@@ -16,7 +16,10 @@ const moduleRoutes: TModuleRoute[] = [
     {
         path: '/users',
         route : userRoutes
-    }
+    }, 
+    // {
+    // another route loading here
+    // }
 
 ];
 
