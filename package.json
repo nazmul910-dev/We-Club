@@ -4,18 +4,23 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+   "start": "node dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "build": "tsup"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.3.0",
+    "mongoose": "^9.7.1",
     "tsx": "^4.22.4"
   },
   "devDependencies": {
@@ -25,6 +30,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.0.0",
     "ts-node-dev": "^2.0.0",
+    "tsup": "^8.5.1",
     "typescript": "^6.0.3"
   }
 }
