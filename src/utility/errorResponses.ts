@@ -35,5 +35,26 @@ class BadRequestError extends Error {
     }
 }
 
+class ExistingUserError extends Error {
+    statusCode : 409;
+    constructor(message : string) {
+        super(message); 
+        this.statusCode = 409;
+        this.name = "ExistingUserError";
+    
+    }
+} 
 
-export { NotFoundError, ForbiddenError, UnauthorizedError, BadRequestError };
+class InvalidCredentialsError extends Error {
+    statusCode : 401;
+    constructor(message : string) {
+        super(message); 
+        this.statusCode = 401;
+        this.name = "InvalidCredentialsError";  
+    }
+}
+
+
+
+
+export { NotFoundError, ForbiddenError, UnauthorizedError, BadRequestError, ExistingUserError, InvalidCredentialsError };
