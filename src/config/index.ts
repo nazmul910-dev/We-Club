@@ -6,5 +6,6 @@ export default{
     MONGO_URI : process.env.MONGO_URI || "",
     DB_NAME : process.env.DB_NAME || "",
     JWT_SECRET: process.env.JWT_SECRET || "change_this_secret",
-    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "1h"
+    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "1h",
+    SALT_ROUNDS: process.env.SALT_ROUNDS || 10
 }

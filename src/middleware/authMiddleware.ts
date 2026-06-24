@@ -1,13 +1,13 @@
 import type { NextFunction, Request, Response } from "express";
 import * as jwt from "jsonwebtoken";
 import config from "../config";
-import { Roles } from "../modules/users/user.interface";
+import { UserRole,USER_ROLES } from "../modules/users/user.interface";
 import { UnauthorizedError, ForbiddenError } from "../utility/errorResponses";
 
 interface JwtPayloadWithRole extends jwt.JwtPayload {
   id: string;
   email: string;
-  role: Roles;
+  role: UserRole;
 }
 
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
@@ -37,7 +37,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
-export const authorizeRoles = (...allowedRoles: Roles[]) => {
+export const authorizeRoles = (...allowedRoles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;
 

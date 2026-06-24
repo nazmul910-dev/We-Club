@@ -1,6 +1,7 @@
 import QueryBuilder from "../../utility/queryBuilder";
 import { IUser } from "./user.interface";
-import User from "./users.model.schema";
+import { User } from "./users.model.schema";
+
 
 
 const getAllUsersFromDB  = async (query: any) => {

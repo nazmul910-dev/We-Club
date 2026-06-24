@@ -1,58 +1,92 @@
 import bcrypt from "bcrypt";
-import * as jwt from "jsonwebtoken";
+// import * as jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import config from "../../config";
-import User from "../users/users.model.schema";
-import { IUser } from "../users/user.interface";
-import { ExistingUserError, InvalidCredentialsError } from "../../utility/errorResponses";
 
-const SALT_ROUNDS = 10;
+import { ExistingUserError } from "../../utility/errorResponses";
+import { loginValidation, registerValidation } from "../users/user.validation";
+import { User } from "../users/users.model.schema";
+import { comparePassword, hashPassword } from "../../utility/passwordUtil";
 
-export async function createUser(data: Partial<IUser>) {
 
-    console.log("Creating user with data:", data); // Debug log
-  if (!data.name || !data.email || !data.password) {
-    throw new Error("name, email and password are required");
+
+export const createUser = async (payload: unknown) =>{
+  const {body} = registerValidation.parse({body:payload});
+
+  const existingUser = await User.findOne({email:body.email});
+  
+  if(existingUser) throw new ExistingUserError("User already exists");
+
+  const hashedPassword = await hashPassword(body.password);
+
+  // const validatedBody = removeUndefined(body);
+
+  const user = await User.create({
+
+    fullName: body.fullName,
+    email: body.email,
+    role: body.role,
+    password: hashedPassword,
+    paymentStatus: "unpaid",
+    approvalStatus: "pending",
+    accountStatus:"pending_approval",
+    licenseVerificationStatus:"pending",
+  });
+
+  return user;
+
+}
+
+
+export const loginUser = async (payload: unknown) => {
+  const { body } = loginValidation.parse({ body: payload });
+
+  const user = await User.findOne({
+    email: body.email,
+  }).select('+password');
+
+  if (!user) {
+    throw new Error('Invalid email or password.');
   }
 
-  const existing = await User.findOne({ email: data.email });
-  if (existing) throw new ExistingUserError("User with this email already exists");
+  const isPasswordMatched = await comparePassword(body.password, user.password);
 
-  const hashed = await bcrypt.hash(data.password, SALT_ROUNDS);
-  
-  const user = await User.create({
-    name: data.name,
-    email: data.email,
-    password: hashed,
-    role: data.role || "USER",
-  });
-  // remove password before returning
-  const obj = user.toObject();
-  delete (obj as any).password;
-  return obj;
-// return null;
-}
+  if (!isPasswordMatched) {
+    throw new Error('Invalid email or password.');
+  }
 
-export async function loginUser(email: string, password: string) {
-  const user = await User.findOne({ email });
-  if (!user) throw new InvalidCredentialsError("Invalid credentials");
+  // if (user.paymentStatus !== 'paid') {
+  //   throw new Error('Payment is not completed.');
+  // }
 
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) throw new InvalidCredentialsError("Invalid credentials");
+  // if (user.approvalStatus !== 'approved') {
+  //   throw new Error('Your account is waiting for admin approval.');
+  // }
 
-  console.log(user);
+  // if (user.accountStatus !== 'active') {
+  //   throw new Error('Your account is not active.');
+  // }
 
-  const payload = { id: user._id.toString(), email: user.email, role: user.role };
+  // if (user.subscriptionExpiresAt && user.subscriptionExpiresAt < new Date()) {
+  //   throw new Error('Your subscription has expired.');
+  // }
+
   const token = jwt.sign(
-    payload as string | object | Buffer,
-    config.JWT_SECRET as jwt.Secret,
-    { expiresIn: config.JWT_EXPIRES_IN } as jwt.SignOptions
+    {
+      userId: user._id,
+      role: user.role,
+    },
+    config.JWT_SECRET as string,
+    {
+      expiresIn: '7d',
+    }
   );
 
-  const u = user.toObject();
-  delete (u as any).password;
-  return { token };
-
-}
+  return {
+    token,
+    user,
+  };
+};
 
 
 
