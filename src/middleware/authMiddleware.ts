@@ -14,12 +14,16 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader;
 
+console.log("authHeader:", authHeader);
+console.log("token:", token);
+console.log("secret:", config.JWT_ACCESS_SECRET);
+
   if (!token) {
     return next(new UnauthorizedError("Authentication token is required"));
   }
 
   try {
-    const decoded = jwt.verify(token, config.JWT_SECRET as jwt.Secret) as JwtPayloadWithRole;
+    const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET as jwt.Secret) as JwtPayloadWithRole;
 
     if (!decoded || !decoded.id || !decoded.role) {
       return next(new UnauthorizedError("Invalid token payload"));

@@ -1,12 +1,16 @@
 import bcrypt from "bcrypt";
 // import * as jwt from "jsonwebtoken";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import config from "../../config";
 
 import { ExistingUserError } from "../../utility/errorResponses";
 import { loginValidation, registerValidation } from "../users/user.validation";
 import { User } from "../users/users.model.schema";
 import { comparePassword, hashPassword } from "../../utility/passwordUtil";
+import { IUser, UserRole } from "../users/user.interface";
+import { createToken, verifyToken } from "./auth.utils";
+import sendMail from "../../utility/SendMail";
+import { de } from "zod/v4/locales";
 
 
 
@@ -35,7 +39,7 @@ export const createUser = async (payload: unknown) =>{
 
   return user;
 
-}
+} 
 
 
 export const loginUser = async (payload: unknown) => {
@@ -73,10 +77,11 @@ export const loginUser = async (payload: unknown) => {
 
   const token = jwt.sign(
     {
-      userId: user._id,
+      id: user._id,
+      email: user.email,
       role: user.role,
     },
-    config.JWT_SECRET as string,
+    config.JWT_ACCESS_SECRET as string,
     {
       expiresIn: '7d',
     }
@@ -89,5 +94,169 @@ export const loginUser = async (payload: unknown) => {
 };
 
 
+export const changePassword = async(userData: { email: string; role: UserRole },payload:{oldPassword:string,newPassword:string}) =>{
 
-export default { createUser, loginUser };
+ const user = await User.findOne({ email: userData.email }).select("+password");
+
+ console.log("users1:",user);
+
+  if (!user) {
+    throw new ExistingUserError("User not exists");
+  }
+
+  const isPasswordMatched = await comparePassword(payload.oldPassword, user.password);
+
+  if(!isPasswordMatched){
+    throw new ExistingUserError("Old password is incorrect");
+  }
+
+  const hashedNewPassword = await hashPassword(payload.newPassword);
+
+  await User.findOneAndUpdate(
+    {email: userData.email},
+    {password: hashedNewPassword}
+  );
+
+  return {
+    message: "Password changed successfully"
+  };
+
+}
+
+
+export const forgetPassword = async(email:string) =>{
+  const user = await User.findOne({email});
+
+  if(!user) throw new ExistingUserError("User not found");
+
+  // if need to some condition then ther check
+  // 
+
+  const jwtPayload = {
+    userId: user._id.toString(),
+    role: user.role
+  };
+
+  const token = createToken(
+    jwtPayload, config.JWT_ACCESS_SECRET as string, 10 * 60 * 1000
+  )
+
+  const resetUILink = `http://localhost:5000/reset-password?token=${token}`;
+
+//   await sendMail(
+//   user.email,
+//   `
+//   <div style="font-family: Arial, sans-serif; background-color: #f4f7fb; padding: 30px;">
+//     <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; padding: 32px; border: 1px solid #e5e7eb;">
+      
+//       <h2 style="color: #111827; margin-bottom: 16px;">
+//         Reset Your Password
+//       </h2>
+
+//       <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
+//         We received a request to reset the password for your account.
+//         Click the button below to create a new password.
+//       </p>
+
+//       <div style="text-align: center; margin: 30px 0;">
+//         <a 
+//           href="${resetUILink}" 
+//           target="_blank"
+//           style="
+//             display: inline-block;
+//             background-color: #2563eb;
+//             color: #ffffff;
+//             text-decoration: none;
+//             padding: 14px 28px;
+//             border-radius: 8px;
+//             font-size: 15px;
+//             font-weight: 600;
+//           "
+//         >
+//           Reset Password
+//         </a>
+//       </div>
+
+//       <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">
+//         This password reset link will expire within 10 minutes.
+//         If you did not request this, you can safely ignore this email.
+//       </p>
+
+//       <p style="color: #9ca3af; font-size: 13px; margin-top: 24px;">
+//         Thank you,<br />
+//         We-Club Team
+//       </p>
+
+//     </div>
+//   </div>
+//   `
+// );
+
+  sendMail(user?.email, `<p> ${resetUILink}</p>`)   
+
+
+}
+
+export const resetPassword = async(payload:{newPassword:any},token:string) =>{
+ 
+  // if need to some condition then ther check
+  // 
+
+  const decoded = verifyToken(
+    token,config.JWT_ACCESS_SECRET as string
+  ) as JwtPayload
+
+  const user = await User.findById(decoded.userId)
+
+    if (!user) {
+    throw new ExistingUserError("User not found");
+  }
+
+  console.log("userId:",decoded.userId);
+
+  console.log("new:pasowrd:",payload.newPassword);
+  const newHashPassword = await hashPassword(payload.newPassword);
+
+
+  await User.findByIdAndUpdate(decoded.userId,{password:newHashPassword});
+
+  return{
+    message:"Password reset successfully"
+  }
+  
+}
+
+export const refreshtoken = async(token:string) =>{
+  if(!token){
+    throw new Error("Token not found.Unauthorized user!");
+  }
+
+  const decoded = verifyToken(token,config.JWT_REFRESH_SECRET as string)
+
+  if(!decoded){
+    throw new Error("Could not verify token.");
+  }
+
+  const {userId} = decoded as JwtPayload
+
+  const user = await User.findById(userId);
+
+  if(!user){
+    throw new Error("User not Found!");
+  }
+
+    const jwtPayload = {
+    userId : user._id.toString(),
+    role: user.role
+  }
+
+  const accessToken = createToken (
+    jwtPayload,config.JWT_ACCESS_SECRET as string, Number(config.JWT_ACCESS_SECRET)
+  )
+
+  return{
+    accessToken
+  }
+}
+
+export default { createUser, loginUser,changePassword,forgetPassword,resetPassword,refreshtoken };
