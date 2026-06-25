@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
 import { IUser } from "./user.interface";
+import { ObjectId } from "mongodb";
 
 const userSchema  = new mongoose.Schema<IUser>({
     name: {
-        type: String, 
+        type: String , 
       }, 
     email: {
         type: String,

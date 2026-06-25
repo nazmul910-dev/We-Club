@@ -11,6 +11,7 @@ interface IUser {
     password: string;
     role: Roles;
     createdAt: Date;
+
 }
 
 export type { IUser, Roles };
