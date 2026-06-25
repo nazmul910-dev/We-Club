@@ -18,14 +18,26 @@ const createUserInDB = async (req: Request, res: Response, next: NextFunction) =
 
 const loginUserInDB = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { email, password } = req.body;
+
         const result = await authService.loginUser(req.body);
+
+        const {refreshToken,accessToken} = result;
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days milliseconds
+    });
 
        sendResponse(res, {
         statusCode : 200,
         success: true,   
         message : "User logged in successfully",
-        data : result
+        data : {
+            token: accessToken,
+            user: result.user
+        }
        });
     } catch (error) {
         }

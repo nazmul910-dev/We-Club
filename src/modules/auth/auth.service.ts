@@ -75,21 +75,42 @@ export const loginUser = async (payload: unknown) => {
   //   throw new Error('Your subscription has expired.');
   // }
 
-  const token = jwt.sign(
-    {
-      id: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    },
+
+
+  // const token = jwt.sign(
+  //   {
+  //     id: user._id.toString(),
+  //     email: user.email,
+  //     role: user.role,
+  //   },
+  //   config.JWT_ACCESS_SECRET as string,
+  //   {
+  //     expiresIn: '7d',
+  //   }
+  // );
+
+  const jwtPayload = {
+    id: user._id.toString(),
+    email: user.email,
+    role: user.role,
+  };
+
+    // Access token
+  const accessToken = jwt.sign(
+    jwtPayload,
     config.JWT_ACCESS_SECRET as string,
-    {
-      expiresIn: '7d',
-    }
+    { expiresIn: '7d' }
+  );
+
+  // Refresh token
+  const refreshToken = createToken(
+    { userId: user._id.toString(), role: user.role },
+    config.JWT_REFRESH_SECRET as string,
+    7 * 24 * 60 * 60  
   );
 
   return {
-    token,
-    user,
+    accessToken, refreshToken, user
   };
 };
 
@@ -231,7 +252,7 @@ export const refreshtoken = async(token:string) =>{
     throw new Error("Token not found.Unauthorized user!");
   }
 
-  const decoded = verifyToken(token,config.JWT_REFRESH_SECRET as string)
+  const decoded = verifyToken(token,config.JWT_REFRESH_SECRET as string) as JwtPayload;
 
   if(!decoded){
     throw new Error("Could not verify token.");
@@ -247,12 +268,18 @@ export const refreshtoken = async(token:string) =>{
 
     const jwtPayload = {
     userId : user._id.toString(),
+    email: user.email,
     role: user.role
   }
 
-  const accessToken = createToken (
-    jwtPayload,config.JWT_ACCESS_SECRET as string, Number(config.JWT_ACCESS_SECRET)
-  )
+  // const accessToken = createToken (
+  //   jwtPayload,config.JWT_ACCESS_SECRET as string, Number(config.JWT_ACCESS_SECRET)
+  // )
+    const accessToken = jwt.sign(
+    jwtPayload,
+    config.JWT_ACCESS_SECRET as string,
+    { expiresIn: '7d' }
+  );
 
   return{
     accessToken

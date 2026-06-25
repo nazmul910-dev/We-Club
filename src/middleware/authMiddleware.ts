@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import * as jwt from "jsonwebtoken";
+import  jwt from "jsonwebtoken";
 import config from "../config";
 import { UserRole,USER_ROLES } from "../modules/users/user.interface";
 import { UnauthorizedError, ForbiddenError } from "../utility/errorResponses";
