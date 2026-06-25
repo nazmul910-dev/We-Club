@@ -20,6 +20,7 @@ const loginUserInDB = async (req: Request, res: Response, next: NextFunction) =>
     try {
         const { email, password } = req.body;
         const result = await authService.loginUser(req.body);
+
        sendResponse(res, {
         statusCode : 200,
         success: true,   
@@ -27,8 +28,7 @@ const loginUserInDB = async (req: Request, res: Response, next: NextFunction) =>
         data : result
        });
     } catch (error) {
-        next(error);
-    }
+        }
 };
 
 const changePassword = async(req:Request,res:Response,next:NextFunction) =>{
