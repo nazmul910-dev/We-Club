@@ -36,10 +36,99 @@ export const createUser = async (payload: unknown) =>{
     licenseVerificationStatus:"pending",
   });
 
-  return user;
+  try {
+     await sendCalendlyMeetingMail({
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+    });
+  } catch (error) {
+    console.error(
+      'Calendly meeting email failed:',
+      error instanceof Error ? error.message : error
+    );
+  }
+
+  const userObject = user.toObject();
+
+  // delete userObject.password;
+
+  return userObject;
 
 } 
 
+
+// export const loginUser = async (payload: unknown) => {
+//   const { body } = loginValidation.parse({ body: payload });
+
+//   const user = await User.findOne({
+//     email: body.email,
+//   }).select('+password');
+
+//   if (!user) {
+//     throw new Error('Invalid email or password.');
+//   }
+
+//   const isPasswordMatched = await comparePassword(body.password, user.password);
+
+//   if (!isPasswordMatched) {
+//     throw new Error('Invalid email or password.');
+//   }
+
+//   // if (user.paymentStatus !== 'paid') {
+//   //   throw new Error('Payment is not completed.');
+//   // }
+
+//   if (user.approvalStatus !== 'approved') {
+//     throw new Error('Your account is waiting for admin approval.');
+//   }
+
+//   if (user.accountStatus !== 'active') {
+//     throw new Error('Your account is not active.');
+//   }
+
+//   // if (user.subscriptionExpiresAt && user.subscriptionExpiresAt < new Date()) {
+//   //   throw new Error('Your subscription has expired.');
+//   // }
+
+
+
+//   // const token = jwt.sign(
+//   //   {
+//   //     id: user._id.toString(),
+//   //     email: user.email,
+//   //     role: user.role,
+//   //   },
+//   //   config.JWT_ACCESS_SECRET as string,
+//   //   {
+//   //     expiresIn: '7d',
+//   //   }
+//   // );
+
+//   const jwtPayload = {
+//     id: user._id.toString(),
+//     email: user.email,
+//     role: user.role,
+//   };
+
+//     // Access token
+//   const accessToken = jwt.sign(
+//     jwtPayload,
+//     config.JWT_ACCESS_SECRET as string,
+//     { expiresIn: '7d' }
+//   );
+
+//   // Refresh token
+//   const refreshToken = createToken(
+//     { userId: user._id.toString(), role: user.role },
+//     config.JWT_REFRESH_SECRET as string,
+//     7 * 24 * 60 * 60  
+//   );
+
+//   return {
+//     accessToken, refreshToken, user
+//   };
+// };
 
 export const loginUser = async (payload: unknown) => {
   const { body } = loginValidation.parse({ body: payload });
@@ -58,35 +147,52 @@ export const loginUser = async (payload: unknown) => {
     throw new Error('Invalid email or password.');
   }
 
-  // if (user.paymentStatus !== 'paid') {
-  //   throw new Error('Payment is not completed.');
-  // }
 
-  // if (user.approvalStatus !== 'approved') {
-  //   throw new Error('Your account is waiting for admin approval.');
-  // }
+  if (user.approvalStatus === 'pending') {
+    throw new Error(
+      'Your account is pending admin approval. Please try again later.'
+    );
+  } 
 
-  // if (user.accountStatus !== 'active') {
-  //   throw new Error('Your account is not active.');
-  // }
+  if (user.approvalStatus === 'rejected') {
+    throw new Error(
+      'Your registration request has been rejected. This email cannot be used to access the platform. Please contact support for further assistance.'
+    );
+  }
 
-  // if (user.subscriptionExpiresAt && user.subscriptionExpiresAt < new Date()) {
-  //   throw new Error('Your subscription has expired.');
-  // }
+  if (user.approvalStatus !== 'approved') {
+    throw new Error('Your account is not approved yet. Please try again later.');
+  }
 
 
 
-  // const token = jwt.sign(
-  //   {
-  //     id: user._id.toString(),
-  //     email: user.email,
-  //     role: user.role,
-  //   },
-  //   config.JWT_ACCESS_SECRET as string,
-  //   {
-  //     expiresIn: '7d',
-  //   }
-  // );
+  if (user.accountStatus === 'pending_approval') {
+    throw new Error(
+      'Your account is pending admin approval. Please try again later.'
+    );
+  }
+
+  if (user.accountStatus === 'pending_payment') {
+    throw new Error(
+      'Your account payment is not completed yet. Please complete your payment to continue.'
+    );
+  }
+
+  if (user.accountStatus === 'suspended') {
+    throw new Error(
+      'Your account has been suspended. Please contact support for further assistance.'
+    );
+  }
+
+  if (user.accountStatus === 'rejected') {
+    throw new Error(
+      'Your account request has been rejected. This email cannot be used to access the platform. Please contact support for further assistance.'
+    );
+  }
+
+  if (user.accountStatus !== 'active') {
+    throw new Error('Your account is not active. Please contact support.');
+  }
 
   const jwtPayload = {
     id: user._id.toString(),
@@ -94,26 +200,33 @@ export const loginUser = async (payload: unknown) => {
     role: user.role,
   };
 
-    // Access token
   const accessToken = jwt.sign(
     jwtPayload,
     config.JWT_ACCESS_SECRET as string,
-    { expiresIn: '7d' }
+    {
+      expiresIn: '7d',
+    }
   );
 
-  // Refresh token
   const refreshToken = createToken(
-    { userId: user._id.toString(), role: user.role },
+    {
+      userId: user._id.toString(),
+      role: user.role,
+    },
     config.JWT_REFRESH_SECRET as string,
-    7 * 24 * 60 * 60  
+    7 * 24 * 60 * 60
   );
+
+  const userObject = user.toObject();
+
+  // delete userObject.password;
 
   return {
-    accessToken, refreshToken, user
+    accessToken,
+    refreshToken,
+    user: userObject,
   };
 };
-
-
 export const changePassword = async(userData: { email: string; role: UserRole },payload:{oldPassword:string,newPassword:string}) =>{
 
  const user = await User.findOne({ email: userData.email }).select("+password");
