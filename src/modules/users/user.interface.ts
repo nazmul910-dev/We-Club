@@ -19,14 +19,41 @@ export const PAYMENT_STATUSES = [
     'refunded',
 ] as const;
 
-interface IUser {
-    id: string;
-    name: string;
-    email: string;
-    password: string;
-    role: Roles;
-    createdAt: Date;
 
+export const APPROVAL_STATUSES = [
+    'pending',
+    'approved',
+    'rejected',
+] as const;
+
+export const ACCOUNT_STATUSES = [
+    'active',
+    'pending_payment',
+    'pending_approval',
+    'suspended',
+    'rejected',
+] as const;
+
+
+export const LICENSE_VERIFICATION_STATUSES = [
+    'pending',
+    'verified',
+    'rejected',
+] as const;
+
+
+export type UserRole = (typeof USER_ROLES)[number];
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
+export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
+export type LicenseVerificationStatus = (typeof LICENSE_VERIFICATION_STATUSES)[number];
+
+
+export interface IUserSocialLinks {
+    linkedin?: string;
+    facebook?: string;
+    twitter?: string;
+    website?: string;
 }
 
 export interface IUser {

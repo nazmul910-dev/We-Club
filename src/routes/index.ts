@@ -2,6 +2,8 @@ import { Router } from 'express';
 
 import { userRoutes } from '../modules/users/user.route';
 import { authRoutes } from '../modules/auth/auth.route';
+import { listingsRoutes } from '../modules/listings/listings.route';
+import { listingPromoteRequestRoutes } from '../modules/listingPromote/listing.promote.route';
 // import { userRoutes } from '../modules/user/user.route';
 // import { adminRoutes } from '../modules/admin/admin.route';
 // import { courseRoutes } from '../modules/course/course.route';
@@ -21,10 +23,15 @@ const moduleRoutes: TModuleRoute[] = [
     {
         path : "/auth",
         route : authRoutes,
+    },
+    {
+      path : "/listings",
+      route : listingsRoutes
+    },
+    {
+      path : "/listings/promote-request",
+      route : listingPromoteRequestRoutes
     }
-    // {
-    // another route loading here
-    // }
 
 ];
 

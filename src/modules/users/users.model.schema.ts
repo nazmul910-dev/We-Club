@@ -1,24 +1,3 @@
-<<<<<<< HEAD
-import mongoose from "mongoose";
-import { IUser } from "./user.interface";
-import { ObjectId } from "mongodb";
-
-const userSchema  = new mongoose.Schema<IUser>({
-    name: {
-        type: String , 
-      }, 
-    email: {
-        type: String,
-        unique: true, 
-      },
-    password: {
-        type: String, 
-      },
-    role: {
-        type: String,
-        enum: ['ADMIN', 'ASSOCIATES', 'PARTNERS', 'USER'],
-        default: 'USER'
-=======
 import {Schema, model} from 'mongoose';
 
 import { ACCOUNT_STATUSES, APPROVAL_STATUSES, IUser, LICENSE_VERIFICATION_STATUSES, PAYMENT_STATUSES, USER_ROLES } from './user.interface';
@@ -30,7 +9,6 @@ const userSchema = new Schema<IUser>(
       required: true,
       trim: true, 
       maxlength: 100,
->>>>>>> 07a2587ea5b995a08e68549905609cc1381f038b
     },
 
     email: {
