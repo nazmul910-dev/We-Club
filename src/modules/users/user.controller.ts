@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { userService } from "./auth.service";
 import sendResponse from "../../utility/sendResponse";
+import { string } from "zod";
 
 const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
 
@@ -31,4 +32,22 @@ const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     }
 }
 
-export const userController = { getAllUsers };
+const getSingleUser= async (req:Request, res:Response, next:NextFunction) =>{
+    try {
+        
+        const id = req.params.id;
+        const result = await userService.getSingleUserFromDB(id);
+            sendResponse(res, {
+            statusCode : 200,
+            success: true,  
+            message : "User received successfully",
+            data : result
+        });
+        
+        
+    } catch (error) {
+        next(error)
+    }
+}
+
+export const userController = { getAllUsers,getSingleUser };
