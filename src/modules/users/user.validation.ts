@@ -7,6 +7,7 @@ export const registerValidation = z.object({
     password: z.string().min(8).max(100),
 
     role: z.enum([
+      'admin',
       'associate',
       'partner',
       'ambassador',

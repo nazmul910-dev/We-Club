@@ -65,6 +65,7 @@ const userSchema = new Schema<IUser>(
 
     profileImage: {
       type: String,
+      trim:true
     },
 
     socialLinks: {
@@ -72,7 +73,11 @@ const userSchema = new Schema<IUser>(
         type: String,
         trim: true,
       },
-      instagram: {
+      facebook:{
+        type: String,
+        trim: true,
+      },
+      twitter: {
         type: String,
         trim: true,
       },
@@ -133,7 +138,7 @@ const userSchema = new Schema<IUser>(
     rejectedReason: {
       type: String,
       trim: true,
-    },
+    }, 
 
     lifetimeCommissionEarned: {
       type: Number,
