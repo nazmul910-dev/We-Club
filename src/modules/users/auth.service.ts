@@ -14,4 +14,9 @@ const getAllUsersFromDB  = async (query: any) => {
     return users;
 }
 
-export const userService = { getAllUsersFromDB };
+const getSingleUserFromDB = async(id:any) =>{
+    const user = await User.findById(id)
+    return user;
+}
+
+export const userService = { getAllUsersFromDB,getSingleUserFromDB };
