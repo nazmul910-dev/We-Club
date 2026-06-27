@@ -4,7 +4,8 @@ import { authorizeRoles, verifyToken } from "../../middleware/authMiddleware";
 
 const router = Router();
 
-router.get("/", verifyToken, authorizeRoles("ADMIN", "MANAGER" ), userController.getAllUsers);
+router.get("/", userController.getAllUsers);  //verifyToken, authorizeRoles("ADMIN", "MANAGER" ),
+router.get("/:id", userController.getSingleUser);
 
 export const userRoutes = router;
 

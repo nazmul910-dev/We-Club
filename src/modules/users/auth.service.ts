@@ -1,6 +1,7 @@
 import QueryBuilder from "../../utility/queryBuilder";
 import { IUser } from "./user.interface";
-import User from "./users.model.schema";
+import { User } from "./users.model.schema";
+
 
 
 const getAllUsersFromDB  = async (query: any) => {
@@ -13,4 +14,9 @@ const getAllUsersFromDB  = async (query: any) => {
     return users;
 }
 
-export const userService = { getAllUsersFromDB };
+const getSingleUserFromDB = async(id:any) =>{
+    const user = await User.findById(id)
+    return user;
+}
+
+export const userService = { getAllUsersFromDB,getSingleUserFromDB };

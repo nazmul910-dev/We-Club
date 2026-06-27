@@ -1,25 +1,29 @@
 import type { NextFunction, Request, Response } from "express";
-import * as jwt from "jsonwebtoken";
+import  jwt from "jsonwebtoken";
 import config from "../config";
-import { Roles } from "../modules/users/user.interface";
+import { UserRole,USER_ROLES } from "../modules/users/user.interface";
 import { UnauthorizedError, ForbiddenError } from "../utility/errorResponses";
 
 interface JwtPayloadWithRole extends jwt.JwtPayload {
   id: string;
   email: string;
-  role: Roles;
+  role: UserRole;
 }
 
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader;
 
+console.log("authHeader:", authHeader);
+console.log("token:", token);
+console.log("secret:", config.JWT_ACCESS_SECRET);
+
   if (!token) {
     return next(new UnauthorizedError("Authentication token is required"));
   }
 
   try {
-    const decoded = jwt.verify(token, config.JWT_SECRET as jwt.Secret) as JwtPayloadWithRole;
+    const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET as jwt.Secret) as JwtPayloadWithRole;
 
     if (!decoded || !decoded.id || !decoded.role) {
       return next(new UnauthorizedError("Invalid token payload"));
@@ -37,7 +41,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
-export const authorizeRoles = (...allowedRoles: Roles[]) => {
+export const authorizeRoles = (...allowedRoles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;
 
