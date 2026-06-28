@@ -6,8 +6,10 @@ import sendResponse from "../../utility/sendResponse";
 const createListingPromoteRequest = async(req : Request, res : Response, next : NextFunction) => {
     try {
 
+        const requesterId = req.user?.id
+
         const payload = req.body;
-        const result = await  listingPromoteRequestService.createPromoteRequestInDB(payload);
+        const result = await  listingPromoteRequestService.createPromoteRequestInDB(requesterId  as string, payload);
 
         sendResponse(res, {
             statusCode: 200,
@@ -38,11 +40,13 @@ const getAllListingPromoteRequest = async (req : Request, res : Response, next :
     }
 
 }
+
+// this controller helps to get the promote request for a asssociate like however posted a promote request on a associate listings will show here
 const getMyListingsPromoteRequest = async (req : Request, res : Response, next : NextFunction) => {
 
      try {
         const associate_id = req.user?.id;
-        console.log(associate_id)
+        // console.log(associate_id)
         const query  = req.query;
         const result = await  listingPromoteRequestService.getMyListingsPromoteRequestFromDB(associate_id as string, query);
 
@@ -55,6 +59,48 @@ const getMyListingsPromoteRequest = async (req : Request, res : Response, next :
     } catch (error) {
         next(error)
     }
+
+}
+
+// this helps to retrived a promoter request whoever  requested in a listing or multiple listing
+const getMyPromoteRequests = async(req : Request, res : Response, next : NextFunction) => {
+     try {
+        const requesterId = req.user?.id; 
+      
+        const query  = req.query;
+        const result = await  listingPromoteRequestService.getMyPromoteRequestsFromDB(requesterId as string, query);
+
+        sendResponse(res, {
+            statusCode: 200,
+            success : true,
+            message : "Your promote requests retrieved successfully",
+            data : result
+        })  
+    } catch (error) {
+        next(error)
+    }
+
+
+}
+
+const cencelPromoteRequest = async(req : Request, res : Response, next : NextFunction) => {
+     try {
+
+        const {id} = req.params;
+        const requesterId = req.user?.id; 
+
+        const result = await  listingPromoteRequestService.cancelPromoteRequestInDB(id as string, requesterId as string);
+
+        sendResponse(res, {
+            statusCode: 200,
+            success : true,
+            message : "Promote request cancelled successfully",
+            data : result
+        })  
+    } catch (error) {
+        next(error)
+    }
+
 
 }
 
@@ -84,6 +130,7 @@ const manageListingPromoteRequest = async (
     const result = await listingPromoteRequestService.manageListingPromoteRequestInDB(
       id as string,
       associateId as string,
+      isAdmin as boolean,
       { status, confirmed_commission_pct }
     );
  
@@ -98,9 +145,33 @@ const manageListingPromoteRequest = async (
   }
 };
 
+const deletePromoteRequest = async(req : Request, res: Response, next : NextFunction) => {
+    try {
+        const {id}  = req.params;
+        const role = req.user?.role
+
+        const result = await listingPromoteRequestService.deletePromoteRequest(id as string, role as string);
+
+
+        sendResponse(res, {
+            statusCode : 200,
+            success : true,
+            message : "Deleted Promote Request successfully",
+            data : result
+        })
+
+    }catch(error) {
+        next(error)
+    }
+}
+
 export const listingPromoteRequestController = {
     createListingPromoteRequest,
     getAllListingPromoteRequest,
     getMyListingsPromoteRequest,
-    manageListingPromoteRequest
+    manageListingPromoteRequest,
+    getMyPromoteRequests,
+    cencelPromoteRequest,
+    deletePromoteRequest
+    
 }
