@@ -3,6 +3,9 @@ import { ObjectId } from "mongodb";
 import QueryBuilder from "../../utility/queryBuilder";
 import { IListing } from "./listings.interface";
 import { Listing } from "./listings.model.schema";
+import { NotFoundError, UnauthorizedError } from "../../utility/errorResponses";
+import { PromoteRequest } from "../listingPromote/listings.promote.request.model.schema";
+import mongoose from "mongoose";
 
 /**
  * Service layer: owns all DB interaction + business logic for Listing.
@@ -49,12 +52,6 @@ import { Listing } from "./listings.model.schema";
 };
 
 
- const getListingByIdFromDB = async (
-  id: string
-): Promise<IListing | null> => {
-  return await Listing.findById(id).populate("associate_id", "name email");
-};
-
 const getMyListingFromDB = async (
   associateId: string,
   query: Record<string, unknown> = {}
@@ -85,23 +82,82 @@ const getMyListingFromDB = async (
   return result;
 };
 
- const updateListingInDB = async (
+
+const getListingByIdFromDB = async (
+  id: string
+): Promise<IListing | null> => {
+  return await Listing.findById(id).populate("associate_id", "name email");
+};
+ 
+const updateListingInDB = async (
   id: string,
+  associateId: string,
   payload: Partial<IListing>
 ): Promise<IListing | null> => {
-  return await Listing.findByIdAndUpdate(id, payload, {
+  const listing = await Listing.findById(id);
+ 
+  if (!listing) {
+    throw new NotFoundError("Listing not found");
+  }
+
+  const isOwner = listing.associate_id.toString() !== associateId.toString()
+ 
+  if (!isOwner) {
+    throw new UnauthorizedError("You are not authorized to update this listing");
+  }
+ 
+  // Prevent associates from sneaking in fields they shouldn't control directly
+  // (e.g. promoters is managed only via approved PromoteRequests, not direct edits).
+  const { promoters, associate_id, ...safePayload } = payload as Record<string, unknown> & Partial<IListing>;
+ 
+  return await Listing.findByIdAndUpdate(id, safePayload, {
     new: true,
     runValidators: true,
   });
 };
 
- const deleteListingFromDB = async (
-  id: string
+const deleteListingFromDB = async (
+  id: string,
+  userId: string,
+  role : string,
 ): Promise<IListing | null> => {
-  return await Listing.findByIdAndDelete(id);
+  const listing = await Listing.findById(id);
+ 
+  if (!listing) {
+    throw new Error("Listing not found");
+  }
+
+    const isOwner = listing.associate_id.toString() === userId.toString();
+    const isAdmin = role === "admin";
+ 
+  if (!isOwner && !isAdmin) {
+  throw new UnauthorizedError("You are not authorized to delete this listing");
+}
+ 
+  const session = await mongoose.startSession();
+ 
+  try {
+    session.startTransaction();
+ 
+    listing.is_deleted = true;
+    listing.deleted_at = new Date();
+    await listing.save({ session });
+ 
+    await PromoteRequest.updateMany(
+      { listing_id: id, is_deleted: false },
+      { is_deleted: true, deleted_at: new Date() },
+      { session }
+    );
+ 
+    await session.commitTransaction();
+    return listing;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
 };
-
-
 
 export const listingsService = {
     createListingInDB, getAllListingFromDB, getListingByIdFromDB, updateListingInDB, deleteListingFromDB, getMyListingFromDB

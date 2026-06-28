@@ -8,7 +8,11 @@ const router = Router();
 
 router.get("/",  listingController.getAllListing);
 router.post("/",  listingController.createListing);
-router.get("/my", verifyToken, listingController.getMyListings)
+router.get("/my", verifyToken, listingController.getMyListings);
+
+router.put("/:id", verifyToken, listingController.updateListing);
+router.get("/:id",  listingController.getListingById);
+router.delete("/:id", verifyToken,  listingController.deleteListing);
 
 
 
