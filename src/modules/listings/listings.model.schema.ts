@@ -1,5 +1,6 @@
 import { Schema, model, Types, Document } from "mongoose";
 import { IListing, ILocation, IPrice, IReferralCommission } from "./listings.interface";
+import { boolean } from "zod";
 
 export type ListingStatus = "active" | "pending" | "sold" | "draft";
 
@@ -60,10 +61,19 @@ const ListingSchema = new Schema<IListing>(
       ref: "User",
       default: [],
     },
+    is_deleted : {
+    type : Boolean,
+    default : false,
   },
+  deleted_at : {
+    type : Date
+  }
+  },
+  
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
   }
+
 );
 
 // Indexes
@@ -71,5 +81,12 @@ ListingSchema.index({ status: 1 });
 ListingSchema.index({ "location.country": 1 });
 ListingSchema.index({ associate_id: 1 });
 ListingSchema.index({ ref_code: 1 }, { unique: true });
+ListingSchema.index({ is_deleted: 1 });
+
+ListingSchema.pre(/^find/, function (this: any) {
+  if (this.getFilter().is_deleted === undefined) {
+    this.where({ is_deleted: false });
+  }
+});
 
 export const Listing = model<IListing>("Listing", ListingSchema);

@@ -20,6 +20,11 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
+    is_deleted  : {
+      type : Boolean,
+      default : false
+    },
+    deleted_at : Date,
     requested_at: { type: Date, default: Date.now },
     resolved_at: { type: Date },
   },
@@ -27,6 +32,14 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
     timestamps: false, // we manage requested_at / resolved_at manually
   }
 );
+
+// Auto-exclude soft-deleted requests from every find-style query by default,
+// same pattern as the Listing model.
+PromoteRequestSchema.pre(/^find/, function (this: any) {
+  if (this.getFilter().is_deleted === undefined) {
+    this.where({ is_deleted: false });
+  }
+});
 
 // Prevent the same user from spamming duplicate pending requests on the same listing
 PromoteRequestSchema.index(

@@ -1,9 +1,11 @@
 
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { IPromoteRequest } from "./listing.promote.interface";
 import { Listing } from "../listings/listings.model.schema";
 import { PromoteRequest } from "./listings.promote.request.model.schema";
 import QueryBuilder from "../../utility/queryBuilder";
+import { IListing } from "../listings/listings.interface";
+import { NotFoundError, UnauthorizedError } from "../../utility/errorResponses";
 
 /**
  * Service layer: owns all DB interaction + business logic for PromoteRequest.
@@ -11,16 +13,16 @@ import QueryBuilder from "../../utility/queryBuilder";
  */
 
 const createPromoteRequestInDB = async (
+    requesterId : string,
   payload: Partial<IPromoteRequest>
 ): Promise<IPromoteRequest> => {
   // Narrow + validate required fields up front — this also fixes the TS overload error,
   // since after these checks TS knows listing_id/requester_id are NOT undefined.
-  if (!payload.listing_id || !payload.requester_id) {
+  if (!payload.listing_id || !requesterId) {
     throw new Error("listing_id and requester_id are required");
   }
 
   const listingId = payload.listing_id;
-  const requesterId = payload.requester_id;
 
   const listing = await Listing.findById(listingId);
   if (!listing) {
@@ -40,8 +42,11 @@ const createPromoteRequestInDB = async (
   if (existingPending) {
     throw new Error("You already have a pending request for this listing");
   }
+   const requestPayload = {
+    requester_id : requesterId, ...payload
+   }
 
-  const promoteRequest = new PromoteRequest(payload);
+  const promoteRequest = new PromoteRequest(requestPayload );
   return await promoteRequest.save();
 };
 
@@ -142,13 +147,33 @@ const getMyPromoteRequestsFromDB = async (
   return { data, meta };
 };
 
+const deletePromoteRequest = async(id : string, role : string) => {
+
+    if(role !== "admin") {
+        throw new UnauthorizedError("Only admins can perform this action")
+    }
+
+  const promoteRequest = await PromoteRequest.findById(id);
+ 
+  if (!promoteRequest) {
+    throw new NotFoundError("Promote request not found");
+  }
+ 
+  promoteRequest.is_deleted = true;
+  promoteRequest.deleted_at = new Date();
+ 
+  return await promoteRequest.save();
+}
+
 const manageListingPromoteRequestInDB = async (
   requestId: string,
   associateId: string,
+  isAdmin : boolean,
   payload: { status: "approved" | "rejected"; confirmed_commission_pct?: number }
 ): Promise<IPromoteRequest> => {
   const promoteRequest = await PromoteRequest.findById(requestId);
- 
+
+
   if (!promoteRequest) {
     throw new Error("Promote request not found");
   }
@@ -157,12 +182,16 @@ const manageListingPromoteRequestInDB = async (
   // Cast through unknown since populate() changes the runtime shape but not the static type.
 const listing = await Listing.findById(promoteRequest.listing_id);
  
+
     if (!listing) {
     throw new Error("Related listing not found");
   }
 
-   if (listing.associate_id.toString() !== associateId.toString()) {
-    throw new Error("You are not authorized to manage this promote request");
+    const isOwner = listing.associate_id.toString() !== associateId.toString();
+ 
+
+   if (!isOwner && !isAdmin) {
+    throw new UnauthorizedError("You are not authorized to manage this promote request");
    }
  
   if (promoteRequest.status !== "pending") {
@@ -211,5 +240,7 @@ export const listingPromoteRequestService = {
   getMyListingsPromoteRequestFromDB,
   manageListingPromoteRequestInDB,
   getMyPromoteRequestsFromDB,
-  cancelPromoteRequestInDB
+  cancelPromoteRequestInDB,
+deletePromoteRequest
+  
 };

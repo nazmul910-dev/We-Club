@@ -6,8 +6,10 @@ import sendResponse from "../../utility/sendResponse";
 const createListingPromoteRequest = async(req : Request, res : Response, next : NextFunction) => {
     try {
 
+        const requesterId = req.user?.id
+
         const payload = req.body;
-        const result = await  listingPromoteRequestService.createPromoteRequestInDB(payload);
+        const result = await  listingPromoteRequestService.createPromoteRequestInDB(requesterId  as string, payload);
 
         sendResponse(res, {
             statusCode: 200,
@@ -111,7 +113,7 @@ const manageListingPromoteRequest = async (
     const { id } = req.params;
     const { status, confirmed_commission_pct } = req.body;
     const associateId = req.user?.id; // wherever your auth middleware attaches it — adjust if different
- 
+    const isAdmin = req.user?.role === "admin"
 
     if (!status || !["approved", "rejected"].includes(status)) {
       
@@ -126,6 +128,7 @@ const manageListingPromoteRequest = async (
     const result = await listingPromoteRequestService.manageListingPromoteRequestInDB(
       id as string,
       associateId as string,
+      isAdmin as boolean,
       { status, confirmed_commission_pct }
     );
  
@@ -140,11 +143,33 @@ const manageListingPromoteRequest = async (
   }
 };
 
+const deletePromoteRequest = async(req : Request, res: Response, next : NextFunction) => {
+    try {
+        const {id}  = req.params;
+        const role = req.user?.role
+
+        const result = await listingPromoteRequestService.deletePromoteRequest(id as string, role as string);
+
+
+        sendResponse(res, {
+            statusCode : 200,
+            success : true,
+            message : "Deleted Promote Request successfully",
+            data : result
+        })
+
+    }catch(error) {
+        next(error)
+    }
+}
+
 export const listingPromoteRequestController = {
     createListingPromoteRequest,
     getAllListingPromoteRequest,
     getMyListingsPromoteRequest,
     manageListingPromoteRequest,
     getMyPromoteRequests,
-    cencelPromoteRequest
+    cencelPromoteRequest,
+    deletePromoteRequest
+    
 }
