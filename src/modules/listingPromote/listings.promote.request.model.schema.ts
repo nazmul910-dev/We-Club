@@ -47,10 +47,12 @@ PromoteRequestSchema.pre("save", function (this: IPromoteRequest) {
   if (this.isModified("status") && this.status !== "pending") {
     this.resolved_at = this.resolved_at ?? new Date();
 
-    if (this.status === "approved" && this.confirmed_commission_pct == null) {
-      // default: confirmed = whatever was proposed, unless associate explicitly overrides it
-      this.confirmed_commission_pct = this.proposed_commission_pct;
-    }
+    // below the code commentout by Nazmul without middle line that was already commentout
+
+    // if (this.status === "approved" && this.confirmed_commission_pct == null) {
+    //   // default: confirmed = whatever was proposed, unless associate explicitly overrides it
+    //   this.confirmed_commission_pct = this.proposed_commission_pct;
+    // }
   }
 });
 

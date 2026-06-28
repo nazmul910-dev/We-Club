@@ -4,6 +4,7 @@ import { userRoutes } from '../modules/users/user.route';
 import { authRoutes } from '../modules/auth/auth.route';
 import { listingsRoutes } from '../modules/listings/listings.route';
 import { listingPromoteRequestRoutes } from '../modules/listingPromote/listing.promote.route';
+import { commissionLedgerRoutes } from '../modules/commissionLedger/commission.ledger.route';
 // import { userRoutes } from '../modules/user/user.route';
 // import { adminRoutes } from '../modules/admin/admin.route';
 // import { courseRoutes } from '../modules/course/course.route';
@@ -31,6 +32,11 @@ const moduleRoutes: TModuleRoute[] = [
     {
       path : "/listings/promote-request",
       route : listingPromoteRequestRoutes
+    }
+    ,
+    {
+      path : "/commission",
+      route : commissionLedgerRoutes 
     }
 
 ];

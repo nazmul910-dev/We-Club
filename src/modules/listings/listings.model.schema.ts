@@ -70,6 +70,6 @@ const ListingSchema = new Schema<IListing>(
 ListingSchema.index({ status: 1 });
 ListingSchema.index({ "location.country": 1 });
 ListingSchema.index({ associate_id: 1 });
-ListingSchema.index({ ref_code: 1 }, { unique: true });
+// ListingSchema.index({ ref_code: 1 }, { unique: true });  // commentout by Nazmul for fixing
 
 export const Listing = model<IListing>("Listing", ListingSchema);
