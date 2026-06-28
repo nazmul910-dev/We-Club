@@ -10,6 +10,9 @@ export interface IPromoteRequest extends Document {
   marketing_channels: string[];
   message?: string;
   status: PromoteReqStatus;
+  is_deleted : Boolean;
+  deleted_at? : Date;
   requested_at: Date;
   resolved_at?: Date;
+
 }

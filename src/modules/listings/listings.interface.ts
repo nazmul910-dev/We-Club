@@ -33,7 +33,9 @@ export interface IListing {
   cover_image: string;
   images: string[];
   associate_id: Types.ObjectId;   
-  promoters: Types.ObjectId[];    
+  promoters: Types.ObjectId[];  
+  is_deleted : boolean;
+  deleted_at? : Date;  
   created_at: Date;
   updated_at: Date;
 }
