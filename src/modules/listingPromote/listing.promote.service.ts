@@ -113,6 +113,34 @@ const getMyListingsPromoteRequestFromDB = async (
   return { data, meta };
 };
 
+const getMyPromoteRequestsFromDB = async (
+  requesterId: string,
+  query: Record<string, unknown>
+): Promise<{
+  data: IPromoteRequest[];
+  meta: { page: number; limit: number; total: number; totalPage: number };
+}> => {
+  const queryWithDefaultSort = {
+    sort: "-requested_at",
+    ...query,
+  };
+ 
+  const promoteRequestQuery = new QueryBuilder<IPromoteRequest>(
+    PromoteRequest.find({ requester_id: requesterId })
+      .populate("listing_id", "title ref_code cover_image price"),
+    queryWithDefaultSort
+  )
+    .search(["message"])
+    .filter()
+    .sort()
+    .paginate()
+    .fieldsLimit();
+ 
+  const data = await promoteRequestQuery.modelQuery;
+  const meta = await promoteRequestQuery.countTotal();
+ 
+  return { data, meta };
+};
 
 const manageListingPromoteRequestInDB = async (
   requestId: string,
@@ -154,9 +182,34 @@ const listing = await Listing.findById(promoteRequest.listing_id);
   return await promoteRequest.save();
 };
 
+const cancelPromoteRequestInDB = async (
+  requestId: string,
+  requesterId: string
+): Promise<IPromoteRequest> => {
+  const promoteRequest = await PromoteRequest.findById(requestId);
+ 
+  if (!promoteRequest) {
+    throw new Error("Promote request not found");
+  }
+ 
+  if (promoteRequest.requester_id.toString() !== requesterId.toString()) {
+    throw new Error("You are not authorized to cancel this request");
+  }
+ 
+  if (promoteRequest.status !== "pending") {
+    throw new Error("Only pending requests can be cancelled");
+  }
+ 
+  await PromoteRequest.findByIdAndDelete(requestId);
+ 
+  return promoteRequest;
+};
+
 export const listingPromoteRequestService = {
   createPromoteRequestInDB,
   getAllListingPromoteRequest,
   getMyListingsPromoteRequestFromDB,
-  manageListingPromoteRequestInDB
+  manageListingPromoteRequestInDB,
+  getMyPromoteRequestsFromDB,
+  cancelPromoteRequestInDB
 };
