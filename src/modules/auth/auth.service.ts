@@ -10,6 +10,7 @@ import { comparePassword, hashPassword } from "../../utility/passwordUtil";
 import { IUser, UserRole } from "../users/user.interface";
 import { createToken, verifyToken } from "./auth.utils";
 import sendMail from "../../utility/SendMail";
+import { sendCalendlyMeetingMail } from "../../utility/sendCalendlyMeeting";
 
 
 

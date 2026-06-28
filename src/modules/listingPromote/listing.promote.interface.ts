@@ -1,6 +1,6 @@
 import { Schema, model, Types, Document } from "mongoose";
 
-export type PromoteReqStatus = "pending" | "approved" | "rejected";
+export type PromoteReqStatus = "pending" | "approved" | "rejected" | "cancelled";
 
 export interface IPromoteRequest extends Document {
   listing_id: Types.ObjectId;
