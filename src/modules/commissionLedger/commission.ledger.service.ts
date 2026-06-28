@@ -6,6 +6,7 @@ import {
   calculateCommissionAmount,
   calculatePlatformFeeAmount,
 } from './commission.ledger.utils';
+import { PromoteRequest } from '../listingPromote/listings.promote.request.model.schema';
 
 type AuthUser = {
   id: string;
@@ -16,7 +17,6 @@ type AuthUser = {
 type CreatePendingCommissionPayload = {
   listing_id: string;
   promotion_request_id: string;
-  promoter_id: string;
   approved_by: string;
 };
 
@@ -110,9 +110,15 @@ const populateCommissionQuery = () => {
 export const createPendingCommissionFromPromotionApproval = async ({
   listing_id,
   promotion_request_id,
-  promoter_id,
   approved_by,
 }: CreatePendingCommissionPayload) => {
+  
+  // ✅ requester_id is the actual promoter who submitted the request
+  const promoteRequest = await PromoteRequest.findById(promotion_request_id).lean();
+  if (!promoteRequest) throw new Error('Promote request not found');
+
+  const promoter_id = promoteRequest.requester_id.toString(); // ✅ correct field name
+
   const listing = await Listing.findById(listing_id).lean();
   const safeListing = ensureValueExists(listing, 'Listing not found', 404);
 
