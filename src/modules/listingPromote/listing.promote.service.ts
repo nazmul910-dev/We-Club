@@ -215,7 +215,7 @@ const manageListingPromoteRequestInDB = async (
     throw new Error("Related listing not found");
   }
 
-  // ✅ Fixed: === (was !==), so isOwner is true when associateId matches
+
   const isOwner = listing.associate_id.toString() === associateId.toString();
 
 
