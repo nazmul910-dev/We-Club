@@ -13,7 +13,7 @@ const createUserInDB = async (req: Request, res: Response, next: NextFunction) =
         });
     } catch (error) {
         next(error);
-    }
+    } 
 };
 
 const loginUserInDB = async (req: Request, res: Response, next: NextFunction) => {

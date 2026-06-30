@@ -6,6 +6,8 @@ import { listingsRoutes } from '../modules/listings/listings.route';
 import { listingPromoteRequestRoutes } from '../modules/listingPromote/listing.promote.route';
 import { commissionLedgerRoutes } from '../modules/commissionLedger/commission.ledger.route';
 import { adminRoutes } from '../modules/admin/admin.route';
+import { listingAssetsRoutes } from '../modules/listingAssets/listing.assets.route';
+import { paymentRoutes } from '../modules/payment/payment.route';
 // import { userRoutes } from '../modules/user/user.route';
 // import { adminRoutes } from '../modules/admin/admin.route';
 // import { courseRoutes } from '../modules/course/course.route';
@@ -42,6 +44,14 @@ const moduleRoutes: TModuleRoute[] = [
   {
     path: "/commission",
     route: commissionLedgerRoutes
+  },
+  {
+    path:"/listing-assets",
+    route: listingAssetsRoutes
+  },
+  {
+    path:"/payments",
+    route: paymentRoutes
   }
 
 ];
