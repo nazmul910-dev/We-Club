@@ -17,3 +17,13 @@ export const upload = multer({
     cb(null, true);
   },
 });
+
+/**
+ * For createListing: expects a single "cover_image" file and up to 10 "images" files
+ * in the same multipart/form-data submission.
+ */
+export const uploadListingImages = upload.fields([
+  { name: "cover_image", maxCount: 1 },
+  { name: "images", maxCount: 10 },
+
+]);
