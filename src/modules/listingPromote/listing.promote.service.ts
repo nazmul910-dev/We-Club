@@ -275,9 +275,9 @@ const cancelPromoteRequestInDB = async (
     throw new Error("Only pending requests can be cancelled");
   }
  
-  await PromoteRequest.findByIdAndDelete(requestId);
+  promoteRequest.status = "cancelled"
  
-  return promoteRequest;
+  return await promoteRequest.save();
 };
 
 export const listingPromoteRequestService = {

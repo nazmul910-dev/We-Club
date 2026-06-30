@@ -15,6 +15,8 @@ import mongoose from "mongoose";
  const createListingInDB = async (
   payload: Partial<IListing>
 ): Promise<IListing> => {
+
+    console.log("payload ", payload)
   const listing = new Listing(payload);
   return await listing.save();
 };
