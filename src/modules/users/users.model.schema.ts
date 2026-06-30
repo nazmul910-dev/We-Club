@@ -1,13 +1,13 @@
-import {Schema, model} from 'mongoose';
+import { Schema, model } from 'mongoose';
 
-import { ACCOUNT_STATUSES, APPROVAL_STATUSES, IUser, LICENSE_VERIFICATION_STATUSES, PAYMENT_STATUSES, USER_ROLES } from './user.interface';
+import { ACCOUNT_STATUSES, APPROVAL_STATUSES, IUser, SUBSCRIPTION_STATUSES, LICENSE_VERIFICATION_STATUSES, PAYMENT_STATUSES, USER_ROLES } from './user.interface';
 
 const userSchema = new Schema<IUser>(
   {
     fullName: {
       type: String,
       required: true,
-      trim: true, 
+      trim: true,
       maxlength: 100,
     },
 
@@ -65,7 +65,7 @@ const userSchema = new Schema<IUser>(
 
     profileImage: {
       type: String,
-      trim:true
+      trim: true
     },
 
     socialLinks: {
@@ -73,7 +73,7 @@ const userSchema = new Schema<IUser>(
         type: String,
         trim: true,
       },
-      facebook:{
+      facebook: {
         type: String,
         trim: true,
       },
@@ -94,12 +94,6 @@ const userSchema = new Schema<IUser>(
       },
     ],
 
-    paymentStatus: {
-      type: String,
-      enum: PAYMENT_STATUSES,
-      default: 'unpaid',
-    },
-
     approvalStatus: {
       type: String,
       enum: APPROVAL_STATUSES,
@@ -118,6 +112,33 @@ const userSchema = new Schema<IUser>(
       default: 'pending',
     },
 
+    paymentStatus: {
+      type: String,
+      enum: PAYMENT_STATUSES,
+      default: 'unpaid',
+    },
+
+    subscriptionStatus: {
+      type: String,
+      enum: SUBSCRIPTION_STATUSES,
+      default: 'none',
+    },
+
+    stripeCustomerId: {
+      type: String,
+      trim: true,
+    },
+
+    stripeSubscriptionId: {
+      type: String,
+      trim: true,
+    },
+
+    stripeCheckoutSessionId: {
+      type: String,
+      trim: true,
+    },
+
     subscriptionStartAt: {
       type: Date,
     },
@@ -125,6 +146,7 @@ const userSchema = new Schema<IUser>(
     subscriptionExpiresAt: {
       type: Date,
     },
+
 
     approvedBy: {
       type: Schema.Types.ObjectId,
@@ -138,7 +160,7 @@ const userSchema = new Schema<IUser>(
     rejectedReason: {
       type: String,
       trim: true,
-    }, 
+    },
 
     lifetimeCommissionEarned: {
       type: Number,

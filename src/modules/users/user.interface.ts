@@ -13,10 +13,11 @@ export const USER_ROLES = [
 
 
 export const PAYMENT_STATUSES = [
-    'unpaid', 
+    'unpaid',
     'paid',
     'failed',
     'refunded',
+    'expired',
 ] as const;
 
 
@@ -41,19 +42,29 @@ export const LICENSE_VERIFICATION_STATUSES = [
     'rejected',
 ] as const;
 
+export const SUBSCRIPTION_STATUSES = [
+    'none',
+    'incomplete',
+    'active',
+    'past_due',
+    'canceled',
+    'expired',
+] as const;
+
 
 export type UserRole = (typeof USER_ROLES)[number];
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
 export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 export type LicenseVerificationStatus = (typeof LICENSE_VERIFICATION_STATUSES)[number];
-
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 
 export interface IUserSocialLinks {
-    linkedin?: string;
-    facebook?: string;
-    twitter?: string;
-    website?: string;
+    linkedin?: string | undefined;
+    facebook?: string | undefined;
+    twitter?: string | undefined;
+    instagram?: string | undefined;
+    website?: string | undefined;
 }
 
 export interface IUser {
@@ -63,32 +74,37 @@ export interface IUser {
 
     role: UserRole;
 
-    licenseNumber?: string;
-    brokerage?: string;
-    phone?: string;
-    city?: string;
-    country?: string;
-    bio?: string;
-    profileImage?: string;
+    licenseNumber?: string | undefined;
+    brokerage?: string | undefined;
+    phone?: string | undefined;
+    city?: string | undefined;
+    country?: string | undefined;
+    bio?: string | undefined;
+    profileImage?: string | undefined;
 
-    socialLinks?: IUserSocialLinks;
-    marketingChannels?: string[];
+    socialLinks?: IUserSocialLinks | undefined;
+    marketingChannels?: string[] | undefined;
 
     paymentStatus: PaymentStatus;
     approvalStatus: ApprovalStatus;
     accountStatus: AccountStatus;
     licenseVerificationStatus: LicenseVerificationStatus;
 
-    subscriptionStartAt?: Date; 
-    subscriptionExpiresAt?: Date;
+    stripeCustomerId?: string | undefined;
+    stripeSubscriptionId?: string | undefined;
+    stripeCheckoutSessionId?: string | undefined;
 
-    approvedBy?: Types.ObjectId;
-    approvedAt?: Date;
-    rejectedReason?: string;
+    subscriptionStatus?: SubscriptionStatus | undefined;
+    subscriptionStartAt?: Date | undefined;
+    subscriptionExpiresAt?: Date | undefined;
 
-    lifetimeCommissionEarned?: number;
-    discretionScore?: number;
+    approvedBy?: Types.ObjectId | undefined;
+    approvedAt?: Date | undefined;
+    rejectedReason?: string | undefined;
 
-    createdAt?: Date;
-    updatedAt?: Date;
+    lifetimeCommissionEarned?: number | undefined;
+    discretionScore?: number | undefined;
+
+    createdAt?: Date | undefined;
+    updatedAt?: Date | undefined;
 }
