@@ -128,8 +128,6 @@ const updateListing = async (req: Request, res: Response, next: NextFunction) =>
     const { id } = req.params;
     const associateId = req.user?.id;
 
-
-
     // req.files comes from the uploadListingImages multer middleware:
     // upload.fields([{ name: "cover_image" }, { name: "images" }])
     const files = req.files as {
@@ -137,17 +135,13 @@ const updateListing = async (req: Request, res: Response, next: NextFunction) =>
       images?: Express.Multer.File[];
     };
 
-    console.log(files)
     let cover_image: string | undefined;
     let images: string[] | undefined;
-
-    console.log("assets from the listings ", cover_image, images)
 
     if (files?.cover_image?.[0]) {
       cover_image = await uploadImageToCloudinary(
         files.cover_image[0],
-        "listings/cover",
-        
+        "listings/cover"
       );
     }
 
@@ -159,13 +153,33 @@ const updateListing = async (req: Request, res: Response, next: NextFunction) =>
       );
     }
 
+    // multipart/form-data sends every field as a plain string — nested object
+    // fields (location, price, referral_commission) arrive as JSON strings and
+    // must be parsed before they can be saved into the schema's nested fields.
+    const jsonFields = ["location", "price", "referral_commission"];
+    const parsedBody: Record<string, unknown> = { ...req.body };
+
+    for (const field of jsonFields) {
+      if (typeof parsedBody[field] === "string") {
+        try {
+          parsedBody[field] = JSON.parse(parsedBody[field] as string);
+        } catch {
+          return res.status(400).json({
+            success: false,
+            message: `Invalid JSON format for field "${field}"`,
+          });
+        }
+      }
+    }
+
     const updatePayload = {
-      ...req.body,
+      ...parsedBody,
       ...(cover_image && { cover_image }),
       ...(images && { images }),
     };
 
-    console.log("updated payload ...",updatePayload)
+
+    console.log(updatePayload)
 
     const results = await listingsService.updateListingInDB(
       id as string,
