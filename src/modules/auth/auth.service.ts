@@ -11,52 +11,53 @@ import { IUser, UserRole } from "../users/user.interface";
 import { createToken, verifyToken } from "./auth.utils";
 import sendMail from "../../utility/SendMail";
 import { sendCalendlyMeetingMail } from "../../utility/sendCalendlyMeeting";
+import { paymentService } from "../payment/payment.service";
+import { isPaidRole } from "../payment/payment.pricing";
 
 
+// export const createUser = async (payload: unknown) =>{
+//   const {body} = registerValidation.parse({body:payload});
 
-export const createUser = async (payload: unknown) =>{
-  const {body} = registerValidation.parse({body:payload});
-
-  const existingUser = await User.findOne({email:body.email});
+//   const existingUser = await User.findOne({email:body.email});
   
-  if(existingUser) throw new ExistingUserError("User already exists");
+//   if(existingUser) throw new ExistingUserError("User already exists");
 
-  const hashedPassword = await hashPassword(body.password);
+//   const hashedPassword = await hashPassword(body.password);
 
-  // const validatedBody = removeUndefined(body);
+//   // const validatedBody = removeUndefined(body);
 
-  const user = await User.create({
+//   const user = await User.create({
 
-    fullName: body.fullName,
-    email: body.email,
-    role: body.role,
-    password: hashedPassword,
-    paymentStatus: "unpaid",
-    approvalStatus: "pending",
-    accountStatus:"pending_approval",
-    licenseVerificationStatus:"pending",
-  });
+//     fullName: body.fullName,
+//     email: body.email,
+//     role: body.role,
+//     password: hashedPassword,
+//     paymentStatus: "unpaid",
+//     approvalStatus: "pending",
+//     accountStatus:"pending_approval",
+//     licenseVerificationStatus:"pending",
+//   });
 
-  try {
-     await sendCalendlyMeetingMail({
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-    });
-  } catch (error) {
-    console.error(
-      'Calendly meeting email failed:',
-      error instanceof Error ? error.message : error
-    );
-  }
+//   try {
+//      await sendCalendlyMeetingMail({
+//       fullName: user.fullName,
+//       email: user.email,
+//       role: user.role,
+//     });
+//   } catch (error) {
+//     console.error(
+//       'Calendly meeting email failed:',
+//       error instanceof Error ? error.message : error
+//     );
+//   }
 
-  const userObject = user.toObject();
+//   const userObject = user.toObject();
 
-  // delete userObject.password;
+//   // delete userObject.password;
 
-  return userObject;
+//   return userObject;
 
-} 
+// } 
 
 
 // export const loginUser = async (payload: unknown) => {
@@ -130,6 +131,100 @@ export const createUser = async (payload: unknown) =>{
 //     accessToken, refreshToken, user
 //   };
 // };
+
+export const createUser = async (payload: unknown) => {
+  const { body } = registerValidation.parse({ body: payload });
+
+  const existingUser = await User.findOne({ email: body.email });
+
+  if (existingUser) {
+    throw new ExistingUserError('User already exists');
+  }
+
+  const hashedPassword = await hashPassword(body.password);
+
+  const requiresPayment = isPaidRole(body.role);
+
+  const userPayload: Record<string, unknown> = {
+    fullName: body.fullName,
+    email: body.email,
+    role: body.role,
+    password: hashedPassword,
+
+    paymentStatus: requiresPayment ? 'unpaid' : 'paid',
+    subscriptionStatus: requiresPayment ? 'none' : 'active',
+
+    approvalStatus: 'pending',
+    accountStatus: requiresPayment ? 'pending_payment' : 'pending_approval',
+    licenseVerificationStatus: 'pending',
+  };
+
+  if (body.licenseNumber !== undefined) {
+    userPayload.licenseNumber = body.licenseNumber;
+  }
+
+  if (body.brokerage !== undefined) {
+    userPayload.brokerage = body.brokerage;
+  }
+
+  if (body.phone !== undefined) {
+    userPayload.phone = body.phone;
+  }
+
+  if (body.city !== undefined) {
+    userPayload.city = body.city;
+  }
+
+  if (body.country !== undefined) {
+    userPayload.country = body.country;
+  }
+
+  if (body.bio !== undefined) {
+    userPayload.bio = body.bio;
+  }
+
+  if (body.marketingChannels !== undefined) {
+    userPayload.marketingChannels = body.marketingChannels;
+  }
+
+  if (body.socialLinks !== undefined) {
+    userPayload.socialLinks = body.socialLinks;
+  }
+
+  const user = await User.create(
+    userPayload as Parameters<typeof User.create>[0]
+  );
+
+  const userObject = user.toObject();
+
+  const { password: _password, ...safeUserObject } = userObject;
+
+  if (!requiresPayment) {
+    return {
+      user: safeUserObject,
+      checkoutUrl: null,
+      sessionId: null,
+      pricing: null,
+      message: 'User created successfully. Waiting for admin approval.',
+    };
+  }
+
+  const checkout = await paymentService.createCheckoutSession({
+    userId: String(user._id),
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+    purpose: 'registration',
+  });
+
+  return {
+    user: safeUserObject,
+    checkoutUrl: checkout.checkoutUrl,
+    sessionId: checkout.sessionId,
+    pricing: checkout.pricing,
+    message: 'User created. Please complete payment to continue registration.',
+  };
+};
 
 export const loginUser = async (payload: unknown) => {
   const { body } = loginValidation.parse({ body: payload });
@@ -217,17 +312,20 @@ export const loginUser = async (payload: unknown) => {
     config.JWT_REFRESH_SECRET as string,
     7 * 24 * 60 * 60
   );
-
+ 
   const userObject = user.toObject();
 
   // delete userObject.password;
+  const { password: _password, ...safeUserObject } = userObject;
 
   return {
     accessToken,
     refreshToken,
-    user: userObject,
+    user: safeUserObject,
   };
 };
+
+
 export const changePassword = async(userData: { email: string; role: UserRole },payload:{oldPassword:string,newPassword:string}) =>{
 
  const user = await User.findOne({ email: userData.email }).select("+password");
