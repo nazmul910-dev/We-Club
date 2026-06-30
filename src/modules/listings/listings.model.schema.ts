@@ -1,6 +1,6 @@
 import { Schema, model, Types, Document } from "mongoose";
 import { IListing, ILocation, IPrice, IReferralCommission } from "./listings.interface";
-import { boolean } from "zod";
+
 
 export type ListingStatus = "active" | "pending" | "sold" | "draft";
 

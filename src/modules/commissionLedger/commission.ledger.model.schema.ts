@@ -233,6 +233,7 @@ CommissionLedgerSchema.index(
   }
 );
 
+
 export const CommissionLedger = model<ICommissionLedger>(
   'CommissionLedger',
   CommissionLedgerSchema
