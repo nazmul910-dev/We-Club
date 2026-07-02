@@ -8,6 +8,7 @@ const port  = process.env.PORT || 3000;
 const main = async () => {
     try {
         await mongoose.connect(config.MONGO_URI as string)
+        
         app.listen(port, () => {
             console.log(`Server is running on port http://localhost:${port}`);
         });

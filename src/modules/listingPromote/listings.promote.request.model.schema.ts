@@ -10,11 +10,17 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
       ref: "Listing",
       required: true,
     },
-    requester_id: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+   requester: {
+  user_id: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+  },
+},
     status: {
       type: String,
       enum: ["pending", "approved", "rejected", "cancelled"],
@@ -24,10 +30,17 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
       type : Boolean,
       default : false
     },
+    selected_tier: {
+      type: String,
+      enum: ["tier_1", "tier_2", "tier_3"],
+      default: null,  // null যতক্ষণ approve না হয়
+  },
     deleted_at : Date,
     requested_at: { type: Date, default: Date.now },
     resolved_at: { type: Date },
+    
   },
+
   {
     timestamps: false, // we manage requested_at / resolved_at manually
   }
@@ -41,15 +54,16 @@ PromoteRequestSchema.pre(/^find/, function (this: any) {
   }
 });
 
-// Prevent the same user from spamming duplicate pending requests on the same listing
 PromoteRequestSchema.index(
-  { listing_id: 1, requester_id: 1, status: 1 },
+  { listing_id: 1, "requester.user_id": 1, status: 1 },
   { unique: true, partialFilterExpression: { status: "pending" } }
 );
+PromoteRequestSchema.index({ listing_id: 1, status: 1 });
+PromoteRequestSchema.index({ "requester.user_id": 1 });
 
 // Common query patterns: "all requests for a listing", "all requests by a user"
 PromoteRequestSchema.index({ listing_id: 1, status: 1 });
-PromoteRequestSchema.index({ requester_id: 1 });
+PromoteRequestSchema.index({ "requester.user_id": 1 });
 
 /**
  * Keep Listing.promoters in sync whenever a request resolves.
@@ -72,15 +86,21 @@ PromoteRequestSchema.pre("save", function (this: IPromoteRequest) {
 PromoteRequestSchema.post("save", async function (doc) {
   if (doc.status === "approved") {
     await Listing.findByIdAndUpdate(doc.listing_id, {
-      $addToSet: { promoters: doc.requester_id },
+      $addToSet: {
+        promoters: {
+          user_id: doc.requester.user_id,
+          tier: doc.selected_tier,
+        },
+      },
     });
   } else if (doc.status === "rejected") {
     await Listing.findByIdAndUpdate(doc.listing_id, {
-      $pull: { promoters: doc.requester_id },
+      $pull: {
+        promoters: { user_id: doc.requester.user_id },
+      },
     });
   }
 });
-
 export const PromoteRequest = model<IPromoteRequest>(
   "PromoteRequest",
   PromoteRequestSchema

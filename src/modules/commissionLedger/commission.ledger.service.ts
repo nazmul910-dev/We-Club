@@ -7,6 +7,8 @@ import {
   calculatePlatformFeeAmount,
 } from './commission.ledger.utils';
 import { PromoteRequest } from '../listingPromote/listings.promote.request.model.schema';
+import { IPromoteRequest } from '../listingPromote/listing.promote.interface';
+import { IListing } from '../listings/listings.interface';
 
 type AuthUser = {
   id: string;
@@ -18,6 +20,8 @@ type CreatePendingCommissionPayload = {
   listing_id: string;
   promotion_request_id: string;
   approved_by: string;
+  promoteRequest: IPromoteRequest; // ← pass it in
+  listing: IListing;               // ← pass it in
 };
 
 type CreateManualCommissionPayload = {
@@ -107,28 +111,25 @@ const populateCommissionQuery = () => {
   ];
 };
 
+
 export const createPendingCommissionFromPromotionApproval = async ({
   listing_id,
   promotion_request_id,
   approved_by,
+  promoteRequest,
+  listing,
 }: CreatePendingCommissionPayload) => {
-  
-  // ✅ requester_id is the actual promoter who submitted the request
-  const promoteRequest = await PromoteRequest.findById(promotion_request_id).lean();
-  if (!promoteRequest) throw new Error('Promote request not found');
-
-  const promoter_id = promoteRequest.requester_id.toString(); // ✅ correct field name
-
-  const listing = await Listing.findById(listing_id).lean();
-  const safeListing = ensureValueExists(listing, 'Listing not found', 404);
-
-  const listingPriceAmount = safeListing.price.amount;
-  const commissionRatePercent = safeListing.referral_commission.offered_amount;
+ 
+  // promoter_id comes from the passed-in promoteRequest — no extra DB query needed
+  const promoter_id = promoteRequest.requester.user_id.toString();
+ 
+  const listingPriceAmount = listing.price.amount;
+  const commissionRatePercent = listing.referral_commission.offered_amount;
   const estimatedCommissionAmount = calculateCommissionAmount(
     listingPriceAmount,
     commissionRatePercent
   );
-
+ 
   const commission = await CommissionLedger.findOneAndUpdate(
     {
       promotion_request_id: toObjectId(promotion_request_id),
@@ -138,19 +139,19 @@ export const createPendingCommissionFromPromotionApproval = async ({
       $setOnInsert: {
         listing_id: toObjectId(listing_id),
         promotion_request_id: toObjectId(promotion_request_id),
-        listing_owner_id: safeListing.associate_id,
+        listing_owner_id: listing.associate_id,
         promoter_id: toObjectId(promoter_id),
         created_by: toObjectId(approved_by),
-
+ 
         status: 'pending',
-        currency: safeListing.price.currency,
-
+        currency: listing.price.currency,
+ 
         listing_price_amount: listingPriceAmount,
         commission_rate_percent: commissionRatePercent,
         estimated_commission_amount: estimatedCommissionAmount,
-
+ 
         is_frozen: false,
-
+ 
         status_history: [
           {
             status: 'pending',
@@ -167,7 +168,7 @@ export const createPendingCommissionFromPromotionApproval = async ({
       runValidators: true,
     }
   );
-
+ 
   return ensureCommissionExists(commission);
 };
 
