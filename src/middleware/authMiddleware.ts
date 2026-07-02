@@ -1,22 +1,20 @@
 import type { NextFunction, Request, Response } from "express";
 import  jwt from "jsonwebtoken";
 import config from "../config";
-import { UserRole,USER_ROLES } from "../modules/users/user.interface";
+import { UserRole,AccessTo } from "../modules/users/user.interface";
 import { UnauthorizedError, ForbiddenError } from "../utility/errorResponses";
 
 interface JwtPayloadWithRole extends jwt.JwtPayload {
   id: string;
   email: string;
   role: UserRole;
+  accessTo?: AccessTo;
 }
 
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader;
 
-console.log("authHeader:", authHeader);
-console.log("token:", token);
-console.log("secret:", config.JWT_ACCESS_SECRET);
 
   if (!token) {
     return next(new UnauthorizedError("Authentication token is required"));
@@ -33,6 +31,7 @@ console.log("secret:", config.JWT_ACCESS_SECRET);
       id: decoded.id,
       email: decoded.email,
       role: decoded.role,
+      accessTo: decoded.accessTo,
     };
 
     return next();

@@ -9,6 +9,7 @@ import { adminRoutes } from '../modules/admin/admin.route';
 import { listingAssetsRoutes } from '../modules/listingAssets/listing.assets.route';
 import { paymentRoutes } from '../modules/payment/payment.route';
 import { profileRoutes } from '../modules/profile/profile.route';
+import { discountRoutes } from '../modules/discount/discount.route';
 // import { userRoutes } from '../modules/user/user.route';
 // import { adminRoutes } from '../modules/admin/admin.route';
 // import { courseRoutes } from '../modules/course/course.route';
@@ -57,7 +58,11 @@ const moduleRoutes: TModuleRoute[] = [
   {
     path:'/profile',
     route:profileRoutes
-  }
+  },
+  {
+  path: '/discounts',
+  route: discountRoutes,
+},
 
 ];
 

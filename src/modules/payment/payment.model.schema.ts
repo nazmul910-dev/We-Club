@@ -4,7 +4,7 @@ import {
   PAYMENT_PURPOSES,
   PAYMENT_SESSION_STATUSES,
 } from './payment.interface';
-import { USER_ROLES } from '../users/user.interface';
+import { USER_ROLES,ACCESS_TO_OPTIONS } from '../users/user.interface';
 
 const PaymentSessionSchema = new Schema<IPaymentSession>(
   {
@@ -21,6 +21,11 @@ const PaymentSessionSchema = new Schema<IPaymentSession>(
       required: true,
     },
 
+    accessTo: {
+      type: String,
+      enum: ACCESS_TO_OPTIONS,
+      required: true,
+    },
     purpose: {
       type: String,
       enum: PAYMENT_PURPOSES,
@@ -57,6 +62,26 @@ const PaymentSessionSchema = new Schema<IPaymentSession>(
     },
 
     amountTotal: {
+      type: Number,
+      min: 0,
+    },
+
+    originalAmountTotal: {
+      type: Number,
+      min: 0,
+    },
+
+    discountAmountTotal: {
+      type: Number,
+      min: 0,
+    },
+
+    discountCode: {
+      type: String,
+      trim: true,
+    },
+
+    discountPercent: {
       type: Number,
       min: 0,
     },

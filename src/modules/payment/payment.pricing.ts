@@ -1,5 +1,8 @@
 import config from '../../config';
-import { UserRole } from '../users/user.interface';
+import {
+  AccessTo,
+  UserRole,
+} from '../users/user.interface';
 
 export type BillingInterval = 'month' | 'year';
 
@@ -16,6 +19,7 @@ export type PricingItem = {
 
 export type RolePricingPlan = {
   role: UserRole;
+  accessTo: AccessTo;
   displayName: string;
   requiresPayment: boolean;
   items: PricingItem[];
@@ -24,22 +28,18 @@ export type RolePricingPlan = {
   totalFirstPaymentFormatted: string;
 };
 
-const throwConfigError = (message: string): never => {
-  throw new Error(message);
-};
-
 const parseDollarAmountToCents = (
   value: string | undefined,
   envKey: string
 ): number => {
   if (!value) {
-    throwConfigError(`${envKey} is missing in environment variables`);
+    throw new Error(`${envKey} is missing in environment variables`);
   }
 
   const amount = Number(value);
 
   if (Number.isNaN(amount) || amount <= 0) {
-    throwConfigError(`${envKey} must be a valid positive number`);
+    throw new Error(`${envKey} must be a valid positive number`);
   }
 
   return Math.round(amount * 100);
@@ -87,62 +87,79 @@ export const isPaidRole = (role: UserRole): boolean => {
   ].includes(role);
 };
 
-export const getPricingByRole = (role: UserRole): RolePricingPlan => {
+const getMemberAccessPrice = (accessTo: AccessTo): number => {
+  if (accessTo === 'we_command_center') {
+    return parseDollarAmountToCents(
+      config.STRIPE_PRICE_WE_COMMAND_CENTER_MONTHLY,
+      'STRIPE_PRICE_WE_COMMAND_CENTER_MONTHLY'
+    );
+  }
+
+  if (accessTo === 'invictus') {
+    return parseDollarAmountToCents(
+      config.STRIPE_PRICE_INVICTUS_MONTHLY,
+      'STRIPE_PRICE_INVICTUS_MONTHLY'
+    );
+  }
+
+  return parseDollarAmountToCents(
+    config.STRIPE_PRICE_BOTH_MONTHLY,
+    'STRIPE_PRICE_BOTH_MONTHLY'
+  );
+};
+
+const getAccessDisplayName = (accessTo: AccessTo): string => {
+  if (accessTo === 'we_command_center') {
+    return 'WÉ Command Center';
+  }
+
+  if (accessTo === 'invictus') {
+    return 'INVICTUS Academy';
+  }
+
+  return 'WÉ Command Center + INVICTUS Academy';
+};
+
+export const getPricingByRoleAndAccess = (
+  role: UserRole,
+  accessTo: AccessTo
+): RolePricingPlan => {
   let displayName = '';
   let items: PricingItem[] = [];
 
-  switch (role) {
-    case 'associate':
-      displayName = 'World Elite Associate Membership';
+  const accessName = getAccessDisplayName(accessTo);
+
+  if (['associate', 'partner', 'ambassador'].includes(role)) {
+    displayName = `${role.toUpperCase()} - ${accessName}`;
+
+    items = [
+      createPricingItem({
+        name: displayName,
+        description: `Access to ${accessName}.`,
+        amountCents: getMemberAccessPrice(accessTo),
+        interval: 'month',
+      }),
+    ];
+  }
+
+  if (role === 'ceo') {
+    displayName = 'CEO Club Membership';
+
+    if (accessTo === 'we_command_center') {
       items = [
         createPricingItem({
-          name: 'World Elite Associate Membership',
-          description: 'Access to WÉ Command Center and INVICTUS Academy.',
-          amountCents: parseDollarAmountToCents(
-            config.STRIPE_PRICE_ASSOCIATE_MONTHLY,
-            'STRIPE_PRICE_ASSOCIATE_MONTHLY'
-          ),
+          name: 'WÉ Command Center Access',
+          description: 'Access to WÉ Command Center.',
+          amountCents: getMemberAccessPrice('we_command_center'),
           interval: 'month',
         }),
       ];
-      break;
-
-    case 'partner':
-      displayName = 'World Elite Partner Membership';
-      items = [
-        createPricingItem({
-          name: 'World Elite Partner Membership',
-          description: 'Access to WÉ Command Center and INVICTUS Academy.',
-          amountCents: parseDollarAmountToCents(
-            config.STRIPE_PRICE_PARTNER_MONTHLY,
-            'STRIPE_PRICE_PARTNER_MONTHLY'
-          ),
-          interval: 'month',
-        }),
-      ];
-      break;
-
-    case 'ambassador':
-      displayName = 'World Elite Ambassador Membership';
-      items = [
-        createPricingItem({
-          name: 'World Elite Ambassador Membership',
-          description: 'Access to WÉ Command Center and INVICTUS Academy.',
-          amountCents: parseDollarAmountToCents(
-            config.STRIPE_PRICE_AMBASSADOR_MONTHLY,
-            'STRIPE_PRICE_AMBASSADOR_MONTHLY'
-          ),
-          interval: 'month',
-        }),
-      ];
-      break;
-
-    case 'ceo':
-      displayName = 'CEO Club Membership';
+    } else {
       items = [
         createPricingItem({
           name: 'CEO Club Membership',
-          description: 'Annual CEO Club access.',
+          description:
+            'INVICTUS Academy Accountability, courses, online events and content creation.',
           amountCents: parseDollarAmountToCents(
             config.STRIPE_PRICE_CEO_YEARLY,
             'STRIPE_PRICE_CEO_YEARLY'
@@ -150,10 +167,33 @@ export const getPricingByRole = (role: UserRole): RolePricingPlan => {
           interval: 'year',
         }),
       ];
-      break;
 
-    case 'ceo_partner':
-      displayName = 'CEO Partner Membership';
+      if (accessTo === 'both') {
+        items.push(
+          createPricingItem({
+            name: 'WÉ Command Center Access',
+            description: 'Access to WÉ Command Center.',
+            amountCents: getMemberAccessPrice('we_command_center'),
+            interval: 'month',
+          })
+        );
+      }
+    }
+  }
+
+  if (role === 'ceo_partner') {
+    displayName = 'CEO Partner Membership';
+
+    if (accessTo === 'we_command_center') {
+      items = [
+        createPricingItem({
+          name: 'WÉ Command Center Access',
+          description: 'Access to WÉ Command Center.',
+          amountCents: getMemberAccessPrice('we_command_center'),
+          interval: 'month',
+        }),
+      ];
+    } else {
       items = [
         createPricingItem({
           name: 'CEO Partner Yearly Membership',
@@ -164,22 +204,19 @@ export const getPricingByRole = (role: UserRole): RolePricingPlan => {
           ),
           interval: 'year',
         }),
-        createPricingItem({
-          name: 'CEO Partner Monthly Partner Subscription',
-          description: 'Monthly partner subscription for CEO Partner.',
-          amountCents: parseDollarAmountToCents(
-            config.STRIPE_PRICE_CEO_PARTNER_MONTHLY,
-            'STRIPE_PRICE_CEO_PARTNER_MONTHLY'
-          ),
-          interval: 'month',
-        }),
       ];
-      break;
 
-    default:
-      displayName = role;
-      items = [];
-      break;
+      if (accessTo === 'both') {
+        items.push(
+          createPricingItem({
+            name: 'WÉ Command Center Access',
+            description: 'Access to WÉ Command Center.',
+            amountCents: getMemberAccessPrice('we_command_center'),
+            interval: 'month',
+          })
+        );
+      }
+    }
   }
 
   const totalFirstPaymentCents = items.reduce(
@@ -189,6 +226,7 @@ export const getPricingByRole = (role: UserRole): RolePricingPlan => {
 
   return {
     role,
+    accessTo,
     displayName,
     requiresPayment: items.length > 0,
     items,
@@ -198,13 +236,64 @@ export const getPricingByRole = (role: UserRole): RolePricingPlan => {
   };
 };
 
+export const applyDiscountToPricingPlan = (
+  pricingPlan: RolePricingPlan,
+  discountPercent: number
+): RolePricingPlan => {
+  if (discountPercent <= 0) {
+    return pricingPlan;
+  }
+
+  const discountedItems = pricingPlan.items.map((item) => {
+    const discountedAmountCents = Math.max(
+      50,
+      Math.round(item.amountCents * ((100 - discountPercent) / 100))
+    );
+
+    return {
+      ...item,
+      amountCents: discountedAmountCents,
+      amount: discountedAmountCents / 100,
+      formattedAmount: formatAmount(discountedAmountCents),
+      billingText:
+        item.interval === 'month'
+          ? `${formatAmount(discountedAmountCents)} / month`
+          : `${formatAmount(discountedAmountCents)} / year`,
+    };
+  });
+
+  const totalFirstPaymentCents = discountedItems.reduce(
+    (total, item) => total + item.amountCents,
+    0
+  );
+
+  return {
+    ...pricingPlan,
+    items: discountedItems,
+    totalFirstPaymentCents,
+    totalFirstPayment: totalFirstPaymentCents / 100,
+    totalFirstPaymentFormatted: formatAmount(totalFirstPaymentCents),
+  };
+};
+
 export const getAllPricingPlans = (): RolePricingPlan[] => {
-  return [
+  const roles: UserRole[] = [
     'associate',
     'partner',
     'ambassador',
     'ceo',
     'ceo_partner',
-    'we_club_member',
-  ].map((role) => getPricingByRole(role as UserRole));
+  ];
+
+  const accessList: AccessTo[] = [
+    'we_command_center',
+    'invictus',
+    'both',
+  ];
+
+  return roles.flatMap((role) =>
+    accessList.map((accessTo) =>
+      getPricingByRoleAndAccess(role, accessTo)
+    )
+  );
 };

@@ -1,6 +1,6 @@
 import { Schema, model } from 'mongoose';
 
-import { ACCOUNT_STATUSES, APPROVAL_STATUSES, IUser, SUBSCRIPTION_STATUSES, LICENSE_VERIFICATION_STATUSES, PAYMENT_STATUSES, USER_ROLES } from './user.interface';
+import { ACCOUNT_STATUSES, APPROVAL_STATUSES, IUser, SUBSCRIPTION_STATUSES, LICENSE_VERIFICATION_STATUSES, PAYMENT_STATUSES, USER_ROLES, ACCESS_TO_OPTIONS } from './user.interface';
 
 const userSchema = new Schema<IUser>(
   {
@@ -31,7 +31,11 @@ const userSchema = new Schema<IUser>(
       required: true,
       enum: USER_ROLES,
     },
-
+    accessTo: {
+      type: String,
+      required: true,
+      enum: ACCESS_TO_OPTIONS,
+    },
     licenseNumber: {
       type: String,
       trim: true,
@@ -78,6 +82,10 @@ const userSchema = new Schema<IUser>(
         trim: true,
       },
       twitter: {
+        type: String,
+        trim: true,
+      },
+      instagram: {
         type: String,
         trim: true,
       },
@@ -166,6 +174,9 @@ const userSchema = new Schema<IUser>(
       type: Number,
       default: 0,
       min: 0,
+    },
+    approvalEmailSentAt: {
+      type: Date,
     },
 
     discretionScore: {

@@ -3,17 +3,14 @@ import sendResponse from '../../utility/sendResponse';
 import { UnauthorizedError } from '../../utility/errorResponses';
 import { paymentService } from './payment.service';
 import {
+  createUpgradeCheckoutValidation,
   paymentRolePricingValidation,
   verifyCheckoutSessionValidation,
 } from './payment.validation';
 
-const getAuthUserId = (req: Request): string => {
+const getAuthUserId = (req: Request): any => {
   if (!req.user) {
     throw new UnauthorizedError('Authentication required');
-  }
-
-  if (typeof req.user.id !== 'string') {
-    throw new UnauthorizedError('Invalid authenticated user');
   }
 
   return req.user.id;
@@ -38,7 +35,7 @@ const getAllPricingPlans = async (
   }
 };
 
-const getPricingPlanByRole = async (
+const getPricingPlanByRoleAndAccess = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -48,8 +45,9 @@ const getPricingPlanByRole = async (
       params: req.params,
     });
 
-    const result = paymentService.getPricingPlanByRole(
-      validatedData.params.role
+    const result = paymentService.getPricingPlanByRoleAndAccess(
+      validatedData.params.role,
+      validatedData.params.accessTo
     );
 
     sendResponse(res, {
@@ -71,8 +69,15 @@ const createUpgradeCheckout = async (
   try {
     const userId = getAuthUserId(req);
 
+    const validatedData = createUpgradeCheckoutValidation.parse({
+      body: req.body,
+    });
+
     const result =
-      await paymentService.createUpgradeCheckoutSessionIntoStripe(userId);
+      await paymentService.createUpgradeCheckoutSessionIntoStripe(
+        userId,
+        validatedData.body?.discountCode
+      );
 
     sendResponse(res, {
       statusCode: 200,
@@ -130,7 +135,7 @@ const stripeWebhook = async (
 
 export const paymentController = {
   getAllPricingPlans,
-  getPricingPlanByRole,
+  getPricingPlanByRoleAndAccess,
   createUpgradeCheckout,
   verifyCheckoutSession,
   stripeWebhook,
