@@ -15,7 +15,7 @@ export const registerValidation = z.object({
       'ceo_partner',
       'we_club_member',
     ]),
-
+    accessTo: z.enum(['we_command_center', 'invictus', 'both']),
     licenseNumber: z.string().trim().optional(),
     brokerage: z.string().trim().optional(),
     phone: z.string().trim().optional(),
@@ -32,6 +32,7 @@ export const registerValidation = z.object({
       .optional(),
 
     marketingChannels: z.array(z.string()).optional(),
+    discountCode: z.string().trim().optional(),
   }),
 });
 

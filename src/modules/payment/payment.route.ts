@@ -6,7 +6,7 @@ const router = Router();
 
 router.get('/pricing', paymentController.getAllPricingPlans);
 
-router.get('/pricing/:role', paymentController.getPricingPlanByRole);
+router.get('/pricing/:role/:accessTo', paymentController.getPricingPlanByRoleAndAccess);
 
 router.post(
   '/upgrade',
@@ -19,4 +19,4 @@ router.get(
   paymentController.verifyCheckoutSession
 );
 
-export const paymentRoutes = router;
+export const paymentRoutes = router; 
