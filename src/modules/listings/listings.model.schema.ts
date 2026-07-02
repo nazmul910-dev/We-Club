@@ -55,11 +55,13 @@ const ListingSchema = new Schema<IListing>(
       ref: "User",
       required: true,
     },
-
     promoters: {
-      type: [Schema.Types.ObjectId],
-      ref: "User",
-      default: [],
+    type: [{
+        _id: false,
+        user_id: { type: Schema.Types.ObjectId, ref: "User" },
+        tier: { type: String, enum: ["tier_1", "tier_2", "tier_3"] },
+    }],
+     default: [],
     },
     is_deleted : {
     type : Boolean,

@@ -8,6 +8,9 @@ import { IListing } from "../listings/listings.interface";
 import { NotFoundError, UnauthorizedError } from "../../utility/errorResponses";
 import { createPendingCommissionFromPromotionApproval } from "../commissionLedger/commission.ledger.service";
 import { UserRole } from "../users/user.interface";
+import { User } from "../users/users.model.schema";
+import { sendPromotionApprovalEmail } from "./listing.promotion.approval.email";
+
 
 /**
  * Service layer: owns all DB interaction + business logic for PromoteRequest.
@@ -34,47 +37,43 @@ const isAdminOrManager = (role: UserRole): boolean => {
   return role === 'admin' || role === 'manager';
 };
 
-
-
-
-
 const createPromoteRequestInDB = async (
-    requesterId : string,
+  requesterId: string,
   payload: Partial<IPromoteRequest>
 ): Promise<IPromoteRequest> => {
-  // Narrow + validate required fields up front — this also fixes the TS overload error,
-  // since after these checks TS knows listing_id/requester_id are NOT undefined.
+
   if (!payload.listing_id || !requesterId) {
     throw new Error("listing_id and requester_id are required");
   }
 
-  const listingId = payload.listing_id;
-
-  const listing = await Listing.findById(listingId);
-  if (!listing) {
-    throw new Error("Listing not found");
-  }
+  const listing = await Listing.findById(payload.listing_id);
+  if (!listing) throw new Error("Listing not found");
 
   if (listing.associate_id.toString() === requesterId.toString()) {
     throw new Error("You cannot request to promote your own listing");
   }
 
-  const existingPending = await PromoteRequest.findOne({
-    listing_id: listingId,
-    requester_id: requesterId,
-    status: "pending",
-  });
+  const existingRequest  = await PromoteRequest.findOne({
+  listing_id: payload.listing_id,
+  "requester.user_id": requesterId,  // ← was "requester._id"
+  status: { $in: ["pending", "approved"] },
+});
 
-  if (existingPending) {
-    throw new Error("You already have a pending request for this listing");
+  if (existingRequest) {
+  const statusMessages: Record<string, string> = {
+    pending:  "You already have a pending request for this listing",
+    approved: "You are already an approved promoter for this listing",
+  };
+   throw new Error(
+    statusMessages[existingRequest.status] ??
+    "You have an active request for this listing"
+  );
   }
-   const requestPayload = {
-    requester_id : requesterId, ...payload
-   }
-
-  const promoteRequest = new PromoteRequest(requestPayload );
+  // ← requester আর rebuild করছি না, payload-এ already আছে
+  const promoteRequest = new PromoteRequest(payload);
   return await promoteRequest.save();
 };
+
 
 const getAllListingPromoteRequest = async (
   query: Record<string, unknown>
@@ -88,9 +87,9 @@ const getAllListingPromoteRequest = async (
   };
 
   const promoteRequestQuery = new QueryBuilder<IPromoteRequest>(
-    PromoteRequest.find()
-      .populate("listing_id", "title ref_code cover_image")
-      .populate("requester_id", "name email"),
+  PromoteRequest.find()
+  .populate("listing_id", "title ref_code cover_image"),
+  // no populate on requester — email is already embedded
     queryWithDefaultSort
   )
     .search(["message"])
@@ -128,8 +127,7 @@ const getMyListingsPromoteRequestFromDB = async (
  
   const promoteRequestQuery = new QueryBuilder<IPromoteRequest>(
     PromoteRequest.find({ listing_id: { $in: myListingIds } })
-      .populate("listing_id", "title ref_code cover_image")
-      .populate("requester_id", "name email"),
+  .populate("listing_id", "title ref_code cover_image"),
     queryWithDefaultSort
   )
     .search(["message"])
@@ -157,7 +155,7 @@ const getMyPromoteRequestsFromDB = async (
   };
  
   const promoteRequestQuery = new QueryBuilder<IPromoteRequest>(
-    PromoteRequest.find({ requester_id: requesterId })
+    PromoteRequest.find({ "requester._id": requesterId })
       .populate("listing_id", "title ref_code cover_image price"),
     queryWithDefaultSort
   )
@@ -192,35 +190,25 @@ const deletePromoteRequest = async(id : string, role : string) => {
 }
 
 const manageListingPromoteRequestInDB = async (
-  promoteRequestId: string,  // the :id from params
-  associateId: string,       // the user performing the action
+  promoteRequestId: string,
+  userId: string,
   isAdmin: boolean,
-  approved_by: string,       // role — rename for clarity if needed
-  payload: { status: "approved" | "rejected"; confirmed_commission_pct?: number }
+  approved_by: string,
+  payload: {
+    status: "approved" | "rejected";
+    confirmed_commission_pct?: number;
+    selected_tier?: "tier_1" | "tier_2" | "tier_3";
+  }
 ): Promise<IPromoteRequest> => {
 
-
-  console.log(promoteRequestId)
-
   const promoteRequest = await PromoteRequest.findById(promoteRequestId);
-  if (!promoteRequest) {
-    throw new Error("Promote request not found");
-  }
+  if (!promoteRequest) throw new Error("Promote request not found");
 
-  const listing = await Listing.findById(promoteRequest.listing_id  // prefer body value, fall back to stored one
-  );
-  
+  // Fetch listing in parallel with nothing yet, but as soon as we have listing_id
+  const listing = await Listing.findById(promoteRequest.listing_id);
+  if (!listing) throw new Error("Related listing not found");
 
-  if (!listing) {
-    throw new Error("Related listing not found");
-  }
-
-
-  const isOwner = listing.associate_id.toString() === associateId.toString();
-
-
-  console.log(isAdmin)
-
+  const isOwner = listing.associate_id.toString() === userId.toString();
   if (!isOwner && !isAdmin) {
     throw new UnauthorizedError("You are not authorized to manage this promote request");
   }
@@ -231,30 +219,45 @@ const manageListingPromoteRequestInDB = async (
 
   promoteRequest.status = payload.status;
 
-  console.log(typeof approved_by);
-
-
   if (payload.status === "approved") {
+    if (!payload.selected_tier) {
+      throw new Error("selected_tier is required when approving a promote request");
+    }
 
-   
+    promoteRequest.selected_tier = payload.selected_tier;
     promoteRequest.confirmed_commission_pct =
       payload.confirmed_commission_pct ?? promoteRequest.proposed_commission_pct;
 
-    // ✅ Fixed: use promoteRequest._id as promotion_request_id
-    //           use promoteRequest.promoter_id (who made the request) as promoter_id
-    //           use associateId as approved_by (who approved it)
-    await createPendingCommissionFromPromotionApproval({
-      approved_by: associateId,                              // ✅ who approved
-      listing_id: promoteRequest.listing_id.toString(),      // ✅ the listing
-     promotion_request_id: promoteRequest._id.toString(),   // ✅ used to look up promoter internally
-});
+    // Run commission creation and save in parallel — they don't depend on each other
+    await Promise.all([
+      createPendingCommissionFromPromotionApproval({
+        approved_by: userId,
+        listing_id: promoteRequest.listing_id.toString(),
+        promotion_request_id: promoteRequest._id.toString(),
+        promoteRequest,
+        listing,
+      }),
+      promoteRequest.save(),
+    ]);
 
-     console.log("heree" , promoteRequest.listing_id, promoteRequestId, approved_by, associateId)
+    // Fire and forget — don't await, user shouldn't wait for SMTP
+    sendPromotionApprovalEmail({
+      toEmail: promoteRequest.requester.email,
+      promoterName: promoteRequest.requester.email.split("@")[0] || "Promoter",
+      listingTitle: listing.title,
+      listingId: listing._id.toString(),
+      tier: promoteRequest.selected_tier!,
+      confirmedCommissionPct: promoteRequest.confirmed_commission_pct!,
+    }).catch((err) =>
+      console.error("Promotion approval email failed silently:", err)
+    );
+
+    return promoteRequest;
   }
 
-
-
-  return await promoteRequest.save();
+  // For rejection — just save
+  await promoteRequest.save();
+  return promoteRequest;
 };
 
 const cancelPromoteRequestInDB = async (
@@ -267,9 +270,10 @@ const cancelPromoteRequestInDB = async (
     throw new Error("Promote request not found");
   }
  
-  if (promoteRequest.requester_id.toString() !== requesterId.toString()) {
-    throw new Error("You are not authorized to cancel this request");
-  }
+ if (promoteRequest.requester.user_id.toString() !== requesterId.toString()) {
+  // ← was promoteRequest.requester._id
+  throw new Error("You are not authorized to cancel this request");
+}
  
   if (promoteRequest.status !== "pending") {
     throw new Error("Only pending requests can be cancelled");
