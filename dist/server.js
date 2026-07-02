@@ -9,6 +9,7 @@ import mongoose2 from "mongoose";
 // src/app.ts
 import express from "express";
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
 
 // src/middleware/globalErrorHandler.ts
 var globalErrorHandler = (err, req, res, next) => {
@@ -30,7 +31,7 @@ var routeNotFoundHandler = (req, res, next) => {
 var routeNotFoundHandler_default = routeNotFoundHandler;
 
 // src/routes/index.ts
-import { Router as Router9 } from "express";
+import { Router as Router11 } from "express";
 
 // src/modules/users/user.route.ts
 import { Router } from "express";
@@ -108,6 +109,11 @@ var USER_ROLES = [
   "ambassador",
   "we_club_member"
 ];
+var ACCESS_TO_OPTIONS = [
+  "we_command_center",
+  "invictus",
+  "both"
+];
 var PAYMENT_STATUSES = [
   "unpaid",
   "paid",
@@ -168,6 +174,11 @@ var userSchema = new Schema(
       required: true,
       enum: USER_ROLES
     },
+    accessTo: {
+      type: String,
+      required: true,
+      enum: ACCESS_TO_OPTIONS
+    },
     licenseNumber: {
       type: String,
       trim: true
@@ -207,6 +218,10 @@ var userSchema = new Schema(
         trim: true
       },
       twitter: {
+        type: String,
+        trim: true
+      },
+      instagram: {
         type: String,
         trim: true
       },
@@ -279,6 +294,9 @@ var userSchema = new Schema(
       type: Number,
       default: 0,
       min: 0
+    },
+    approvalEmailSentAt: {
+      type: Date
     },
     discretionScore: {
       type: Number,
@@ -392,12 +410,11 @@ var config_default = {
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:5173",
-  STRIPE_PRICE_ASSOCIATE_MONTHLY: process.env.STRIPE_PRICE_ASSOCIATE_MONTHLY,
-  STRIPE_PRICE_PARTNER_MONTHLY: process.env.STRIPE_PRICE_PARTNER_MONTHLY,
-  STRIPE_PRICE_AMBASSADOR_MONTHLY: process.env.STRIPE_PRICE_AMBASSADOR_MONTHLY,
+  STRIPE_PRICE_WE_COMMAND_CENTER_MONTHLY: process.env.STRIPE_PRICE_WE_COMMAND_CENTER_MONTHLY,
+  STRIPE_PRICE_INVICTUS_MONTHLY: process.env.STRIPE_PRICE_INVICTUS_MONTHLY,
+  STRIPE_PRICE_BOTH_MONTHLY: process.env.STRIPE_PRICE_BOTH_MONTHLY,
   STRIPE_PRICE_CEO_YEARLY: process.env.STRIPE_PRICE_CEO_YEARLY,
-  STRIPE_PRICE_CEO_PARTNER_YEARLY: process.env.STRIPE_PRICE_CEO_PARTNER_YEARLY,
-  STRIPE_PRICE_CEO_PARTNER_MONTHLY: process.env.STRIPE_PRICE_CEO_PARTNER_MONTHLY
+  STRIPE_PRICE_CEO_PARTNER_YEARLY: process.env.STRIPE_PRICE_CEO_PARTNER_YEARLY
 };
 
 // src/utility/errorResponses.ts
@@ -450,6 +467,7 @@ var registerValidation = z.object({
       "ceo_partner",
       "we_club_member"
     ]),
+    accessTo: z.enum(["we_command_center", "invictus", "both"]),
     licenseNumber: z.string().trim().optional(),
     brokerage: z.string().trim().optional(),
     phone: z.string().trim().optional(),
@@ -461,7 +479,8 @@ var registerValidation = z.object({
       instagram: z.string().url().optional(),
       website: z.string().url().optional()
     }).optional(),
-    marketingChannels: z.array(z.string()).optional()
+    marketingChannels: z.array(z.string()).optional(),
+    discountCode: z.string().trim().optional()
   })
 });
 var loginValidation = z.object({
@@ -726,6 +745,11 @@ var PaymentSessionSchema = new Schema2(
       enum: USER_ROLES,
       required: true
     },
+    accessTo: {
+      type: String,
+      enum: ACCESS_TO_OPTIONS,
+      required: true
+    },
     purpose: {
       type: String,
       enum: PAYMENT_PURPOSES,
@@ -759,6 +783,22 @@ var PaymentSessionSchema = new Schema2(
       type: Number,
       min: 0
     },
+    originalAmountTotal: {
+      type: Number,
+      min: 0
+    },
+    discountAmountTotal: {
+      type: Number,
+      min: 0
+    },
+    discountCode: {
+      type: String,
+      trim: true
+    },
+    discountPercent: {
+      type: Number,
+      min: 0
+    },
     currency: {
       type: String,
       trim: true
@@ -773,17 +813,375 @@ var PaymentSession = model2(
   PaymentSessionSchema
 );
 
-// src/modules/payment/payment.pricing.ts
-var throwConfigError = (message) => {
-  throw new Error(message);
+// src/modules/discount/discount.service.ts
+import { Types } from "mongoose";
+
+// src/utility/sendCustomMail.ts
+import nodemailer3 from "nodemailer";
+var sendCustomMail = async ({
+  to,
+  subject,
+  html,
+  text
+}) => {
+  const transporter = nodemailer3.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: config_default.SMTP_AUTH_USER,
+      pass: config_default.SMTP_AUTH_PASS
+    }
+  });
+  await transporter.sendMail({
+    from: `${config_default.MAIL_FROM_NAME} <${config_default.SMTP_AUTH_USER}>`,
+    to,
+    subject,
+    text: text || "",
+    html
+  });
 };
+var sendCustomMail_default = sendCustomMail;
+
+// src/utility/sendDiscountCodeMail.ts
+var sendDiscountCodeMail = async ({
+  email,
+  code,
+  discountPercent,
+  expiresAt
+}) => {
+  const expiryText = expiresAt ? `This code will expire on ${expiresAt.toDateString()}.` : "This code is valid while the offer is active.";
+  await sendCustomMail_default({
+    to: email,
+    subject: "Your World Elite Discount Code",
+    text: `Your World Elite discount code is ${code}. Discount: ${discountPercent}%. ${expiryText}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; background:#f6f7fb; padding:30px;">
+        <div style="max-width:600px; margin:0 auto; background:#ffffff; padding:30px; border-radius:12px;">
+          <h2 style="margin:0 0 15px; color:#111827;">Your World Elite Discount Code</h2>
+
+          <p style="font-size:15px; color:#374151;">
+            Use this discount code during registration or subscription upgrade.
+          </p>
+
+          <div style="margin:25px 0; padding:18px; background:#111827; color:#ffffff; text-align:center; border-radius:10px;">
+            <p style="margin:0 0 8px; font-size:13px;">Discount Code</p>
+            <h1 style="margin:0; letter-spacing:2px;">${code}</h1>
+          </div>
+
+          <p style="font-size:16px; color:#111827;">
+            Discount: <strong>${discountPercent}%</strong>
+          </p>
+
+          <p style="font-size:14px; color:#6b7280;">
+            ${expiryText}
+          </p>
+
+          <p style="font-size:14px; color:#6b7280; margin-top:25px;">
+            Thank you,<br />
+            World Elite Team
+          </p>
+        </div>
+      </div>
+    `
+  });
+};
+
+// src/modules/discount/discount.model.schema.ts
+import { Schema as Schema3, model as model3 } from "mongoose";
+var DiscountCodeSchema = new Schema3(
+  {
+    code: {
+      type: String,
+      required: true,
+      uppercase: true,
+      trim: true,
+      unique: true,
+      index: true
+    },
+    discountPercent: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 100
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
+    allowedRoles: [
+      {
+        type: String,
+        enum: USER_ROLES
+      }
+    ],
+    allowedAccessTo: [
+      {
+        type: String,
+        enum: ACCESS_TO_OPTIONS
+      }
+    ],
+    maxRedemptionsPerRole: {
+      type: Number,
+      default: 20,
+      min: 1
+    },
+    expiresAt: {
+      type: Date
+    },
+    createdBy: {
+      type: Schema3.Types.ObjectId,
+      ref: "User"
+    },
+    note: {
+      type: String,
+      trim: true
+    },
+    usedCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    }
+  },
+  {
+    timestamps: true
+  }
+);
+var DiscountRedemptionSchema = new Schema3(
+  {
+    discountCode: {
+      type: Schema3.Types.ObjectId,
+      ref: "DiscountCode",
+      required: true,
+      index: true
+    },
+    code: {
+      type: String,
+      required: true,
+      uppercase: true,
+      trim: true,
+      index: true
+    },
+    user: {
+      type: Schema3.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    role: {
+      type: String,
+      enum: USER_ROLES,
+      required: true,
+      index: true
+    },
+    accessTo: {
+      type: String,
+      enum: ACCESS_TO_OPTIONS,
+      required: true
+    },
+    stripeCheckoutSessionId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    redeemedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  {
+    timestamps: false
+  }
+);
+DiscountRedemptionSchema.index(
+  {
+    discountCode: 1,
+    user: 1
+  },
+  {
+    unique: true
+  }
+);
+var DiscountCode = model3(
+  "DiscountCode",
+  DiscountCodeSchema
+);
+var DiscountRedemption = model3(
+  "DiscountRedemption",
+  DiscountRedemptionSchema
+);
+
+// src/modules/discount/discount.service.ts
+var throwError = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var normalizeCode = (code) => {
+  return code.trim().toUpperCase();
+};
+var createDiscountCodeIntoDB = async (payload, adminId) => {
+  const code = normalizeCode(payload.code);
+  const existing = await DiscountCode.findOne({ code });
+  if (existing) {
+    throwError("Discount code already exists", 409);
+  }
+  const createPayload = {
+    code,
+    discountPercent: payload.discountPercent,
+    maxRedemptionsPerRole: payload.maxRedemptionsPerRole ?? 20,
+    isActive: true
+  };
+  if (payload.allowedRoles !== void 0) {
+    createPayload.allowedRoles = payload.allowedRoles;
+  }
+  if (payload.allowedAccessTo !== void 0) {
+    createPayload.allowedAccessTo = payload.allowedAccessTo;
+  }
+  if (payload.expiresAt !== void 0) {
+    createPayload.expiresAt = new Date(payload.expiresAt);
+  }
+  if (payload.note !== void 0) {
+    createPayload.note = payload.note;
+  }
+  if (adminId) {
+    createPayload.createdBy = new Types.ObjectId(adminId);
+  }
+  return DiscountCode.create(createPayload);
+};
+var getAllDiscountCodesFromDB = async () => {
+  return DiscountCode.find().sort({ createdAt: -1 });
+};
+var validateDiscountCodeForCheckout = async ({
+  code,
+  role,
+  accessTo,
+  userId
+}) => {
+  if (!code) {
+    return null;
+  }
+  const normalizedCode = normalizeCode(code);
+  const discount = await DiscountCode.findOne({
+    code: normalizedCode
+  });
+  if (!discount) {
+    throwError("Invalid discount code", 400);
+  }
+  const discountCode = discount;
+  if (!discountCode.isActive) {
+    throwError("Discount code is inactive", 400);
+  }
+  if (discountCode.expiresAt && discountCode.expiresAt < /* @__PURE__ */ new Date()) {
+    throwError("Discount code has expired", 400);
+  }
+  if (discountCode.allowedRoles && discountCode.allowedRoles.length > 0 && !discountCode.allowedRoles.includes(role)) {
+    throwError("This discount code is not valid for this role", 400);
+  }
+  if (discountCode.allowedAccessTo && discountCode.allowedAccessTo.length > 0 && !discountCode.allowedAccessTo.includes(accessTo)) {
+    throwError("This discount code is not valid for this access type", 400);
+  }
+  const usedForRole = await DiscountRedemption.countDocuments({
+    discountCode: discountCode._id,
+    role
+  });
+  if (usedForRole >= discountCode.maxRedemptionsPerRole) {
+    throwError("Discount code redemption limit reached for this role", 400);
+  }
+  if (userId) {
+    const alreadyUsedByUser = await DiscountRedemption.findOne({
+      discountCode: discountCode._id,
+      user: userId
+    });
+    if (alreadyUsedByUser) {
+      throwError("You have already used this discount code", 400);
+    }
+  }
+  return {
+    discountId: discountCode._id,
+    code: discountCode.code,
+    discountPercent: discountCode.discountPercent
+  };
+};
+var redeemDiscountCodeAfterPayment = async ({
+  code,
+  userId,
+  role,
+  accessTo,
+  stripeCheckoutSessionId
+}) => {
+  if (!code) {
+    return null;
+  }
+  const normalizedCode = normalizeCode(code);
+  const discount = await DiscountCode.findOne({
+    code: normalizedCode
+  });
+  if (!discount) {
+    return null;
+  }
+  const existing = await DiscountRedemption.findOne({
+    discountCode: discount._id,
+    user: userId
+  });
+  if (existing) {
+    return existing;
+  }
+  const redemption = await DiscountRedemption.create({
+    discountCode: discount._id,
+    code: discount.code,
+    user: userId,
+    role,
+    accessTo,
+    stripeCheckoutSessionId,
+    redeemedAt: /* @__PURE__ */ new Date()
+  });
+  await DiscountCode.findByIdAndUpdate(discount._id, {
+    $inc: {
+      usedCount: 1
+    }
+  });
+  return redemption;
+};
+var sendDiscountCodeByEmail = async (email, code) => {
+  const discount = await DiscountCode.findOne({
+    code: normalizeCode(code),
+    isActive: true
+  });
+  if (!discount) {
+    throwError("Discount code not found or inactive", 404);
+  }
+  const discountCode = discount;
+  await sendDiscountCodeMail({
+    email,
+    code: discountCode.code,
+    discountPercent: discountCode.discountPercent,
+    expiresAt: discountCode.expiresAt
+  });
+  return {
+    email,
+    code: discountCode.code,
+    discountPercent: discountCode.discountPercent,
+    message: "Discount code email sent successfully"
+  };
+};
+var discountService = {
+  createDiscountCodeIntoDB,
+  getAllDiscountCodesFromDB,
+  validateDiscountCodeForCheckout,
+  redeemDiscountCodeAfterPayment,
+  sendDiscountCodeByEmail
+};
+
+// src/modules/payment/payment.pricing.ts
 var parseDollarAmountToCents = (value, envKey) => {
   if (!value) {
-    throwConfigError(`${envKey} is missing in environment variables`);
+    throw new Error(`${envKey} is missing in environment variables`);
   }
   const amount = Number(value);
   if (Number.isNaN(amount) || amount <= 0) {
-    throwConfigError(`${envKey} must be a valid positive number`);
+    throw new Error(`${envKey} must be a valid positive number`);
   }
   return Math.round(amount * 100);
 };
@@ -817,58 +1215,64 @@ var isPaidRole = (role) => {
     "ceo_partner"
   ].includes(role);
 };
-var getPricingByRole = (role) => {
+var getMemberAccessPrice = (accessTo) => {
+  if (accessTo === "we_command_center") {
+    return parseDollarAmountToCents(
+      config_default.STRIPE_PRICE_WE_COMMAND_CENTER_MONTHLY,
+      "STRIPE_PRICE_WE_COMMAND_CENTER_MONTHLY"
+    );
+  }
+  if (accessTo === "invictus") {
+    return parseDollarAmountToCents(
+      config_default.STRIPE_PRICE_INVICTUS_MONTHLY,
+      "STRIPE_PRICE_INVICTUS_MONTHLY"
+    );
+  }
+  return parseDollarAmountToCents(
+    config_default.STRIPE_PRICE_BOTH_MONTHLY,
+    "STRIPE_PRICE_BOTH_MONTHLY"
+  );
+};
+var getAccessDisplayName = (accessTo) => {
+  if (accessTo === "we_command_center") {
+    return "W\xC9 Command Center";
+  }
+  if (accessTo === "invictus") {
+    return "INVICTUS Academy";
+  }
+  return "W\xC9 Command Center + INVICTUS Academy";
+};
+var getPricingByRoleAndAccess = (role, accessTo) => {
   let displayName = "";
   let items = [];
-  switch (role) {
-    case "associate":
-      displayName = "World Elite Associate Membership";
+  const accessName = getAccessDisplayName(accessTo);
+  if (["associate", "partner", "ambassador"].includes(role)) {
+    displayName = `${role.toUpperCase()} - ${accessName}`;
+    items = [
+      createPricingItem({
+        name: displayName,
+        description: `Access to ${accessName}.`,
+        amountCents: getMemberAccessPrice(accessTo),
+        interval: "month"
+      })
+    ];
+  }
+  if (role === "ceo") {
+    displayName = "CEO Club Membership";
+    if (accessTo === "we_command_center") {
       items = [
         createPricingItem({
-          name: "World Elite Associate Membership",
-          description: "Access to W\xC9 Command Center and INVICTUS Academy.",
-          amountCents: parseDollarAmountToCents(
-            config_default.STRIPE_PRICE_ASSOCIATE_MONTHLY,
-            "STRIPE_PRICE_ASSOCIATE_MONTHLY"
-          ),
+          name: "W\xC9 Command Center Access",
+          description: "Access to W\xC9 Command Center.",
+          amountCents: getMemberAccessPrice("we_command_center"),
           interval: "month"
         })
       ];
-      break;
-    case "partner":
-      displayName = "World Elite Partner Membership";
-      items = [
-        createPricingItem({
-          name: "World Elite Partner Membership",
-          description: "Access to W\xC9 Command Center and INVICTUS Academy.",
-          amountCents: parseDollarAmountToCents(
-            config_default.STRIPE_PRICE_PARTNER_MONTHLY,
-            "STRIPE_PRICE_PARTNER_MONTHLY"
-          ),
-          interval: "month"
-        })
-      ];
-      break;
-    case "ambassador":
-      displayName = "World Elite Ambassador Membership";
-      items = [
-        createPricingItem({
-          name: "World Elite Ambassador Membership",
-          description: "Access to W\xC9 Command Center and INVICTUS Academy.",
-          amountCents: parseDollarAmountToCents(
-            config_default.STRIPE_PRICE_AMBASSADOR_MONTHLY,
-            "STRIPE_PRICE_AMBASSADOR_MONTHLY"
-          ),
-          interval: "month"
-        })
-      ];
-      break;
-    case "ceo":
-      displayName = "CEO Club Membership";
+    } else {
       items = [
         createPricingItem({
           name: "CEO Club Membership",
-          description: "Annual CEO Club access.",
+          description: "INVICTUS Academy Accountability, courses, online events and content creation.",
           amountCents: parseDollarAmountToCents(
             config_default.STRIPE_PRICE_CEO_YEARLY,
             "STRIPE_PRICE_CEO_YEARLY"
@@ -876,9 +1280,30 @@ var getPricingByRole = (role) => {
           interval: "year"
         })
       ];
-      break;
-    case "ceo_partner":
-      displayName = "CEO Partner Membership";
+      if (accessTo === "both") {
+        items.push(
+          createPricingItem({
+            name: "W\xC9 Command Center Access",
+            description: "Access to W\xC9 Command Center.",
+            amountCents: getMemberAccessPrice("we_command_center"),
+            interval: "month"
+          })
+        );
+      }
+    }
+  }
+  if (role === "ceo_partner") {
+    displayName = "CEO Partner Membership";
+    if (accessTo === "we_command_center") {
+      items = [
+        createPricingItem({
+          name: "W\xC9 Command Center Access",
+          description: "Access to W\xC9 Command Center.",
+          amountCents: getMemberAccessPrice("we_command_center"),
+          interval: "month"
+        })
+      ];
+    } else {
       items = [
         createPricingItem({
           name: "CEO Partner Yearly Membership",
@@ -888,22 +1313,19 @@ var getPricingByRole = (role) => {
             "STRIPE_PRICE_CEO_PARTNER_YEARLY"
           ),
           interval: "year"
-        }),
-        createPricingItem({
-          name: "CEO Partner Monthly Partner Subscription",
-          description: "Monthly partner subscription for CEO Partner.",
-          amountCents: parseDollarAmountToCents(
-            config_default.STRIPE_PRICE_CEO_PARTNER_MONTHLY,
-            "STRIPE_PRICE_CEO_PARTNER_MONTHLY"
-          ),
-          interval: "month"
         })
       ];
-      break;
-    default:
-      displayName = role;
-      items = [];
-      break;
+      if (accessTo === "both") {
+        items.push(
+          createPricingItem({
+            name: "W\xC9 Command Center Access",
+            description: "Access to W\xC9 Command Center.",
+            amountCents: getMemberAccessPrice("we_command_center"),
+            interval: "month"
+          })
+        );
+      }
+    }
   }
   const totalFirstPaymentCents = items.reduce(
     (total, item) => total + item.amountCents,
@@ -911,6 +1333,7 @@ var getPricingByRole = (role) => {
   );
   return {
     role,
+    accessTo,
     displayName,
     requiresPayment: items.length > 0,
     items,
@@ -919,53 +1342,112 @@ var getPricingByRole = (role) => {
     totalFirstPaymentFormatted: formatAmount(totalFirstPaymentCents)
   };
 };
+var applyDiscountToPricingPlan = (pricingPlan, discountPercent) => {
+  if (discountPercent <= 0) {
+    return pricingPlan;
+  }
+  const discountedItems = pricingPlan.items.map((item) => {
+    const discountedAmountCents = Math.max(
+      50,
+      Math.round(item.amountCents * ((100 - discountPercent) / 100))
+    );
+    return {
+      ...item,
+      amountCents: discountedAmountCents,
+      amount: discountedAmountCents / 100,
+      formattedAmount: formatAmount(discountedAmountCents),
+      billingText: item.interval === "month" ? `${formatAmount(discountedAmountCents)} / month` : `${formatAmount(discountedAmountCents)} / year`
+    };
+  });
+  const totalFirstPaymentCents = discountedItems.reduce(
+    (total, item) => total + item.amountCents,
+    0
+  );
+  return {
+    ...pricingPlan,
+    items: discountedItems,
+    totalFirstPaymentCents,
+    totalFirstPayment: totalFirstPaymentCents / 100,
+    totalFirstPaymentFormatted: formatAmount(totalFirstPaymentCents)
+  };
+};
 var getAllPricingPlans = () => {
-  return [
+  const roles = [
     "associate",
     "partner",
     "ambassador",
     "ceo",
-    "ceo_partner",
-    "we_club_member"
-  ].map((role) => getPricingByRole(role));
+    "ceo_partner"
+  ];
+  const accessList = [
+    "we_command_center",
+    "invictus",
+    "both"
+  ];
+  return roles.flatMap(
+    (role) => accessList.map(
+      (accessTo) => getPricingByRoleAndAccess(role, accessTo)
+    )
+  );
 };
 
 // src/modules/payment/payment.service.ts
-var throwError = (message, statusCode) => {
+var stripeSecretKey = config_default.STRIPE_SECRET_KEY;
+var stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
+var stripUndefined = (obj) => {
+  const result = {};
+  for (const key in obj) {
+    if (obj[key] !== void 0) {
+      result[key] = obj[key];
+    }
+  }
+  return result;
+};
+var throwError2 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var stripeSecretKey = config_default.STRIPE_SECRET_KEY;
-var stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 var getStripeClient = () => {
   const stripeClient = stripe;
   if (!stripeClient) {
-    throwError("Stripe is not configured. Please set STRIPE_SECRET_KEY.", 500);
+    throwError2("Stripe is not configured. Please set STRIPE_SECRET_KEY.", 500);
   }
   return stripeClient;
 };
-var getPricingPlanByRole = (role) => {
-  return getPricingByRole(role);
+var getPricingPlanByRoleAndAccess = (role, accessTo) => {
+  return getPricingByRoleAndAccess(role, accessTo);
 };
 var createCheckoutSession = async ({
   userId,
   fullName,
   email,
   role,
+  accessTo,
   purpose,
+  discountCode,
   stripeCustomerId
 }) => {
   if (!isPaidRole(role)) {
-    throwError("This role does not require Stripe payment", 400);
+    throwError2("This role does not require Stripe payment", 400);
   }
-  const pricingPlan = getPricingByRole(role);
-  if (!pricingPlan.requiresPayment || pricingPlan.items.length === 0) {
-    throwError("No pricing configured for this role", 500);
+  const originalPricingPlan = getPricingByRoleAndAccess(role, accessTo);
+  if (!originalPricingPlan.requiresPayment || originalPricingPlan.items.length === 0) {
+    throwError2("No pricing configured for this role and access type", 500);
   }
-  const checkoutSessionPayload = {
+  const discount = await discountService.validateDiscountCodeForCheckout({
+    code: discountCode,
+    role,
+    accessTo,
+    userId
+  });
+  const finalPricingPlan = discount ? applyDiscountToPricingPlan(
+    originalPricingPlan,
+    discount.discountPercent
+  ) : originalPricingPlan;
+  const sessionCreateParams = {
     mode: "subscription",
-    line_items: pricingPlan.items.map((item) => ({
+    line_items: finalPricingPlan.items.map((item) => ({
       quantity: 1,
       price_data: {
         currency: item.currency,
@@ -979,49 +1461,64 @@ var createCheckoutSession = async ({
         }
       }
     })),
-    allow_promotion_codes: true,
+    allow_promotion_codes: false,
     success_url: `${config_default.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${config_default.FRONTEND_URL}/payment/cancel`,
     metadata: {
       userId,
       role,
+      accessTo,
       purpose,
       fullName,
       email,
-      totalFirstPaymentCents: String(pricingPlan.totalFirstPaymentCents)
+      originalAmountCents: String(
+        originalPricingPlan.totalFirstPaymentCents
+      ),
+      finalAmountCents: String(
+        finalPricingPlan.totalFirstPaymentCents
+      ),
+      discountCode: discount?.code || "",
+      discountPercent: String(discount?.discountPercent || 0)
     },
     subscription_data: {
       metadata: {
         userId,
         role,
-        purpose
+        accessTo,
+        purpose,
+        discountCode: discount?.code || "",
+        discountPercent: String(discount?.discountPercent || 0)
       }
     }
   };
   if (stripeCustomerId) {
-    checkoutSessionPayload.customer = stripeCustomerId;
+    sessionCreateParams.customer = stripeCustomerId;
   } else {
-    checkoutSessionPayload.customer_email = email;
+    sessionCreateParams.customer_email = email;
   }
   const stripeClient = getStripeClient();
-  const session = await stripeClient.checkout.sessions.create(checkoutSessionPayload);
+  const session = await stripeClient.checkout.sessions.create(sessionCreateParams);
   if (!session.url) {
-    throwError("Failed to create Stripe Checkout session", 500);
+    throwError2("Failed to create Stripe Checkout session", 500);
   }
-  const paymentSessionPayload = {
-    user: userId,
-    role,
-    purpose,
-    status: "pending",
-    stripeCheckoutSessionId: session.id,
-    checkoutUrl: session.url,
-    amountTotal: pricingPlan.totalFirstPaymentCents,
-    currency: "usd"
-  };
-  if (typeof session.customer === "string") {
-    paymentSessionPayload.stripeCustomerId = session.customer;
-  }
-  await PaymentSession.create(paymentSessionPayload);
+  await PaymentSession.create(
+    stripUndefined({
+      user: userId,
+      role,
+      accessTo,
+      purpose,
+      status: "pending",
+      stripeCheckoutSessionId: session.id,
+      stripeCustomerId: typeof session.customer === "string" ? session.customer : void 0,
+      checkoutUrl: session.url ?? void 0,
+      amountTotal: finalPricingPlan.totalFirstPaymentCents,
+      originalAmountTotal: originalPricingPlan.totalFirstPaymentCents,
+      discountAmountTotal: originalPricingPlan.totalFirstPaymentCents - finalPricingPlan.totalFirstPaymentCents,
+      discountCode: discount?.code,
+      discountPercent: discount?.discountPercent,
+      currency: "usd"
+    })
+  );
   await User.findByIdAndUpdate(
     userId,
     {
@@ -1036,24 +1533,27 @@ var createCheckoutSession = async ({
     }
   );
   return {
-    checkoutUrl: session.url,
+    checkoutUrl: session.url ?? null,
     sessionId: session.id,
-    pricing: pricingPlan
+    pricing: finalPricingPlan,
+    originalPricing: originalPricingPlan,
+    discount
   };
 };
-var createUpgradeCheckoutSessionIntoStripe = async (userId) => {
+var createUpgradeCheckoutSessionIntoStripe = async (userId, discountCode) => {
   const user = await User.findById(userId).select("-password");
   if (!user) {
-    throwError("User not found", 404);
+    throwError2("User not found", 404);
   }
-  const currentUser = user;
   return createCheckoutSession({
-    userId: String(currentUser._id),
-    fullName: currentUser.fullName,
-    email: currentUser.email,
-    role: currentUser.role,
+    userId: String(user._id),
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+    accessTo: user.accessTo,
     purpose: "upgrade",
-    stripeCustomerId: currentUser.stripeCustomerId || void 0
+    discountCode,
+    stripeCustomerId: user.stripeCustomerId
   });
 };
 var getSubscriptionPeriodEnd = (subscription) => {
@@ -1066,10 +1566,16 @@ var getSubscriptionPeriodEnd = (subscription) => {
 var activateUserSubscription = async (session) => {
   const userId = session.metadata?.userId;
   const role = session.metadata?.role;
+  const accessTo = session.metadata?.accessTo;
   const purpose = session.metadata?.purpose;
-  if (!userId || !role || !purpose) {
-    throwError("Stripe session metadata is missing", 400);
+  const discountCode = session.metadata?.discountCode || void 0;
+  if (!userId || !role || !accessTo || !purpose) {
+    throwError2("Stripe session metadata is missing", 400);
   }
+  const userIdVal = userId;
+  const roleVal = role;
+  const accessToVal = accessTo;
+  const purposeVal = purpose;
   const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
   let subscriptionExpiresAt;
@@ -1081,6 +1587,7 @@ var activateUserSubscription = async (session) => {
   const userSetPayload = {
     paymentStatus: "paid",
     subscriptionStatus: "active",
+    accessTo: accessToVal,
     stripeCheckoutSessionId: session.id,
     subscriptionStartAt: /* @__PURE__ */ new Date()
   };
@@ -1093,11 +1600,11 @@ var activateUserSubscription = async (session) => {
   if (subscriptionExpiresAt) {
     userSetPayload.subscriptionExpiresAt = subscriptionExpiresAt;
   }
-  if (purpose === "registration") {
+  if (purposeVal === "registration") {
     userSetPayload.accountStatus = "pending_approval";
   }
   const user = await User.findByIdAndUpdate(
-    userId,
+    userIdVal,
     {
       $set: userSetPayload
     },
@@ -1107,12 +1614,16 @@ var activateUserSubscription = async (session) => {
     }
   ).select("-password");
   if (!user) {
-    throwError("User not found while activating subscription", 404);
+    throwError2("User not found while activating subscription", 404);
   }
   const currentUser = user;
   const paymentSetPayload = {
     status: "paid",
-    amountTotal: session.amount_total || Number(session.metadata?.totalFirstPaymentCents) || void 0,
+    amountTotal: session.amount_total || Number(session.metadata?.finalAmountCents) || Number(session.metadata?.totalFirstPaymentCents) || void 0,
+    originalAmountTotal: Number(session.metadata?.originalAmountCents) || void 0,
+    discountAmountTotal: Number(session.metadata?.originalAmountCents || 0) - Number(session.metadata?.finalAmountCents || 0) || void 0,
+    discountCode: discountCode || void 0,
+    discountPercent: Number(session.metadata?.discountPercent) || void 0,
     currency: session.currency || "usd"
   };
   if (customerId) {
@@ -1133,7 +1644,16 @@ var activateUserSubscription = async (session) => {
       runValidators: true
     }
   );
-  if (purpose === "registration") {
+  if (discountCode) {
+    await discountService.redeemDiscountCodeAfterPayment({
+      code: discountCode,
+      userId: userIdVal,
+      role: roleVal,
+      accessTo: accessToVal,
+      stripeCheckoutSessionId: session.id
+    });
+  }
+  if (purposeVal === "registration") {
     try {
       await sendCalendlyMeetingMail({
         fullName: currentUser.fullName,
@@ -1249,12 +1769,12 @@ var handleSubscriptionDeletedOrExpired = async (subscription) => {
 var handleStripeWebhook = async (rawBody, signature) => {
   const stripeSignatureValue = Array.isArray(signature) ? signature[0] : signature;
   if (typeof stripeSignatureValue !== "string" || !stripeSignatureValue.trim()) {
-    throwError("Stripe signature is missing", 400);
+    throwError2("Stripe signature is missing", 400);
   }
   const stripeSignature = stripeSignatureValue;
   const webhookSecret = config_default.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
-    throwError("Stripe webhook secret is missing", 500);
+    throwError2("Stripe webhook secret is missing", 500);
   }
   const stripeClient = getStripeClient();
   const stripeWebhookSecret = webhookSecret;
@@ -1266,10 +1786,10 @@ var handleStripeWebhook = async (rawBody, signature) => {
       stripeWebhookSecret
     );
   } catch {
-    throwError("Invalid Stripe webhook signature", 400);
+    throwError2("Invalid Stripe webhook signature", 400);
   }
   if (!event) {
-    throwError("Unable to process Stripe webhook event", 500);
+    throwError2("Unable to process Stripe webhook event", 500);
   }
   const webhookEvent = event;
   switch (webhookEvent.type) {
@@ -1310,7 +1830,7 @@ var verifyCheckoutSessionFromStripe = async (sessionId) => {
 };
 var paymentService = {
   getAllPricingPlans,
-  getPricingPlanByRole,
+  getPricingPlanByRoleAndAccess,
   createCheckoutSession,
   createUpgradeCheckoutSessionIntoStripe,
   handleStripeWebhook,
@@ -1330,6 +1850,7 @@ var createUser = async (payload) => {
     fullName: body.fullName,
     email: body.email,
     role: body.role,
+    accessTo: body.accessTo,
     password: hashedPassword,
     paymentStatus: requiresPayment ? "unpaid" : "paid",
     subscriptionStatus: requiresPayment ? "none" : "active",
@@ -1375,20 +1896,29 @@ var createUser = async (payload) => {
       message: "User created successfully. Waiting for admin approval."
     };
   }
-  const checkout = await paymentService.createCheckoutSession({
-    userId: String(user._id),
-    fullName: user.fullName,
-    email: user.email,
-    role: user.role,
-    purpose: "registration"
-  });
-  return {
-    user: safeUserObject,
-    checkoutUrl: checkout.checkoutUrl,
-    sessionId: checkout.sessionId,
-    pricing: checkout.pricing,
-    message: "User created. Please complete payment to continue registration."
-  };
+  try {
+    const checkout = await paymentService.createCheckoutSession({
+      userId: String(user._id),
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      accessTo: user.accessTo,
+      purpose: "registration",
+      discountCode: body.discountCode
+    });
+    return {
+      user: safeUserObject,
+      checkoutUrl: checkout.checkoutUrl,
+      sessionId: checkout.sessionId,
+      pricing: checkout.pricing,
+      originalPricing: checkout.originalPricing,
+      discount: checkout.discount,
+      message: "User created. Please complete payment to continue registration."
+    };
+  } catch (error) {
+    await User.findByIdAndDelete(user._id);
+    throw error;
+  }
 };
 var loginUser = async (payload) => {
   const { body } = loginValidation.parse({ body: payload });
@@ -1441,7 +1971,8 @@ var loginUser = async (payload) => {
   const jwtPayload = {
     id: user._id.toString(),
     email: user.email,
-    role: user.role
+    role: user.role,
+    accessTo: user.accessTo
   };
   const accessToken = jwt2.sign(
     jwtPayload,
@@ -1453,7 +1984,8 @@ var loginUser = async (payload) => {
   const refreshToken = createToken(
     {
       userId: user._id.toString(),
-      role: user.role
+      role: user.role,
+      accessTo: user.accessTo
     },
     config_default.JWT_REFRESH_SECRET,
     7 * 24 * 60 * 60
@@ -1691,9 +2223,6 @@ import jwt3 from "jsonwebtoken";
 var verifyToken2 = (req, res, next) => {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader;
-  console.log("authHeader:", authHeader);
-  console.log("token:", token);
-  console.log("secret:", config_default.JWT_ACCESS_SECRET);
   if (!token) {
     return next(new UnauthorizedError("Authentication token is required"));
   }
@@ -1705,7 +2234,8 @@ var verifyToken2 = (req, res, next) => {
     req.user = {
       id: decoded.id,
       email: decoded.email,
-      role: decoded.role
+      role: decoded.role,
+      accessTo: decoded.accessTo
     };
     return next();
   } catch (error) {
@@ -1739,8 +2269,8 @@ var authRoutes = router2;
 import { Router as Router3 } from "express";
 
 // src/modules/listings/listings.model.schema.ts
-import { Schema as Schema3, model as model3 } from "mongoose";
-var LocationSchema = new Schema3(
+import { Schema as Schema4, model as model4 } from "mongoose";
+var LocationSchema = new Schema4(
   {
     city: { type: String, required: true },
     region: { type: String, required: true },
@@ -1748,21 +2278,21 @@ var LocationSchema = new Schema3(
   },
   { _id: false }
 );
-var PriceSchema = new Schema3(
+var PriceSchema = new Schema4(
   {
     amount: { type: Number, required: true },
     currency: { type: String, required: true }
   },
   { _id: false }
 );
-var ReferralCommissionSchema = new Schema3(
+var ReferralCommissionSchema = new Schema4(
   {
     offered_amount: { type: Number, required: true },
     confirmed_amount: { type: Number }
   },
   { _id: false }
 );
-var ListingSchema = new Schema3(
+var ListingSchema = new Schema4(
   {
     title: { type: String, required: true, trim: true },
     ref_code: { type: String, required: true, unique: true, trim: true },
@@ -1780,12 +2310,12 @@ var ListingSchema = new Schema3(
     cover_image: { type: String, required: true },
     images: { type: [String], default: [] },
     associate_id: {
-      type: Schema3.Types.ObjectId,
+      type: Schema4.Types.ObjectId,
       ref: "User",
       required: true
     },
     promoters: {
-      type: [Schema3.Types.ObjectId],
+      type: [Schema4.Types.ObjectId],
       ref: "User",
       default: []
     },
@@ -1811,25 +2341,25 @@ ListingSchema.pre(/^find/, function() {
     this.where({ is_deleted: false });
   }
 });
-var Listing = model3("Listing", ListingSchema);
+var Listing = model4("Listing", ListingSchema);
 
 // src/modules/listingPromote/listings.promote.request.model.schema.ts
-import { Schema as Schema4, model as model4 } from "mongoose";
-var PromoteRequestSchema = new Schema4(
+import { Schema as Schema5, model as model5 } from "mongoose";
+var PromoteRequestSchema = new Schema5(
   {
     listing_id: {
-      type: Schema4.Types.ObjectId,
+      type: Schema5.Types.ObjectId,
       ref: "Listing",
       required: true
     },
     requester_id: {
-      type: Schema4.Types.ObjectId,
+      type: Schema5.Types.ObjectId,
       ref: "User",
       required: true
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: ["pending", "approved", "rejected", "cancelled"],
       default: "pending"
     },
     is_deleted: {
@@ -1872,7 +2402,7 @@ PromoteRequestSchema.post("save", async function(doc) {
     });
   }
 });
-var PromoteRequest = model4(
+var PromoteRequest = model5(
   "PromoteRequest",
   PromoteRequestSchema
 );
@@ -1880,6 +2410,7 @@ var PromoteRequest = model4(
 // src/modules/listings/listings.service.ts
 import mongoose from "mongoose";
 var createListingInDB = async (payload) => {
+  console.log("payload ", payload);
   const listing = new Listing(payload);
   return await listing.save();
 };
@@ -1974,19 +2505,84 @@ var listingsService = {
   getMyListingFromDB
 };
 
+// src/utility/cloudinaryUpload.ts
+import { v2 as cloudinary } from "cloudinary";
+cloudinary.config({
+  cloud_name: config_default.CLOUDINARY_CLOUD_NAME,
+  api_key: config_default.CLOUDINARY_API_KEY,
+  api_secret: config_default.CLOUDINARY_API_SECRET
+});
+var uploadImageToCloudinary = async (file, folder = "newaza/profile-images") => {
+  const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
+    "base64"
+  )}`;
+  const result = await cloudinary.uploader.upload(base64Image, {
+    folder,
+    resource_type: "image",
+    transformation: [
+      {
+        width: 500,
+        height: 500,
+        crop: "fill",
+        gravity: "face",
+        quality: "auto",
+        fetch_format: "auto"
+      }
+    ]
+  });
+  return result.secure_url;
+};
+
 // src/modules/listings/listings.controllers.ts
-var createListing = async (req, res, next) => {
+var createListing = async (req, res) => {
   try {
-    const payload = req.body;
-    const result = await listingsService.createListingInDB(payload);
-    sendResponse_default(res, {
-      statusCode: 201,
+    const files = req.files;
+    let cover_image;
+    let images = [];
+    if (files?.cover_image?.[0]) {
+      cover_image = await uploadImageToCloudinary(
+        files.cover_image[0],
+        "listings/cover"
+      );
+    }
+    if (files?.images?.length) {
+      images = await Promise.all(
+        files.images.map(
+          (file) => uploadImageToCloudinary(file, "listings/gallery")
+        )
+      );
+    }
+    const parseIfString = (val) => {
+      if (typeof val === "string") {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return val;
+        }
+      }
+      return val;
+    };
+    const body = {
+      ...req.body,
+      location: parseIfString(req.body.location),
+      price: parseIfString(req.body.price),
+      referral_commission: parseIfString(req.body.referral_commission)
+    };
+    const listing = await listingsService.createListingInDB({
+      ...body,
+      ...cover_image && { cover_image },
+      ...images.length > 0 && { images }
+    });
+    res.status(201).json({
       success: true,
       message: "Listing created successfully",
-      data: result
+      data: listing
     });
   } catch (error) {
-    next(error);
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to create listing"
+    });
   }
 };
 var getAllListing = async (req, res, next) => {
@@ -2035,7 +2631,47 @@ var updateListing = async (req, res, next) => {
   try {
     const { id } = req.params;
     const associateId = req.user?.id;
-    const results = await listingsService.updateListingInDB(id, associateId, req.body);
+    const files = req.files;
+    let cover_image;
+    let images;
+    if (files?.cover_image?.[0]) {
+      cover_image = await uploadImageToCloudinary(
+        files.cover_image[0],
+        "listings/cover"
+      );
+    }
+    if (files?.images?.length) {
+      images = await Promise.all(
+        files.images.map(
+          (file) => uploadImageToCloudinary(file, "listings/gallery")
+        )
+      );
+    }
+    const jsonFields = ["location", "price", "referral_commission"];
+    const parsedBody = { ...req.body };
+    for (const field of jsonFields) {
+      if (typeof parsedBody[field] === "string") {
+        try {
+          parsedBody[field] = JSON.parse(parsedBody[field]);
+        } catch {
+          return res.status(400).json({
+            success: false,
+            message: `Invalid JSON format for field "${field}"`
+          });
+        }
+      }
+    }
+    const updatePayload = {
+      ...parsedBody,
+      ...cover_image && { cover_image },
+      ...images && { images }
+    };
+    console.log(updatePayload);
+    const results = await listingsService.updateListingInDB(
+      id,
+      associateId,
+      updatePayload
+    );
     res.status(200).json({
       success: true,
       message: "Listing updated successfully",
@@ -2069,12 +2705,33 @@ var listingController = {
   deleteListing
 };
 
+// src/middleware/uploadMiddleware.ts
+import multer from "multer";
+var storage = multer.memoryStorage();
+var allowedImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+var upload = multer({
+  storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024
+  },
+  fileFilter: (_req, file, cb) => {
+    if (!allowedImageTypes.includes(file.mimetype)) {
+      return cb(new Error("Only JPG, JPEG, PNG, and WEBP images are allowed"));
+    }
+    cb(null, true);
+  }
+});
+var uploadListingImages = upload.fields([
+  { name: "cover_image", maxCount: 1 },
+  { name: "images", maxCount: 10 }
+]);
+
 // src/modules/listings/listings.route.ts
 var router3 = Router3();
 router3.get("/", listingController.getAllListing);
-router3.post("/", listingController.createListing);
+router3.post("/", verifyToken2, uploadListingImages, listingController.createListing);
 router3.get("/my", verifyToken2, listingController.getMyListings);
-router3.put("/:id", verifyToken2, listingController.updateListing);
+router3.put("/:id", verifyToken2, uploadListingImages, listingController.updateListing);
 router3.get("/:id", listingController.getListingById);
 router3.delete("/:id", verifyToken2, listingController.deleteListing);
 var listingsRoutes = router3;
@@ -2083,10 +2740,10 @@ var listingsRoutes = router3;
 import { Router as Router4 } from "express";
 
 // src/modules/commissionLedger/commission.ledger.service.ts
-import { Types as Types3 } from "mongoose";
+import { Types as Types4 } from "mongoose";
 
 // src/modules/commissionLedger/commission.ledger.model.schema.ts
-import { Schema as Schema5, model as model5 } from "mongoose";
+import { Schema as Schema6, model as model6 } from "mongoose";
 
 // src/modules/commissionLedger/commision.ledger.interface.ts
 var COMMISSION_STATUSES = [
@@ -2112,7 +2769,7 @@ var PLATFORM_FEE_STATUSES = [
 ];
 
 // src/modules/commissionLedger/commission.ledger.model.schema.ts
-var CommissionStatusHistorySchema = new Schema5(
+var CommissionStatusHistorySchema = new Schema6(
   {
     status: {
       type: String,
@@ -2120,7 +2777,7 @@ var CommissionStatusHistorySchema = new Schema5(
       required: true
     },
     changed_by: {
-      type: Schema5.Types.ObjectId,
+      type: Schema6.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -2136,33 +2793,33 @@ var CommissionStatusHistorySchema = new Schema5(
   },
   { _id: false }
 );
-var CommissionLedgerSchema = new Schema5(
+var CommissionLedgerSchema = new Schema6(
   {
     listing_id: {
-      type: Schema5.Types.ObjectId,
+      type: Schema6.Types.ObjectId,
       ref: "Listing",
       required: true,
       index: true
     },
     promotion_request_id: {
-      type: Schema5.Types.ObjectId,
+      type: Schema6.Types.ObjectId,
       ref: "PromoteRequest",
       index: true
     },
     listing_owner_id: {
-      type: Schema5.Types.ObjectId,
+      type: Schema6.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     promoter_id: {
-      type: Schema5.Types.ObjectId,
+      type: Schema6.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     created_by: {
-      type: Schema5.Types.ObjectId,
+      type: Schema6.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -2203,14 +2860,14 @@ var CommissionLedgerSchema = new Schema5(
     },
     payment_tracking: {
       marked_paid_by: {
-        type: Schema5.Types.ObjectId,
+        type: Schema6.Types.ObjectId,
         ref: "User"
       },
       marked_paid_at: {
         type: Date
       },
       receiver_confirmed_by: {
-        type: Schema5.Types.ObjectId,
+        type: Schema6.Types.ObjectId,
         ref: "User"
       },
       receiver_confirmed_at: {
@@ -2233,7 +2890,7 @@ var CommissionLedgerSchema = new Schema5(
     },
     dispute: {
       opened_by: {
-        type: Schema5.Types.ObjectId,
+        type: Schema6.Types.ObjectId,
         ref: "User"
       },
       opened_at: {
@@ -2245,7 +2902,7 @@ var CommissionLedgerSchema = new Schema5(
         maxlength: 1e3
       },
       resolved_by: {
-        type: Schema5.Types.ObjectId,
+        type: Schema6.Types.ObjectId,
         ref: "User"
       },
       resolved_at: {
@@ -2319,7 +2976,7 @@ CommissionLedgerSchema.index(
     }
   }
 );
-var CommissionLedger = model5(
+var CommissionLedger = model6(
   "CommissionLedger",
   CommissionLedgerSchema
 );
@@ -2337,16 +2994,16 @@ var calculatePlatformFeeAmount = (finalCommissionAmount, platformFeeRatePercent 
 };
 
 // src/modules/commissionLedger/commission.ledger.service.ts
-var throwError2 = (message, statusCode) => {
+var throwError3 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
 var toObjectId = (id) => {
-  if (!Types3.ObjectId.isValid(id)) {
-    throwError2("Invalid id", 400);
+  if (!Types4.ObjectId.isValid(id)) {
+    throwError3("Invalid id", 400);
   }
-  return new Types3.ObjectId(id);
+  return new Types4.ObjectId(id);
 };
 var isAdminOrManager = (role) => {
   return role === "admin" || role === "manager";
@@ -2356,7 +3013,7 @@ var isSameId = (idA, idB) => {
 };
 var ensureValueExists = (value, message, statusCode) => {
   if (value == null) {
-    throwError2(message, statusCode);
+    throwError3(message, statusCode);
   }
   return value;
 };
@@ -2453,7 +3110,7 @@ var getSingleCommissionFromDB = async (commissionId, authUser) => {
   const safeCommission = ensureCommissionExists(commission);
   const canView = isAdminOrManager(authUser.role) || isSameId(safeCommission.listing_owner_id, authUser.id) || isSameId(safeCommission.promoter_id, authUser.id);
   if (!canView) {
-    throwError2("You are not allowed to view this commission record", 403);
+    throwError3("You are not allowed to view this commission record", 403);
   }
   return safeCommission;
 };
@@ -2462,7 +3119,7 @@ var createManualCommissionIntoDB = async (authUser, payload) => {
   const safeListing = ensureValueExists(listing, "Listing not found", 404);
   const isListingOwner = isSameId(safeListing.associate_id, authUser.id);
   if (!isAdminOrManager(authUser.role) && !isListingOwner) {
-    throwError2("Only listing owner, admin, or manager can create commission", 403);
+    throwError3("Only listing owner, admin, or manager can create commission", 403);
   }
   const listingPriceAmount = safeListing.price.amount;
   const commissionRatePercent = safeListing.referral_commission.offered_amount;
@@ -2508,14 +3165,14 @@ var confirmCommissionIntoDB = async (commissionId, authUser, payload) => {
   const commission = await CommissionLedger.findById(commissionId);
   const safeCommission = ensureCommissionExists(commission);
   if (safeCommission.is_frozen) {
-    throwError2("This commission is frozen due to a dispute", 400);
+    throwError3("This commission is frozen due to a dispute", 400);
   }
   const isListingOwner = isSameId(safeCommission.listing_owner_id, authUser.id);
   if (!isAdminOrManager(authUser.role) && !isListingOwner) {
-    throwError2("Only listing owner, admin, or manager can confirm commission", 403);
+    throwError3("Only listing owner, admin, or manager can confirm commission", 403);
   }
   if (safeCommission.status !== "pending") {
-    throwError2("Only pending commission can be confirmed", 400);
+    throwError3("Only pending commission can be confirmed", 400);
   }
   const platformFeeAmount = calculatePlatformFeeAmount(
     payload.final_commission_amount
@@ -2553,14 +3210,14 @@ var markCommissionPaidIntoDB = async (commissionId, authUser, payload) => {
   const commission = await CommissionLedger.findById(commissionId);
   const safeCommission = ensureCommissionExists(commission);
   if (safeCommission.is_frozen) {
-    throwError2("This commission is frozen due to a dispute", 400);
+    throwError3("This commission is frozen due to a dispute", 400);
   }
   const isListingOwner = isSameId(safeCommission.listing_owner_id, authUser.id);
   if (!isAdminOrManager(authUser.role) && !isListingOwner) {
-    throwError2("Only payer/listing owner, admin, or manager can mark as paid", 403);
+    throwError3("Only payer/listing owner, admin, or manager can mark as paid", 403);
   }
   if (safeCommission.status !== "confirmed") {
-    throwError2("Only confirmed commission can be marked as paid", 400);
+    throwError3("Only confirmed commission can be marked as paid", 400);
   }
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
     commissionId,
@@ -2593,10 +3250,10 @@ var confirmCommissionReceivedIntoDB = async (commissionId, authUser, payload) =>
   const commission = await CommissionLedger.findById(commissionId);
   const safeCommission = ensureCommissionExists(commission);
   if (!isSameId(safeCommission.promoter_id, authUser.id)) {
-    throwError2("Only the receiving promoter can confirm payment received", 403);
+    throwError3("Only the receiving promoter can confirm payment received", 403);
   }
   if (safeCommission.status !== "paid") {
-    throwError2("Only paid commission can be confirmed as received", 400);
+    throwError3("Only paid commission can be confirmed as received", 400);
   }
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
     commissionId,
@@ -2626,7 +3283,7 @@ var disputeCommissionIntoDB = async (commissionId, authUser, payload) => {
   const safeCommission = ensureCommissionExists(commission);
   const isInvolved = isSameId(safeCommission.listing_owner_id, authUser.id) || isSameId(safeCommission.promoter_id, authUser.id);
   if (!isAdminOrManager(authUser.role) && !isInvolved) {
-    throwError2("You are not allowed to dispute this commission", 403);
+    throwError3("You are not allowed to dispute this commission", 403);
   }
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
     commissionId,
@@ -2656,7 +3313,7 @@ var disputeCommissionIntoDB = async (commissionId, authUser, payload) => {
 };
 var resolveCommissionDisputeIntoDB = async (commissionId, authUser, payload) => {
   if (!isAdminOrManager(authUser.role)) {
-    throwError2("Only admin or manager can resolve dispute", 403);
+    throwError3("Only admin or manager can resolve dispute", 403);
   }
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
     commissionId,
@@ -2828,8 +3485,8 @@ var cancelPromoteRequestInDB = async (requestId, requesterId) => {
   if (promoteRequest.status !== "pending") {
     throw new Error("Only pending requests can be cancelled");
   }
-  await PromoteRequest.findByIdAndDelete(requestId);
-  return promoteRequest;
+  promoteRequest.status = "cancelled";
+  return await promoteRequest.save();
 };
 var listingPromoteRequestService = {
   createPromoteRequestInDB,
@@ -2982,6 +3639,7 @@ router4.post("/manage/:id", verifyToken2, listingPromoteRequestController.manage
 router4.get("/received", verifyToken2, listingPromoteRequestController.getMyListingsPromoteRequest);
 router4.get("/sent", verifyToken2, listingPromoteRequestController.getMyPromoteRequests);
 router4.delete("/:id", verifyToken2, listingPromoteRequestController.deletePromoteRequest);
+router4.put("/:id", verifyToken2, listingPromoteRequestController.cencelPromoteRequest);
 var listingPromoteRequestRoutes = router4;
 
 // src/modules/commissionLedger/commission.ledger.route.ts
@@ -2989,8 +3647,8 @@ import { Router as Router5 } from "express";
 
 // src/modules/commissionLedger/commission.ledger.validation.ts
 import { z as z3 } from "zod";
-import { Types as Types4 } from "mongoose";
-var mongoIdValidation = z3.string().refine((id) => Types4.ObjectId.isValid(id), {
+import { Types as Types5 } from "mongoose";
+var mongoIdValidation = z3.string().refine((id) => Types5.ObjectId.isValid(id), {
   message: "Invalid id"
 });
 var commissionIdValidation = z3.object({
@@ -3299,15 +3957,129 @@ var commissionLedgerRoutes = router5;
 import { Router as Router6 } from "express";
 
 // src/modules/admin/admin.service.ts
-import { Types as Types5 } from "mongoose";
-var throwError3 = (message, statusCode) => {
+import { Types as Types6 } from "mongoose";
+
+// src/utility/sendAccountApprovedMail.ts
+var getAccessLabel = (accessTo) => {
+  if (accessTo === "we_command_center") {
+    return "W\xC9 Command Center";
+  }
+  if (accessTo === "invictus") {
+    return "INVICTUS Academy";
+  }
+  if (accessTo === "both") {
+    return "W\xC9 Command Center + INVICTUS Academy";
+  }
+  return "your approved dashboard";
+};
+var sendAccountApprovedMail = async ({
+  fullName,
+  email,
+  role,
+  accessTo
+}) => {
+  const accessLabel = getAccessLabel(accessTo);
+  await sendCustomMail_default({
+    to: email,
+    subject: "Your World Elite Account Has Been Approved",
+    text: `Hello ${fullName}, your World Elite account has been approved. You can now log in and access ${accessLabel}.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; background:#f6f7fb; padding:30px;">
+        <div style="max-width:600px; margin:0 auto; background:#ffffff; padding:30px; border-radius:12px;">
+          <h2 style="margin:0 0 15px; color:#111827;">
+            Your Account Has Been Approved
+          </h2>
+
+          <p style="font-size:15px; color:#374151;">
+            Hello ${fullName},
+          </p>
+
+          <p style="font-size:15px; color:#374151;">
+            Your World Elite account has been approved successfully.
+          </p>
+
+          <div style="margin:22px 0; padding:18px; background:#f3f4f6; border-radius:10px;">
+            <p style="margin:0 0 8px; color:#111827;">
+              <strong>Role:</strong> ${role}
+            </p>
+            <p style="margin:0; color:#111827;">
+              <strong>Access:</strong> ${accessLabel}
+            </p>
+          </div>
+
+          <p style="font-size:15px; color:#374151;">
+            You can now log in to your account and access your approved dashboard.
+          </p>
+
+          <p style="font-size:14px; color:#6b7280; margin-top:25px;">
+            Thank you,<br />
+            World Elite Team
+          </p>
+        </div>
+      </div>
+    `
+  });
+};
+
+// src/modules/users/user.approvalMail.ts
+var sendApprovalEmailIfFullyApproved = async (userId) => {
+  const user = await User.findOneAndUpdate(
+    {
+      _id: userId,
+      approvalStatus: "approved",
+      accountStatus: "active",
+      licenseVerificationStatus: "verified",
+      $or: [
+        { approvalEmailSentAt: { $exists: false } },
+        { approvalEmailSentAt: null }
+      ]
+    },
+    {
+      $set: {
+        approvalEmailSentAt: /* @__PURE__ */ new Date()
+      }
+    },
+    {
+      new: true,
+      runValidators: true
+    }
+  ).select(
+    "fullName email role accessTo approvalStatus accountStatus licenseVerificationStatus approvalEmailSentAt"
+  );
+  if (!user) {
+    return null;
+  }
+  try {
+    await sendAccountApprovedMail({
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      accessTo: user.accessTo
+    });
+    return user;
+  } catch (error) {
+    await User.findByIdAndUpdate(user._id, {
+      $unset: {
+        approvalEmailSentAt: ""
+      }
+    });
+    console.error(
+      "Account approval email failed:",
+      error instanceof Error ? error.message : error
+    );
+    return null;
+  }
+};
+
+// src/modules/admin/admin.service.ts
+var throwError4 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
 var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
-  if (!Types5.ObjectId.isValid(userId)) {
-    throwError3("Invalid user id", 400);
+  if (!Types6.ObjectId.isValid(userId)) {
+    throwError4("Invalid user id", 400);
   }
   const updateQuery = {
     $set: {
@@ -3315,7 +4087,7 @@ var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
     }
   };
   if (payload.approvalStatus === "approved") {
-    updateQuery.$set.approvedBy = new Types5.ObjectId(adminId);
+    updateQuery.$set.approvedBy = new Types6.ObjectId(adminId);
     updateQuery.$set.approvedAt = /* @__PURE__ */ new Date();
     updateQuery.$unset = {
       rejectedReason: ""
@@ -3324,7 +4096,7 @@ var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
   if (payload.approvalStatus === "rejected") {
     const rejectedReason = payload.rejectedReason?.trim();
     if (!rejectedReason) {
-      throwError3("Rejected reason is required", 400);
+      throwError4("Rejected reason is required", 400);
     }
     updateQuery.$set.rejectedReason = rejectedReason;
     updateQuery.$unset = {
@@ -3344,13 +4116,14 @@ var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
     runValidators: true
   }).select("-password");
   if (!updatedUser) {
-    throwError3("User not found", 404);
+    throwError4("User not found", 404);
   }
+  await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
   return updatedUser;
 };
 var updateUserLicenseVerificationStatusIntoDB = async (userId, payload) => {
-  if (!Types5.ObjectId.isValid(userId)) {
-    throwError3("Invalid user id", 400);
+  if (!Types6.ObjectId.isValid(userId)) {
+    throwError4("Invalid user id", 400);
   }
   const updatedUser = await User.findByIdAndUpdate(
     userId,
@@ -3365,13 +4138,14 @@ var updateUserLicenseVerificationStatusIntoDB = async (userId, payload) => {
     }
   ).select("-password");
   if (!updatedUser) {
-    throwError3("User not found", 404);
+    throwError4("User not found", 404);
   }
+  await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
   return updatedUser;
 };
 var updateUserAccountStatusIntoDB = async (userId, payload) => {
-  if (!Types5.ObjectId.isValid(userId)) {
-    throwError3("Invalid user id", 400);
+  if (!Types6.ObjectId.isValid(userId)) {
+    throwError4("Invalid user id", 400);
   }
   const updatedUser = await User.findByIdAndUpdate(
     userId,
@@ -3386,8 +4160,9 @@ var updateUserAccountStatusIntoDB = async (userId, payload) => {
     }
   ).select("-password");
   if (!updatedUser) {
-    throwError3("User not found", 404);
+    throwError4("User not found", 404);
   }
+  await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
   return updatedUser;
 };
 var adminService = {
@@ -3398,8 +4173,8 @@ var adminService = {
 
 // src/modules/admin/admin.validation.ts
 import { z as z4 } from "zod";
-import { Types as Types6 } from "mongoose";
-var mongoIdValidation2 = z4.string().refine((id) => Types6.ObjectId.isValid(id), {
+import { Types as Types7 } from "mongoose";
+var mongoIdValidation2 = z4.string().refine((id) => Types7.ObjectId.isValid(id), {
   message: "Invalid user id"
 });
 var updateApprovalStatusValidation = z4.object({
@@ -3538,26 +4313,26 @@ import { Router as Router7 } from "express";
 
 // src/modules/listingAssets/listing.assets.service.ts
 import { ZipArchive } from "archiver";
-import { Types as Types7 } from "mongoose";
+import { Types as Types8 } from "mongoose";
 
 // src/modules/listingAssets/listing.assets.model.schema.ts
-import { Schema as Schema6, model as model6 } from "mongoose";
-var ListingAssetDownloadSchema = new Schema6(
+import { Schema as Schema7, model as model7 } from "mongoose";
+var ListingAssetDownloadSchema = new Schema7(
   {
     listing_id: {
-      type: Schema6.Types.ObjectId,
+      type: Schema7.Types.ObjectId,
       ref: "Listing",
       required: true,
       index: true
     },
     downloaded_by: {
-      type: Schema6.Types.ObjectId,
+      type: Schema7.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     promotion_request_id: {
-      type: Schema6.Types.ObjectId,
+      type: Schema7.Types.ObjectId,
       ref: "PromoteRequest"
     },
     user_role: {
@@ -3611,7 +4386,7 @@ ListingAssetDownloadSchema.index({
   downloaded_by: 1,
   downloaded_at: -1
 });
-var ListingAssetDownload = model6(
+var ListingAssetDownload = model7(
   "ListingAssetDownload",
   ListingAssetDownloadSchema
 );
@@ -3756,16 +4531,16 @@ var generateListingOnePagerPdf = async (listing, images, captions) => {
 };
 
 // src/modules/listingAssets/listing.assets.service.ts
-var throwError4 = (message, statusCode) => {
+var throwError5 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
 var toObjectId2 = (id) => {
-  if (!Types7.ObjectId.isValid(id)) {
-    throwError4("Invalid id", 400);
+  if (!Types8.ObjectId.isValid(id)) {
+    throwError5("Invalid id", 400);
   }
-  return new Types7.ObjectId(id);
+  return new Types8.ObjectId(id);
 };
 var isAdminOrManager2 = (role) => {
   return role === "admin" || role === "manager";
@@ -3775,7 +4550,7 @@ var isAllowedPromoterRole = (role) => {
 };
 var ensureListingExists = (listing) => {
   if (listing == null) {
-    throwError4("Listing not found", 404);
+    throwError5("Listing not found", 404);
   }
   return listing;
 };
@@ -3792,7 +4567,7 @@ var downloadListingAssetsZipFromDB = async (listingId, authUser, meta) => {
   const hasDirectAccess = isAdminOrManager2(authUser.role) || isListingOwner;
   if (!hasDirectAccess) {
     if (!isAllowedPromoterRole(authUser.role)) {
-      throwError4("You are not allowed to download listing assets", 403);
+      throwError5("You are not allowed to download listing assets", 403);
     }
     const approvedRequest = await PromoteRequest.findOne({
       listing_id: toObjectId2(listingId),
@@ -3800,7 +4575,7 @@ var downloadListingAssetsZipFromDB = async (listingId, authUser, meta) => {
       status: "approved"
     }).lean();
     if (!approvedRequest) {
-      throwError4(
+      throwError5(
         "You must be approved to promote this listing before downloading assets",
         403
       );
@@ -3885,7 +4660,7 @@ var getListingAssetLogsFromDB = async (listingId, authUser) => {
   const safeListing = ensureListingExists(listing);
   const isListingOwner = String(safeListing.associate_id) === authUser.id;
   if (!isAdminOrManager2(authUser.role) && !isListingOwner) {
-    throwError4("You are not allowed to view asset download logs", 403);
+    throwError5("You are not allowed to view asset download logs", 403);
   }
   return ListingAssetDownload.find({
     listing_id: toObjectId2(listingId)
@@ -3893,7 +4668,7 @@ var getListingAssetLogsFromDB = async (listingId, authUser) => {
 };
 var getAllListingAssetLogsFromDB = async (authUser) => {
   if (!isAdminOrManager2(authUser.role)) {
-    throwError4("Only admin or manager can view all asset download logs", 403);
+    throwError5("Only admin or manager can view all asset download logs", 403);
   }
   return ListingAssetDownload.find().populate("downloaded_by", "fullName email role").populate("listing_id", "title ref_code").sort({ downloaded_at: -1 });
 };
@@ -3905,8 +4680,8 @@ var listingAssetsService = {
 
 // src/modules/listingAssets/listing.assets.validation.ts
 import { z as z5 } from "zod";
-import { Types as Types8 } from "mongoose";
-var mongoIdValidation3 = z5.string().refine((id) => Types8.ObjectId.isValid(id), {
+import { Types as Types9 } from "mongoose";
+var mongoIdValidation3 = z5.string().refine((id) => Types9.ObjectId.isValid(id), {
   message: "Invalid listing id"
 });
 var downloadListingAssetsValidation = z5.object({
@@ -4026,7 +4801,9 @@ import { Router as Router8 } from "express";
 // src/modules/payment/payment.validation.ts
 import { z as z6 } from "zod";
 var createUpgradeCheckoutValidation = z6.object({
-  body: z6.object({}).optional()
+  body: z6.object({
+    discountCode: z6.string().trim().max(50).optional()
+  }).optional()
 });
 var paymentRolePricingValidation = z6.object({
   params: z6.object({
@@ -4037,7 +4814,8 @@ var paymentRolePricingValidation = z6.object({
       "ceo",
       "ceo_partner",
       "we_club_member"
-    ])
+    ]),
+    accessTo: z6.enum(["we_command_center", "invictus", "both"])
   })
 });
 var verifyCheckoutSessionValidation = z6.object({
@@ -4050,9 +4828,6 @@ var verifyCheckoutSessionValidation = z6.object({
 var getAuthUserId = (req) => {
   if (!req.user) {
     throw new UnauthorizedError("Authentication required");
-  }
-  if (typeof req.user.id !== "string") {
-    throw new UnauthorizedError("Invalid authenticated user");
   }
   return req.user.id;
 };
@@ -4069,13 +4844,14 @@ var getAllPricingPlans2 = async (_req, res, next) => {
     next(error);
   }
 };
-var getPricingPlanByRole2 = async (req, res, next) => {
+var getPricingPlanByRoleAndAccess2 = async (req, res, next) => {
   try {
     const validatedData = paymentRolePricingValidation.parse({
       params: req.params
     });
-    const result = paymentService.getPricingPlanByRole(
-      validatedData.params.role
+    const result = paymentService.getPricingPlanByRoleAndAccess(
+      validatedData.params.role,
+      validatedData.params.accessTo
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -4090,7 +4866,13 @@ var getPricingPlanByRole2 = async (req, res, next) => {
 var createUpgradeCheckout = async (req, res, next) => {
   try {
     const userId = getAuthUserId(req);
-    const result = await paymentService.createUpgradeCheckoutSessionIntoStripe(userId);
+    const validatedData = createUpgradeCheckoutValidation.parse({
+      body: req.body
+    });
+    const result = await paymentService.createUpgradeCheckoutSessionIntoStripe(
+      userId,
+      validatedData.body?.discountCode
+    );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -4132,7 +4914,7 @@ var stripeWebhook = async (req, res, next) => {
 };
 var paymentController = {
   getAllPricingPlans: getAllPricingPlans2,
-  getPricingPlanByRole: getPricingPlanByRole2,
+  getPricingPlanByRoleAndAccess: getPricingPlanByRoleAndAccess2,
   createUpgradeCheckout,
   verifyCheckoutSession,
   stripeWebhook
@@ -4141,7 +4923,7 @@ var paymentController = {
 // src/modules/payment/payment.route.ts
 var router8 = Router8();
 router8.get("/pricing", paymentController.getAllPricingPlans);
-router8.get("/pricing/:role", paymentController.getPricingPlanByRole);
+router8.get("/pricing/:role/:accessTo", paymentController.getPricingPlanByRoleAndAccess);
 router8.post(
   "/upgrade",
   verifyToken2,
@@ -4153,8 +4935,558 @@ router8.get(
 );
 var paymentRoutes = router8;
 
-// src/routes/index.ts
+// src/modules/profile/profile.route.ts
+import { Router as Router9 } from "express";
+
+// src/modules/profile/profile.service.ts
+var throwError6 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var ensureUserExists = (user) => {
+  if (user == null) {
+    throwError6("User not found", 404);
+  }
+  return user;
+};
+var getDefaultProfileImage = () => {
+  return config_default.DEFAULT_PROFILE_IMAGE_URL || "https://res.cloudinary.com/demo/image/upload/v1/default-profile.png";
+};
+var formatProfileResponse = (user) => {
+  return {
+    ...user,
+    profileImage: user.profileImage || getDefaultProfileImage()
+  };
+};
+var getMyProfileFromDB = async (userId) => {
+  const user = await User.findById(userId).select("-password").lean();
+  if (!user) {
+    throwError6("User not found", 404);
+  }
+  const safeUser = ensureUserExists(user);
+  return formatProfileResponse(safeUser);
+};
+var updateBasicProfileIntoDB = async (userId, payload) => {
+  const updateData = {};
+  const allowedFields = [
+    "fullName",
+    "brokerage",
+    "phone",
+    "city",
+    "country"
+  ];
+  allowedFields.forEach((field) => {
+    const value = payload[field];
+    if (value !== void 0) {
+      updateData[field] = value;
+    }
+  });
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: updateData
+    },
+    {
+      returnDocument: "after",
+      runValidators: true
+    }
+  ).select("-password").lean();
+  const safeUpdatedUser = ensureUserExists(updatedUser);
+  return formatProfileResponse(safeUpdatedUser);
+};
+var updateBioIntoDB = async (userId, payload) => {
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        bio: payload.bio
+      }
+    },
+    {
+      returnDocument: "after",
+      runValidators: true
+    }
+  ).select("-password").lean();
+  const safeUpdatedUser = ensureUserExists(updatedUser);
+  return formatProfileResponse(safeUpdatedUser);
+};
+var upsertSocialLinkIntoDB = async (userId, payload) => {
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        [`socialLinks.${payload.platform}`]: payload.url
+      }
+    },
+    {
+      returnDocument: "after",
+      runValidators: true
+    }
+  ).select("-password").lean();
+  const safeUpdatedUser = ensureUserExists(updatedUser);
+  return formatProfileResponse(safeUpdatedUser);
+};
+var deleteSocialLinkFromDB = async (userId, platform) => {
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    {
+      $unset: {
+        [`socialLinks.${platform}`]: ""
+      }
+    },
+    {
+      returnDocument: "after",
+      runValidators: true
+    }
+  ).select("-password").lean();
+  const safeUpdatedUser = ensureUserExists(updatedUser);
+  return formatProfileResponse(safeUpdatedUser);
+};
+var updateMarketingChannelsIntoDB = async (userId, payload) => {
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        marketingChannels: payload.marketingChannels
+      }
+    },
+    {
+      returnDocument: "after",
+      runValidators: true
+    }
+  ).select("-password").lean();
+  const safeUpdatedUser = ensureUserExists(updatedUser);
+  return formatProfileResponse(safeUpdatedUser);
+};
+var updateProfileImageIntoDB = async (userId, file) => {
+  const profileImageUrl = await uploadImageToCloudinary(
+    file,
+    "newaza/profile-images"
+  );
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        profileImage: profileImageUrl
+      }
+    },
+    {
+      returnDocument: "after",
+      runValidators: true
+    }
+  ).select("-password").lean();
+  const safeUpdatedUser = ensureUserExists(updatedUser);
+  return formatProfileResponse(safeUpdatedUser);
+};
+var deleteProfileImageFromDB = async (userId) => {
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    {
+      $unset: {
+        profileImage: ""
+      }
+    },
+    {
+      returnDocument: "after",
+      runValidators: true
+    }
+  ).select("-password").lean();
+  const safeUpdatedUser = ensureUserExists(updatedUser);
+  return formatProfileResponse(safeUpdatedUser);
+};
+var profileService = {
+  getMyProfileFromDB,
+  updateBasicProfileIntoDB,
+  updateBioIntoDB,
+  upsertSocialLinkIntoDB,
+  deleteSocialLinkFromDB,
+  updateMarketingChannelsIntoDB,
+  updateProfileImageIntoDB,
+  deleteProfileImageFromDB
+};
+
+// src/modules/profile/profile.validation.ts
+import { z as z7 } from "zod";
+var SOCIAL_LINK_PLATFORMS = [
+  "linkedin",
+  "facebook",
+  "twitter",
+  "instagram",
+  "website"
+];
+var updateBasicProfileValidation = z7.object({
+  body: z7.object({
+    fullName: z7.string().trim().min(2).max(100).optional(),
+    brokerage: z7.string().trim().max(100).optional(),
+    phone: z7.string().trim().max(30).optional(),
+    city: z7.string().trim().max(100).optional(),
+    country: z7.string().trim().max(100).optional()
+  }).strict().refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field is required"
+  })
+});
+var updateBioValidation = z7.object({
+  body: z7.object({
+    bio: z7.string().trim().max(1e3)
+  }).strict()
+});
+var upsertSocialLinkValidation = z7.object({
+  body: z7.object({
+    platform: z7.enum(SOCIAL_LINK_PLATFORMS),
+    url: z7.string().trim().url("Invalid social link URL").max(500)
+  }).strict()
+});
+var deleteSocialLinkValidation = z7.object({
+  params: z7.object({
+    platform: z7.enum(SOCIAL_LINK_PLATFORMS)
+  })
+});
+var updateMarketingChannelsValidation = z7.object({
+  body: z7.object({
+    marketingChannels: z7.array(z7.string().trim().min(1).max(80)).max(20).transform((channels) => [...new Set(channels)])
+  }).strict()
+});
+
+// src/modules/profile/profile.controller.ts
+var throwError7 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var getAuthenticatedUserId = (req) => {
+  if (!req.user) {
+    throw new UnauthorizedError("Authentication required");
+  }
+  if (typeof req.user.id !== "string") {
+    throw new UnauthorizedError("Invalid authenticated user");
+  }
+  return req.user.id;
+};
+var getMyProfile = async (req, res, next) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    const result = await profileService.getMyProfileFromDB(userId);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Profile retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateBasicProfile = async (req, res, next) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    const validatedData = updateBasicProfileValidation.parse({
+      body: req.body
+    });
+    const result = await profileService.updateBasicProfileIntoDB(
+      userId,
+      validatedData.body
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Basic profile updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateBio = async (req, res, next) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    const validatedData = updateBioValidation.parse({
+      body: req.body
+    });
+    const result = await profileService.updateBioIntoDB(
+      userId,
+      validatedData.body
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Bio updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var upsertSocialLink = async (req, res, next) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    const validatedData = upsertSocialLinkValidation.parse({
+      body: req.body
+    });
+    const result = await profileService.upsertSocialLinkIntoDB(
+      userId,
+      validatedData.body
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Social link saved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var deleteSocialLink = async (req, res, next) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    const validatedData = deleteSocialLinkValidation.parse({
+      params: req.params
+    });
+    const result = await profileService.deleteSocialLinkFromDB(
+      userId,
+      validatedData.params.platform
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Social link deleted successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateMarketingChannels = async (req, res, next) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    const validatedData = updateMarketingChannelsValidation.parse({
+      body: req.body
+    });
+    const result = await profileService.updateMarketingChannelsIntoDB(
+      userId,
+      validatedData.body
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Marketing channels updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateProfileImage = async (req, res, next) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    const file = req.file;
+    if (!file) {
+      throwError7("Profile image is required", 400);
+    }
+    const result = await profileService.updateProfileImageIntoDB(userId, file);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Profile image updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var deleteProfileImage = async (req, res, next) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    const result = await profileService.deleteProfileImageFromDB(userId);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Profile image deleted successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var profileController = {
+  getMyProfile,
+  updateBasicProfile,
+  updateBio,
+  upsertSocialLink,
+  deleteSocialLink,
+  updateMarketingChannels,
+  updateProfileImage,
+  deleteProfileImage
+};
+
+// src/modules/profile/profile.route.ts
 var router9 = Router9();
+router9.use(verifyToken2);
+router9.get("/me", profileController.getMyProfile);
+router9.patch("/me/basic", profileController.updateBasicProfile);
+router9.patch("/me/bio", profileController.updateBio);
+router9.patch("/me/social-links", profileController.upsertSocialLink);
+router9.delete(
+  "/me/social-links/:platform",
+  profileController.deleteSocialLink
+);
+router9.patch(
+  "/me/marketing-channels",
+  profileController.updateMarketingChannels
+);
+router9.patch(
+  "/me/image",
+  upload.single("profileImage"),
+  profileController.updateProfileImage
+);
+router9.delete("/me/image", profileController.deleteProfileImage);
+var profileRoutes = router9;
+
+// src/modules/discount/discount.route.ts
+import { Router as Router10 } from "express";
+
+// src/modules/discount/discount.validation.ts
+import { z as z8 } from "zod";
+var createDiscountCodeValidation = z8.object({
+  body: z8.object({
+    code: z8.string().trim().min(2).max(50),
+    discountPercent: z8.number().min(1).max(100),
+    allowedRoles: z8.array(
+      z8.enum([
+        "associate",
+        "partner",
+        "ambassador",
+        "ceo",
+        "ceo_partner",
+        "we_club_member"
+      ])
+    ).optional(),
+    allowedAccessTo: z8.array(z8.enum(["we_command_center", "invictus", "both"])).optional(),
+    maxRedemptionsPerRole: z8.number().int().positive().optional(),
+    expiresAt: z8.string().datetime().optional(),
+    note: z8.string().trim().max(500).optional()
+  })
+});
+var validateDiscountCodeValidation = z8.object({
+  query: z8.object({
+    code: z8.string().trim().min(2).max(50),
+    role: z8.enum([
+      "associate",
+      "partner",
+      "ambassador",
+      "ceo",
+      "ceo_partner",
+      "we_club_member"
+    ]),
+    accessTo: z8.enum(["we_command_center", "invictus", "both"])
+  })
+});
+var sendDiscountCodeEmailValidation = z8.object({
+  body: z8.object({
+    email: z8.string().email(),
+    code: z8.string().trim().min(2).max(50)
+  })
+});
+
+// src/modules/discount/discount.controller.ts
+var getAuthUserId2 = (req) => {
+  if (!req.user) {
+    throw new UnauthorizedError("Authentication required");
+  }
+  return req.user.id;
+};
+var createDiscountCode = async (req, res, next) => {
+  try {
+    const adminId = getAuthUserId2(req);
+    const validatedData = createDiscountCodeValidation.parse({
+      body: req.body
+    });
+    const result = await discountService.createDiscountCodeIntoDB(
+      validatedData.body,
+      adminId
+    );
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Discount code created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllDiscountCodes = async (_req, res, next) => {
+  try {
+    const result = await discountService.getAllDiscountCodesFromDB();
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Discount codes retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var validateDiscountCode = async (req, res, next) => {
+  try {
+    const validatedData = validateDiscountCodeValidation.parse({
+      query: req.query
+    });
+    const result = await discountService.validateDiscountCodeForCheckout({
+      code: validatedData.query.code,
+      role: validatedData.query.role,
+      accessTo: validatedData.query.accessTo
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Discount code is valid",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var sendDiscountCodeEmail = async (req, res, next) => {
+  try {
+    const validatedData = sendDiscountCodeEmailValidation.parse({
+      body: req.body
+    });
+    const result = await discountService.sendDiscountCodeByEmail(
+      validatedData.body.email,
+      validatedData.body.code
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Discount code email sent successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var discountController = {
+  createDiscountCode,
+  getAllDiscountCodes,
+  validateDiscountCode,
+  sendDiscountCodeEmail
+};
+
+// src/modules/discount/discount.route.ts
+var router10 = Router10();
+router10.get("/validate", discountController.validateDiscountCode);
+router10.use(verifyToken2);
+router10.use(authorizeRoles("admin", "manager"));
+router10.post("/", discountController.createDiscountCode);
+router10.get("/", discountController.getAllDiscountCodes);
+router10.post("/send-email", discountController.sendDiscountCodeEmail);
+var discountRoutes = router10;
+
+// src/routes/index.ts
+var router11 = Router11();
 var moduleRoutes = [
   {
     path: "/admin",
@@ -4187,12 +5519,470 @@ var moduleRoutes = [
   {
     path: "/payments",
     route: paymentRoutes
+  },
+  {
+    path: "/profile",
+    route: profileRoutes
+  },
+  {
+    path: "/discounts",
+    route: discountRoutes
   }
 ];
 moduleRoutes.forEach((route) => {
-  router9.use(route.path, route.route);
+  router11.use(route.path, route.route);
 });
-var routes_default = router9;
+var routes_default = router11;
+
+// src/swagger/swagger.ts
+import swaggerJSDoc from "swagger-jsdoc";
+var definition = {
+  openapi: "3.0.3",
+  info: {
+    title: "We-Club Updated API",
+    version: "1.0.0",
+    description: 'API documentation for the We-Club backend \u2014 a real estate listing & referral commission platform. Use the "Authorize" button below and paste your JWT access token to call protected endpoints.',
+    contact: {
+      name: "We-Club"
+    }
+  },
+  servers: [
+    {
+      url: "/api/v1",
+      description: "Base API (relative to current host)"
+    }
+  ],
+  tags: [
+    { name: "Auth", description: "Login, signup, and password management" },
+    { name: "Users", description: "User listing & profile lookup" },
+    { name: "Admin", description: "Admin-only user management actions" },
+    { name: "Listings", description: "Property listings" },
+    { name: "Listing Promote Requests", description: "Requests to promote a listing" },
+    { name: "Commission Ledger", description: "Referral commission tracking" },
+    { name: "Listing Assets", description: "Downloadable listing asset packages & logs" },
+    { name: "Payments", description: "Stripe pricing, checkout & webhook" }
+  ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT"
+      }
+    },
+    schemas: {
+      ErrorResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: false },
+          message: { type: "string", example: "Something went wrong" },
+          errorDetails: { type: "object", nullable: true }
+        }
+      },
+      SuccessResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: true },
+          message: { type: "string", example: "Operation successful" },
+          data: { type: "object", nullable: true }
+        }
+      },
+      User: {
+        type: "object",
+        properties: {
+          _id: { type: "string", example: "665f1a2b3c4d5e6f7a8b9c0d" },
+          fullName: { type: "string", example: "John Doe" },
+          email: { type: "string", format: "email", example: "john@example.com" },
+          role: {
+            type: "string",
+            enum: [
+              "admin",
+              "manager",
+              "ceo",
+              "ceo_partner",
+              "associate",
+              "partner",
+              "ambassador",
+              "we_club_member"
+            ]
+          },
+          licenseNumber: { type: "string", nullable: true },
+          brokerage: { type: "string", nullable: true },
+          phone: { type: "string", nullable: true },
+          city: { type: "string", nullable: true },
+          country: { type: "string", nullable: true },
+          bio: { type: "string", nullable: true },
+          profileImage: { type: "string", nullable: true },
+          paymentStatus: {
+            type: "string",
+            enum: ["unpaid", "paid", "failed", "refunded", "expired"]
+          },
+          approvalStatus: {
+            type: "string",
+            enum: ["pending", "approved", "rejected"]
+          },
+          accountStatus: {
+            type: "string",
+            enum: ["active", "pending_payment", "pending_approval", "suspended", "rejected"]
+          },
+          licenseVerificationStatus: {
+            type: "string",
+            enum: ["pending", "verified", "rejected"]
+          },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" }
+        }
+      },
+      SignupRequest: {
+        type: "object",
+        required: ["fullName", "email", "password", "role"],
+        properties: {
+          fullName: { type: "string", example: "John Doe" },
+          email: { type: "string", format: "email", example: "john@example.com" },
+          password: { type: "string", format: "password", example: "StrongPass123!" },
+          role: {
+            type: "string",
+            enum: [
+              "admin",
+              "manager",
+              "ceo",
+              "ceo_partner",
+              "associate",
+              "partner",
+              "ambassador",
+              "we_club_member"
+            ]
+          },
+          phone: { type: "string", nullable: true },
+          city: { type: "string", nullable: true },
+          country: { type: "string", nullable: true },
+          licenseNumber: { type: "string", nullable: true },
+          brokerage: { type: "string", nullable: true }
+        }
+      },
+      LoginRequest: {
+        type: "object",
+        required: ["email", "password"],
+        properties: {
+          email: { type: "string", format: "email", example: "john@example.com" },
+          password: { type: "string", format: "password", example: "StrongPass123!" }
+        }
+      },
+      AuthTokenResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: true },
+          message: { type: "string", example: "Login successful" },
+          data: {
+            type: "object",
+            properties: {
+              accessToken: { type: "string" },
+              refreshToken: { type: "string" },
+              user: { $ref: "#/components/schemas/User" }
+            }
+          }
+        }
+      },
+      ChangePasswordRequest: {
+        type: "object",
+        required: ["oldPassword", "newPassword"],
+        properties: {
+          oldPassword: { type: "string", format: "password" },
+          newPassword: { type: "string", format: "password" }
+        }
+      },
+      ForgetPasswordRequest: {
+        type: "object",
+        required: ["email"],
+        properties: {
+          email: { type: "string", format: "email" }
+        }
+      },
+      ResetPasswordRequest: {
+        type: "object",
+        required: ["newPassword"],
+        properties: {
+          newPassword: { type: "string", format: "password" }
+        }
+      },
+      Location: {
+        type: "object",
+        properties: {
+          city: { type: "string", example: "Dhaka" },
+          region: { type: "string", example: "Dhaka Division" },
+          country: { type: "string", example: "Bangladesh" }
+        }
+      },
+      Price: {
+        type: "object",
+        properties: {
+          amount: { type: "number", example: 25e4 },
+          currency: { type: "string", example: "USD" }
+        }
+      },
+      ReferralCommission: {
+        type: "object",
+        properties: {
+          offered_amount: { type: "number", example: 5 },
+          confirmed_amount: { type: "number", nullable: true, example: 4.5 }
+        }
+      },
+      Listing: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          title: { type: "string", example: "Modern 3BR Apartment in Gulshan" },
+          ref_code: { type: "string", example: "WC-10234" },
+          status: { type: "string", enum: ["active", "pending", "sold", "draft"] },
+          location: { $ref: "#/components/schemas/Location" },
+          price: { $ref: "#/components/schemas/Price" },
+          bedrooms: { type: "number", example: 3 },
+          bathrooms: { type: "number", example: 2 },
+          area_sqm: { type: "number", example: 145 },
+          referral_commission: { $ref: "#/components/schemas/ReferralCommission" },
+          cover_image: { type: "string" },
+          images: { type: "array", items: { type: "string" } },
+          associate_id: { type: "string" },
+          promoters: { type: "array", items: { type: "string" } },
+          is_deleted: { type: "boolean" },
+          created_at: { type: "string", format: "date-time" },
+          updated_at: { type: "string", format: "date-time" }
+        }
+      },
+      CreateListingRequest: {
+        type: "object",
+        required: ["title", "location", "price", "bedrooms", "bathrooms", "area_sqm"],
+        properties: {
+          title: { type: "string", example: "Modern 3BR Apartment in Gulshan" },
+          location: {
+            type: "string",
+            description: 'JSON string of Location object, e.g. {"city":"Dhaka","region":"Dhaka Division","country":"Bangladesh"}'
+          },
+          price: {
+            type: "string",
+            description: 'JSON string of Price object, e.g. {"amount":250000,"currency":"USD"}'
+          },
+          referral_commission: {
+            type: "string",
+            description: 'JSON string of ReferralCommission object, e.g. {"offered_amount":5}'
+          },
+          bedrooms: { type: "number", example: 3 },
+          bathrooms: { type: "number", example: 2 },
+          area_sqm: { type: "number", example: 145 },
+          cover_image: { type: "string", format: "binary" },
+          images: {
+            type: "array",
+            items: { type: "string", format: "binary" }
+          }
+        }
+      },
+      PromoteRequest: {
+        type: "object",
+        properties: {
+          _id: { type: "string" },
+          listing_id: { type: "string" },
+          requester_id: { type: "string" },
+          proposed_commission_pct: { type: "number", example: 4.5 },
+          confirmed_commission_pct: { type: "number", nullable: true },
+          marketing_channels: { type: "array", items: { type: "string" } },
+          message: { type: "string", nullable: true },
+          status: {
+            type: "string",
+            enum: ["pending", "approved", "rejected", "cancelled"]
+          },
+          requested_at: { type: "string", format: "date-time" },
+          resolved_at: { type: "string", format: "date-time", nullable: true }
+        }
+      },
+      CreatePromoteRequest: {
+        type: "object",
+        required: ["listing_id", "proposed_commission_pct"],
+        properties: {
+          listing_id: { type: "string" },
+          proposed_commission_pct: { type: "number", example: 4.5 },
+          marketing_channels: { type: "array", items: { type: "string" } },
+          message: { type: "string", nullable: true }
+        }
+      },
+      ManagePromoteRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          status: { type: "string", enum: ["approved", "rejected"] },
+          confirmed_commission_pct: { type: "number", nullable: true },
+          listing_id: { type: "string" }
+        }
+      },
+      CommissionLedger: {
+        type: "object",
+        properties: {
+          _id: { type: "string" },
+          listing_id: { type: "string" },
+          promotion_request_id: { type: "string", nullable: true },
+          listing_owner_id: { type: "string" },
+          promoter_id: { type: "string" },
+          created_by: { type: "string" },
+          status: {
+            type: "string",
+            enum: ["pending", "confirmed", "paid", "disputed", "cancelled"]
+          },
+          currency: { type: "string", example: "USD" },
+          listing_price_amount: { type: "number" },
+          commission_rate_percent: { type: "number" },
+          estimated_commission_amount: { type: "number" },
+          final_commission_amount: { type: "number", nullable: true },
+          deal_closed_at: { type: "string", format: "date-time", nullable: true },
+          is_frozen: { type: "boolean" },
+          note: { type: "string", nullable: true },
+          created_at: { type: "string", format: "date-time" },
+          updated_at: { type: "string", format: "date-time" }
+        }
+      },
+      CreateManualCommissionRequest: {
+        type: "object",
+        required: ["listing_id", "listing_owner_id", "promoter_id", "listing_price_amount", "commission_rate_percent"],
+        properties: {
+          listing_id: { type: "string" },
+          promotion_request_id: { type: "string", nullable: true },
+          listing_owner_id: { type: "string" },
+          promoter_id: { type: "string" },
+          currency: { type: "string", example: "USD" },
+          listing_price_amount: { type: "number" },
+          commission_rate_percent: { type: "number" },
+          note: { type: "string", nullable: true }
+        }
+      },
+      MarkPaidRequest: {
+        type: "object",
+        properties: {
+          payment_method: {
+            type: "string",
+            enum: ["bank_transfer", "stripe", "helcim", "cash", "check", "other"]
+          },
+          payment_reference: { type: "string", nullable: true },
+          note: { type: "string", nullable: true }
+        }
+      },
+      DisputeRequest: {
+        type: "object",
+        required: ["reason"],
+        properties: {
+          reason: { type: "string", example: "Amount does not match agreed rate" }
+        }
+      },
+      ResolveDisputeRequest: {
+        type: "object",
+        required: ["resolution_note"],
+        properties: {
+          resolution_note: { type: "string" },
+          final_commission_amount: { type: "number", nullable: true }
+        }
+      },
+      ApprovalStatusRequest: {
+        type: "object",
+        required: ["approvalStatus"],
+        properties: {
+          approvalStatus: { type: "string", enum: ["pending", "approved", "rejected"] },
+          rejectedReason: { type: "string", nullable: true }
+        }
+      },
+      LicenseVerificationStatusRequest: {
+        type: "object",
+        required: ["licenseVerificationStatus"],
+        properties: {
+          licenseVerificationStatus: { type: "string", enum: ["pending", "verified", "rejected"] }
+        }
+      },
+      AccountStatusRequest: {
+        type: "object",
+        required: ["accountStatus"],
+        properties: {
+          accountStatus: {
+            type: "string",
+            enum: ["active", "pending_payment", "pending_approval", "suspended", "rejected"]
+          }
+        }
+      },
+      PricingItem: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          description: { type: "string" },
+          amount: { type: "number" },
+          currency: { type: "string", example: "usd" },
+          interval: { type: "string", enum: ["month", "year"] },
+          formattedAmount: { type: "string", example: "$49.00" },
+          billingText: { type: "string", example: "$49.00 / month" }
+        }
+      },
+      RolePricingPlan: {
+        type: "object",
+        properties: {
+          role: { type: "string" },
+          displayName: { type: "string" },
+          requiresPayment: { type: "boolean" },
+          items: { type: "array", items: { $ref: "#/components/schemas/PricingItem" } },
+          totalFirstPayment: { type: "number" },
+          totalFirstPaymentFormatted: { type: "string" }
+        }
+      },
+      UpgradeCheckoutRequest: {
+        type: "object",
+        required: ["targetRole"],
+        properties: {
+          targetRole: {
+            type: "string",
+            enum: [
+              "admin",
+              "manager",
+              "ceo",
+              "ceo_partner",
+              "associate",
+              "partner",
+              "ambassador",
+              "we_club_member"
+            ]
+          }
+        }
+      },
+      CheckoutSessionResponse: {
+        type: "object",
+        properties: {
+          success: { type: "boolean", example: true },
+          data: {
+            type: "object",
+            properties: {
+              checkoutUrl: { type: "string", example: "https://checkout.stripe.com/c/pay/cs_test_..." },
+              sessionId: { type: "string", example: "cs_test_a1b2c3" }
+            }
+          }
+        }
+      },
+      ListingAssetDownloadLog: {
+        type: "object",
+        properties: {
+          _id: { type: "string" },
+          listing_id: { type: "string" },
+          downloaded_by: { type: "string" },
+          ip_address: { type: "string", nullable: true },
+          user_agent: { type: "string", nullable: true },
+          created_at: { type: "string", format: "date-time" }
+        }
+      }
+    }
+  },
+  security: [{ bearerAuth: [] }]
+};
+var options = {
+  definition,
+  apis: [
+    "./src/modules/**/*.route.ts",
+    "./src/modules/**/*.docs.ts",
+    "./dist/modules/**/*.route.js",
+    "./dist/modules/**/*.docs.js"
+  ]
+};
+var swaggerSpec = swaggerJSDoc(options);
 
 // src/app.ts
 var app = express();
@@ -4209,6 +5999,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.get("/", (req, res) => {
   res.send("Hello World Bro!");
+});
+app.use(
+  "/api-docs1",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customSiteTitle: "We-Club API Docs"
+  })
+);
+app.get("/api-docs1.json", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.send(swaggerSpec);
 });
 app.use("/api/v1", routes_default);
 app.use(routeNotFoundHandler_default);
