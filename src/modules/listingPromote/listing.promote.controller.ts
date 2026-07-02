@@ -8,9 +8,19 @@ const createListingPromoteRequest = async(req : Request, res : Response, next : 
     try {
 
         const requesterId = req.user?.id
+        const requesterEmail = req.user?.email
+
 
         const payload = req.body;
-        const result = await  listingPromoteRequestService.createPromoteRequestInDB(requesterId  as string, payload);
+        const  updatedPayload = { 
+            ...payload,
+            requester : {
+                user_id : requesterId,
+                email : requesterEmail
+            }
+        }
+
+        const result = await  listingPromoteRequestService.createPromoteRequestInDB(requesterId  as string, updatedPayload);
 
         sendResponse(res, {
             statusCode: 200,
@@ -112,12 +122,12 @@ const manageListingPromoteRequest = async (
 ) => {
   try {
     const { id } = req.params; // promote request ID
-    const { status, confirmed_commission_pct, listing_id } = req.body;
-    const associateId = req.user?.id;
+    const payload = req.body;
+    const userId = req.user?.id;
     const role = req.user?.role;
     const isAdmin = req.user?.role === "admin";
 
-    if (!status || !["approved", "rejected"].includes(status)) {
+    if (!payload.status || !["approved", "rejected"].includes(payload.status)) {
       return sendResponse(res, {
         statusCode: 400,
         success: false,
@@ -128,15 +138,15 @@ const manageListingPromoteRequest = async (
 
     const result = await listingPromoteRequestService.manageListingPromoteRequestInDB(
       id as string,          // promoteRequestId
-      associateId as string, // the user managing the request
+      userId as string, // the user managing the request
       isAdmin as boolean,
       role as string,
-      { status, confirmed_commission_pct }
+      payload
     );
 
     res.status(200).json({
       success: true,
-      message: `Promote request ${status} successfully`,
+      message: `Promote request ${payload.status} successfully`,
       data: result,
     });
   } catch (error) {
