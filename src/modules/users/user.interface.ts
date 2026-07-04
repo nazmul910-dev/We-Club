@@ -7,7 +7,7 @@ export const USER_ROLES = [
     'ceo_partner',
     'associate',
     'partner',
-    'ambassador',
+    'ambassador', 
     'we_club_member'
 ] as const;
 
