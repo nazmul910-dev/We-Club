@@ -101,6 +101,11 @@ PromoteRequestSchema.post("save", async function (doc) {
     });
   }
 });
+
+
+
+
+
 export const PromoteRequest = model<IPromoteRequest>(
   "PromoteRequest",
   PromoteRequestSchema

@@ -221,6 +221,42 @@ const deleteListing = async (req: Request, res: Response, next : NextFunction) =
   }
 };
 
+const cancelPendingListing = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;  
+
+    const results = await listingsService.cancelPendingListingInDB(id as string, userId as string);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Pending listing canceled successfully",
+      data: results,
+    });
+   
+  } catch (error) {
+    next(error);
+  }
+}
+
+const deletePendingListing = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;  
+    const results = await listingsService.deletePendingListingInDB(id as string, userId as string);
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Pending listing deleted successfully",
+      data: results,
+    });
+  }catch (error) {
+  
+  next(error)
+  }
+}
+
 export const listingController = {
     createListing,
     getAllListing,
@@ -228,5 +264,7 @@ export const listingController = {
     updateListing,
     getListingById,
     deleteListing,
-    getMyPromoters
+    getMyPromoters,
+    cancelPendingListing,
+    deletePendingListing
 }

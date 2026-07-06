@@ -1,4 +1,3 @@
-
 import { ObjectId } from "mongodb";
 import QueryBuilder from "../../utility/queryBuilder";
 import { IListing } from "./listings.interface";
@@ -12,18 +11,20 @@ import mongoose from "mongoose";
  * Controllers should never talk to the model directly — always go through here.
  */
 
- const createListingInDB = async (
-  payload: Partial<IListing>
+const createListingInDB = async (
+  payload: Partial<IListing>,
 ): Promise<IListing> => {
-
-    console.log("payload ", payload)
+  console.log("payload ", payload);
   const listing = new Listing(payload);
   return await listing.save();
 };
 
- const getAllListingFromDB = async (
-  query: Record<string, unknown>
-): Promise<{ data: IListing[]; meta: { page: number; limit: number; total: number; totalPage: number } }> => {
+const getAllListingFromDB = async (
+  query: Record<string, unknown>,
+): Promise<{
+  data: IListing[];
+  meta: { page: number; limit: number; total: number; totalPage: number };
+}> => {
   // NOTE: QueryBuilder.sort() defaults to "-createdAt", but this schema's
   // timestamps are mapped to "created_at"/"updated_at" (snake_case).
   // If the caller doesn't pass ?sort=, force the correct default here.
@@ -34,7 +35,7 @@ import mongoose from "mongoose";
 
   const listingQuery = new QueryBuilder<IListing>(
     Listing.find().populate("associate_id", "name email"),
-    queryWithDefaultSort
+    queryWithDefaultSort,
   )
     .search(["title", "ref_code"])
     .filter()
@@ -47,64 +48,64 @@ import mongoose from "mongoose";
 
   const result = {
     data,
-    meta
-  }
+    meta,
+  };
 
   return result;
 };
 
-
 const getMyListingFromDB = async (
   associateId: string,
-  query: Record<string, unknown> = {}
-): Promise<{ data: IListing[]; meta: { page: number; limit: number; total: number; totalPage: number } }> => {
- 
+  query: Record<string, unknown> = {},
+): Promise<{
+  data: IListing[];
+  meta: { page: number; limit: number; total: number; totalPage: number };
+}> => {
   const queryWithDefaultSort = {
     sort: "-created_at",
     ...query,
   };
- 
-  console.log("query", queryWithDefaultSort)
- 
+
+  console.log("query", queryWithDefaultSort);
+
   const listingQuery = new QueryBuilder<IListing>(
     Listing.find({ associate_id: associateId }),
-    queryWithDefaultSort
+    queryWithDefaultSort,
   )
     .search(["title", "ref_code"])
     .filter()
     .sort()
     .paginate()
     .fieldsLimit();
- 
+
   const data = await listingQuery.modelQuery;
   const meta = await listingQuery.countTotal();
 
   const result = {
-    data, meta
-  }
- 
+    data,
+    meta,
+  };
+
   return result;
 };
 
-
-const getListingByIdFromDB = async (
-  id: string
-): Promise<IListing | null> => {
+const getListingByIdFromDB = async (id: string): Promise<IListing | null> => {
   return await Listing.findById(id).populate("associate_id", "name email");
 };
 
-
- const getMyPromotersFromDB = async (
-  associateId: string
-): Promise<{
-  user_id: string;
-  name: string;
-  email: string;
-  phone: string;
-  tier: string;
-  totalListingsCount: number;
-  totalListingsValue: { amount: number; currency: string }[];
-}[]> => {
+const getMyPromotersFromDB = async (
+  associateId: string,
+): Promise<
+  {
+    user_id: string;
+    name: string;
+    email: string;
+    phone: string;
+    tier: string;
+    totalListingsCount: number;
+    totalListingsValue: { amount: number; currency: string }[];
+  }[]
+> => {
   const result = await Listing.aggregate([
     // 1. Only this associate's listings, not soft-deleted
     {
@@ -141,9 +142,7 @@ const getListingByIdFromDB = async (
         localField: "_id",
         foreignField: "_id",
         as: "user",
-        pipeline: [
-          { $project: { fullName: 1, email: 1, phone: 1, _id: 0 } },
-        ],
+        pipeline: [{ $project: { fullName: 1, email: 1, phone: 1, _id: 0 } }],
       },
     },
 
@@ -169,28 +168,34 @@ const getListingByIdFromDB = async (
 
   return result;
 };
- 
+
 const updateListingInDB = async (
   id: string,
   associateId: string,
-  payload: Partial<IListing>
+  payload: Partial<IListing>,
 ): Promise<IListing | null> => {
   const listing = await Listing.findById(id);
- 
+
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
 
-  const isOwner = listing.associate_id.toString() !== associateId.toString()
- 
+  const isOwner = listing.associate_id.toString() !== associateId.toString();
+
   if (!isOwner) {
-    throw new UnauthorizedError("You are not authorized to update this listing");
+    throw new UnauthorizedError(
+      "You are not authorized to update this listing",
+    );
   }
- 
+
   // Prevent associates from sneaking in fields they shouldn't control directly
   // (e.g. promoters is managed only via approved PromoteRequests, not direct edits).
-  const { promoters, associate_id, ...safePayload } = payload as Record<string, unknown> & Partial<IListing>;
- 
+  const { promoters, associate_id, ...safePayload } = payload as Record<
+    string,
+    unknown
+  > &
+    Partial<IListing>;
+
   return await Listing.findByIdAndUpdate(id, safePayload, {
     new: true,
     runValidators: true,
@@ -200,36 +205,38 @@ const updateListingInDB = async (
 const deleteListingFromDB = async (
   id: string,
   userId: string,
-  role : string,
+  role: string,
 ): Promise<IListing | null> => {
   const listing = await Listing.findById(id);
- 
+
   if (!listing) {
     throw new Error("Listing not found");
   }
 
-    const isOwner = listing.associate_id.toString() === userId.toString();
-    const isAdmin = role === "admin";
- 
+  const isOwner = listing.associate_id.toString() === userId.toString();
+  const isAdmin = role === "admin";
+
   if (!isOwner && !isAdmin) {
-  throw new UnauthorizedError("You are not authorized to delete this listing");
-}
- 
+    throw new UnauthorizedError(
+      "You are not authorized to delete this listing",
+    );
+  }
+
   const session = await mongoose.startSession();
- 
+
   try {
     session.startTransaction();
- 
+
     listing.is_deleted = true;
     listing.deleted_at = new Date();
     await listing.save({ session });
- 
+
     await PromoteRequest.updateMany(
       { listing_id: id, is_deleted: false },
       { is_deleted: true, deleted_at: new Date() },
-      { session }
+      { session },
     );
- 
+
     await session.commitTransaction();
     return listing;
   } catch (error) {
@@ -240,8 +247,61 @@ const deleteListingFromDB = async (
   }
 };
 
+const cancelPendingListingInDB = async (
+  id: string,
+  userId: string,
+): Promise<IListing | null> => {
+  const listing = await Listing.findById(id);
+  console.log(userId);
+  if (!listing) {
+    throw new NotFoundError("Listing not found");
+  }
+
+  const isOwner = listing.associate_id.toString() === userId.toString();
+  // console.log(listing.associate_id.toString(), userId.toString())
+
+  // console.log(isOwner);
+  if (!isOwner) {
+    throw new UnauthorizedError(
+      "You are not authorized to cancel this listing",
+    );
+  }
+
+  listing.status = "draft";
+  return await listing.save();
+};
+
+const deletePendingListingInDB = async (
+  id: string,
+  userId: string,
+): Promise<IListing | null> => {
+  const listing = await Listing.findById(id);
+
+  if (!listing) {
+    throw new NotFoundError("Listing not found");
+  }
+
+  const isOwner = listing.associate_id.toString() === userId.toString();
+
+  if (!isOwner) {
+    throw new UnauthorizedError(
+      "You are not authorized to delete this listing",
+    );
+  }
+
+  listing.is_deleted = true;
+  listing.deleted_at = new Date();
+  return await listing.save();
+};
+
 export const listingsService = {
-    createListingInDB, getAllListingFromDB, getListingByIdFromDB, updateListingInDB, deleteListingFromDB, getMyListingFromDB , getMyPromotersFromDB 
-}
-
-
+  createListingInDB,
+  getAllListingFromDB,
+  getListingByIdFromDB,
+  updateListingInDB,
+  deleteListingFromDB,
+  getMyListingFromDB,
+  getMyPromotersFromDB,
+  cancelPendingListingInDB,
+  deletePendingListingInDB,
+};

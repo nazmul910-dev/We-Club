@@ -1,6 +1,6 @@
 import { Document, Types } from "mongoose";
 
-export type ListingStatus = "active" | "pending" | "sold" | "draft";
+export type ListingStatus = "active" | "pending" | "sold" | "draft" | "cancelled";
 export type PromoteReqStatus = "pending" | "approved" | "rejected";
 
 export interface ILocation {
