@@ -58,11 +58,13 @@ const getMyListingFromDB = async (
   associateId: string,
   query: Record<string, unknown> = {}
 ): Promise<{ data: IListing[]; meta: { page: number; limit: number; total: number; totalPage: number } }> => {
+ 
   const queryWithDefaultSort = {
     sort: "-created_at",
     ...query,
   };
  
+  console.log("query", queryWithDefaultSort)
  
   const listingQuery = new QueryBuilder<IListing>(
     Listing.find({ associate_id: associateId }),
