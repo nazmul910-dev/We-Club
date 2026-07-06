@@ -110,6 +110,21 @@ const getListingById  = async(req : Request, res : Response, next : NextFunction
 
 }
 
+const getMyPromoters = async(req : Request, res : Response, next : NextFunction) => {
+    try {
+        const userId = req.user?.id;
+        const result = await listingsService.getMyPromotersFromDB(userId as string); 
+        sendResponse(res, {
+            statusCode: 200,
+            success : true,
+            message : "Promoters retrieved successfully",
+            data : result
+        }) 
+    } catch (error) {
+        next(error)
+    }
+}
+
 const updateListing = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -212,5 +227,6 @@ export const listingController = {
     getMyListings,
     updateListing,
     getListingById,
-    deleteListing
+    deleteListing,
+    getMyPromoters
 }

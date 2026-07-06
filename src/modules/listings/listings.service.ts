@@ -90,6 +90,83 @@ const getListingByIdFromDB = async (
 ): Promise<IListing | null> => {
   return await Listing.findById(id).populate("associate_id", "name email");
 };
+
+
+ const getMyPromotersFromDB = async (
+  associateId: string
+): Promise<{
+  user_id: string;
+  name: string;
+  email: string;
+  phone: string;
+  tier: string;
+  totalListingsCount: number;
+  totalListingsValue: { amount: number; currency: string }[];
+}[]> => {
+  const result = await Listing.aggregate([
+    // 1. Only this associate's listings, not soft-deleted
+    {
+      $match: {
+        associate_id: new mongoose.Types.ObjectId(associateId),
+        is_deleted: false,
+      },
+    },
+
+    // 2. Flatten promoters array — one doc per promoter per listing
+    { $unwind: "$promoters" },
+
+    // 3. Group by promoter user_id
+    //    - count how many listings they're promoting
+    //    - collect each listing's price (amount + currency) to handle multi-currency
+    {
+      $group: {
+        _id: "$promoters.user_id",
+        tier: { $last: "$promoters.tier" },
+        totalListingsCount: { $sum: 1 },
+        listingPrices: {
+          $push: {
+            amount: "$price.amount",
+            currency: "$price.currency",
+          },
+        },
+      },
+    },
+
+    // 4. Lookup User details — one join, not N queries
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "user",
+        pipeline: [
+          { $project: { fullName: 1, email: 1, phone: 1, _id: 0 } },
+        ],
+      },
+    },
+
+    // 5. Flatten the user array (lookup always returns array)
+    { $unwind: "$user" },
+
+    // 6. Shape final output
+    {
+      $project: {
+        _id: 0,
+        user_id: "$_id",
+        name: "$user.fullName",
+        email: "$user.email",
+        phone: "$user.phone",
+        tier: 1,
+        totalListingsCount: 1,
+        listingPrices: 1,
+      },
+    },
+
+    { $sort: { totalListingsCount: -1 } },
+  ]);
+
+  return result;
+};
  
 const updateListingInDB = async (
   id: string,
@@ -162,7 +239,7 @@ const deleteListingFromDB = async (
 };
 
 export const listingsService = {
-    createListingInDB, getAllListingFromDB, getListingByIdFromDB, updateListingInDB, deleteListingFromDB, getMyListingFromDB
+    createListingInDB, getAllListingFromDB, getListingByIdFromDB, updateListingInDB, deleteListingFromDB, getMyListingFromDB , getMyPromotersFromDB 
 }
 
 

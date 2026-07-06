@@ -10,6 +10,7 @@ const router = Router();
 router.get("/",  listingController.getAllListing);
 router.post("/", verifyToken, uploadListingImages,  listingController.createListing);
 router.get("/my", verifyToken, listingController.getMyListings);
+router.get("/my-promoters", verifyToken, listingController.getMyPromoters);
 
 router.put("/:id",  verifyToken, uploadListingImages, listingController.updateListing);
 router.get("/:id",  listingController.getListingById);
