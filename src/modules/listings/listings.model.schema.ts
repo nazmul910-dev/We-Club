@@ -91,4 +91,10 @@ ListingSchema.pre(/^find/, function (this: any) {
   }
 });
 
+// ListingSchema.save(/^find/ , function(this : any){
+//   if(this.getFilter().is_deleted === true){
+//     this.where({promoters : []})
+//   }
+// } );
+
 export const Listing = model<IListing>("Listing", ListingSchema);

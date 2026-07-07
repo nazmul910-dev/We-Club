@@ -86,6 +86,7 @@ router.post("/", verifyToken, uploadListingImages,  listingController.createList
  *                     $ref: '#/components/schemas/Listing'
  */
 router.get("/my", verifyToken, listingController.getMyListings);
+router.get("/my-promoters", verifyToken, listingController.getMyPromoters);
 
 
 /**
@@ -127,6 +128,8 @@ router.get("/my", verifyToken, listingController.getMyListings);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.put("/:id",  verifyToken, uploadListingImages, listingController.updateListing);
+router.patch("/cancel/:id", verifyToken, listingController.cancelPendingListing);
+router.patch("/delete/:id", verifyToken, listingController.deletePendingListing);
 
 /**
  * @openapi
