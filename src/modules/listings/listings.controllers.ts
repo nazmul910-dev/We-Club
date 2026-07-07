@@ -3,6 +3,7 @@ import { listingsService } from "./listings.service";
 import sendResponse from "../../utility/sendResponse";
 import { uploadImageToCloudinary } from "../../utility/cloudinaryUpload";
 import { json } from "zod";
+import { parseIfString } from "../../utility/parseIfString";
 
 const LISTING_IMAGE_TRANSFORM = [{ quality: "auto", fetch_format: "auto" }];
 
@@ -14,35 +15,20 @@ const createListing = async (req: Request, res: Response) => {
       images?: Express.Multer.File[];
     };
 
-    let cover_image: string | undefined;
-    let images: string[] = [];
+    // Upload cover_image and ALL gallery images in parallel — not sequentially.
+    // Previously: cover upload finished → then gallery uploads started (sequential).
+    // Now: all uploads fire at the same time, response time = slowest single upload.
+    const [cover_image, ...uploadedImages] = await Promise.all([
+      files?.cover_image?.[0]
+        ? uploadImageToCloudinary(files.cover_image[0], "listings/cover")
+        : Promise.resolve(undefined),
 
-    if (files?.cover_image?.[0]) {
-      cover_image = await uploadImageToCloudinary(
-        files.cover_image[0],
-        "listings/cover"
-      );
-    }
+      ...(files?.images ?? []).map((file) =>
+        uploadImageToCloudinary(file, "listings/gallery")
+      ),
+    ]);
 
-    if (files?.images?.length) {
-      images = await Promise.all(
-        files.images.map((file) =>
-          uploadImageToCloudinary(file, "listings/gallery")
-        )
-      );
-    }
-
-    // parse stringified JSON fields coming from form-data
-    const parseIfString = (val: any) => {
-      if (typeof val === "string") {
-        try {
-          return JSON.parse(val);
-        } catch {
-          return val;
-        }
-      }
-      return val;
-    };
+    const images = uploadedImages.filter(Boolean) as string[];
 
     const body = {
       ...req.body,
@@ -65,7 +51,8 @@ const createListing = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: error instanceof Error ? error.message : "Failed to create listing",
+      message:
+        error instanceof Error ? error.message : "Failed to create listing",
     });
   }
 };
@@ -121,6 +108,21 @@ const getListingById  = async(req : Request, res : Response, next : NextFunction
     }
 
 
+}
+
+const getMyPromoters = async(req : Request, res : Response, next : NextFunction) => {
+    try {
+        const userId = req.user?.id;
+        const result = await listingsService.getMyPromotersFromDB(userId as string); 
+        sendResponse(res, {
+            statusCode: 200,
+            success : true,
+            message : "Promoters retrieved successfully",
+            data : result
+        }) 
+    } catch (error) {
+        next(error)
+    }
 }
 
 const updateListing = async (req: Request, res: Response, next: NextFunction) => {
@@ -219,11 +221,50 @@ const deleteListing = async (req: Request, res: Response, next : NextFunction) =
   }
 };
 
+const cancelPendingListing = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;  
+
+    const results = await listingsService.cancelPendingListingInDB(id as string, userId as string);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Pending listing canceled successfully",
+      data: results,
+    });
+   
+  } catch (error) {
+    next(error);
+  }
+}
+
+const deletePendingListing = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;  
+    const results = await listingsService.deletePendingListingInDB(id as string, userId as string);
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Pending listing deleted successfully",
+      data: results,
+    });
+  }catch (error) {
+  
+  next(error)
+  }
+}
+
 export const listingController = {
     createListing,
     getAllListing,
     getMyListings,
     updateListing,
     getListingById,
-    deleteListing
+    deleteListing,
+    getMyPromoters,
+    cancelPendingListing,
+    deletePendingListing
 }
