@@ -257,6 +257,24 @@ const deletePendingListing = async (req: Request, res: Response, next: NextFunct
   }
 }
 
+const manageListings = async(req: Request, res: Response, next: NextFunction) => {
+  try {
+    const {id} = req.params
+    const {
+      status 
+    } = req.body
+    const results = await listingsService.manageListings(id as string, status   )
+      sendResponse(res, {
+        statusCode : 200,
+        success : true,
+        message : `Listing ${status} updated sucessfull`,
+        data : results
+      })
+  } catch (error) {
+    next(error)
+  }
+}
+
 export const listingController = {
     createListing,
     getAllListing,
@@ -266,5 +284,6 @@ export const listingController = {
     deleteListing,
     getMyPromoters,
     cancelPendingListing,
-    deletePendingListing
+    deletePendingListing,
+    manageListings
 }

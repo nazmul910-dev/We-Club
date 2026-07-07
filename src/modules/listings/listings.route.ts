@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { listingController } from './listings.controllers';
-import { verifyToken } from '../../middleware/authMiddleware';
+import { verifyAdmin, verifyToken } from '../../middleware/authMiddleware';
 import { uploadListingImages } from '../../middleware/uploadMiddleware';
 
 
@@ -11,6 +11,8 @@ router.get("/",  listingController.getAllListing);
 router.post("/", verifyToken, uploadListingImages,  listingController.createListing);
 router.get("/my", verifyToken, listingController.getMyListings);
 router.get("/my-promoters", verifyToken, listingController.getMyPromoters);
+
+router.post("/manage/:id", verifyToken, verifyAdmin, listingController.manageListings)
 
 router.put("/:id",  verifyToken, uploadListingImages, listingController.updateListing);
 router.patch("/cancel/:id", verifyToken, listingController.cancelPendingListing);

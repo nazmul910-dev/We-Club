@@ -41,6 +41,25 @@ console.log("secret:", config.JWT_ACCESS_SECRET);
   }
 };
 
+export const verifyAdmin = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  // Ensure verifyToken has already populated req.user
+  if (!req.user) {
+    return next(new UnauthorizedError("Authentication required"));
+  }
+
+  if (req.user.role !== "admin") {
+    return next(
+      new ForbiddenError("You are not authorized to access this resource")
+    );
+  }
+
+  return next();
+};
+
 export const authorizeRoles = (...allowedRoles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;
