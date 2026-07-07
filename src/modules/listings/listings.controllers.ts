@@ -77,9 +77,9 @@ const getMyListings =async (req: Request, res : Response, next : NextFunction) =
     try {
       
         const userId = req.user?.id
-       
+       const query = req.query
         
-        const result = await  listingsService.getMyListingFromDB(userId as string);
+        const result = await  listingsService.getMyListingFromDB(userId as string, query);
           sendResponse(res, {
             statusCode : 200,
             success : true,

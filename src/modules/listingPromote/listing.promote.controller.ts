@@ -78,7 +78,7 @@ const getMyPromoteRequests = async(req : Request, res : Response, next : NextFun
      try {
         const requesterId = req.user?.id; 
 
-        console.log(requesterId)
+        
       
         const query  = req.query;
         const result = await  listingPromoteRequestService.getMyPromoteRequestsFromDB(requesterId as string, query);
