@@ -75,19 +75,42 @@ const forgetPassword = async(req:Request,res:Response,next:NextFunction) =>{
 }
 
 
-const resetPassword = async(req:Request, res:Response, next:NextFunction) =>{
-    try {
-        const token = req.headers.authorization as string;
-        const result = await authService.resetPassword(req.body, token);
-        sendResponse(res, {
-        statusCode : 200,
-        success: true,   
-        message : "Password has been reset",
-        data : result
-       });
-    } catch (error) {
-        next(error)
-    }
+const resetPassword = async(
+req:Request,
+res:Response,
+next:NextFunction
+)=>{
+    
+try {
+
+const authHeader = req.headers.authorization;
+
+const token = authHeader?.split(" ")[1];
+
+
+if(!token){
+    throw new Error("Token missing");
+}
+
+
+const result = await authService.resetPassword(
+    req.body,
+    token
+);
+
+
+sendResponse(res,{
+    statusCode:200,
+    success:true,
+    message:"Password has been reset",
+    data:result
+});
+
+
+}catch(error){
+    next(error);
+}
+
 }
 
 const refreshtoken = async(req:Request, res:Response, next:NextFunction) =>{
