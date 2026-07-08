@@ -149,6 +149,7 @@ export const createUser = async (payload: unknown) => {
     fullName: body.fullName,
     email: body.email,
     role: body.role,
+    accessTo: body.accessTo,
     password: hashedPassword,
 
     paymentStatus: requiresPayment ? 'unpaid' : 'paid',
@@ -209,21 +210,30 @@ export const createUser = async (payload: unknown) => {
     };
   }
 
-  const checkout = await paymentService.createCheckoutSession({
-    userId: String(user._id),
-    fullName: user.fullName,
-    email: user.email,
-    role: user.role,
-    purpose: 'registration',
-  });
+  try {
+    const checkout = await paymentService.createCheckoutSession({
+      userId: String(user._id),
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      accessTo: user.accessTo,
+      purpose: 'registration',
+      discountCode: body.discountCode,
+    });
 
-  return {
-    user: safeUserObject,
-    checkoutUrl: checkout.checkoutUrl,
-    sessionId: checkout.sessionId,
-    pricing: checkout.pricing,
-    message: 'User created. Please complete payment to continue registration.',
-  };
+    return {
+      user: safeUserObject,
+      checkoutUrl: checkout.checkoutUrl,
+      sessionId: checkout.sessionId,
+      pricing: checkout.pricing,
+      originalPricing: checkout.originalPricing,
+      discount: checkout.discount,
+      message: 'User created. Please complete payment to continue registration.',
+    };
+  } catch (error) {
+    await User.findByIdAndDelete(user._id);
+    throw error;
+  }
 };
 
 export const loginUser = async (payload: unknown) => {
@@ -294,6 +304,7 @@ export const loginUser = async (payload: unknown) => {
     id: user._id.toString(),
     email: user.email,
     role: user.role,
+    accessTo: user.accessTo,
   };
 
   const accessToken = jwt.sign(
@@ -308,6 +319,7 @@ export const loginUser = async (payload: unknown) => {
     {
       userId: user._id.toString(),
       role: user.role,
+      accessTo: user.accessTo,
     },
     config.JWT_REFRESH_SECRET as string,
     7 * 24 * 60 * 60

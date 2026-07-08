@@ -7,10 +7,15 @@ export const USER_ROLES = [
     'ceo_partner',
     'associate',
     'partner',
-    'ambassador',
+    'ambassador', 
     'we_club_member'
 ] as const;
 
+export const ACCESS_TO_OPTIONS = [
+  'we_command_center',
+  'invictus',
+  'both',
+] as const;
 
 export const PAYMENT_STATUSES = [
     'unpaid',
@@ -52,6 +57,7 @@ export const SUBSCRIPTION_STATUSES = [
 ] as const;
 
 
+export type AccessTo = (typeof ACCESS_TO_OPTIONS)[number];
 export type UserRole = (typeof USER_ROLES)[number];
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
@@ -73,6 +79,7 @@ export interface IUser {
     password: string;
 
     role: UserRole;
+    accessTo: AccessTo ;
 
     licenseNumber?: string | undefined;
     brokerage?: string | undefined;
@@ -105,6 +112,8 @@ export interface IUser {
     lifetimeCommissionEarned?: number | undefined;
     discretionScore?: number | undefined;
 
+    approvalEmailSentAt?: Date | undefined;
+    
     createdAt?: Date | undefined;
     updatedAt?: Date | undefined;
 }

@@ -3,7 +3,7 @@ import { IUser } from "../modules/users/user.interface";
 declare global {
   namespace Express {
     interface Request {
-      user?: Pick<IUser, "id" | "email" | "role">;
+      user?: Pick<IUser, "id" | "email" | "role"> & { accessTo?: AccessTo | undefined };
     }
   }
 }
