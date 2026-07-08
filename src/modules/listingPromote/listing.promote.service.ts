@@ -155,8 +155,7 @@ const getMyPromoteRequestsFromDB = async (
 
   const promoteRequestQuery = new QueryBuilder<IPromoteRequest>(
     PromoteRequest.find({
-      "requester._id": requesterId,
-      // "listing_id" : {$not : null},
+      "requester.user_id": requesterId,
       is_deleted: { $ne: true },
     }).populate("listing_id", "title ref_code cover_image price"),
     queryWithDefaultSort,

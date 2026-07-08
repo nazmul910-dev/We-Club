@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 import QueryBuilder from "../../utility/queryBuilder";
-import { IListing } from "./listings.interface";
+import { IListing, ListingStatus } from "./listings.interface";
 import { Listing } from "./listings.model.schema";
 import { NotFoundError, UnauthorizedError } from "../../utility/errorResponses";
 import { PromoteRequest } from "../listingPromote/listings.promote.request.model.schema";
@@ -294,6 +294,22 @@ const deletePendingListingInDB = async (
   return await listing.save();
 };
 
+const manageListings = async (
+  id: string,
+  status: ListingStatus,
+  // message: string
+) => {
+  const listing = await Listing.findById(id);
+
+  if (!listing) {
+    throw new NotFoundError("Listing not found");
+  }
+
+  listing.status = status;
+
+  return await listing.save();
+};
+
 export const listingsService = {
   createListingInDB,
   getAllListingFromDB,
@@ -304,4 +320,5 @@ export const listingsService = {
   getMyPromotersFromDB,
   cancelPendingListingInDB,
   deletePendingListingInDB,
+  manageListings
 };

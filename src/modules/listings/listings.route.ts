@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { listingController } from './listings.controllers';
-import { verifyToken } from '../../middleware/authMiddleware';
+import { verifyAdmin, verifyToken } from '../../middleware/authMiddleware';
 import { uploadListingImages } from '../../middleware/uploadMiddleware';
 
 
@@ -87,6 +87,8 @@ router.post("/", verifyToken, uploadListingImages,  listingController.createList
  */
 router.get("/my", verifyToken, listingController.getMyListings);
 router.get("/my-promoters", verifyToken, listingController.getMyPromoters);
+
+router.post("/manage/:id", verifyToken, verifyAdmin, listingController.manageListings)
 
 
 /**

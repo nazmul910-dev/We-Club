@@ -77,10 +77,13 @@ const getMyListingsPromoteRequest = async (req : Request, res : Response, next :
 const getMyPromoteRequests = async(req : Request, res : Response, next : NextFunction) => {
      try {
         const requesterId = req.user?.id; 
+
+        
       
         const query  = req.query;
         const result = await  listingPromoteRequestService.getMyPromoteRequestsFromDB(requesterId as string, query);
 
+            console.log(result)
         sendResponse(res, {
             statusCode: 200,
             success : true,

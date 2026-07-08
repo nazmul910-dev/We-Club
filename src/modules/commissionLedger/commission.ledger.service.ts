@@ -62,6 +62,21 @@ type ResolveDisputePayload = {
   resolution_note: string;
 };
 
+interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPage: number;
+}
+ 
+const getPaginationParams = (query: Record<string, unknown>) => {
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.max(1, Number(query.limit) || 10);
+  const skip = (page - 1) * limit;
+  return { page, limit, skip };
+};
+ 
+
 const throwError = (message: string, statusCode: number): never => {
   const error = new Error(message) as Error & { statusCode?: number };
   error.statusCode = statusCode;
@@ -172,45 +187,123 @@ export const createPendingCommissionFromPromotionApproval = async ({
   return ensureCommissionExists(commission);
 };
 
+// const getMyCommissionsFromDB = async (
+//   authUser: AuthUser,
+//   query: Record<string, unknown>
+// ) => {
+//   const filter: Record<string, unknown> = {
+//     $or: [
+//       { listing_owner_id: toObjectId(authUser.id) },
+//       { promoter_id: toObjectId(authUser.id) },
+//     ],
+//   };
+
+//   if (typeof query.status === 'string') {
+//     filter.status = query.status;
+//   }
+
+//   return CommissionLedger.find(filter)
+//     .populate(populateCommissionQuery())
+//     .sort({ created_at: -1 });
+// };
+
 const getMyCommissionsFromDB = async (
   authUser: AuthUser,
   query: Record<string, unknown>
-) => {
+): Promise<{ data: unknown[]; meta: PaginationMeta }> => {
   const filter: Record<string, unknown> = {
     $or: [
       { listing_owner_id: toObjectId(authUser.id) },
       { promoter_id: toObjectId(authUser.id) },
     ],
   };
-
+ 
   if (typeof query.status === 'string') {
     filter.status = query.status;
   }
-
-  return CommissionLedger.find(filter)
-    .populate(populateCommissionQuery())
-    .sort({ created_at: -1 });
+ 
+  const { page, limit, skip } = getPaginationParams(query);
+ 
+  // Run the page of results and the total count in parallel — same filter,
+  // one for `.find()`, one for `.countDocuments()`.
+  const [data, total] = await Promise.all([
+    CommissionLedger.find(filter)
+      .populate(populateCommissionQuery())
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit),
+    CommissionLedger.countDocuments(filter),
+  ]);
+ 
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.max(1, Math.ceil(total / limit)),
+    },
+  };
 };
 
-const getAllCommissionsFromDB = async (query: Record<string, unknown>) => {
+const getAllCommissionsFromDB = async (
+  query: Record<string, unknown>
+): Promise<{ data: unknown[]; meta: PaginationMeta }> => {
   const filter: Record<string, unknown> = {};
  
   if (typeof query.status === 'string') {
     filter.status = query.status;
-  } 
-
+  }
+ 
   if (typeof query.promoter_id === 'string') {
     filter.promoter_id = toObjectId(query.promoter_id);
   }
-
+ 
   if (typeof query.listing_owner_id === 'string') {
     filter.listing_owner_id = toObjectId(query.listing_owner_id);
   }
-
-  return CommissionLedger.find(filter)
-    .populate(populateCommissionQuery())
-    .sort({ created_at: -1 });
+ 
+  const { page, limit, skip } = getPaginationParams(query);
+ 
+  const [data, total] = await Promise.all([
+    CommissionLedger.find(filter)
+      .populate(populateCommissionQuery())
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit),
+    CommissionLedger.countDocuments(filter),
+  ]);
+ 
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.max(1, Math.ceil(total / limit)),
+    },
+  };
 };
+
+// const getAllCommissionsFromDB = async (query: Record<string, unknown>) => {
+//   const filter: Record<string, unknown> = {};
+ 
+//   if (typeof query.status === 'string') {
+//     filter.status = query.status;
+//   } 
+
+//   if (typeof query.promoter_id === 'string') {
+//     filter.promoter_id = toObjectId(query.promoter_id);
+//   }
+
+//   if (typeof query.listing_owner_id === 'string') {
+//     filter.listing_owner_id = toObjectId(query.listing_owner_id);
+//   }
+
+//   return CommissionLedger.find(filter)
+//     .populate(populateCommissionQuery())
+//     .sort({ created_at: -1 });
+// };
 
 const getSingleCommissionFromDB = async (
   commissionId: string,
