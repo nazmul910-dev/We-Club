@@ -2029,7 +2029,7 @@ var forgetPassword = async (email) => {
     config_default.JWT_ACCESS_SECRET,
     10 * 60 * 1e3
   );
-  const resetUILink = `http://localhost:5000/reset-password?token=${token}`;
+  const resetUILink = `http://localhost:3000/reset-password?token=${token}`;
   SendMail_default(user?.email, `<p> ${resetUILink}</p>`);
 };
 var resetPassword = async (payload, token) => {
@@ -2145,8 +2145,15 @@ var forgetPassword2 = async (req, res, next) => {
 };
 var resetPassword2 = async (req, res, next) => {
   try {
-    const token = req.headers.authorization;
-    const result = await resetPassword(req.body, token);
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(" ")[1];
+    if (!token) {
+      throw new Error("Token missing");
+    }
+    const result = await resetPassword(
+      req.body,
+      token
+    );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -2242,6 +2249,17 @@ var verifyToken2 = (req, res, next) => {
     return next(new UnauthorizedError("Invalid or expired token"));
   }
 };
+var verifyAdmin = (req, res, next) => {
+  if (!req.user) {
+    return next(new UnauthorizedError("Authentication required"));
+  }
+  if (req.user.role !== "admin") {
+    return next(
+      new ForbiddenError("You are not authorized to access this resource")
+    );
+  }
+  return next();
+};
 var authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
     const user = req.user;
@@ -2315,8 +2333,11 @@ var ListingSchema = new Schema4(
       required: true
     },
     promoters: {
-      type: [Schema4.Types.ObjectId],
-      ref: "User",
+      type: [{
+        _id: false,
+        user_id: { type: Schema4.Types.ObjectId, ref: "User" },
+        tier: { type: String, enum: ["tier_1", "tier_2", "tier_3"] }
+      }],
       default: []
     },
     is_deleted: {
@@ -2334,7 +2355,6 @@ var ListingSchema = new Schema4(
 ListingSchema.index({ status: 1 });
 ListingSchema.index({ "location.country": 1 });
 ListingSchema.index({ associate_id: 1 });
-ListingSchema.index({ ref_code: 1 }, { unique: true });
 ListingSchema.index({ is_deleted: 1 });
 ListingSchema.pre(/^find/, function() {
   if (this.getFilter().is_deleted === void 0) {
@@ -2352,10 +2372,16 @@ var PromoteRequestSchema = new Schema5(
       ref: "Listing",
       required: true
     },
-    requester_id: {
-      type: Schema5.Types.ObjectId,
-      ref: "User",
-      required: true
+    requester: {
+      user_id: {
+        type: Schema5.Types.ObjectId,
+        ref: "User",
+        required: true
+      },
+      email: {
+        type: String,
+        required: true
+      }
     },
     status: {
       type: String,
@@ -2365,6 +2391,12 @@ var PromoteRequestSchema = new Schema5(
     is_deleted: {
       type: Boolean,
       default: false
+    },
+    selected_tier: {
+      type: String,
+      enum: ["tier_1", "tier_2", "tier_3"],
+      default: null
+      // null যতক্ষণ approve না হয়
     },
     deleted_at: Date,
     requested_at: { type: Date, default: Date.now },
@@ -2381,11 +2413,13 @@ PromoteRequestSchema.pre(/^find/, function() {
   }
 });
 PromoteRequestSchema.index(
-  { listing_id: 1, requester_id: 1, status: 1 },
+  { listing_id: 1, "requester.user_id": 1, status: 1 },
   { unique: true, partialFilterExpression: { status: "pending" } }
 );
 PromoteRequestSchema.index({ listing_id: 1, status: 1 });
-PromoteRequestSchema.index({ requester_id: 1 });
+PromoteRequestSchema.index({ "requester.user_id": 1 });
+PromoteRequestSchema.index({ listing_id: 1, status: 1 });
+PromoteRequestSchema.index({ "requester.user_id": 1 });
 PromoteRequestSchema.pre("save", function() {
   if (this.isModified("status") && this.status !== "pending") {
     this.resolved_at = this.resolved_at ?? /* @__PURE__ */ new Date();
@@ -2394,11 +2428,18 @@ PromoteRequestSchema.pre("save", function() {
 PromoteRequestSchema.post("save", async function(doc) {
   if (doc.status === "approved") {
     await Listing.findByIdAndUpdate(doc.listing_id, {
-      $addToSet: { promoters: doc.requester_id }
+      $addToSet: {
+        promoters: {
+          user_id: doc.requester.user_id,
+          tier: doc.selected_tier
+        }
+      }
     });
   } else if (doc.status === "rejected") {
     await Listing.findByIdAndUpdate(doc.listing_id, {
-      $pull: { promoters: doc.requester_id }
+      $pull: {
+        promoters: { user_id: doc.requester.user_id }
+      }
     });
   }
 });
@@ -2420,7 +2461,7 @@ var getAllListingFromDB = async (query) => {
     ...query
   };
   const listingQuery = new queryBuilder_default(
-    Listing.find().populate("associate_id", "name email"),
+    Listing.find().populate("associate_id", "fullName email phone city country brokerage profileImage accountStatus role"),
     queryWithDefaultSort
   ).search(["title", "ref_code"]).filter().sort().paginate().fieldsLimit();
   const data = await listingQuery.modelQuery;
@@ -2436,6 +2477,7 @@ var getMyListingFromDB = async (associateId, query = {}) => {
     sort: "-created_at",
     ...query
   };
+  console.log("query", queryWithDefaultSort);
   const listingQuery = new queryBuilder_default(
     Listing.find({ associate_id: associateId }),
     queryWithDefaultSort
@@ -2451,6 +2493,62 @@ var getMyListingFromDB = async (associateId, query = {}) => {
 var getListingByIdFromDB = async (id) => {
   return await Listing.findById(id).populate("associate_id", "name email");
 };
+var getMyPromotersFromDB = async (associateId) => {
+  const result = await Listing.aggregate([
+    // 1. Only this associate's listings, not soft-deleted
+    {
+      $match: {
+        associate_id: new mongoose.Types.ObjectId(associateId),
+        is_deleted: false
+      }
+    },
+    // 2. Flatten promoters array — one doc per promoter per listing
+    { $unwind: "$promoters" },
+    // 3. Group by promoter user_id
+    //    - count how many listings they're promoting
+    //    - collect each listing's price (amount + currency) to handle multi-currency
+    {
+      $group: {
+        _id: "$promoters.user_id",
+        tier: { $last: "$promoters.tier" },
+        totalListingsCount: { $sum: 1 },
+        listingPrices: {
+          $push: {
+            amount: "$price.amount",
+            currency: "$price.currency"
+          }
+        }
+      }
+    },
+    // 4. Lookup User details — one join, not N queries
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "user",
+        pipeline: [{ $project: { fullName: 1, email: 1, phone: 1, _id: 0 } }]
+      }
+    },
+    // 5. Flatten the user array (lookup always returns array)
+    { $unwind: "$user" },
+    // 6. Shape final output
+    {
+      $project: {
+        _id: 0,
+        user_id: "$_id",
+        name: "$user.fullName",
+        email: "$user.email",
+        phone: "$user.phone",
+        tier: 1,
+        totalListingsCount: 1,
+        listingPrices: 1
+      }
+    },
+    { $sort: { totalListingsCount: -1 } }
+  ]);
+  return result;
+};
 var updateListingInDB = async (id, associateId, payload) => {
   const listing = await Listing.findById(id);
   if (!listing) {
@@ -2458,7 +2556,9 @@ var updateListingInDB = async (id, associateId, payload) => {
   }
   const isOwner = listing.associate_id.toString() !== associateId.toString();
   if (!isOwner) {
-    throw new UnauthorizedError("You are not authorized to update this listing");
+    throw new UnauthorizedError(
+      "You are not authorized to update this listing"
+    );
   }
   const { promoters, associate_id, ...safePayload } = payload;
   return await Listing.findByIdAndUpdate(id, safePayload, {
@@ -2474,7 +2574,9 @@ var deleteListingFromDB = async (id, userId, role) => {
   const isOwner = listing.associate_id.toString() === userId.toString();
   const isAdmin = role === "admin";
   if (!isOwner && !isAdmin) {
-    throw new UnauthorizedError("You are not authorized to delete this listing");
+    throw new UnauthorizedError(
+      "You are not authorized to delete this listing"
+    );
   }
   const session = await mongoose.startSession();
   try {
@@ -2496,13 +2598,55 @@ var deleteListingFromDB = async (id, userId, role) => {
     session.endSession();
   }
 };
+var cancelPendingListingInDB = async (id, userId) => {
+  const listing = await Listing.findById(id);
+  console.log(userId);
+  if (!listing) {
+    throw new NotFoundError("Listing not found");
+  }
+  const isOwner = listing.associate_id.toString() === userId.toString();
+  if (!isOwner) {
+    throw new UnauthorizedError(
+      "You are not authorized to cancel this listing"
+    );
+  }
+  listing.status = "draft";
+  return await listing.save();
+};
+var deletePendingListingInDB = async (id, userId) => {
+  const listing = await Listing.findById(id);
+  if (!listing) {
+    throw new NotFoundError("Listing not found");
+  }
+  const isOwner = listing.associate_id.toString() === userId.toString();
+  if (!isOwner) {
+    throw new UnauthorizedError(
+      "You are not authorized to delete this listing"
+    );
+  }
+  listing.is_deleted = true;
+  listing.deleted_at = /* @__PURE__ */ new Date();
+  return await listing.save();
+};
+var manageListings = async (id, status) => {
+  const listing = await Listing.findById(id);
+  if (!listing) {
+    throw new NotFoundError("Listing not found");
+  }
+  listing.status = status;
+  return await listing.save();
+};
 var listingsService = {
   createListingInDB,
   getAllListingFromDB,
   getListingByIdFromDB,
   updateListingInDB,
   deleteListingFromDB,
-  getMyListingFromDB
+  getMyListingFromDB,
+  getMyPromotersFromDB,
+  cancelPendingListingInDB,
+  deletePendingListingInDB,
+  manageListings
 };
 
 // src/utility/cloudinaryUpload.ts
@@ -2533,35 +2677,29 @@ var uploadImageToCloudinary = async (file, folder = "newaza/profile-images") => 
   return result.secure_url;
 };
 
+// src/utility/parseIfString.ts
+var parseIfString = (val) => {
+  if (typeof val === "string") {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return val;
+    }
+  }
+  return val;
+};
+
 // src/modules/listings/listings.controllers.ts
 var createListing = async (req, res) => {
   try {
     const files = req.files;
-    let cover_image;
-    let images = [];
-    if (files?.cover_image?.[0]) {
-      cover_image = await uploadImageToCloudinary(
-        files.cover_image[0],
-        "listings/cover"
-      );
-    }
-    if (files?.images?.length) {
-      images = await Promise.all(
-        files.images.map(
-          (file) => uploadImageToCloudinary(file, "listings/gallery")
-        )
-      );
-    }
-    const parseIfString = (val) => {
-      if (typeof val === "string") {
-        try {
-          return JSON.parse(val);
-        } catch {
-          return val;
-        }
-      }
-      return val;
-    };
+    const [cover_image, ...uploadedImages] = await Promise.all([
+      files?.cover_image?.[0] ? uploadImageToCloudinary(files.cover_image[0], "listings/cover") : Promise.resolve(void 0),
+      ...(files?.images ?? []).map(
+        (file) => uploadImageToCloudinary(file, "listings/gallery")
+      )
+    ]);
+    const images = uploadedImages.filter(Boolean);
     const body = {
       ...req.body,
       location: parseIfString(req.body.location),
@@ -2602,7 +2740,8 @@ var getAllListing = async (req, res, next) => {
 var getMyListings = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const result = await listingsService.getMyListingFromDB(userId);
+    const query = req.query;
+    const result = await listingsService.getMyListingFromDB(userId, query);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -2621,6 +2760,20 @@ var getListingById = async (req, res, next) => {
       statusCode: 200,
       success: true,
       message: "Listing retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyPromoters = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const result = await listingsService.getMyPromotersFromDB(userId);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Promoters retrieved successfully",
       data: result
     });
   } catch (error) {
@@ -2696,13 +2849,64 @@ var deleteListing = async (req, res, next) => {
     next(error);
   }
 };
+var cancelPendingListing = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const results = await listingsService.cancelPendingListingInDB(id, userId);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Pending listing canceled successfully",
+      data: results
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var deletePendingListing = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const results = await listingsService.deletePendingListingInDB(id, userId);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Pending listing deleted successfully",
+      data: results
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var manageListings2 = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      status
+    } = req.body;
+    const results = await listingsService.manageListings(id, status);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: `Listing ${status} updated sucessfull`,
+      data: results
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var listingController = {
   createListing,
   getAllListing,
   getMyListings,
   updateListing,
   getListingById,
-  deleteListing
+  deleteListing,
+  getMyPromoters,
+  cancelPendingListing,
+  deletePendingListing,
+  manageListings: manageListings2
 };
 
 // src/middleware/uploadMiddleware.ts
@@ -2731,7 +2935,11 @@ var router3 = Router3();
 router3.get("/", listingController.getAllListing);
 router3.post("/", verifyToken2, uploadListingImages, listingController.createListing);
 router3.get("/my", verifyToken2, listingController.getMyListings);
+router3.get("/my-promoters", verifyToken2, listingController.getMyPromoters);
+router3.post("/manage/:id", verifyToken2, verifyAdmin, listingController.manageListings);
 router3.put("/:id", verifyToken2, uploadListingImages, listingController.updateListing);
+router3.patch("/cancel/:id", verifyToken2, listingController.cancelPendingListing);
+router3.patch("/delete/:id", verifyToken2, listingController.deletePendingListing);
 router3.get("/:id", listingController.getListingById);
 router3.delete("/:id", verifyToken2, listingController.deleteListing);
 var listingsRoutes = router3;
@@ -2994,6 +3202,12 @@ var calculatePlatformFeeAmount = (finalCommissionAmount, platformFeeRatePercent 
 };
 
 // src/modules/commissionLedger/commission.ledger.service.ts
+var getPaginationParams = (query) => {
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.max(1, Number(query.limit) || 10);
+  const skip = (page - 1) * limit;
+  return { page, limit, skip };
+};
 var throwError3 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -3031,15 +3245,13 @@ var populateCommissionQuery = () => {
 var createPendingCommissionFromPromotionApproval = async ({
   listing_id,
   promotion_request_id,
-  approved_by
+  approved_by,
+  promoteRequest,
+  listing
 }) => {
-  const promoteRequest = await PromoteRequest.findById(promotion_request_id).lean();
-  if (!promoteRequest) throw new Error("Promote request not found");
-  const promoter_id = promoteRequest.requester_id.toString();
-  const listing = await Listing.findById(listing_id).lean();
-  const safeListing = ensureValueExists(listing, "Listing not found", 404);
-  const listingPriceAmount = safeListing.price.amount;
-  const commissionRatePercent = safeListing.referral_commission.offered_amount;
+  const promoter_id = promoteRequest.requester.user_id.toString();
+  const listingPriceAmount = listing.price.amount;
+  const commissionRatePercent = listing.referral_commission.offered_amount;
   const estimatedCommissionAmount = calculateCommissionAmount(
     listingPriceAmount,
     commissionRatePercent
@@ -3053,11 +3265,11 @@ var createPendingCommissionFromPromotionApproval = async ({
       $setOnInsert: {
         listing_id: toObjectId(listing_id),
         promotion_request_id: toObjectId(promotion_request_id),
-        listing_owner_id: safeListing.associate_id,
+        listing_owner_id: listing.associate_id,
         promoter_id: toObjectId(promoter_id),
         created_by: toObjectId(approved_by),
         status: "pending",
-        currency: safeListing.price.currency,
+        currency: listing.price.currency,
         listing_price_amount: listingPriceAmount,
         commission_rate_percent: commissionRatePercent,
         estimated_commission_amount: estimatedCommissionAmount,
@@ -3090,7 +3302,20 @@ var getMyCommissionsFromDB = async (authUser, query) => {
   if (typeof query.status === "string") {
     filter.status = query.status;
   }
-  return CommissionLedger.find(filter).populate(populateCommissionQuery()).sort({ created_at: -1 });
+  const { page, limit, skip } = getPaginationParams(query);
+  const [data, total] = await Promise.all([
+    CommissionLedger.find(filter).populate(populateCommissionQuery()).sort({ created_at: -1 }).skip(skip).limit(limit),
+    CommissionLedger.countDocuments(filter)
+  ]);
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.max(1, Math.ceil(total / limit))
+    }
+  };
 };
 var getAllCommissionsFromDB = async (query) => {
   const filter = {};
@@ -3103,7 +3328,20 @@ var getAllCommissionsFromDB = async (query) => {
   if (typeof query.listing_owner_id === "string") {
     filter.listing_owner_id = toObjectId(query.listing_owner_id);
   }
-  return CommissionLedger.find(filter).populate(populateCommissionQuery()).sort({ created_at: -1 });
+  const { page, limit, skip } = getPaginationParams(query);
+  const [data, total] = await Promise.all([
+    CommissionLedger.find(filter).populate(populateCommissionQuery()).sort({ created_at: -1 }).skip(skip).limit(limit),
+    CommissionLedger.countDocuments(filter)
+  ]);
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.max(1, Math.ceil(total / limit))
+    }
+  };
 };
 var getSingleCommissionFromDB = async (commissionId, authUser) => {
   const commission = await CommissionLedger.findById(commissionId).populate(populateCommissionQuery()).lean();
@@ -3354,32 +3592,172 @@ var commissionLedgerService = {
   resolveCommissionDisputeIntoDB
 };
 
+// src/modules/listingPromote/listing.promotion.approval.email.ts
+import nodemailer4 from "nodemailer";
+var TIER_DETAILS = {
+  tier_1: {
+    label: "Tier 1: Full Marketing + Website",
+    description: "Maximum reach. Full address and visuals exposed.",
+    features: [
+      "Full address & geolocation revealed",
+      "All photography (interior + exterior)",
+      "Promoter may publish to their own website",
+      "Listing appears in network newsletter"
+    ]
+  },
+  tier_2: {
+    label: "Tier 2: Full Marketing",
+    description: "Distribution to qualified buyers only \u2014 no public listing.",
+    features: [
+      "Full address shared with vetted prospects",
+      "All photography (interior + exterior)",
+      "No public web publication permitted",
+      "Print collateral & private decks allowed"
+    ]
+  },
+  tier_3: {
+    label: "Tier 3: Discreet Marketing",
+    description: "Off-market. Whispered, never broadcast.",
+    features: [
+      "Address withheld until NDA signed",
+      "Exterior photography only",
+      "1:1 introductions only \u2014 no decks",
+      "All inquiries routed through Associate"
+    ]
+  }
+};
+var TIER_COLORS = {
+  tier_1: "#16a34a",
+  tier_2: "#2563eb",
+  tier_3: "#7c3aed"
+};
+var escapeHtml2 = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+var getPromotionApprovalEmailHtml = (promoterName, listingTitle, listingId, tier, confirmedCommissionPct) => {
+  const tierInfo = TIER_DETAILS[tier];
+  const tierColor = TIER_COLORS[tier];
+  const featureRows = tierInfo.features.map(
+    (f) => `
+      <tr>
+        <td style="padding:6px 0;font-size:14px;color:#374151;">
+          <span style="color:${tierColor};font-weight:bold;margin-right:8px;">\u2713</span>
+          ${escapeHtml2(f)}
+        </td>
+      </tr>`
+  ).join("");
+  return `
+    <div style="font-family:Arial,sans-serif;background:#f4f6f8;padding:24px;">
+      <div style="max-width:620px;margin:auto;background:#fff;padding:28px;border-radius:12px;">
+
+        <h2 style="margin:0 0 16px;color:#111827;">
+          Your Promotion Request Has Been Approved
+        </h2>
+
+        <p>Hello ${escapeHtml2(promoterName)},</p>
+
+        <p>
+          Congratulations! Your request to promote
+          <strong>${escapeHtml2(listingTitle)}</strong> has been approved.
+        </p>
+
+        <div style="background:#f9fafb;padding:16px;border-radius:8px;margin:20px 0;">
+          <strong>Listing:</strong> ${escapeHtml2(listingTitle)}<br>
+          <strong>ID:</strong> ${escapeHtml2(listingId)}
+        </div>
+
+        <div style="background:#f9fafb;padding:16px;border-radius:8px;margin-bottom:20px;">
+          <strong>Confirmed Commission:</strong>
+          <span style="font-size:22px;font-weight:bold;">
+            ${confirmedCommissionPct}%
+          </span>
+        </div>
+
+        <div style="border-left:4px solid ${tierColor};background:#f9fafb;padding:16px 20px;border-radius:0 8px 8px 0;">
+          <h3 style="margin:0;color:${tierColor};">
+            ${escapeHtml2(tierInfo.label)}
+          </h3>
+
+          <p>${escapeHtml2(tierInfo.description)}</p>
+
+          <table style="width:100%;border-collapse:collapse;">
+            ${featureRows}
+          </table>
+        </div>
+
+        <p style="margin-top:20px;">
+          Please ensure all promotion activities remain within the permissions
+          granted by your tier.
+        </p>
+
+        <p>
+          Regards,<br>
+          <strong>NEWAZA Team</strong>
+        </p>
+
+      </div>
+    </div>
+  `;
+};
+var sendPromotionApprovalEmail = async ({
+  toEmail,
+  promoterName,
+  listingTitle,
+  listingId,
+  tier,
+  confirmedCommissionPct
+}) => {
+  const transporter = nodemailer4.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: config_default.SMTP_AUTH_USER,
+      pass: config_default.SMTP_AUTH_PASS
+    }
+  });
+  await transporter.sendMail({
+    from: config_default.SMTP_AUTH_USER,
+    to: toEmail,
+    subject: `You've been approved to promote: ${listingTitle}`,
+    text: `Hello ${promoterName}, your request to promote "${listingTitle}" has been approved under ${tier.replace(
+      "_",
+      " "
+    ).toUpperCase()} with a confirmed commission of ${confirmedCommissionPct}%.`,
+    html: getPromotionApprovalEmailHtml(
+      promoterName,
+      listingTitle,
+      listingId,
+      tier,
+      confirmedCommissionPct
+    )
+  });
+};
+
 // src/modules/listingPromote/listing.promote.service.ts
 var createPromoteRequestInDB = async (requesterId, payload) => {
   if (!payload.listing_id || !requesterId) {
     throw new Error("listing_id and requester_id are required");
   }
-  const listingId = payload.listing_id;
-  const listing = await Listing.findById(listingId);
-  if (!listing) {
-    throw new Error("Listing not found");
-  }
+  const listing = await Listing.findById(payload.listing_id);
+  if (!listing) throw new Error("Listing not found");
   if (listing.associate_id.toString() === requesterId.toString()) {
     throw new Error("You cannot request to promote your own listing");
   }
-  const existingPending = await PromoteRequest.findOne({
-    listing_id: listingId,
-    requester_id: requesterId,
-    status: "pending"
+  const existingRequest = await PromoteRequest.findOne({
+    listing_id: payload.listing_id,
+    "requester.user_id": requesterId,
+    // ← was "requester._id"
+    status: { $in: ["pending", "approved"] }
   });
-  if (existingPending) {
-    throw new Error("You already have a pending request for this listing");
+  if (existingRequest) {
+    const statusMessages = {
+      pending: "You already have a pending request for this listing",
+      approved: "You are already an approved promoter for this listing"
+    };
+    throw new Error(
+      statusMessages[existingRequest.status] ?? "You have an active request for this listing"
+    );
   }
-  const requestPayload = {
-    requester_id: requesterId,
-    ...payload
-  };
-  const promoteRequest = new PromoteRequest(requestPayload);
+  const promoteRequest = new PromoteRequest(payload);
   return await promoteRequest.save();
 };
 var getAllListingPromoteRequest = async (query) => {
@@ -3388,7 +3766,8 @@ var getAllListingPromoteRequest = async (query) => {
     ...query
   };
   const promoteRequestQuery = new queryBuilder_default(
-    PromoteRequest.find().populate("listing_id", "title ref_code cover_image").populate("requester_id", "name email"),
+    PromoteRequest.find().populate("listing_id", "title ref_code cover_image"),
+    // no populate on requester — email is already embedded
     queryWithDefaultSort
   ).search(["message"]).filter().sort().paginate().fieldsLimit();
   const data = await promoteRequestQuery.modelQuery;
@@ -3396,7 +3775,9 @@ var getAllListingPromoteRequest = async (query) => {
   return { data, meta };
 };
 var getMyListingsPromoteRequestFromDB = async (associateId, query) => {
-  const myListingIds = await Listing.find({ associate_id: associateId }).distinct("_id");
+  const myListingIds = await Listing.find({
+    associate_id: associateId
+  }).distinct("_id");
   if (myListingIds.length === 0) {
     return { data: [], meta: { page: 1, limit: 10, total: 0, totalPage: 0 } };
   }
@@ -3405,7 +3786,10 @@ var getMyListingsPromoteRequestFromDB = async (associateId, query) => {
     ...query
   };
   const promoteRequestQuery = new queryBuilder_default(
-    PromoteRequest.find({ listing_id: { $in: myListingIds } }).populate("listing_id", "title ref_code cover_image").populate("requester_id", "name email"),
+    PromoteRequest.find({ listing_id: { $in: myListingIds } }).populate(
+      "listing_id",
+      "title ref_code cover_image"
+    ),
     queryWithDefaultSort
   ).search(["message"]).filter().sort().paginate().fieldsLimit();
   const data = await promoteRequestQuery.modelQuery;
@@ -3418,7 +3802,10 @@ var getMyPromoteRequestsFromDB = async (requesterId, query) => {
     ...query
   };
   const promoteRequestQuery = new queryBuilder_default(
-    PromoteRequest.find({ requester_id: requesterId }).populate("listing_id", "title ref_code cover_image price"),
+    PromoteRequest.find({
+      "requester.user_id": requesterId,
+      is_deleted: { $ne: true }
+    }).populate("listing_id", "title ref_code cover_image price"),
     queryWithDefaultSort
   ).search(["message"]).filter().sort().paginate().fieldsLimit();
   const data = await promoteRequestQuery.modelQuery;
@@ -3437,49 +3824,60 @@ var deletePromoteRequest = async (id, role) => {
   promoteRequest.deleted_at = /* @__PURE__ */ new Date();
   return await promoteRequest.save();
 };
-var manageListingPromoteRequestInDB = async (promoteRequestId, associateId, isAdmin, approved_by, payload) => {
-  console.log(promoteRequestId);
+var manageListingPromoteRequestInDB = async (promoteRequestId, userId, isAdmin, approved_by, payload) => {
   const promoteRequest = await PromoteRequest.findById(promoteRequestId);
-  if (!promoteRequest) {
-    throw new Error("Promote request not found");
-  }
-  const listing = await Listing.findById(
-    promoteRequest.listing_id
-    // prefer body value, fall back to stored one
-  );
-  if (!listing) {
-    throw new Error("Related listing not found");
-  }
-  const isOwner = listing.associate_id.toString() === associateId.toString();
-  console.log(isAdmin);
+  if (!promoteRequest) throw new Error("Promote request not found");
+  const listing = await Listing.findById(promoteRequest.listing_id);
+  if (!listing) throw new Error("Related listing not found");
+  const isOwner = listing.associate_id.toString() === userId.toString();
   if (!isOwner && !isAdmin) {
-    throw new UnauthorizedError("You are not authorized to manage this promote request");
+    throw new UnauthorizedError(
+      "You are not authorized to manage this promote request"
+    );
   }
   if (promoteRequest.status !== "pending") {
     throw new Error("This request has already been resolved");
   }
   promoteRequest.status = payload.status;
-  console.log(typeof approved_by);
   if (payload.status === "approved") {
+    if (!payload.selected_tier) {
+      throw new Error(
+        "selected_tier is required when approving a promote request"
+      );
+    }
+    promoteRequest.selected_tier = payload.selected_tier;
     promoteRequest.confirmed_commission_pct = payload.confirmed_commission_pct ?? promoteRequest.proposed_commission_pct;
-    await createPendingCommissionFromPromotionApproval({
-      approved_by: associateId,
-      // ✅ who approved
-      listing_id: promoteRequest.listing_id.toString(),
-      // ✅ the listing
-      promotion_request_id: promoteRequest._id.toString()
-      // ✅ used to look up promoter internally
-    });
-    console.log("heree", promoteRequest.listing_id, promoteRequestId, approved_by, associateId);
+    await Promise.all([
+      createPendingCommissionFromPromotionApproval({
+        approved_by: userId,
+        listing_id: promoteRequest.listing_id.toString(),
+        promotion_request_id: promoteRequest._id.toString(),
+        promoteRequest,
+        listing
+      }),
+      promoteRequest.save()
+    ]);
+    sendPromotionApprovalEmail({
+      toEmail: promoteRequest.requester.email,
+      promoterName: promoteRequest.requester.email.split("@")[0] || "Promoter",
+      listingTitle: listing.title,
+      listingId: listing._id.toString(),
+      tier: promoteRequest.selected_tier,
+      confirmedCommissionPct: promoteRequest.confirmed_commission_pct
+    }).catch(
+      (err) => console.error("Promotion approval email failed silently:", err)
+    );
+    return promoteRequest;
   }
-  return await promoteRequest.save();
+  await promoteRequest.save();
+  return promoteRequest;
 };
 var cancelPromoteRequestInDB = async (requestId, requesterId) => {
   const promoteRequest = await PromoteRequest.findById(requestId);
   if (!promoteRequest) {
     throw new Error("Promote request not found");
   }
-  if (promoteRequest.requester_id.toString() !== requesterId.toString()) {
+  if (promoteRequest.requester.user_id.toString() !== requesterId.toString()) {
     throw new Error("You are not authorized to cancel this request");
   }
   if (promoteRequest.status !== "pending") {
@@ -3502,8 +3900,16 @@ var listingPromoteRequestService = {
 var createListingPromoteRequest = async (req, res, next) => {
   try {
     const requesterId = req.user?.id;
+    const requesterEmail = req.user?.email;
     const payload = req.body;
-    const result = await listingPromoteRequestService.createPromoteRequestInDB(requesterId, payload);
+    const updatedPayload = {
+      ...payload,
+      requester: {
+        user_id: requesterId,
+        email: requesterEmail
+      }
+    };
+    const result = await listingPromoteRequestService.createPromoteRequestInDB(requesterId, updatedPayload);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -3548,6 +3954,7 @@ var getMyPromoteRequests = async (req, res, next) => {
     const requesterId = req.user?.id;
     const query = req.query;
     const result = await listingPromoteRequestService.getMyPromoteRequestsFromDB(requesterId, query);
+    console.log(result);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -3576,11 +3983,11 @@ var cencelPromoteRequest = async (req, res, next) => {
 var manageListingPromoteRequest = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status, confirmed_commission_pct, listing_id } = req.body;
-    const associateId = req.user?.id;
+    const payload = req.body;
+    const userId = req.user?.id;
     const role = req.user?.role;
     const isAdmin = req.user?.role === "admin";
-    if (!status || !["approved", "rejected"].includes(status)) {
+    if (!payload.status || !["approved", "rejected"].includes(payload.status)) {
       return sendResponse_default(res, {
         statusCode: 400,
         success: false,
@@ -3591,15 +3998,15 @@ var manageListingPromoteRequest = async (req, res, next) => {
     const result = await listingPromoteRequestService.manageListingPromoteRequestInDB(
       id,
       // promoteRequestId
-      associateId,
+      userId,
       // the user managing the request
       isAdmin,
       role,
-      { status, confirmed_commission_pct }
+      payload
     );
     res.status(200).json({
       success: true,
-      message: `Promote request ${status} successfully`,
+      message: `Promote request ${payload.status} successfully`,
       data: result
     });
   } catch (error) {
@@ -4951,7 +5358,7 @@ var ensureUserExists = (user) => {
   return user;
 };
 var getDefaultProfileImage = () => {
-  return config_default.DEFAULT_PROFILE_IMAGE_URL || "https://res.cloudinary.com/demo/image/upload/v1/default-profile.png";
+  return config_default.DEFAULT_PROFILE_IMAGE_URL;
 };
 var formatProfileResponse = (user) => {
   return {
@@ -6001,13 +6408,13 @@ app.get("/", (req, res) => {
   res.send("Hello World Bro!");
 });
 app.use(
-  "/api-docs1",
+  "/api-docs",
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
     customSiteTitle: "We-Club API Docs"
   })
 );
-app.get("/api-docs1.json", (req, res) => {
+app.get("/api-docs.json", (req, res) => {
   res.setHeader("Content-Type", "application/json");
   res.send(swaggerSpec);
 });
