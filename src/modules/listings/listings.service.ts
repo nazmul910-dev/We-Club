@@ -28,6 +28,7 @@ const getAllListingFromDB = async (
   // NOTE: QueryBuilder.sort() defaults to "-createdAt", but this schema's
   // timestamps are mapped to "created_at"/"updated_at" (snake_case).
   // If the caller doesn't pass ?sort=, force the correct default here.
+  
   const queryWithDefaultSort = {
     sort: "-created_at",
     ...query,
