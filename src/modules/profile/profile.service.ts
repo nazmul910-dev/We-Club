@@ -25,8 +25,7 @@ const ensureUserExists = <T>(user: T | null | undefined): NonNullable<T> => {
 
 const getDefaultProfileImage = (): string => {
   return (
-    config.DEFAULT_PROFILE_IMAGE_URL ||
-    'https://res.cloudinary.com/demo/image/upload/v1/default-profile.png'
+    config.DEFAULT_PROFILE_IMAGE_URL 
   );
 };
 
