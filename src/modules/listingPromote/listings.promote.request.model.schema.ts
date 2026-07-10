@@ -20,7 +20,7 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
         required: true,
       },
     },
-    status: {
+    status: { 
       type: String,
       enum: ["pending", "approved", "rejected", "cancelled"],
       default: "pending",
