@@ -33,9 +33,9 @@ const getAllListingFromDB = async (
     sort: "-created_at",
     ...query,
   };
-
+// .populate("associate_id", "fullName email phone city country brokerage profileImage accountStatus role")
   const listingQuery = new QueryBuilder<IListing>(
-    Listing.find().populate("associate_id", "fullName email phone city country brokerage profileImage accountStatus role"),
+    Listing.find(),
     queryWithDefaultSort,
   )
     .search(["title", "ref_code"])

@@ -1,14 +1,18 @@
-import mongoose, { Types } from "mongoose";
+import mongoose, { ClientSession, Types } from "mongoose";
 import { IPromoteRequest } from "./listing.promote.interface";
 import { Listing } from "../listings/listings.model.schema";
 import { PromoteRequest } from "./listings.promote.request.model.schema";
 import QueryBuilder from "../../utility/queryBuilder";
 import { IListing } from "../listings/listings.interface";
 import { NotFoundError, UnauthorizedError } from "../../utility/errorResponses";
-import { createPendingCommissionFromPromotionApproval } from "../commissionLedger/commission.ledger.service";
+import {
+  commissionLedgerService,
+  createPendingCommissionFromPromotionApproval,
+} from "../commissionLedger/commission.ledger.service";
 import { UserRole } from "../users/user.interface";
 import { User } from "../users/users.model.schema";
 import { sendPromotionApprovalEmail } from "./listing.promotion.approval.email";
+import { Promoter } from "../promoters/promoters.model.schema";
 
 /**
  * Service layer: owns all DB interaction + business logic for PromoteRequest.
@@ -23,6 +27,7 @@ type AuthUser = {
 type ManagePromoteRequestPayload = {
   status: "approved" | "rejected";
   confirmed_commission_pct?: number | undefined;
+  selected_tier?: "tier_1" | "tier_2" | "tier_3";
 };
 
 const throwError = (message: string, statusCode: number): never => {
@@ -189,79 +194,248 @@ const deletePromoteRequest = async (id: string, role: string) => {
   return await promoteRequest.save();
 };
 
-const manageListingPromoteRequestInDB = async (
+// const manageListingPromoteRequestInDB = async (
+//   promoteRequestId: string,
+//   userId: string,
+//   isAdmin: boolean,
+//   approved_by: string,
+
+//   payload: {
+//     status: "approved" | "rejected";
+//     confirmed_commission_pct?: number;
+//     selected_tier?: "tier_1" | "tier_2" | "tier_3";
+//   },
+// ): Promise<IPromoteRequest> => {
+//   const promoteRequest = await PromoteRequest.findById(promoteRequestId);
+//   if (!promoteRequest) throw new Error("Promote request not found");
+
+//   // Fetch listing in parallel with nothing yet, but as soon as we have listing_id
+//   const listing = await Listing.findById(promoteRequest.listing_id);
+//   if (!listing) throw new Error("Related listing not found");
+
+//   const isOwner = listing.associate_id.toString() === userId.toString();
+//   if (!isOwner && !isAdmin) {
+//     throw new UnauthorizedError(
+//       "You are not authorized to manage this promote request",
+//     );
+//   }
+
+//   if (promoteRequest.status !== "pending") {
+//     throw new Error("This request has already been resolved");
+//   }
+
+//   promoteRequest.status = payload.status;
+
+//   if (payload.status === "approved") {
+//     if (!payload.selected_tier) {
+//       throw new Error(
+//         "selected_tier is required when approving a promote request",
+//       );
+//     }
+
+//     promoteRequest.selected_tier = payload.selected_tier;
+//     promoteRequest.confirmed_commission_pct =
+//       payload.confirmed_commission_pct ??
+//       promoteRequest.proposed_commission_pct;
+
+//     // Run commission creation and save in parallel — they don't depend on each other
+//     await Promise.all([
+//       createPendingCommissionFromPromotionApproval({
+//         approved_by: userId,
+//         listing_id: promoteRequest.listing_id.toString(),
+//         promotion_request_id: promoteRequest._id.toString(),
+//         promoteRequest,
+//         listing,
+//       }),
+//       promoteRequest.save(),
+//     ]);
+
+//     // Fire and forget — don't await, user shouldn't wait for SMTP
+//     sendPromotionApprovalEmail({
+//       toEmail: promoteRequest.requester.email,
+//       promoterName: promoteRequest.requester.email.split("@")[0] || "Promoter",
+//       listingTitle: listing.title,
+//       listingId: listing._id.toString(),
+//       tier: promoteRequest.selected_tier!,
+//       confirmedCommissionPct: promoteRequest.confirmed_commission_pct!,
+//     }).catch((err) =>
+//       console.error("Promotion approval email failed silently:", err),
+//     );
+
+//     return promoteRequest;
+//   }
+
+//   // For rejection — just save
+//   await promoteRequest.save();
+//   return promoteRequest;
+// };
+
+const isSameId = (idA: unknown, idB: string): boolean =>
+  String(idA) === String(idB);
+
+const managePromoteRequestInDB = async (
   promoteRequestId: string,
-  userId: string,
-  isAdmin: boolean,
-  approved_by: string,
+  authUser: AuthUser,
   payload: {
     status: "approved" | "rejected";
     confirmed_commission_pct?: number;
     selected_tier?: "tier_1" | "tier_2" | "tier_3";
   },
 ): Promise<IPromoteRequest> => {
-  const promoteRequest = await PromoteRequest.findById(promoteRequestId);
-  if (!promoteRequest) throw new Error("Promote request not found");
+  const session: ClientSession = await mongoose.startSession();
 
-  // Fetch listing in parallel with nothing yet, but as soon as we have listing_id
-  const listing = await Listing.findById(promoteRequest.listing_id);
-  if (!listing) throw new Error("Related listing not found");
+  try {
+    session.startTransaction();
 
-  const isOwner = listing.associate_id.toString() === userId.toString();
-  if (!isOwner && !isAdmin) {
-    throw new UnauthorizedError(
-      "You are not authorized to manage this promote request",
-    );
-  }
+    const promoteRequest = await PromoteRequest.findById(promoteRequestId);
+    if (!promoteRequest) throw new Error("Promote request not found");
 
-  if (promoteRequest.status !== "pending") {
-    throw new Error("This request has already been resolved");
-  }
+    // Fetch listing in parallel with nothing yet, but as soon as we have listing_id
+    const listing = await Listing.findById(promoteRequest.listing_id);
+    if (!listing) throw new Error("Related listing not found");
 
-  promoteRequest.status = payload.status;
+    // -------------------------
+    // Get Promotion Request
+    // -------------------------
 
-  if (payload.status === "approved") {
-    if (!payload.selected_tier) {
-      throw new Error(
-        "selected_tier is required when approving a promote request",
+    // const promoteRequest = await PromoteRequest.findById(requestId).session(
+    //   session
+    // );
+
+    // if (promoteRequest === null) {
+    //   throwError("Promote request not found", 404);
+    // }
+
+    if (promoteRequest.status !== "pending") {
+      throwError("Only pending promote requests can be managed", 400);
+    }
+
+    // // -------------------------
+    // // Get Listing
+    // // -------------------------
+
+    // const listing = await Listing.findById(promoteRequest?.listing_id).session(
+    //   session
+    // );
+
+    // -------------------------
+    // Authorization
+    // -------------------------
+
+    const isOwner = isSameId(listing?.associate_id, authUser.id);
+    const isAdmin = isAdminOrManager(authUser.role as UserRole);
+
+    if (!isOwner && !isAdmin) {
+      throwError("You are not authorized to manage this promote request", 403);
+    }
+
+    // if (isSameId(promoteRequest.requester.user_id, authUser.id)) {
+    //   throwError("You cannot manage your own promote request", 403);
+    // }
+
+    // -------------------------
+    // Update Request
+    // -------------------------
+
+    promoteRequest.status = payload.status;
+    promoteRequest.resolved_at = new Date();
+
+    if (payload.status === "approved") {
+      promoteRequest.selected_tier = payload.selected_tier
+        ? payload.selected_tier
+        : "tier_1";
+    }
+
+    await promoteRequest.save({ session });
+
+    // -------------------------
+    // Approval
+    // -------------------------
+
+    if (payload.status === "approved") {
+      await Listing.findByIdAndUpdate(
+        listing._id,
+        {
+          $addToSet: {
+            promoters: {
+              user_id: promoteRequest.requester.user_id,
+              tier: promoteRequest.selected_tier,
+            },
+          },
+        },
+        { session },
+      );
+
+      // Keep normalized copy in Promoter collection
+      await Promoter.findOneAndUpdate(
+        {
+          user_id: promoteRequest.requester.user_id,
+        },
+        {
+          $setOnInsert: {
+            user_id: promoteRequest.requester.user_id,
+          },
+
+          $push: {
+            listings: {
+              listing_id: listing._id,
+              listing_title: listing.title,
+              listing_price:  listing.price.amount,
+              listing_owner_id: listing.associate_id,
+              promotion_request_id: promoteRequest._id,
+              tier: promoteRequest.selected_tier,
+              approved_by: authUser.id,
+              approved_at: new Date(),
+              status: "active",
+            },
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+          session,
+          runValidators: true,
+        },
+      );
+      await commissionLedgerService.createPendingCommissionFromPromotionApproval(
+        {
+          listing_id: listing._id.toString(),
+          promotion_request_id: promoteRequest._id.toString(),
+          approved_by: authUser.id,
+          promoteRequest,
+          listing,
+          session,
+        },
       );
     }
 
-    promoteRequest.selected_tier = payload.selected_tier;
-    promoteRequest.confirmed_commission_pct =
-      payload.confirmed_commission_pct ??
-      promoteRequest.proposed_commission_pct;
+    // -------------------------
+    // Rejection
+    // -------------------------
 
-    // Run commission creation and save in parallel — they don't depend on each other
-    await Promise.all([
-      createPendingCommissionFromPromotionApproval({
-        approved_by: userId,
-        listing_id: promoteRequest.listing_id.toString(),
-        promotion_request_id: promoteRequest._id.toString(),
-        promoteRequest,
-        listing,
-      }),
-      promoteRequest.save(),
-    ]);
+    if (payload.status === "rejected") {
+      await Listing.findByIdAndUpdate(
+        listing._id,
+        {
+          $pull: {
+            promoters: {
+              user_id: promoteRequest.requester.user_id,
+            },
+          },
+        },
+        { session },
+      );
+    }
 
-    // Fire and forget — don't await, user shouldn't wait for SMTP
-    sendPromotionApprovalEmail({
-      toEmail: promoteRequest.requester.email,
-      promoterName: promoteRequest.requester.email.split("@")[0] || "Promoter",
-      listingTitle: listing.title,
-      listingId: listing._id.toString(),
-      tier: promoteRequest.selected_tier!,
-      confirmedCommissionPct: promoteRequest.confirmed_commission_pct!,
-    }).catch((err) =>
-      console.error("Promotion approval email failed silently:", err),
-    );
+    await session.commitTransaction();
 
     return promoteRequest;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
   }
-
-  // For rejection — just save
-  await promoteRequest.save();
-  return promoteRequest;
 };
 
 const cancelPromoteRequestInDB = async (
@@ -292,7 +466,7 @@ export const listingPromoteRequestService = {
   createPromoteRequestInDB,
   getAllListingPromoteRequest,
   getMyListingsPromoteRequestFromDB,
-  manageListingPromoteRequestInDB,
+  managePromoteRequestInDB,
   getMyPromoteRequestsFromDB,
   cancelPromoteRequestInDB,
   deletePromoteRequest,

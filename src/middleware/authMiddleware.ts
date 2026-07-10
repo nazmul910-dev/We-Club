@@ -20,6 +20,8 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     return next(new UnauthorizedError("Authentication token is required"));
   }
 
+ 
+
   try {
     const decoded = jwt.verify(token, config.JWT_ACCESS_SECRET as jwt.Secret) as JwtPayloadWithRole;
 
