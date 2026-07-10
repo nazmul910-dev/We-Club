@@ -24,6 +24,34 @@ const getDashboardStats = async (
   }
 };
 
+
+const getTopPromoters = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+
+    try{
+
+        const result=
+        await dashboardService.getTopPromoters();
+
+        sendResponse(res,{
+            success:true,
+            statusCode:200,
+            message:"Top promoters retrieved successfully",
+            data:result
+        });
+
+    }catch(error){
+
+        next(error);
+
+    }
+
+};
+
 export const dashboardController = {
   getDashboardStats,
+  getTopPromoters
 };

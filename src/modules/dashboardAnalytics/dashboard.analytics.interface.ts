@@ -5,4 +5,14 @@ export interface IDashboardStats {
   total_promoters: number;
   properties_shared_with_me: number;
   commission_pipeline: number;
+  top_promoters: ITopPromoter[];
+}
+
+export interface ITopPromoter {
+  user_id: string;
+  fullName: string;
+  profileImage?: string;
+  city?: string;
+  country?: string;
+  totalViews: number;
 }
