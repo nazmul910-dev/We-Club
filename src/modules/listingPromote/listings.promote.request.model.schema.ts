@@ -1,7 +1,6 @@
 import { Schema, model, Types, Document } from "mongoose";
-import { Listing } from "../listings/listings.model.schema"; 
+import { Listing } from "../listings/listings.model.schema";
 import { IPromoteRequest } from "./listing.promote.interface";
-
 
 const PromoteRequestSchema = new Schema<IPromoteRequest>(
   {
@@ -10,40 +9,39 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
       ref: "Listing",
       required: true,
     },
-   requester: {
-  user_id: {
-    type: Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  email: {
-    type: String,
-    required: true,
-  },
-},
+    requester: {
+      user_id: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+      email: {
+        type: String,
+        required: true,
+      },
+    },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected", "cancelled"],
       default: "pending",
     },
-    is_deleted  : {
-      type : Boolean,
-      default : false
+    is_deleted: {
+      type: Boolean,
+      default: false,
     },
     selected_tier: {
       type: String,
       enum: ["tier_1", "tier_2", "tier_3"],
-      default: null,  // null যতক্ষণ approve না হয়
-  },
-    deleted_at : Date,
+      default: null, // null যতক্ষণ approve না হয়
+    },
+    deleted_at: Date,
     requested_at: { type: Date, default: Date.now },
     resolved_at: { type: Date },
-    
   },
 
   {
     timestamps: false, // we manage requested_at / resolved_at manually
-  }
+  },
 );
 
 // Auto-exclude soft-deleted requests from every find-style query by default,
@@ -56,7 +54,7 @@ PromoteRequestSchema.pre(/^find/, function (this: any) {
 
 PromoteRequestSchema.index(
   { listing_id: 1, "requester.user_id": 1, status: 1 },
-  { unique: true, partialFilterExpression: { status: "pending" } }
+  { unique: true, partialFilterExpression: { status: "pending" } },
 );
 PromoteRequestSchema.index({ listing_id: 1, status: 1 });
 PromoteRequestSchema.index({ "requester.user_id": 1 });
@@ -83,30 +81,27 @@ PromoteRequestSchema.pre("save", function (this: IPromoteRequest) {
   }
 });
 
-PromoteRequestSchema.post("save", async function (doc) {
-  if (doc.status === "approved") {
-    await Listing.findByIdAndUpdate(doc.listing_id, {
-      $addToSet: {
-        promoters: {
-          user_id: doc.requester.user_id,
-          tier: doc.selected_tier,
-        },
-      },
-    });
-  } else if (doc.status === "rejected") {
-    await Listing.findByIdAndUpdate(doc.listing_id, {
-      $pull: {
-        promoters: { user_id: doc.requester.user_id },
-      },
-    });
-  }
-});
-
-
-
-
+// PromoteRequestSchema.post("save", async function (doc) {
+//   if (doc.status === "approved") {
+//     await Listing.findByIdAndUpdate(doc.listing_id, {
+//       $addToSet: {
+//         promoters: {
+//           user_id: doc.requester.user_id,
+//           email : doc.requester.email,
+//           tier: doc.selected_tier,
+//         },
+//       },
+//     });
+//   } else if (doc.status === "rejected") {
+//     await Listing.findByIdAndUpdate(doc.listing_id, {
+//       $pull: {
+//         promoters: { user_id: doc.requester.user_id },
+//       },
+//     });
+//   }
+// });
 
 export const PromoteRequest = model<IPromoteRequest>(
   "PromoteRequest",
-  PromoteRequestSchema
+  PromoteRequestSchema,
 );

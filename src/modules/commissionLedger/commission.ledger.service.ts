@@ -1,4 +1,4 @@
-import { Types } from 'mongoose';
+import { ClientSession, Types } from 'mongoose';
 import { Listing } from '../listings/listings.model.schema';
 import { UserRole } from '../users/user.interface';
 import { CommissionLedger } from './commission.ledger.model.schema';
@@ -21,7 +21,8 @@ type CreatePendingCommissionPayload = {
   promotion_request_id: string;
   approved_by: string;
   promoteRequest: IPromoteRequest; // ← pass it in
-  listing: IListing;               // ← pass it in
+  listing: IListing;     
+  session : ClientSession          // ← pass it in
 };
 
 type CreateManualCommissionPayload = {
@@ -133,7 +134,10 @@ export const createPendingCommissionFromPromotionApproval = async ({
   approved_by,
   promoteRequest,
   listing,
-}: CreatePendingCommissionPayload) => {
+  session
+}: CreatePendingCommissionPayload & {
+  session? : ClientSession
+}) => {
  
   // promoter_id comes from the passed-in promoteRequest — no extra DB query needed
   const promoter_id = promoteRequest.requester.user_id.toString();
@@ -181,6 +185,7 @@ export const createPendingCommissionFromPromotionApproval = async ({
       upsert: true,
       returnDocument: 'after',
       runValidators: true,
+      session
     }
   );
  
