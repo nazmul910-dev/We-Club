@@ -15,6 +15,6 @@ export const downloadListingAssetsValidation = z.object({
 
 export const listingAssetLogsValidation = z.object({
   params: z.object({
-    listingId: mongoIdValidation,
+    listingId: mongoIdValidation,  
   }),
 });

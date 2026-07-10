@@ -90,10 +90,11 @@ const downloadListingAssetsZipFromDB = async (
 
     const approvedRequest = await PromoteRequest.findOne({
       listing_id: toObjectId(listingId),
-      requester_id: toObjectId(authUser.id),
+      "requester.user_id": toObjectId(authUser.id),
       status: 'approved',
     }).lean();
-
+ 
+    console.log("Approved Request:", approvedRequest);
     if (!approvedRequest) {
       throwError(
         'You must be approved to promote this listing before downloading assets',
