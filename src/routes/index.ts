@@ -1,15 +1,17 @@
-import { Router } from 'express';
+import { Router } from "express";
 
-import { userRoutes } from '../modules/users/user.route';
-import { authRoutes } from '../modules/auth/auth.route';
-import { listingsRoutes } from '../modules/listings/listings.route';
-import { listingPromoteRequestRoutes } from '../modules/listingPromote/listing.promote.route';
-import { commissionLedgerRoutes } from '../modules/commissionLedger/commission.ledger.route';
-import { adminRoutes } from '../modules/admin/admin.route';
-import { listingAssetsRoutes } from '../modules/listingAssets/listing.assets.route';
-import { paymentRoutes } from '../modules/payment/payment.route';
-import { profileRoutes } from '../modules/profile/profile.route';
-import { discountRoutes } from '../modules/discount/discount.route';
+import { userRoutes } from "../modules/users/user.route";
+import { authRoutes } from "../modules/auth/auth.route";
+import { listingsRoutes } from "../modules/listings/listings.route";
+import { listingPromoteRequestRoutes } from "../modules/listingPromote/listing.promote.route";
+import { commissionLedgerRoutes } from "../modules/commissionLedger/commission.ledger.route";
+import { adminRoutes } from "../modules/admin/admin.route";
+import { listingAssetsRoutes } from "../modules/listingAssets/listing.assets.route";
+import { paymentRoutes } from "../modules/payment/payment.route";
+import { profileRoutes } from "../modules/profile/profile.route";
+import { discountRoutes } from "../modules/discount/discount.route";
+import { promoterRoutes } from "../modules/promoters/promoters.routes";
+import { dashboardAnalyticsRoutes } from "../modules/dashboardAnalytics/dashboard.analytics.route";
 // import { userRoutes } from '../modules/user/user.route';
 // import { adminRoutes } from '../modules/admin/admin.route';
 // import { courseRoutes } from '../modules/course/course.route';
@@ -23,12 +25,12 @@ type TModuleRoute = {
 
 const moduleRoutes: TModuleRoute[] = [
   {
-    path: '/admin',
-    route: adminRoutes
+    path: "/admin",
+    route: adminRoutes,
   },
   {
-    path: '/users',
-    route: userRoutes
+    path: "/users",
+    route: userRoutes,
   },
   {
     path: "/auth",
@@ -36,34 +38,40 @@ const moduleRoutes: TModuleRoute[] = [
   },
   {
     path: "/listings",
-    route: listingsRoutes
+    route: listingsRoutes,
   },
   {
     path: "/listings/promote-request",
-    route: listingPromoteRequestRoutes
-  }
-  ,
+    route: listingPromoteRequestRoutes,
+  },
   {
     path: "/commission",
-    route: commissionLedgerRoutes
+    route: commissionLedgerRoutes,
   },
   {
-    path:"/listing-assets",
-    route: listingAssetsRoutes
+    path: "/listing-assets",
+    route: listingAssetsRoutes,
   },
   {
-    path:"/payments",
-    route: paymentRoutes
+    path: "/payments",
+    route: paymentRoutes,
   },
   {
-    path:'/profile',
-    route:profileRoutes
+    path: "/profile",
+    route: profileRoutes,
   },
   {
-  path: '/discounts',
-  route: discountRoutes,
-},
-
+    path: "/discounts",
+    route: discountRoutes,
+  },
+  {
+    path: "/promoters",
+    route: promoterRoutes,
+  },
+  {
+    path: "/dashboard",
+    route: dashboardAnalyticsRoutes,
+  },
 ];
 
 moduleRoutes.forEach((route) => {

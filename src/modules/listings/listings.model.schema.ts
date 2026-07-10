@@ -38,7 +38,7 @@ const ListingSchema = new Schema<IListing>(
     status: {
       type: String,
       enum: ["active", "pending", "sold", "draft"],
-      default: "draft",
+      default: "pending",
     },
     
     location: { type: LocationSchema, required: true },
@@ -62,6 +62,10 @@ const ListingSchema = new Schema<IListing>(
         tier: { type: String, enum: ["tier_1", "tier_2", "tier_3"] },
     }],
      default: [],
+    },
+    listings_view : {
+      type : Number,
+      default : 100
     },
     is_deleted : {
     type : Boolean,
