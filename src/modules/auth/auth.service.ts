@@ -385,7 +385,7 @@ export const forgetPassword = async(email:string) =>{
     jwtPayload, config.JWT_ACCESS_SECRET as string, 10 * 60 * 1000
   )
 
-  const resetUILink = `http://localhost:3000/reset-password?token=${token}`;
+  const resetUILink = `https://we-club.onrender.com/reset-password?token=${token}`;
 
 //   await sendMail(
 //   user.email,
