@@ -15,6 +15,7 @@ import { paymentService } from "../payment/payment.service";
 import { isPaidRole } from "../payment/payment.pricing";
 
 
+
 // export const createUser = async (payload: unknown) =>{
 //   const {body} = registerValidation.parse({body:payload});
 
@@ -236,6 +237,8 @@ export const createUser = async (payload: unknown) => {
   }
 };
 
+
+
 export const loginUser = async (payload: unknown) => {
   const { body } = loginValidation.parse({ body: payload });
 
@@ -269,7 +272,6 @@ export const loginUser = async (payload: unknown) => {
   if (user.approvalStatus !== 'approved') {
     throw new Error('Your account is not approved yet. Please try again later.');
   }
-
 
 
   if (user.accountStatus === 'pending_approval') {
@@ -342,7 +344,7 @@ export const changePassword = async(userData: { email: string; role: UserRole },
 
  const user = await User.findOne({ email: userData.email }).select("+password");
 
- console.log("users1:",user);
+
 
   if (!user) {
     throw new ExistingUserError("User not exists");
@@ -456,9 +458,7 @@ export const resetPassword = async(payload:{newPassword:any},token:string) =>{
     throw new ExistingUserError("User not found");
   }
 
-  console.log("userId:",decoded.userId);
 
-  console.log("new:pasowrd:",payload.newPassword);
   const newHashPassword = await hashPassword(payload.newPassword);
 
 

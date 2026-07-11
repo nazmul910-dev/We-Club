@@ -68,7 +68,7 @@ const getMyListingsPromoteRequest = async (
 ) => {
   try {
     const associate_id = req.user?.id;
-    // console.log(associate_id)
+
     const query = req.query;
     const result =
       await listingPromoteRequestService.getMyListingsPromoteRequestFromDB(

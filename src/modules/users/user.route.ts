@@ -62,6 +62,35 @@ router.get("/", userController.getAllUsers);  //verifyToken, authorizeRoles("ADM
  */
 router.get("/:id", userController.getSingleUser);
 
+router.post(
+  "/admin-create",
+  verifyToken,
+  authorizeRoles("admin"),
+  userController.createManagerByAdmin
+);
+
+
+router.delete(
+  "/:id",
+  verifyToken,
+  authorizeRoles("admin"),
+  userController.deleteManagerByAdmin
+);
+
+router.patch(
+  "/:id/suspend",
+  verifyToken,
+  authorizeRoles("admin"),
+  userController.suspendManagerByAdmin
+);
+
+router.patch(
+  "/:id/activate",
+  verifyToken,
+  authorizeRoles("admin"),
+  userController.activateManagerByAdmin
+);
+
 export const userRoutes = router;
 
 // export default router;

@@ -62,7 +62,6 @@ const getAllCommissions = async (
       req.query
     );
 
-    console.log("result2:", result);
 
     sendResponse(res, {
       statusCode: 200,
