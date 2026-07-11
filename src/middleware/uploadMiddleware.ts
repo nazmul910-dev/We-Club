@@ -7,7 +7,7 @@ const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 export const upload = multer({
   storage,
   limits: {
-    fileSize: 2 * 1024 * 1024,
+    fileSize: 10 * 1024 * 1024,
   },
   fileFilter: (_req, file, cb) => {
     if (!allowedImageTypes.includes(file.mimetype)) {
@@ -17,7 +17,7 @@ export const upload = multer({
     cb(null, true);
   },
 });
-
+ 
 /**
  * For createListing: expects a single "cover_image" file and up to 10 "images" files
  * in the same multipart/form-data submission.

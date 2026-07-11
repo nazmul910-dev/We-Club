@@ -4,7 +4,7 @@
     
 
 // src/server.ts
-import mongoose2 from "mongoose";
+import mongoose3 from "mongoose";
 
 // src/app.ts
 import express from "express";
@@ -31,7 +31,7 @@ var routeNotFoundHandler = (req, res, next) => {
 var routeNotFoundHandler_default = routeNotFoundHandler;
 
 // src/routes/index.ts
-import { Router as Router11 } from "express";
+import { Router as Router13 } from "express";
 
 // src/modules/users/user.route.ts
 import { Router } from "express";
@@ -2029,7 +2029,7 @@ var forgetPassword = async (email) => {
     config_default.JWT_ACCESS_SECRET,
     10 * 60 * 1e3
   );
-  const resetUILink = `http://localhost:3000/reset-password?token=${token}`;
+  const resetUILink = `https://we-club.onrender.com/reset-password?token=${token}`;
   SendMail_default(user?.email, `<p> ${resetUILink}</p>`);
 };
 var resetPassword = async (payload, token) => {
@@ -2317,7 +2317,7 @@ var ListingSchema = new Schema4(
     status: {
       type: String,
       enum: ["active", "pending", "sold", "draft"],
-      default: "draft"
+      default: "pending"
     },
     location: { type: LocationSchema, required: true },
     price: { type: PriceSchema, required: true },
@@ -2339,6 +2339,10 @@ var ListingSchema = new Schema4(
         tier: { type: String, enum: ["tier_1", "tier_2", "tier_3"] }
       }],
       default: []
+    },
+    listings_view: {
+      type: Number,
+      default: 100
     },
     is_deleted: {
       type: Boolean,
@@ -2425,24 +2429,6 @@ PromoteRequestSchema.pre("save", function() {
     this.resolved_at = this.resolved_at ?? /* @__PURE__ */ new Date();
   }
 });
-PromoteRequestSchema.post("save", async function(doc) {
-  if (doc.status === "approved") {
-    await Listing.findByIdAndUpdate(doc.listing_id, {
-      $addToSet: {
-        promoters: {
-          user_id: doc.requester.user_id,
-          tier: doc.selected_tier
-        }
-      }
-    });
-  } else if (doc.status === "rejected") {
-    await Listing.findByIdAndUpdate(doc.listing_id, {
-      $pull: {
-        promoters: { user_id: doc.requester.user_id }
-      }
-    });
-  }
-});
 var PromoteRequest = model5(
   "PromoteRequest",
   PromoteRequestSchema
@@ -2461,7 +2447,7 @@ var getAllListingFromDB = async (query) => {
     ...query
   };
   const listingQuery = new queryBuilder_default(
-    Listing.find().populate("associate_id", "fullName email phone city country brokerage profileImage accountStatus role"),
+    Listing.find(),
     queryWithDefaultSort
   ).search(["title", "ref_code"]).filter().sort().paginate().fieldsLimit();
   const data = await listingQuery.modelQuery;
@@ -2947,6 +2933,9 @@ var listingsRoutes = router3;
 // src/modules/listingPromote/listing.promote.route.ts
 import { Router as Router4 } from "express";
 
+// src/modules/listingPromote/listing.promote.service.ts
+import mongoose2 from "mongoose";
+
 // src/modules/commissionLedger/commission.ledger.service.ts
 import { Types as Types4 } from "mongoose";
 
@@ -3247,7 +3236,8 @@ var createPendingCommissionFromPromotionApproval = async ({
   promotion_request_id,
   approved_by,
   promoteRequest,
-  listing
+  listing,
+  session
 }) => {
   const promoter_id = promoteRequest.requester.user_id.toString();
   const listingPriceAmount = listing.price.amount;
@@ -3287,7 +3277,8 @@ var createPendingCommissionFromPromotionApproval = async ({
     {
       upsert: true,
       returnDocument: "after",
-      runValidators: true
+      runValidators: true,
+      session
     }
   );
   return ensureCommissionExists(commission);
@@ -3592,147 +3583,91 @@ var commissionLedgerService = {
   resolveCommissionDisputeIntoDB
 };
 
-// src/modules/listingPromote/listing.promotion.approval.email.ts
-import nodemailer4 from "nodemailer";
-var TIER_DETAILS = {
-  tier_1: {
-    label: "Tier 1: Full Marketing + Website",
-    description: "Maximum reach. Full address and visuals exposed.",
-    features: [
-      "Full address & geolocation revealed",
-      "All photography (interior + exterior)",
-      "Promoter may publish to their own website",
-      "Listing appears in network newsletter"
-    ]
-  },
-  tier_2: {
-    label: "Tier 2: Full Marketing",
-    description: "Distribution to qualified buyers only \u2014 no public listing.",
-    features: [
-      "Full address shared with vetted prospects",
-      "All photography (interior + exterior)",
-      "No public web publication permitted",
-      "Print collateral & private decks allowed"
-    ]
-  },
-  tier_3: {
-    label: "Tier 3: Discreet Marketing",
-    description: "Off-market. Whispered, never broadcast.",
-    features: [
-      "Address withheld until NDA signed",
-      "Exterior photography only",
-      "1:1 introductions only \u2014 no decks",
-      "All inquiries routed through Associate"
-    ]
-  }
-};
-var TIER_COLORS = {
-  tier_1: "#16a34a",
-  tier_2: "#2563eb",
-  tier_3: "#7c3aed"
-};
-var escapeHtml2 = (str) => str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-var getPromotionApprovalEmailHtml = (promoterName, listingTitle, listingId, tier, confirmedCommissionPct) => {
-  const tierInfo = TIER_DETAILS[tier];
-  const tierColor = TIER_COLORS[tier];
-  const featureRows = tierInfo.features.map(
-    (f) => `
-      <tr>
-        <td style="padding:6px 0;font-size:14px;color:#374151;">
-          <span style="color:${tierColor};font-weight:bold;margin-right:8px;">\u2713</span>
-          ${escapeHtml2(f)}
-        </td>
-      </tr>`
-  ).join("");
-  return `
-    <div style="font-family:Arial,sans-serif;background:#f4f6f8;padding:24px;">
-      <div style="max-width:620px;margin:auto;background:#fff;padding:28px;border-radius:12px;">
-
-        <h2 style="margin:0 0 16px;color:#111827;">
-          Your Promotion Request Has Been Approved
-        </h2>
-
-        <p>Hello ${escapeHtml2(promoterName)},</p>
-
-        <p>
-          Congratulations! Your request to promote
-          <strong>${escapeHtml2(listingTitle)}</strong> has been approved.
-        </p>
-
-        <div style="background:#f9fafb;padding:16px;border-radius:8px;margin:20px 0;">
-          <strong>Listing:</strong> ${escapeHtml2(listingTitle)}<br>
-          <strong>ID:</strong> ${escapeHtml2(listingId)}
-        </div>
-
-        <div style="background:#f9fafb;padding:16px;border-radius:8px;margin-bottom:20px;">
-          <strong>Confirmed Commission:</strong>
-          <span style="font-size:22px;font-weight:bold;">
-            ${confirmedCommissionPct}%
-          </span>
-        </div>
-
-        <div style="border-left:4px solid ${tierColor};background:#f9fafb;padding:16px 20px;border-radius:0 8px 8px 0;">
-          <h3 style="margin:0;color:${tierColor};">
-            ${escapeHtml2(tierInfo.label)}
-          </h3>
-
-          <p>${escapeHtml2(tierInfo.description)}</p>
-
-          <table style="width:100%;border-collapse:collapse;">
-            ${featureRows}
-          </table>
-        </div>
-
-        <p style="margin-top:20px;">
-          Please ensure all promotion activities remain within the permissions
-          granted by your tier.
-        </p>
-
-        <p>
-          Regards,<br>
-          <strong>NEWAZA Team</strong>
-        </p>
-
-      </div>
-    </div>
-  `;
-};
-var sendPromotionApprovalEmail = async ({
-  toEmail,
-  promoterName,
-  listingTitle,
-  listingId,
-  tier,
-  confirmedCommissionPct
-}) => {
-  const transporter = nodemailer4.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: config_default.SMTP_AUTH_USER,
-      pass: config_default.SMTP_AUTH_PASS
+// src/modules/promoters/promoters.model.schema.ts
+import { Schema as Schema7, model as model7 } from "mongoose";
+var promotedListingSchema = new Schema7(
+  {
+    listing_id: {
+      type: Schema7.Types.ObjectId,
+      ref: "Listing",
+      required: true
+    },
+    listing_title: {
+      type: String,
+      ref: "Listing",
+      required: true
+    },
+    listing_price: {
+      type: Number,
+      ref: "Listing",
+      required: true
+    },
+    listing_owner_id: {
+      type: Schema7.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    promotion_request_id: {
+      type: Schema7.Types.ObjectId,
+      ref: "PromoteRequest",
+      required: true
+    },
+    tier: {
+      type: String,
+      enum: ["tier_1", "tier_2", "tier_3"],
+      required: true
+    },
+    approved_by: {
+      type: Schema7.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    approved_at: {
+      type: Date,
+      default: Date.now
+    },
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active"
     }
-  });
-  await transporter.sendMail({
-    from: config_default.SMTP_AUTH_USER,
-    to: toEmail,
-    subject: `You've been approved to promote: ${listingTitle}`,
-    text: `Hello ${promoterName}, your request to promote "${listingTitle}" has been approved under ${tier.replace(
-      "_",
-      " "
-    ).toUpperCase()} with a confirmed commission of ${confirmedCommissionPct}%.`,
-    html: getPromotionApprovalEmailHtml(
-      promoterName,
-      listingTitle,
-      listingId,
-      tier,
-      confirmedCommissionPct
-    )
-  });
-};
+  },
+  {
+    _id: false
+  }
+);
+var promoterSchema = new Schema7(
+  {
+    user_id: {
+      type: Schema7.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true
+    },
+    listings: {
+      type: [promotedListingSchema],
+      default: []
+    },
+    profile_views: {
+      type: Number,
+      default: 10
+    }
+  },
+  {
+    timestamps: true
+  }
+);
+var Promoter = model7("Promoter", promoterSchema);
 
 // src/modules/listingPromote/listing.promote.service.ts
+var throwError4 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var isAdminOrManager2 = (role) => {
+  return role === "admin" || role === "manager";
+};
 var createPromoteRequestInDB = async (requesterId, payload) => {
   if (!payload.listing_id || !requesterId) {
     throw new Error("listing_id and requester_id are required");
@@ -3824,53 +3759,103 @@ var deletePromoteRequest = async (id, role) => {
   promoteRequest.deleted_at = /* @__PURE__ */ new Date();
   return await promoteRequest.save();
 };
-var manageListingPromoteRequestInDB = async (promoteRequestId, userId, isAdmin, approved_by, payload) => {
-  const promoteRequest = await PromoteRequest.findById(promoteRequestId);
-  if (!promoteRequest) throw new Error("Promote request not found");
-  const listing = await Listing.findById(promoteRequest.listing_id);
-  if (!listing) throw new Error("Related listing not found");
-  const isOwner = listing.associate_id.toString() === userId.toString();
-  if (!isOwner && !isAdmin) {
-    throw new UnauthorizedError(
-      "You are not authorized to manage this promote request"
-    );
-  }
-  if (promoteRequest.status !== "pending") {
-    throw new Error("This request has already been resolved");
-  }
-  promoteRequest.status = payload.status;
-  if (payload.status === "approved") {
-    if (!payload.selected_tier) {
-      throw new Error(
-        "selected_tier is required when approving a promote request"
+var isSameId2 = (idA, idB) => String(idA) === String(idB);
+var managePromoteRequestInDB = async (promoteRequestId, authUser, payload) => {
+  const session = await mongoose2.startSession();
+  try {
+    session.startTransaction();
+    const promoteRequest = await PromoteRequest.findById(promoteRequestId);
+    if (!promoteRequest) throw new Error("Promote request not found");
+    const listing = await Listing.findById(promoteRequest.listing_id);
+    if (!listing) throw new Error("Related listing not found");
+    if (promoteRequest.status !== "pending") {
+      throwError4("Only pending promote requests can be managed", 400);
+    }
+    const isOwner = isSameId2(listing?.associate_id, authUser.id);
+    const isAdmin = isAdminOrManager2(authUser.role);
+    if (!isOwner && !isAdmin) {
+      throwError4("You are not authorized to manage this promote request", 403);
+    }
+    promoteRequest.status = payload.status;
+    promoteRequest.resolved_at = /* @__PURE__ */ new Date();
+    if (payload.status === "approved") {
+      promoteRequest.selected_tier = payload.selected_tier ? payload.selected_tier : "tier_1";
+    }
+    await promoteRequest.save({ session });
+    if (payload.status === "approved") {
+      await Listing.findByIdAndUpdate(
+        listing._id,
+        {
+          $addToSet: {
+            promoters: {
+              user_id: promoteRequest.requester.user_id,
+              tier: promoteRequest.selected_tier
+            }
+          }
+        },
+        { session }
+      );
+      await Promoter.findOneAndUpdate(
+        {
+          user_id: promoteRequest.requester.user_id
+        },
+        {
+          $setOnInsert: {
+            user_id: promoteRequest.requester.user_id
+          },
+          $push: {
+            listings: {
+              listing_id: listing._id,
+              listing_title: listing.title,
+              listing_price: listing.price.amount,
+              listing_owner_id: listing.associate_id,
+              promotion_request_id: promoteRequest._id,
+              tier: promoteRequest.selected_tier,
+              approved_by: authUser.id,
+              approved_at: /* @__PURE__ */ new Date(),
+              status: "active"
+            }
+          }
+        },
+        {
+          upsert: true,
+          new: true,
+          session,
+          runValidators: true
+        }
+      );
+      await commissionLedgerService.createPendingCommissionFromPromotionApproval(
+        {
+          listing_id: listing._id.toString(),
+          promotion_request_id: promoteRequest._id.toString(),
+          approved_by: authUser.id,
+          promoteRequest,
+          listing,
+          session
+        }
       );
     }
-    promoteRequest.selected_tier = payload.selected_tier;
-    promoteRequest.confirmed_commission_pct = payload.confirmed_commission_pct ?? promoteRequest.proposed_commission_pct;
-    await Promise.all([
-      createPendingCommissionFromPromotionApproval({
-        approved_by: userId,
-        listing_id: promoteRequest.listing_id.toString(),
-        promotion_request_id: promoteRequest._id.toString(),
-        promoteRequest,
-        listing
-      }),
-      promoteRequest.save()
-    ]);
-    sendPromotionApprovalEmail({
-      toEmail: promoteRequest.requester.email,
-      promoterName: promoteRequest.requester.email.split("@")[0] || "Promoter",
-      listingTitle: listing.title,
-      listingId: listing._id.toString(),
-      tier: promoteRequest.selected_tier,
-      confirmedCommissionPct: promoteRequest.confirmed_commission_pct
-    }).catch(
-      (err) => console.error("Promotion approval email failed silently:", err)
-    );
+    if (payload.status === "rejected") {
+      await Listing.findByIdAndUpdate(
+        listing._id,
+        {
+          $pull: {
+            promoters: {
+              user_id: promoteRequest.requester.user_id
+            }
+          }
+        },
+        { session }
+      );
+    }
+    await session.commitTransaction();
     return promoteRequest;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    await session.endSession();
   }
-  await promoteRequest.save();
-  return promoteRequest;
 };
 var cancelPromoteRequestInDB = async (requestId, requesterId) => {
   const promoteRequest = await PromoteRequest.findById(requestId);
@@ -3890,7 +3875,7 @@ var listingPromoteRequestService = {
   createPromoteRequestInDB,
   getAllListingPromoteRequest,
   getMyListingsPromoteRequestFromDB,
-  manageListingPromoteRequestInDB,
+  managePromoteRequestInDB,
   getMyPromoteRequestsFromDB,
   cancelPromoteRequestInDB,
   deletePromoteRequest
@@ -3909,7 +3894,10 @@ var createListingPromoteRequest = async (req, res, next) => {
         email: requesterEmail
       }
     };
-    const result = await listingPromoteRequestService.createPromoteRequestInDB(requesterId, updatedPayload);
+    const result = await listingPromoteRequestService.createPromoteRequestInDB(
+      requesterId,
+      updatedPayload
+    );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -3938,7 +3926,10 @@ var getMyListingsPromoteRequest = async (req, res, next) => {
   try {
     const associate_id = req.user?.id;
     const query = req.query;
-    const result = await listingPromoteRequestService.getMyListingsPromoteRequestFromDB(associate_id, query);
+    const result = await listingPromoteRequestService.getMyListingsPromoteRequestFromDB(
+      associate_id,
+      query
+    );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -3953,8 +3944,10 @@ var getMyPromoteRequests = async (req, res, next) => {
   try {
     const requesterId = req.user?.id;
     const query = req.query;
-    const result = await listingPromoteRequestService.getMyPromoteRequestsFromDB(requesterId, query);
-    console.log(result);
+    const result = await listingPromoteRequestService.getMyPromoteRequestsFromDB(
+      requesterId,
+      query
+    );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -3969,7 +3962,10 @@ var cencelPromoteRequest = async (req, res, next) => {
   try {
     const { id } = req.params;
     const requesterId = req.user?.id;
-    const result = await listingPromoteRequestService.cancelPromoteRequestInDB(id, requesterId);
+    const result = await listingPromoteRequestService.cancelPromoteRequestInDB(
+      id,
+      requesterId
+    );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -3995,13 +3991,12 @@ var manageListingPromoteRequest = async (req, res, next) => {
         data: null
       });
     }
-    const result = await listingPromoteRequestService.manageListingPromoteRequestInDB(
+    const result = await listingPromoteRequestService.managePromoteRequestInDB(
       id,
-      // promoteRequestId
-      userId,
-      // the user managing the request
-      isAdmin,
-      role,
+      {
+        id: userId,
+        role
+      },
       payload
     );
     res.status(200).json({
@@ -4017,7 +4012,10 @@ var deletePromoteRequest2 = async (req, res, next) => {
   try {
     const { id } = req.params;
     const role = req.user?.role;
-    const result = await listingPromoteRequestService.deletePromoteRequest(id, role);
+    const result = await listingPromoteRequestService.deletePromoteRequest(
+      id,
+      role
+    );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -4054,8 +4052,8 @@ import { Router as Router5 } from "express";
 
 // src/modules/commissionLedger/commission.ledger.validation.ts
 import { z as z3 } from "zod";
-import { Types as Types5 } from "mongoose";
-var mongoIdValidation = z3.string().refine((id) => Types5.ObjectId.isValid(id), {
+import { Types as Types7 } from "mongoose";
+var mongoIdValidation = z3.string().refine((id) => Types7.ObjectId.isValid(id), {
   message: "Invalid id"
 });
 var commissionIdValidation = z3.object({
@@ -4364,7 +4362,7 @@ var commissionLedgerRoutes = router5;
 import { Router as Router6 } from "express";
 
 // src/modules/admin/admin.service.ts
-import { Types as Types6 } from "mongoose";
+import { Types as Types8 } from "mongoose";
 
 // src/utility/sendAccountApprovedMail.ts
 var getAccessLabel = (accessTo) => {
@@ -4479,14 +4477,14 @@ var sendApprovalEmailIfFullyApproved = async (userId) => {
 };
 
 // src/modules/admin/admin.service.ts
-var throwError4 = (message, statusCode) => {
+var throwError5 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
 var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
-  if (!Types6.ObjectId.isValid(userId)) {
-    throwError4("Invalid user id", 400);
+  if (!Types8.ObjectId.isValid(userId)) {
+    throwError5("Invalid user id", 400);
   }
   const updateQuery = {
     $set: {
@@ -4494,7 +4492,7 @@ var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
     }
   };
   if (payload.approvalStatus === "approved") {
-    updateQuery.$set.approvedBy = new Types6.ObjectId(adminId);
+    updateQuery.$set.approvedBy = new Types8.ObjectId(adminId);
     updateQuery.$set.approvedAt = /* @__PURE__ */ new Date();
     updateQuery.$unset = {
       rejectedReason: ""
@@ -4503,7 +4501,7 @@ var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
   if (payload.approvalStatus === "rejected") {
     const rejectedReason = payload.rejectedReason?.trim();
     if (!rejectedReason) {
-      throwError4("Rejected reason is required", 400);
+      throwError5("Rejected reason is required", 400);
     }
     updateQuery.$set.rejectedReason = rejectedReason;
     updateQuery.$unset = {
@@ -4523,14 +4521,14 @@ var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
     runValidators: true
   }).select("-password");
   if (!updatedUser) {
-    throwError4("User not found", 404);
+    throwError5("User not found", 404);
   }
   await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
   return updatedUser;
 };
 var updateUserLicenseVerificationStatusIntoDB = async (userId, payload) => {
-  if (!Types6.ObjectId.isValid(userId)) {
-    throwError4("Invalid user id", 400);
+  if (!Types8.ObjectId.isValid(userId)) {
+    throwError5("Invalid user id", 400);
   }
   const updatedUser = await User.findByIdAndUpdate(
     userId,
@@ -4545,14 +4543,14 @@ var updateUserLicenseVerificationStatusIntoDB = async (userId, payload) => {
     }
   ).select("-password");
   if (!updatedUser) {
-    throwError4("User not found", 404);
+    throwError5("User not found", 404);
   }
   await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
   return updatedUser;
 };
 var updateUserAccountStatusIntoDB = async (userId, payload) => {
-  if (!Types6.ObjectId.isValid(userId)) {
-    throwError4("Invalid user id", 400);
+  if (!Types8.ObjectId.isValid(userId)) {
+    throwError5("Invalid user id", 400);
   }
   const updatedUser = await User.findByIdAndUpdate(
     userId,
@@ -4567,7 +4565,7 @@ var updateUserAccountStatusIntoDB = async (userId, payload) => {
     }
   ).select("-password");
   if (!updatedUser) {
-    throwError4("User not found", 404);
+    throwError5("User not found", 404);
   }
   await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
   return updatedUser;
@@ -4580,8 +4578,8 @@ var adminService = {
 
 // src/modules/admin/admin.validation.ts
 import { z as z4 } from "zod";
-import { Types as Types7 } from "mongoose";
-var mongoIdValidation2 = z4.string().refine((id) => Types7.ObjectId.isValid(id), {
+import { Types as Types9 } from "mongoose";
+var mongoIdValidation2 = z4.string().refine((id) => Types9.ObjectId.isValid(id), {
   message: "Invalid user id"
 });
 var updateApprovalStatusValidation = z4.object({
@@ -4720,26 +4718,26 @@ import { Router as Router7 } from "express";
 
 // src/modules/listingAssets/listing.assets.service.ts
 import { ZipArchive } from "archiver";
-import { Types as Types8 } from "mongoose";
+import { Types as Types10 } from "mongoose";
 
 // src/modules/listingAssets/listing.assets.model.schema.ts
-import { Schema as Schema7, model as model7 } from "mongoose";
-var ListingAssetDownloadSchema = new Schema7(
+import { Schema as Schema8, model as model8 } from "mongoose";
+var ListingAssetDownloadSchema = new Schema8(
   {
     listing_id: {
-      type: Schema7.Types.ObjectId,
+      type: Schema8.Types.ObjectId,
       ref: "Listing",
       required: true,
       index: true
     },
     downloaded_by: {
-      type: Schema7.Types.ObjectId,
+      type: Schema8.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     promotion_request_id: {
-      type: Schema7.Types.ObjectId,
+      type: Schema8.Types.ObjectId,
       ref: "PromoteRequest"
     },
     user_role: {
@@ -4793,7 +4791,7 @@ ListingAssetDownloadSchema.index({
   downloaded_by: 1,
   downloaded_at: -1
 });
-var ListingAssetDownload = model7(
+var ListingAssetDownload = model8(
   "ListingAssetDownload",
   ListingAssetDownloadSchema
 );
@@ -4938,18 +4936,18 @@ var generateListingOnePagerPdf = async (listing, images, captions) => {
 };
 
 // src/modules/listingAssets/listing.assets.service.ts
-var throwError5 = (message, statusCode) => {
+var throwError6 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
 var toObjectId2 = (id) => {
-  if (!Types8.ObjectId.isValid(id)) {
-    throwError5("Invalid id", 400);
+  if (!Types10.ObjectId.isValid(id)) {
+    throwError6("Invalid id", 400);
   }
-  return new Types8.ObjectId(id);
+  return new Types10.ObjectId(id);
 };
-var isAdminOrManager2 = (role) => {
+var isAdminOrManager3 = (role) => {
   return role === "admin" || role === "manager";
 };
 var isAllowedPromoterRole = (role) => {
@@ -4957,7 +4955,7 @@ var isAllowedPromoterRole = (role) => {
 };
 var ensureListingExists = (listing) => {
   if (listing == null) {
-    throwError5("Listing not found", 404);
+    throwError6("Listing not found", 404);
   }
   return listing;
 };
@@ -4971,18 +4969,19 @@ var downloadListingAssetsZipFromDB = async (listingId, authUser, meta) => {
   const safeListing = ensureListingExists(listing);
   const isListingOwner = String(safeListing.associate_id) === authUser.id;
   let promotionRequestId;
-  const hasDirectAccess = isAdminOrManager2(authUser.role) || isListingOwner;
+  const hasDirectAccess = isAdminOrManager3(authUser.role) || isListingOwner;
   if (!hasDirectAccess) {
     if (!isAllowedPromoterRole(authUser.role)) {
-      throwError5("You are not allowed to download listing assets", 403);
+      throwError6("You are not allowed to download listing assets", 403);
     }
     const approvedRequest = await PromoteRequest.findOne({
       listing_id: toObjectId2(listingId),
-      requester_id: toObjectId2(authUser.id),
+      "requester.user_id": toObjectId2(authUser.id),
       status: "approved"
     }).lean();
+    console.log("Approved Request:", approvedRequest);
     if (!approvedRequest) {
-      throwError5(
+      throwError6(
         "You must be approved to promote this listing before downloading assets",
         403
       );
@@ -5066,16 +5065,16 @@ var getListingAssetLogsFromDB = async (listingId, authUser) => {
   const listing = await Listing.findById(listingId).lean();
   const safeListing = ensureListingExists(listing);
   const isListingOwner = String(safeListing.associate_id) === authUser.id;
-  if (!isAdminOrManager2(authUser.role) && !isListingOwner) {
-    throwError5("You are not allowed to view asset download logs", 403);
+  if (!isAdminOrManager3(authUser.role) && !isListingOwner) {
+    throwError6("You are not allowed to view asset download logs", 403);
   }
   return ListingAssetDownload.find({
     listing_id: toObjectId2(listingId)
   }).populate("downloaded_by", "fullName email role").populate("listing_id", "title ref_code").sort({ downloaded_at: -1 });
 };
 var getAllListingAssetLogsFromDB = async (authUser) => {
-  if (!isAdminOrManager2(authUser.role)) {
-    throwError5("Only admin or manager can view all asset download logs", 403);
+  if (!isAdminOrManager3(authUser.role)) {
+    throwError6("Only admin or manager can view all asset download logs", 403);
   }
   return ListingAssetDownload.find().populate("downloaded_by", "fullName email role").populate("listing_id", "title ref_code").sort({ downloaded_at: -1 });
 };
@@ -5087,8 +5086,8 @@ var listingAssetsService = {
 
 // src/modules/listingAssets/listing.assets.validation.ts
 import { z as z5 } from "zod";
-import { Types as Types9 } from "mongoose";
-var mongoIdValidation3 = z5.string().refine((id) => Types9.ObjectId.isValid(id), {
+import { Types as Types11 } from "mongoose";
+var mongoIdValidation3 = z5.string().refine((id) => Types11.ObjectId.isValid(id), {
   message: "Invalid listing id"
 });
 var downloadListingAssetsValidation = z5.object({
@@ -5346,14 +5345,14 @@ var paymentRoutes = router8;
 import { Router as Router9 } from "express";
 
 // src/modules/profile/profile.service.ts
-var throwError6 = (message, statusCode) => {
+var throwError7 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
 var ensureUserExists = (user) => {
   if (user == null) {
-    throwError6("User not found", 404);
+    throwError7("User not found", 404);
   }
   return user;
 };
@@ -5369,7 +5368,7 @@ var formatProfileResponse = (user) => {
 var getMyProfileFromDB = async (userId) => {
   const user = await User.findById(userId).select("-password").lean();
   if (!user) {
-    throwError6("User not found", 404);
+    throwError7("User not found", 404);
   }
   const safeUser = ensureUserExists(user);
   return formatProfileResponse(safeUser);
@@ -5556,7 +5555,7 @@ var updateMarketingChannelsValidation = z7.object({
 });
 
 // src/modules/profile/profile.controller.ts
-var throwError7 = (message, statusCode) => {
+var throwError8 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
@@ -5689,7 +5688,7 @@ var updateProfileImage = async (req, res, next) => {
     const userId = getAuthenticatedUserId(req);
     const file = req.file;
     if (!file) {
-      throwError7("Profile image is required", 400);
+      throwError8("Profile image is required", 400);
     }
     const result = await profileService.updateProfileImageIntoDB(userId, file);
     sendResponse_default(res, {
@@ -5892,8 +5891,218 @@ router10.get("/", discountController.getAllDiscountCodes);
 router10.post("/send-email", discountController.sendDiscountCodeEmail);
 var discountRoutes = router10;
 
-// src/routes/index.ts
+// src/modules/promoters/promoters.routes.ts
+import { Router as Router11 } from "express";
+
+// src/modules/promoters/promoters.services.ts
+var getPromotersFromDB = async (query) => {
+  const queryWithDefaultSort = {
+    sort: "-created_at",
+    ...query
+  };
+  const listingQuery = new queryBuilder_default(
+    Promoter.find(),
+    queryWithDefaultSort
+  ).search(["fullName"]).filter().sort().paginate().fieldsLimit();
+  const data = await listingQuery.modelQuery;
+  const meta = await listingQuery.countTotal();
+  const result = {
+    data,
+    meta
+  };
+  return result;
+};
+var promotersServices = {
+  getPromotersFromDB
+};
+
+// src/modules/promoters/promoters.controller.ts
+var getPromoters = async (req, res, next) => {
+  try {
+    const query = req.query;
+    const results = await promotersServices.getPromotersFromDB(query);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: false,
+      message: "Promoters data retrived successfully",
+      data: results
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var promotersController = {
+  getPromoters
+};
+
+// src/modules/promoters/promoters.routes.ts
 var router11 = Router11();
+router11.get("/", promotersController.getPromoters);
+var promoterRoutes = router11;
+
+// src/modules/dashboardAnalytics/dashboard.analytics.route.ts
+import { Router as Router12 } from "express";
+
+// src/modules/dashboardAnalytics/dashboard.analytics.services.ts
+import { Types as Types12 } from "mongoose";
+var getDashboardStats = async (userId) => {
+  console.log(userId);
+  const ownerId = new Types12.ObjectId(userId);
+  console.log("user data ", ownerId);
+  const [listingStats, promoterStats, propertiesShared, commissionStats] = await Promise.all([
+    Listing.aggregate([
+      {
+        $match: {
+          associate_id: ownerId
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total_listings: { $sum: 1 },
+          listing_value: { $sum: "$price.amount" },
+          listing_views: { $sum: "$listings_view" }
+        }
+      }
+    ]),
+    Promoter.countDocuments(),
+    Promoter.aggregate([
+      {
+        $match: {
+          user_id: ownerId
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          total: {
+            $size: "$listings"
+          }
+        }
+      }
+    ]),
+    CommissionLedger.aggregate([
+      {
+        $match: {
+          listing_owner_id: ownerId,
+          status: "pending"
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: "$estimated_commission_amount"
+          }
+        }
+      }
+    ])
+  ]);
+  console.log(propertiesShared);
+  return {
+    total_listings: listingStats[0]?.total_listings ?? 0,
+    listing_value: listingStats[0]?.listing_value ?? 100,
+    listing_views: listingStats[0]?.listing_views ?? 100,
+    total_promoters: promoterStats ?? 0,
+    properties_shared_with_me: propertiesShared[0]?.total ?? 0,
+    commission_pipeline: commissionStats[0]?.total ?? 100,
+    top_promoters: []
+  };
+};
+var getTopPromoters = async () => {
+  return Listing.aggregate([
+    {
+      $group: {
+        _id: "$associate_id",
+        totalViews: {
+          $sum: "$listings_view"
+        }
+      }
+    },
+    {
+      $sort: {
+        totalViews: -1
+      }
+    },
+    {
+      $limit: 5
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    {
+      $unwind: "$user"
+    },
+    {
+      $project: {
+        _id: 0,
+        user_id: "$user._id",
+        fullName: "$user.fullName",
+        profileImage: "$user.profileImage",
+        city: "$user.city",
+        country: "$user.country",
+        totalViews: 1
+      }
+    }
+  ]);
+};
+var dashboardService = {
+  getDashboardStats,
+  getTopPromoters
+};
+
+// src/modules/dashboardAnalytics/dashboard.analytics.controller.ts
+var getDashboardStats2 = async (req, res, next) => {
+  try {
+    console.log(req.user);
+    const result = await dashboardService.getDashboardStats(
+      req.user?.id
+    );
+    sendResponse_default(res, {
+      success: true,
+      statusCode: 200,
+      message: "Dashboard statistics retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getTopPromoters2 = async (req, res, next) => {
+  try {
+    const result = await dashboardService.getTopPromoters();
+    sendResponse_default(res, {
+      success: true,
+      statusCode: 200,
+      message: "Top promoters retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var dashboardController = {
+  getDashboardStats: getDashboardStats2,
+  getTopPromoters: getTopPromoters2
+};
+
+// src/modules/dashboardAnalytics/dashboard.analytics.route.ts
+var router12 = Router12();
+router12.get("/stats", verifyToken2, dashboardController.getDashboardStats);
+router12.get(
+  "/top-promoters",
+  verifyToken2,
+  dashboardController.getTopPromoters
+);
+var dashboardAnalyticsRoutes = router12;
+
+// src/routes/index.ts
+var router13 = Router13();
 var moduleRoutes = [
   {
     path: "/admin",
@@ -5934,12 +6143,20 @@ var moduleRoutes = [
   {
     path: "/discounts",
     route: discountRoutes
+  },
+  {
+    path: "/promoters",
+    route: promoterRoutes
+  },
+  {
+    path: "/dashboard",
+    route: dashboardAnalyticsRoutes
   }
 ];
 moduleRoutes.forEach((route) => {
-  router11.use(route.path, route.route);
+  router13.use(route.path, route.route);
 });
-var routes_default = router11;
+var routes_default = router13;
 
 // src/swagger/swagger.ts
 import swaggerJSDoc from "swagger-jsdoc";
@@ -6427,7 +6644,7 @@ var app_default = app;
 var port = process.env.PORT || 3e3;
 var main = async () => {
   try {
-    await mongoose2.connect(config_default.MONGO_URI);
+    await mongoose3.connect(config_default.MONGO_URI);
     app_default.listen(port, () => {
       console.log(`Server is running on port http://localhost:${port}`);
     });

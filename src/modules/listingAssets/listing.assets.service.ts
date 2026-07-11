@@ -94,7 +94,6 @@ const downloadListingAssetsZipFromDB = async (
       status: 'approved',
     }).lean();
  
-    console.log("Approved Request:", approvedRequest);
     if (!approvedRequest) {
       throwError(
         'You must be approved to promote this listing before downloading assets',
