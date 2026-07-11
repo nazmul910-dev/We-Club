@@ -56,3 +56,21 @@ export const rejectUserValidation = z.object({
     reason: z.string().trim().min(2).max(500),
   }),
 });
+
+export const createManagerByAdminValidation = z.object({
+  body: z.object({
+    fullName: z.string().trim().min(2).max(100),
+
+    email: z.string().trim().email().toLowerCase(),
+
+    password: z.string().min(8).max(100),
+
+    role: z.enum(["manager"]),
+
+    accessTo: z.enum([
+      "we_command_center",
+      "invictus",
+      "both",
+    ]),
+  }),
+});

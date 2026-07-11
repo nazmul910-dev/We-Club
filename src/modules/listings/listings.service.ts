@@ -14,7 +14,7 @@ import mongoose from "mongoose";
 const createListingInDB = async (
   payload: Partial<IListing>,
 ): Promise<IListing> => {
-  console.log("payload ", payload);
+
   const listing = new Listing(payload);
   return await listing.save();
 };
@@ -67,7 +67,7 @@ const getMyListingFromDB = async (
     ...query,
   };
 
-  console.log("query", queryWithDefaultSort);
+
 
   const listingQuery = new QueryBuilder<IListing>(
     Listing.find({ associate_id: associateId }),
@@ -253,15 +253,13 @@ const cancelPendingListingInDB = async (
   userId: string,
 ): Promise<IListing | null> => {
   const listing = await Listing.findById(id);
-  console.log(userId);
+
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
 
   const isOwner = listing.associate_id.toString() === userId.toString();
-  // console.log(listing.associate_id.toString(), userId.toString())
 
-  // console.log(isOwner);
   if (!isOwner) {
     throw new UnauthorizedError(
       "You are not authorized to cancel this listing",

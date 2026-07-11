@@ -8,7 +8,6 @@ const getDashboardStats = async (
   next: NextFunction,
 ) => {
     try {
-      console.log(req.user);
     const result = await dashboardService.getDashboardStats(
       req.user?.id as string,
     );

@@ -46,8 +46,7 @@ const loginUserInDB = async (req: Request, res: Response, next: NextFunction) =>
 
 const changePassword = async(req:Request,res:Response,next:NextFunction) =>{
     try {
-        console.log("user2:",req.user)
-        console.log("user3:",req.body)
+
         const result = await authService.changePassword( req.user!, req.body);
         sendResponse(res, {
         statusCode : 200,

@@ -6,10 +6,9 @@ import { Listing } from "../listings/listings.model.schema";
 import { CommissionLedger } from "../commissionLedger/commission.ledger.model.schema";
 
 const getDashboardStats = async (userId: string): Promise<IDashboardStats> => {
-  console.log(userId);
+
   const ownerId = new Types.ObjectId(userId);
 
-  console.log("user data ", ownerId);
 
   const [listingStats, promoterStats, propertiesShared, commissionStats] =
     await Promise.all([
@@ -65,7 +64,6 @@ const getDashboardStats = async (userId: string): Promise<IDashboardStats> => {
       ]),
     ]);
 
-  console.log(propertiesShared);
 
   return {
     total_listings: listingStats[0]?.total_listings ?? 0,
