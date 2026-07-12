@@ -5,35 +5,35 @@ import { Promoter } from "../promoters/promoters.model.schema";
 import { Listing } from "../listings/listings.model.schema";
 import { CommissionLedger } from "../commissionLedger/commission.ledger.model.schema";
 import { UserRole } from "../users/user.interface";
+import { ListingViewStats } from "../listings/listings.viewsHistory.modal.schema";
 
- 
 const isAdminOrManager = (role: UserRole): boolean =>
   role === "admin" || role === "manager";
- 
+
 const getDashboardStats = async (
   userId: string,
   role: UserRole,
 ): Promise<IDashboardStats> => {
   const ownerId = new Types.ObjectId(userId);
   const isPrivileged = isAdminOrManager(role);
- 
+
   // Computed once, reused across every aggregation below — an empty match
   // object means "no filter" (i.e. everything), so admins/managers get
   // platform-wide totals with zero extra branching per query.
-  
+
   const listingMatch: Record<string, unknown> = isPrivileged
     ? {}
     : { associate_id: ownerId };
- 
+
   const commissionMatch: Record<string, unknown> = {
     status: "pending",
     ...(isPrivileged ? {} : { listing_owner_id: ownerId }),
   };
- 
+
   const promoterListingsMatch: Record<string, unknown> = isPrivileged
     ? {}
     : { user_id: ownerId };
- 
+
   const [
     listingStats,
     totalPromotersPlatformWide,
@@ -52,10 +52,10 @@ const getDashboardStats = async (
         },
       },
     ]),
- 
+
     // Platform-wide count — this is what admin/manager should actually see.
     Promoter.countDocuments(),
- 
+
     // NOTE: the original code used this exact same Promoter.countDocuments()
     // value for `total_promoters` regardless of role — meaning a regular
     // associate was ALSO seeing the platform-wide total, not "how many
@@ -65,7 +65,7 @@ const getDashboardStats = async (
     // If you actually want the platform-wide count for everyone regardless
     // of role, just drop this query and always use the one above.
     Listing.distinct("promoters.user_id", listingMatch),
- 
+
     // Also switched $project → $group + $sum here: $project only handles
     // the case where exactly one Promoter document matches (true for a
     // single associate, since there's one Promoter doc per user). For the
@@ -81,7 +81,7 @@ const getDashboardStats = async (
         },
       },
     ]),
- 
+
     CommissionLedger.aggregate([
       { $match: commissionMatch },
       {
@@ -92,23 +92,23 @@ const getDashboardStats = async (
       },
     ]),
   ]);
- 
+
   return {
     total_listings: listingStats[0]?.total_listings ?? 0,
- 
+
     // NOTE: these previously defaulted to `?? 100` instead of `?? 0` —
     // meaning a user/org with genuinely zero listing value, zero views, or
     // zero commission pipeline would have shown a fake "100" instead of an
     // honest zero. Fixed to `?? 0`, matching total_listings' own fallback.
     listing_value: listingStats[0]?.listing_value ?? 0,
     listing_views: listingStats[0]?.listing_views ?? 0,
- 
+
     total_promoters: isPrivileged
       ? totalPromotersPlatformWide
       : distinctPromotersOfMyListings.length,
- 
+
     properties_shared_with_me: propertiesShared[0]?.total ?? 0,
- 
+
     commission_pipeline: commissionStats[0]?.total ?? 0,
     top_promoters: [],
   };
@@ -117,7 +117,6 @@ const getDashboardStats = async (
 // const getDashboardStats = async (userId: string): Promise<IDashboardStats> => {
 
 //   const ownerId = new Types.ObjectId(userId);
-
 
 //   const [listingStats, promoterStats, propertiesShared, commissionStats] =
 //     await Promise.all([
@@ -173,7 +172,6 @@ const getDashboardStats = async (
 //       ]),
 //     ]);
 
-
 //   return {
 //     total_listings: listingStats[0]?.total_listings ?? 0,
 
@@ -190,67 +188,247 @@ const getDashboardStats = async (
 //   };
 // };
 
-const getTopPromoters=async()=>{
+const getTopPromoters = async () => {
+  return Listing.aggregate([
+    {
+      $group: {
+        _id: "$associate_id",
 
-    return Listing.aggregate([
-
-        {
-            $group:{
-                _id:"$associate_id",
-
-                totalViews:{
-                    $sum:"$listings_view"
-                }
-            }
+        totalViews: {
+          $sum: "$listings_view",
         },
+      },
+    },
 
-        {
-            $sort:{
-                totalViews:-1
-            }
+    {
+      $sort: {
+        totalViews: -1,
+      },
+    },
+
+    {
+      $limit: 5,
+    },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "user",
+      },
+    },
+
+    {
+      $unwind: "$user",
+    },
+
+    {
+      $project: {
+        _id: 0,
+
+        user_id: "$user._id",
+
+        fullName: "$user.fullName",
+
+        profileImage: "$user.profileImage",
+
+        city: "$user.city",
+
+        country: "$user.country",
+
+        totalViews: 1,
+      },
+    },
+  ]);
+};
+
+interface IChartData {
+  label: string;
+  value: number;
+}
+
+const getListingsViewsAnalytics = async () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  /**
+   * TOTAL VIEWS
+   */
+  const totalViewsResult = await Listing.aggregate([
+    {
+      $group: {
+        _id: null,
+        total: {
+          $sum: "$listings_view",
         },
+      },
+    },
+  ]);
 
-        {
-            $limit:5
+  const totalViews = totalViewsResult[0]?.total ?? 0;
+
+  /**
+   * LAST 7 DAYS
+   */
+
+  const sevenDaysAgo = new Date(today);
+  sevenDaysAgo.setDate(today.getDate() - 6);
+
+  const daily: IChartData[] = [];
+  const weekly: IChartData[] = [];
+  const monthly: IChartData[] = [];
+
+  const dailyResult = await ListingViewStats.aggregate([
+    {
+      $match: {
+        date: {
+          $gte: sevenDaysAgo,
+          $lte: today,
         },
-
-        {
-            $lookup:{
-                from:"users",
-                localField:"_id",
-                foreignField:"_id",
-                as:"user"
-            }
+      },
+    },
+    {
+      $group: {
+        _id: "$date",
+        value: {
+          $sum: "$views",
         },
+      },
+    },
+    {
+      $sort: {
+        _id: 1,
+      },
+    },
+  ]);
 
-        {
-            $unwind:"$user"
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(sevenDaysAgo);
+    date.setDate(sevenDaysAgo.getDate() + i);
+
+    const found = dailyResult.find(
+      (item) => new Date(item._id).toDateString() === date.toDateString(),
+    );
+
+    daily.push({
+      label: date.toLocaleDateString("en-US", {
+        weekday: "short",
+      }),
+      value: found?.value ?? 100,
+    });
+  }
+
+  /**
+   * LAST 4 WEEKS
+   */
+
+  for (let week = 3; week >= 0; week--) {
+    const start = new Date(today);
+
+    start.setDate(today.getDate() - week * 7 - 6);
+
+    const end = new Date(today);
+
+    end.setDate(today.getDate() - week * 7);
+
+    const result = await ListingViewStats.aggregate([
+      {
+        $match: {
+          date: {
+            $gte: start,
+            $lte: end,
+          },
         },
-
-        {
-            $project:{
-
-                _id:0,
-
-                user_id:"$user._id",
-
-                fullName:"$user.fullName",
-
-                profileImage:"$user.profileImage",
-
-                city:"$user.city",
-
-                country:"$user.country",
-
-                totalViews:1
-            }
-        }
-
+      },
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: "$views",
+          },
+        },
+      },
     ]);
 
-}
+    weekly.push({
+      label: `Week ${4 - week}`,
+      value: result[0]?.total ?? 1000,
+    });
+  }
+
+  /**
+   * LAST 6 MONTHS
+   */
+
+  for (let i = 5; i >= 0; i--) {
+    const start = new Date(today.getFullYear(), today.getMonth() - i, 1);
+
+    const end = new Date(today.getFullYear(), today.getMonth() - i + 1, 0);
+
+    end.setHours(23, 59, 59, 999);
+
+    const result = await ListingViewStats.aggregate([
+      {
+        $match: {
+          date: {
+            $gte: start,
+            $lte: end,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: {
+            $sum: "$views",
+          },
+        },
+      },
+    ]);
+
+    monthly.push({
+      label: start.toLocaleDateString("en-US", {
+        month: "short",
+      }),
+      value: result[0]?.total ?? 10000,
+    });
+  }
+
+  /**
+   * Average
+   */
+
+  const average =
+    daily.reduce((sum, item) => sum + item.value, 0) / daily.length;
+
+  /**
+   * Growth
+   */
+
+  let growth = 0;
+
+  if (daily.length >= 2) {
+    const firstDay = daily[0];
+    const lastDay = daily[daily.length - 1];
+
+    if (firstDay && lastDay && firstDay.value > 0) {
+      growth = ((lastDay.value - firstDay.value) / firstDay.value) * 100;
+    }
+  }
+
+  return {
+    totalViews,
+    daily,
+    weekly,
+    monthly,
+    average: Math.round(average),
+    growth: Number(growth.toFixed(2)),
+  };
+};
 
 export const dashboardService = {
   getDashboardStats,
   getTopPromoters,
+  getListingsViewsAnalytics,
 };

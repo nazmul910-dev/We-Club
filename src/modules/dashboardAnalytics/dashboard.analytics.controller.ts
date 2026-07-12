@@ -8,10 +8,10 @@ const getDashboardStats = async (
   res: Response,
   next: NextFunction,
 ) => {
-    try {
+  try {
     const result = await dashboardService.getDashboardStats(
       req.user?.id as string,
-      req.user?.role as UserRole
+      req.user?.role as UserRole,
     );
 
     sendResponse(res, {
@@ -25,34 +25,47 @@ const getDashboardStats = async (
   }
 };
 
-
 const getTopPromoters = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ) => {
+  try {
+    const result = await dashboardService.getTopPromoters();
 
-    try{
+    sendResponse(res, {
+      success: true,
+      statusCode: 200,
+      message: "Top promoters retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-        const result=
-        await dashboardService.getTopPromoters();
+const getListingsViewsAnaliticsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await dashboardService.getListingsViewsAnalytics();
 
-        sendResponse(res,{
-            success:true,
-            statusCode:200,
-            message:"Top promoters retrieved successfully",
-            data:result
-        });
-
-    }catch(error){
-
-        next(error);
-
-    }
-
+    sendResponse(res, {
+      success: true,
+      statusCode: 200,
+      message:
+        "Listings views analitics generatred sucessfully retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const dashboardController = {
   getDashboardStats,
-  getTopPromoters
+  getTopPromoters,
+  getListingsViewsAnaliticsController
 };

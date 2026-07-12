@@ -11,5 +11,10 @@ router.get(
     verifyToken,
     dashboardController.getTopPromoters
 );
+router.get(
+    "/listing-analytics",
+    verifyToken,
+    dashboardController.getListingsViewsAnaliticsController
+);
 
 export const dashboardAnalyticsRoutes = router;
