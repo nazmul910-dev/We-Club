@@ -7,7 +7,6 @@ import { parseIfString } from "../../utility/parseIfString";
 
 const LISTING_IMAGE_TRANSFORM = [{ quality: "auto", fetch_format: "auto" }];
 
-
 const createListing = async (req: Request, res: Response) => {
   try {
     const files = req.files as {
@@ -24,7 +23,7 @@ const createListing = async (req: Request, res: Response) => {
         : Promise.resolve(undefined),
 
       ...(files?.images ?? []).map((file) =>
-        uploadImageToCloudinary(file, "listings/gallery")
+        uploadImageToCloudinary(file, "listings/gallery"),
       ),
     ]);
 
@@ -57,75 +56,93 @@ const createListing = async (req: Request, res: Response) => {
   }
 };
 
-const getAllListing =async (req: Request, res : Response, next : NextFunction) => {
-    try {
-        const query = req.query;
-        
-        const result = await  listingsService.getAllListingFromDB(query);
-          sendResponse(res, {
-            statusCode : 200,
-            success : true,
-            message : "Listing retrived successfully",
-            data : result,
-        })
-        
-    } catch (error) {
-        next(error)
-    }
-}
-const getMyListings =async (req: Request, res : Response, next : NextFunction) => {
-    try {
-      
-        const userId = req.user?.id
-       const query = req.query
-        
-        const result = await  listingsService.getMyListingFromDB(userId as string, query);
-          sendResponse(res, {
-            statusCode : 200,
-            success : true,
-            message : "Listing retrived successfully",
-            data : result,
-        })
-        
-    } catch (error) {
-        next(error)
-    }
-}
+const getAllListing = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const query = req.query;
 
-const getListingById  = async(req : Request, res : Response, next : NextFunction) => {
-     try {
-        const {id} = req.params;
-        const result = await  listingsService.getListingByIdFromDB(id as string );
+    const result = await listingsService.getAllListingFromDB(query);
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Listing retrived successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+const getMyListings = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = req.user?.id;
+    const query = req.query;
 
-        sendResponse(res, {
-            statusCode: 200,
-            success : true,
-            message : "Listing retrieved successfully",
-            data : result
-        })  
-    } catch (error) {
-        next(error)
-    }
+    const result = await listingsService.getMyListingFromDB(
+      userId as string,
+      query,
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Listing retrived successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
+const getListingById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const result = await listingsService.getListingByIdFromDB(id as string);
 
-}
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Listing retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-const getMyPromoters = async(req : Request, res : Response, next : NextFunction) => {
-    try {
-        const userId = req.user?.id;
-        const result = await listingsService.getMyPromotersFromDB(userId as string); 
-        sendResponse(res, {
-            statusCode: 200,
-            success : true,
-            message : "Promoters retrieved successfully",
-            data : result
-        }) 
-    } catch (error) {
-        next(error)
-    }
-}
+const getMyPromoters = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = req.user?.id;
+    const result = await listingsService.getMyPromotersFromDB(userId as string);
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Promoters retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
-const updateListing = async (req: Request, res: Response, next: NextFunction) => {
+const updateListing = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { id } = req.params;
     const associateId = req.user?.id;
@@ -143,15 +160,15 @@ const updateListing = async (req: Request, res: Response, next: NextFunction) =>
     if (files?.cover_image?.[0]) {
       cover_image = await uploadImageToCloudinary(
         files.cover_image[0],
-        "listings/cover"
+        "listings/cover",
       );
     }
 
     if (files?.images?.length) {
       images = await Promise.all(
         files.images.map((file) =>
-          uploadImageToCloudinary(file, "listings/gallery")
-        )
+          uploadImageToCloudinary(file, "listings/gallery"),
+        ),
       );
     }
 
@@ -180,13 +197,12 @@ const updateListing = async (req: Request, res: Response, next: NextFunction) =>
       ...(images && { images }),
     };
 
-
-
+    console.log(updatePayload);
 
     const results = await listingsService.updateListingInDB(
       id as string,
       associateId as string,
-      updatePayload
+      updatePayload,
     );
 
     res.status(200).json({
@@ -199,34 +215,47 @@ const updateListing = async (req: Request, res: Response, next: NextFunction) =>
   }
 };
 
-const deleteListing = async (req: Request, res: Response, next : NextFunction) => {
+const deleteListing = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
-
-    const {id} = req.params
+    const { id } = req.params;
     const userId = req.user?.id;
     const role = req.user?.role;
 
+    //  console.log(id, req.user, role)
 
- 
-    const results = await listingsService.deleteListingFromDB(id as string, userId as string, role as string);
- 
+    const results = await listingsService.deleteListingFromDB(
+      id as string,
+      userId as string,
+      role as string,
+    );
+
     res.status(200).json({
       success: true,
       message: "Listing deleted successfully",
       data: results,
     });
-
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
 
-const cancelPendingListing = async (req: Request, res: Response, next: NextFunction) => {
+const cancelPendingListing = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;  
+    const userId = req.user?.id;
 
-    const results = await listingsService.cancelPendingListingInDB(id as string, userId as string);
+    const results = await listingsService.cancelPendingListingInDB(
+      id as string,
+      userId as string,
+    );
 
     sendResponse(res, {
       statusCode: 200,
@@ -234,56 +263,85 @@ const cancelPendingListing = async (req: Request, res: Response, next: NextFunct
       message: "Pending listing canceled successfully",
       data: results,
     });
-   
   } catch (error) {
     next(error);
   }
-}
+};
 
-const deletePendingListing = async (req: Request, res: Response, next: NextFunction) => {
+const deletePendingListing = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;  
-    const results = await listingsService.deletePendingListingInDB(id as string, userId as string);
+    const userId = req.user?.id;
+    const results = await listingsService.deletePendingListingInDB(
+      id as string,
+      userId as string,
+    );
     sendResponse(res, {
       statusCode: 200,
       success: true,
       message: "Pending listing deleted successfully",
       data: results,
     });
-  }catch (error) {
-  
-  next(error)
-  }
-}
-
-const manageListings = async(req: Request, res: Response, next: NextFunction) => {
-  try {
-    const {id} = req.params
-    const {
-      status 
-    } = req.body
-    const results = await listingsService.manageListings(id as string, status   )
-      sendResponse(res, {
-        statusCode : 200,
-        success : true,
-        message : `Listing ${status} updated sucessfull`,
-        data : results
-      })
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
+
+const manageListings = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const results = await listingsService.manageListings(id as string, status);
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: `Listing ${status} updated sucessfull`,
+      data: results,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const incrementListingView = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const result = await listingsService.incrementListingViewCountInDB(
+      id as string,
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "View recorded",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const listingController = {
-    createListing,
-    getAllListing,
-    getMyListings,
-    updateListing,
-    getListingById,
-    deleteListing,
-    getMyPromoters,
-    cancelPendingListing,
-    deletePendingListing,
-    manageListings
-}
+  createListing,
+  getAllListing,
+  getMyListings,
+  updateListing,
+  getListingById,
+  deleteListing,
+  getMyPromoters,
+  cancelPendingListing,
+  deletePendingListing,
+  manageListings,
+  incrementListingView
+};

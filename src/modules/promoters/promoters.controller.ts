@@ -24,6 +24,28 @@ const getPromoters = async (
 
 };
 
+const incrementPromoterView = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const result = await promotersServices.incrementPromoterViewCountInDB(
+      id as string,
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "View recorded",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const promotersController = {
   getPromoters,
+  incrementPromoterView
 };

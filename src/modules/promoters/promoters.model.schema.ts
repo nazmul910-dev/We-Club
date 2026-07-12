@@ -61,11 +61,16 @@ const promotedListingSchema = new Schema(
 
 const promoterSchema = new Schema<IPromoter>(
   {
-    user_id: {
+    user: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
+    },
+    user_id : {
+      type : Schema.Types.ObjectId,
+      ref : "User",
+      
     },
 
     listings: {

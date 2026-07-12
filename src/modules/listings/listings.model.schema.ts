@@ -65,7 +65,8 @@ const ListingSchema = new Schema<IListing>(
     },
     listings_view : {
       type : Number,
-      default : 100
+      default : 100,
+      
     },
     is_deleted : {
     type : Boolean,

@@ -10,11 +10,16 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
       required: true,
     },
     requester: {
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
       user_id: {
         type: Schema.Types.ObjectId,
         ref: "User",
-        required: true,
+        require : true
       },
+
       email: {
         type: String,
         required: true,

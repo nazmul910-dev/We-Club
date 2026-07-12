@@ -16,7 +16,8 @@ export interface IPromotedListing {
 }
 
 export interface IPromoter extends Document {
-  user_id: Types.ObjectId;
+  user: Types.ObjectId;
+  user_id : Types.ObjectId;
   listings: IPromotedListing[];
   profile_views: number;
   createdAt: Date;
