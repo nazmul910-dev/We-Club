@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import sendResponse from "../../utility/sendResponse";
 import { dashboardService } from "./dashboard.analytics.services";
+import { UserRole } from "../users/user.interface";
 
 const getDashboardStats = async (
   req: Request,
@@ -10,6 +11,7 @@ const getDashboardStats = async (
     try {
     const result = await dashboardService.getDashboardStats(
       req.user?.id as string,
+      req.user?.role as UserRole
     );
 
     sendResponse(res, {
