@@ -309,6 +309,19 @@ const manageListings = async (
   return await listing.save();
 };
 
+
+const incrementListingViewCountInDB = async(id : string) => {
+  const listing = await Listing.findByIdAndUpdate(
+    id, 
+    {$inc : {listings_view : 1}},
+    {new : true, select  : "listings_view"}
+  )
+  if(!listing){
+    throw new NotFoundError("Listing not found")
+  }
+  return listing;
+}
+
 export const listingsService = {
   createListingInDB,
   getAllListingFromDB,
@@ -319,5 +332,6 @@ export const listingsService = {
   getMyPromotersFromDB,
   cancelPendingListingInDB,
   deletePendingListingInDB,
-  manageListings
+  manageListings,
+  incrementListingViewCountInDB 
 };

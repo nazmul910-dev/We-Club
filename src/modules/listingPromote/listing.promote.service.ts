@@ -46,7 +46,11 @@ const createPromoteRequestInDB = async (
 ): Promise<IPromoteRequest> => {
   if (!payload.listing_id || !requesterId) {
     throw new Error("listing_id and requester_id are required");
+
+
   }
+
+
 
   const listing = await Listing.findById(payload.listing_id);
   if (!listing) throw new Error("Listing not found");
@@ -287,11 +291,11 @@ const managePromoteRequestInDB = async (
   try {
     session.startTransaction();
 
-    const promoteRequest = await PromoteRequest.findById(promoteRequestId);
+    const promoteRequest = await PromoteRequest.findById(promoteRequestId).session(session);
     if (!promoteRequest) throw new Error("Promote request not found");
 
     // Fetch listing in parallel with nothing yet, but as soon as we have listing_id
-    const listing = await Listing.findById(promoteRequest.listing_id);
+    const listing = await Listing.findById(promoteRequest.listing_id).session(session);
     if (!listing) throw new Error("Related listing not found");
 
     // -------------------------
@@ -366,6 +370,8 @@ const managePromoteRequestInDB = async (
         { session },
       );
 
+      // const promoteUser  = await User.findById()
+
       // Keep normalized copy in Promoter collection
       await Promoter.findOneAndUpdate(
         {
@@ -374,6 +380,7 @@ const managePromoteRequestInDB = async (
         {
           $setOnInsert: {
             user_id: promoteRequest.requester.user_id,
+            user : promoteRequest.requester.user_id,
           },
 
           $push: {
@@ -410,7 +417,7 @@ const managePromoteRequestInDB = async (
     }
 
     // -------------------------
-    // Rejection
+    // Rejection 
     // -------------------------
 
     if (payload.status === "rejected") {
@@ -420,6 +427,7 @@ const managePromoteRequestInDB = async (
           $pull: {
             promoters: {
               user_id: promoteRequest.requester.user_id,
+              user : promoteRequest.requester.user_id
             },
           },
         },

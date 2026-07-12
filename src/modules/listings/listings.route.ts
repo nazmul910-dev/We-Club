@@ -196,4 +196,6 @@ router.get("/:id",  listingController.getListingById);
  */
 router.delete("/:id", verifyToken,  listingController.deleteListing);
 
+router.patch("/:id/view", listingController.incrementListingView);
+
 export const listingsRoutes = router;
