@@ -5,6 +5,7 @@ import { Listing } from "./listings.model.schema";
 import { NotFoundError, UnauthorizedError } from "../../utility/errorResponses";
 import { PromoteRequest } from "../listingPromote/listings.promote.request.model.schema";
 import mongoose from "mongoose";
+import { ListingViewStats } from "./listings.viewsHistory.modal.schema";
 
 /**
  * Service layer: owns all DB interaction + business logic for Listing.
@@ -14,7 +15,6 @@ import mongoose from "mongoose";
 const createListingInDB = async (
   payload: Partial<IListing>,
 ): Promise<IListing> => {
-
   const listing = new Listing(payload);
   return await listing.save();
 };
@@ -28,12 +28,12 @@ const getAllListingFromDB = async (
   // NOTE: QueryBuilder.sort() defaults to "-createdAt", but this schema's
   // timestamps are mapped to "created_at"/"updated_at" (snake_case).
   // If the caller doesn't pass ?sort=, force the correct default here.
-  
+
   const queryWithDefaultSort = {
     sort: "-created_at",
     ...query,
   };
-// .populate("associate_id", "fullName email phone city country brokerage profileImage accountStatus role")
+  // .populate("associate_id", "fullName email phone city country brokerage profileImage accountStatus role")
   const listingQuery = new QueryBuilder<IListing>(
     Listing.find(),
     queryWithDefaultSort,
@@ -66,8 +66,6 @@ const getMyListingFromDB = async (
     sort: "-created_at",
     ...query,
   };
-
-
 
   const listingQuery = new QueryBuilder<IListing>(
     Listing.find({ associate_id: associateId }),
@@ -309,18 +307,48 @@ const manageListings = async (
   return await listing.save();
 };
 
-
-const incrementListingViewCountInDB = async(id : string) => {
+const incrementListingViewCountInDB = async (id: string) => {
   const listing = await Listing.findByIdAndUpdate(
-    id, 
-    {$inc : {listings_view : 1}},
-    {new : true, select  : "listings_view"}
-  )
-  if(!listing){
-    throw new NotFoundError("Listing not found")
+    id,
+    { $inc: { listings_view: 1 } },
+    { new: true, select: "listings_view" },
+  );
+  await trackListingView(id);
+
+  if (!listing) {
+    throw new NotFoundError("Listing not found");
   }
   return listing;
-}
+};
+
+export const trackListingView = async (listingId: string) => {
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+
+  await Promise.all([
+    Listing.findByIdAndUpdate(listingId, {
+      $inc: {
+        totalViews: 1,
+      },
+    }),
+
+    ListingViewStats.updateOne(
+      {
+        listing: listingId,
+        date: today,
+      },
+      {
+        $inc: {
+          views: 1,
+        },
+      },
+      {
+        upsert: true,
+      },
+    ),
+  ]);
+};
 
 export const listingsService = {
   createListingInDB,
@@ -333,5 +361,5 @@ export const listingsService = {
   cancelPendingListingInDB,
   deletePendingListingInDB,
   manageListings,
-  incrementListingViewCountInDB 
+  incrementListingViewCountInDB,
 };

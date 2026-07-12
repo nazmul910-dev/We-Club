@@ -16,3 +16,27 @@ export interface ITopPromoter {
   country?: string;
   totalViews: number;
 }
+
+export interface IAnalyticsChartItem{
+
+    label:string;
+
+    value:number;
+
+}
+
+export interface IDashboardAnalytics{
+
+    totalViews:number;
+
+    daily:IAnalyticsChartItem[];
+
+    weekly:IAnalyticsChartItem[];
+
+    monthly:IAnalyticsChartItem[];
+
+    average:number;
+
+    growth:number;
+
+}
