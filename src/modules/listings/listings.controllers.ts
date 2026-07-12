@@ -332,6 +332,9 @@ const incrementListingView = async (
   }
 };
 
+
+
+
 export const listingController = {
   createListing,
   getAllListing,
