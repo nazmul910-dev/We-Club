@@ -10,6 +10,7 @@ const getPromoters = async (
 
     try {
         const query = req.query
+        console.log(query)
         const results = await promotersServices.getPromotersFromDB(query);
         sendResponse(res, {
             statusCode : 200,
