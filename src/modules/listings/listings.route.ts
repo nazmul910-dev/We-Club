@@ -33,7 +33,7 @@ router.get("/",  listingController.getAllListing);
  * @openapi
  * /listings:
  *   post:
- *     tags: [Listings]
+ *     tags: [Listings] 
  *     summary: Create a new listing
  *     security:
  *       - bearerAuth: []
