@@ -14,10 +14,6 @@ import { User } from "../users/users.model.schema";
 import { sendPromotionApprovalEmail } from "./listing.promotion.approval.email";
 import { Promoter } from "../promoters/promoters.model.schema";
 
-/**
- * Service layer: owns all DB interaction + business logic for PromoteRequest.
- * Controllers should never talk to the model directly — always go through here.
- */
 
 type AuthUser = {
   id: string;
@@ -75,7 +71,6 @@ const createPromoteRequestInDB = async (
         "You have an active request for this listing",
     );
   }
-  // ← requester আর rebuild করছি না, payload-এ already আছে
   const promoteRequest = new PromoteRequest(payload);
   return await promoteRequest.save();
 };
@@ -92,7 +87,10 @@ const getAllListingPromoteRequest = async (
   };
 
   const promoteRequestQuery = new QueryBuilder<IPromoteRequest>(
-    PromoteRequest.find().populate("listing_id", "title ref_code cover_image"),
+    PromoteRequest.find().populate("listing_id", "title ref_code cover_image").populate(
+      "requester.user_id",
+      "fullName email profileImage licenseNumber phone country city role"
+    ),
     // no populate on requester — email is already embedded
     queryWithDefaultSort,
   )
@@ -198,81 +196,7 @@ const deletePromoteRequest = async (id: string, role: string) => {
   return await promoteRequest.save();
 };
 
-// const manageListingPromoteRequestInDB = async (
-//   promoteRequestId: string,
-//   userId: string,
-//   isAdmin: boolean,
-//   approved_by: string,
 
-//   payload: {
-//     status: "approved" | "rejected";
-//     confirmed_commission_pct?: number;
-//     selected_tier?: "tier_1" | "tier_2" | "tier_3";
-//   },
-// ): Promise<IPromoteRequest> => {
-//   const promoteRequest = await PromoteRequest.findById(promoteRequestId);
-//   if (!promoteRequest) throw new Error("Promote request not found");
-
-//   // Fetch listing in parallel with nothing yet, but as soon as we have listing_id
-//   const listing = await Listing.findById(promoteRequest.listing_id);
-//   if (!listing) throw new Error("Related listing not found");
-
-//   const isOwner = listing.associate_id.toString() === userId.toString();
-//   if (!isOwner && !isAdmin) {
-//     throw new UnauthorizedError(
-//       "You are not authorized to manage this promote request",
-//     );
-//   }
-
-//   if (promoteRequest.status !== "pending") {
-//     throw new Error("This request has already been resolved");
-//   }
-
-//   promoteRequest.status = payload.status;
-
-//   if (payload.status === "approved") {
-//     if (!payload.selected_tier) {
-//       throw new Error(
-//         "selected_tier is required when approving a promote request",
-//       );
-//     }
-
-//     promoteRequest.selected_tier = payload.selected_tier;
-//     promoteRequest.confirmed_commission_pct =
-//       payload.confirmed_commission_pct ??
-//       promoteRequest.proposed_commission_pct;
-
-//     // Run commission creation and save in parallel — they don't depend on each other
-//     await Promise.all([
-//       createPendingCommissionFromPromotionApproval({
-//         approved_by: userId,
-//         listing_id: promoteRequest.listing_id.toString(),
-//         promotion_request_id: promoteRequest._id.toString(),
-//         promoteRequest,
-//         listing,
-//       }),
-//       promoteRequest.save(),
-//     ]);
-
-//     // Fire and forget — don't await, user shouldn't wait for SMTP
-//     sendPromotionApprovalEmail({
-//       toEmail: promoteRequest.requester.email,
-//       promoterName: promoteRequest.requester.email.split("@")[0] || "Promoter",
-//       listingTitle: listing.title,
-//       listingId: listing._id.toString(),
-//       tier: promoteRequest.selected_tier!,
-//       confirmedCommissionPct: promoteRequest.confirmed_commission_pct!,
-//     }).catch((err) =>
-//       console.error("Promotion approval email failed silently:", err),
-//     );
-
-//     return promoteRequest;
-//   }
-
-//   // For rejection — just save
-//   await promoteRequest.save();
-//   return promoteRequest;
-// };
 
 const isSameId = (idA: unknown, idB: string): boolean =>
   String(idA) === String(idB);
@@ -298,33 +222,11 @@ const managePromoteRequestInDB = async (
     const listing = await Listing.findById(promoteRequest.listing_id).session(session);
     if (!listing) throw new Error("Related listing not found");
 
-    // -------------------------
-    // Get Promotion Request
-    // -------------------------
-
-    // const promoteRequest = await PromoteRequest.findById(requestId).session(
-    //   session
-    // );
-
-    // if (promoteRequest === null) {
-    //   throwError("Promote request not found", 404);
-    // }
 
     if (promoteRequest.status !== "pending") {
       throwError("Only pending promote requests can be managed", 400);
     }
 
-    // // -------------------------
-    // // Get Listing
-    // // -------------------------
-
-    // const listing = await Listing.findById(promoteRequest?.listing_id).session(
-    //   session
-    // );
-
-    // -------------------------
-    // Authorization
-    // -------------------------
 
     const isOwner = isSameId(listing?.associate_id, authUser.id);
     const isAdmin = isAdminOrManager(authUser.role as UserRole);
@@ -333,13 +235,7 @@ const managePromoteRequestInDB = async (
       throwError("You are not authorized to manage this promote request", 403);
     }
 
-    // if (isSameId(promoteRequest.requester.user_id, authUser.id)) {
-    //   throwError("You cannot manage your own promote request", 403);
-    // }
 
-    // -------------------------
-    // Update Request
-    // -------------------------
 
     promoteRequest.status = payload.status;
     promoteRequest.resolved_at = new Date();
@@ -352,9 +248,7 @@ const managePromoteRequestInDB = async (
 
     await promoteRequest.save({ session });
 
-    // -------------------------
-    // Approval
-    // -------------------------
+
 
     if (payload.status === "approved") {
       await Listing.findByIdAndUpdate(
@@ -370,9 +264,6 @@ const managePromoteRequestInDB = async (
         { session },
       );
 
-      // const promoteUser  = await User.findById()
-
-      // Keep normalized copy in Promoter collection
       await Promoter.findOneAndUpdate(
         {
           user_id: promoteRequest.requester.user_id,
@@ -416,9 +307,7 @@ const managePromoteRequestInDB = async (
       );
     }
 
-    // -------------------------
-    // Rejection 
-    // -------------------------
+
 
     if (payload.status === "rejected") {
       await Listing.findByIdAndUpdate(

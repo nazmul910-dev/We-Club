@@ -35,10 +35,14 @@ const getAllListingFromDB = async (
   };
   // .populate("associate_id", "fullName email phone city country brokerage profileImage accountStatus role")
   const listingQuery = new QueryBuilder<IListing>(
-    Listing.find(),
+    Listing.find().populate(
+      "associate_id",
+      "fullName email phone city country brokerage profileImage licenseNumber role accountStatus approvalStatus"
+    ),
+    
     queryWithDefaultSort,
   )
-    .search(["title", "ref_code"])
+    .search(["title", "ref_code","location.country"])
     .filter()
     .sort()
     .paginate()
