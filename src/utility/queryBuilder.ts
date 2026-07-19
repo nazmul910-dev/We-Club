@@ -21,13 +21,32 @@ class QueryBuilder<T> {
     this.query = query;
   }
 
+  // Escapes characters that have special meaning in a regex (. * + ? ( ) [
+  // ] { } ^ $ |) so a search term is always treated as literal text, never
+  // as regex syntax. Without this, searching something like "Dr. Smith" or
+  // "C++" would have those symbols interpreted as regex operators instead
+  // of literal characters — silently breaking matches for real names — and
+  // more importantly, it means arbitrary user input flows straight into a
+  // MongoDB regex unescaped, which is a real injection/ReDoS surface.
+  //
+  // Public (not private) so any other service can reuse it directly, e.g.
+  // when it needs to search a REFERENCED collection first — you can't
+  // filter Promoter by a populated User field via a plain .find(), so
+  // getPromotersFromDB resolves matching User _ids itself first, and needs
+  // this same escaping for that separate query:
+  //   QueryBuilder.escapeRegex(searchTerm)
+  static escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
   search(searchableFields: string[]) {
     const searchTerm = this.query.search?.trim();
 
     if (searchTerm) {
+      const safeSearchTerm = QueryBuilder.escapeRegex(searchTerm);
       this.modelQuery = this.modelQuery.find({
         $or: searchableFields.map((field) => ({
-          [field]: { $regex: searchTerm, $options: "i" },
+          [field]: { $regex: safeSearchTerm, $options: "i" },
         })),
       });
     }
