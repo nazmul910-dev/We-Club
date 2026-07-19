@@ -39,9 +39,15 @@ const getPromotersFromDB = async (query: Record<string, unknown>) => {
  
   const data = await listingQuery.modelQuery;
   const meta = await listingQuery.countTotal();
- 
-  return { data, meta };
-};
+
+
+
+  const result = {
+    data,
+    meta,
+  };
+  return result
+}
 
 
 const incrementPromoterViewCountInDB = async(id : string) => {

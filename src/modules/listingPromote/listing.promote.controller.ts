@@ -204,6 +204,31 @@ const deletePromoteRequest = async (
   }
 };
 
+
+const getPublicPromoteRequestDetails = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+ 
+    const result =
+      await listingPromoteRequestService.getPublicPromoteRequestDetailsFromDB(
+        id as string,
+      );
+ 
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Promote request details retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const listingPromoteRequestController = {
   createListingPromoteRequest,
   getAllListingPromoteRequest,
@@ -212,4 +237,5 @@ export const listingPromoteRequestController = {
   getMyPromoteRequests,
   cencelPromoteRequest,
   deletePromoteRequest,
+  getPublicPromoteRequestDetails,
 };
