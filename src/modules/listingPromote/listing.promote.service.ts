@@ -4,7 +4,7 @@ import { Listing } from "../listings/listings.model.schema";
 import { PromoteRequest } from "./listings.promote.request.model.schema";
 import QueryBuilder from "../../utility/queryBuilder";
 import { IListing } from "../listings/listings.interface";
-import { NotFoundError, UnauthorizedError } from "../../utility/errorResponses";
+import { BadRequestError, NotFoundError, UnauthorizedError } from "../../utility/errorResponses";
 import {
   commissionLedgerService,
   createPendingCommissionFromPromotionApproval,
@@ -359,6 +359,105 @@ const cancelPromoteRequestInDB = async (
   return await promoteRequest.save();
 };
 
+const getPublicPromoteRequestDetailsFromDB = async (id: string) => {
+  const promoteRequest = await PromoteRequest.findById(id)
+    .populate({
+      path: "listing_id",
+      select:
+        "title ref_code cover_image images price location bedrooms bathrooms area_sqm referral_commission status",
+      populate: {
+        path: "associate_id",
+        select:
+          "fullName email phone licenseNumber brokerage profileImage city country bio socialLinks role",
+      },
+    })
+    .populate({
+      path: "requester.user_id",
+      select:
+        "fullName email phone licenseNumber brokerage profileImage city country bio socialLinks role",
+    })
+    .lean();
+ 
+  if (!promoteRequest) {
+    throw new NotFoundError("This link is invalid or no longer exists");
+  }
+ 
+  const safeRequest = promoteRequest as any;
+ 
+  if (safeRequest.status !== "approved") {
+    throw new BadRequestError(
+      "This promotion request has not been approved yet"
+    );
+  }
+ 
+  if (!safeRequest.selected_tier) {
+    throw new BadRequestError("This request has no tier assigned yet");
+  }
+ 
+  const listing = safeRequest.listing_id;
+  const owner = listing?.associate_id;
+  const promoter = safeRequest.requester?.user_id;
+ 
+  return {
+    id: safeRequest._id,
+    status: safeRequest.status,
+    selected_tier: safeRequest.selected_tier,
+    requested_at: safeRequest.requested_at,
+    resolved_at: safeRequest.resolved_at,
+    proposed_commission_pct: safeRequest.proposed_commission_pct,
+    confirmed_commission_pct: safeRequest.confirmed_commission_pct,
+ 
+    listing: listing
+      ? {
+          id: listing._id,
+          title: listing.title,
+          ref_code: listing.ref_code,
+          status: listing.status,
+          cover_image: listing.cover_image,
+          images: listing.images,
+          price: listing.price,
+          location: listing.location,
+          bedrooms: listing.bedrooms,
+          bathrooms: listing.bathrooms,
+          area_sqm: listing.area_sqm,
+          referral_commission: listing.referral_commission,
+        }
+      : null,
+ 
+    listing_owner: owner
+      ? {
+          fullName: owner.fullName,
+          email: owner.email,
+          phone: owner.phone,
+          licenseNumber: owner.licenseNumber,
+          brokerage: owner.brokerage,
+          profileImage: owner.profileImage,
+          city: owner.city,
+          country: owner.country,
+          bio: owner.bio,
+          socialLinks: owner.socialLinks,
+          role: owner.role,
+        }
+      : null,
+ 
+    promoter: promoter
+      ? {
+          fullName: promoter.fullName,
+          email: promoter.email,
+          phone: promoter.phone,
+          licenseNumber: promoter.licenseNumber,
+          brokerage: promoter.brokerage,
+          profileImage: promoter.profileImage,
+          city: promoter.city,
+          country: promoter.country,
+          bio: promoter.bio,
+          socialLinks: promoter.socialLinks,
+          role: promoter.role,
+        }
+      : { email: safeRequest.requester?.email },
+  };
+};
+
 export const listingPromoteRequestService = {
   createPromoteRequestInDB,
   getAllListingPromoteRequest,
@@ -367,4 +466,5 @@ export const listingPromoteRequestService = {
   getMyPromoteRequestsFromDB,
   cancelPromoteRequestInDB,
   deletePromoteRequest,
+  getPublicPromoteRequestDetailsFromDB,
 };

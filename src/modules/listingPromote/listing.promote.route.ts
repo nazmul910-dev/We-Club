@@ -204,4 +204,42 @@ router.delete("/:id", verifyToken,   listingPromoteRequestController.deletePromo
  */ 
 router.put("/:id", verifyToken,   listingPromoteRequestController.cencelPromoteRequest)
 
+
+
+
+/**
+ * Add this to: src/modules/listingPromote/listing.promote.route.ts
+ * Place it near the top, before "/:id" routes (delete/put) so there's
+ * no ambiguity, though since those are DELETE/PUT and this is GET it's
+ * not strictly required.
+ *
+ * NOTE: no verifyToken here on purpose — this is the public share link.
+ */
+ 
+/**
+ * @openapi
+ * /listings/promote-request/public/{id}:
+ *   get:
+ *     tags: [Listing Promote Requests]
+ *     summary: Public share page data for an approved promote request (no auth)
+ *     security: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: Promote request ID
+ *     responses:
+ *       200:
+ *         description: Public promote request details
+ *       400:
+ *         description: Not approved yet / unsupported tier
+ *       404:
+ *         description: Link invalid or not found
+ */
+router.get(
+  "/public/:id",
+  listingPromoteRequestController.getPublicPromoteRequestDetails,
+);
+
 export const listingPromoteRequestRoutes = router;
