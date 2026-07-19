@@ -109,6 +109,13 @@ const CommissionLedgerSchema = new Schema<ICommissionLedger>(
     },
 
     payment_tracking: {
+      sent_by: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      sent_at: {
+        type: Date,
+      },
       marked_paid_by: {
         type: Schema.Types.ObjectId,
         ref: 'User',

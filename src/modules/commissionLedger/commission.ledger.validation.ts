@@ -13,7 +13,7 @@ const mongoIdValidation = z
 
 export const commissionIdValidation = z.object({
   params: z.object({
-    id: mongoIdValidation,
+    id: mongoIdValidation, 
   }),
 });
 
@@ -42,7 +42,7 @@ export const markCommissionPaidValidation = z.object({
     id: mongoIdValidation,
   }),
   body: z.object({
-    payment_method: z.enum(COMMISSION_PAYMENT_METHODS),
+    payment_method: z.enum(COMMISSION_PAYMENT_METHODS).optional(),
     payment_reference: z.string().trim().max(255).optional(),
     note: z.string().trim().max(1000).optional(),
   }),

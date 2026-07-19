@@ -39,6 +39,9 @@ export interface ICommissionStatusHistory {
 }
 
 export interface ICommissionPaymentTracking {
+  sent_by?: Types.ObjectId;
+  sent_at?: Date;
+
   marked_paid_by?: Types.ObjectId;
   marked_paid_at?: Date;
 

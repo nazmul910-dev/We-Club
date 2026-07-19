@@ -312,4 +312,15 @@ router.patch(
  */
 router.patch('/:id/dispute', commissionLedgerController.disputeCommission);
 
+router.patch(
+  '/:id/send-payment',
+  commissionLedgerController.sendCommissionPayment
+);
+
+
+router.patch(
+  '/:id/confirm-received',
+  commissionLedgerController.confirmCommissionReceived
+);
+
 export const commissionLedgerRoutes = router;

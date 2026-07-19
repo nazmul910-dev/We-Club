@@ -9,6 +9,7 @@ import {
 import { PromoteRequest } from '../listingPromote/listings.promote.request.model.schema';
 import { IPromoteRequest } from '../listingPromote/listing.promote.interface';
 import { IListing } from '../listings/listings.interface';
+import { CommissionPaymentMethod } from './commision.ledger.interface';
 
 type AuthUser = {
   id: string;
@@ -39,13 +40,13 @@ type ConfirmCommissionPayload = {
 };
 
 type MarkCommissionPaidPayload = {
-  payment_method:
+  payment_method?:
     | 'bank_transfer'
     | 'stripe'
     | 'helcim'
     | 'cash'
     | 'check'
-    | 'other';
+    | 'other' | undefined;
   payment_reference?: string | undefined;
   note?: string | undefined;
 };
@@ -192,25 +193,6 @@ export const createPendingCommissionFromPromotionApproval = async ({
   return ensureCommissionExists(commission);
 };
 
-// const getMyCommissionsFromDB = async (
-//   authUser: AuthUser,
-//   query: Record<string, unknown>
-// ) => {
-//   const filter: Record<string, unknown> = {
-//     $or: [
-//       { listing_owner_id: toObjectId(authUser.id) },
-//       { promoter_id: toObjectId(authUser.id) },
-//     ],
-//   };
-
-//   if (typeof query.status === 'string') {
-//     filter.status = query.status;
-//   }
-
-//   return CommissionLedger.find(filter)
-//     .populate(populateCommissionQuery())
-//     .sort({ created_at: -1 });
-// };
 
 const getMyCommissionsFromDB = async (
   authUser: AuthUser,
@@ -290,25 +272,6 @@ const getAllCommissionsFromDB = async (
   };
 };
 
-// const getAllCommissionsFromDB = async (query: Record<string, unknown>) => {
-//   const filter: Record<string, unknown> = {};
- 
-//   if (typeof query.status === 'string') {
-//     filter.status = query.status;
-//   } 
-
-//   if (typeof query.promoter_id === 'string') {
-//     filter.promoter_id = toObjectId(query.promoter_id);
-//   }
-
-//   if (typeof query.listing_owner_id === 'string') {
-//     filter.listing_owner_id = toObjectId(query.listing_owner_id);
-//   }
-
-//   return CommissionLedger.find(filter)
-//     .populate(populateCommissionQuery())
-//     .sort({ created_at: -1 });
-// };
 
 const getSingleCommissionFromDB = async (
   commissionId: string,
@@ -469,21 +432,27 @@ const markCommissionPaidIntoDB = async (
   payload: MarkCommissionPaidPayload
 ) => {
   const commission = await CommissionLedger.findById(commissionId);
-
   const safeCommission = ensureCommissionExists(commission);
 
   if (safeCommission.is_frozen) {
     throwError('This commission is frozen due to a dispute', 400);
   }
 
-  const isListingOwner = isSameId(safeCommission.listing_owner_id, authUser.id);
 
-  if (!isAdminOrManager(authUser.role) && !isListingOwner) {
-    throwError('Only payer/listing owner, admin, or manager can mark as paid', 403);
+  if (!isAdminOrManager(authUser.role)) {
+    throwError('Only admin or manager can mark commission as paid', 403);
   }
 
   if (safeCommission.status !== 'confirmed') {
     throwError('Only confirmed commission can be marked as paid', 400);
+  }
+
+  if (!safeCommission.payment_tracking?.sent_at) {
+    throwError('Payment has not been sent by listing owner yet', 400);
+  }
+
+  if (!safeCommission.payment_tracking?.receiver_confirmed_at) {
+    throwError('Promoter has not confirmed receipt yet', 400);
   }
 
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
@@ -493,23 +462,20 @@ const markCommissionPaidIntoDB = async (
         status: 'paid',
         'payment_tracking.marked_paid_by': toObjectId(authUser.id),
         'payment_tracking.marked_paid_at': new Date(),
-        'payment_tracking.payment_method': payload.payment_method,
-        'payment_tracking.payment_reference': payload.payment_reference,
-        'payment_tracking.note': payload.note,
+        ...(payload.payment_method && { 'payment_tracking.payment_method': payload.payment_method }),
+        ...(payload.payment_reference && { 'payment_tracking.payment_reference': payload.payment_reference }),
+        ...(payload.note && { 'payment_tracking.note': payload.note }),
       },
       $push: {
         status_history: {
           status: 'paid',
           changed_by: toObjectId(authUser.id),
           changed_at: new Date(),
-          note: payload.note || 'Commission marked as paid.',
+          note: payload.note || 'Commission marked as paid by admin.',
         },
       },
     },
-    {
-      returnDocument: 'after',
-      runValidators: true,
-    }
+    { returnDocument: 'after', runValidators: true }
   );
 
   return ensureCommissionExists(updatedCommission);
@@ -521,15 +487,19 @@ const confirmCommissionReceivedIntoDB = async (
   payload: ConfirmReceivedPayload
 ) => {
   const commission = await CommissionLedger.findById(commissionId);
-
   const safeCommission = ensureCommissionExists(commission);
 
   if (!isSameId(safeCommission.promoter_id, authUser.id)) {
     throwError('Only the receiving promoter can confirm payment received', 403);
   }
 
-  if (safeCommission.status !== 'paid') {
-    throwError('Only paid commission can be confirmed as received', 400);
+  // status na, sent_at check koro
+  if (!safeCommission.payment_tracking?.sent_at) {
+    throwError('Payment has not been sent yet', 400);
+  }
+
+  if (safeCommission.payment_tracking?.receiver_confirmed_at) {
+    throwError('Payment already confirmed as received', 400);
   }
 
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
@@ -541,17 +511,14 @@ const confirmCommissionReceivedIntoDB = async (
       },
       $push: {
         status_history: {
-          status: 'paid',
+          status: safeCommission.status, // still 'confirmed'
           changed_by: toObjectId(authUser.id),
           changed_at: new Date(),
           note: payload.note || 'Receiver confirmed payment received.',
         },
       },
     },
-    {
-      returnDocument: 'after',
-      runValidators: true,
-    }
+    { returnDocument: 'after', runValidators: true }
   );
 
   return ensureCommissionExists(updatedCommission);
@@ -639,6 +606,56 @@ const resolveCommissionDisputeIntoDB = async (
   return ensureCommissionExists(updatedCommission);
 };
 
+
+const sendCommissionPaymentIntoDB = async (
+  id: string,
+  authUser: { id: string; role: string },
+  payload: {
+    payment_method?: CommissionPaymentMethod | undefined;
+    payment_reference?: string | undefined;
+    note?: string | undefined;
+  }
+) => {
+  const commission = await CommissionLedger.findById(id);
+
+  if (!commission) {
+    throw new Error("Commission not found");
+  }
+
+  if (commission.listing_owner_id.toString() !== authUser.id) {
+    throw new Error("Only listing owner can send payment");
+  }
+
+  if (commission.status !== 'confirmed') {
+    throw new Error("Only confirmed commission can be sent for payment");
+  }
+
+  if (commission.payment_tracking?.sent_at) {
+    throw new Error("Payment already sent");
+  }
+
+
+ commission.payment_tracking = {
+  ...commission.payment_tracking,
+  sent_by: new Types.ObjectId(authUser.id),
+  sent_at: new Date(),
+  ...(payload.payment_method && { payment_method: payload.payment_method }),
+  ...(payload.payment_reference && { payment_reference: payload.payment_reference }),
+  ...(payload.note && { note: payload.note }),
+};
+
+  commission.status_history.push({
+    status: commission.status, 
+    changed_by: new Types.ObjectId(authUser.id),
+    changed_at: new Date(),
+    note: payload.note || 'Listing owner sent commission payment.',
+  } as any);
+
+  await commission.save();
+  return commission;
+};
+
+
 export const commissionLedgerService = {
   createPendingCommissionFromPromotionApproval,
   getMyCommissionsFromDB,
@@ -650,4 +667,5 @@ export const commissionLedgerService = {
   confirmCommissionReceivedIntoDB,
   disputeCommissionIntoDB,
   resolveCommissionDisputeIntoDB,
+  sendCommissionPaymentIntoDB
 };

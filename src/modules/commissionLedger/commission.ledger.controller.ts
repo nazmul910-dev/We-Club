@@ -282,6 +282,40 @@ const resolveCommissionDispute = async (
   }
 };
 
+const sendCommissionPayment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authUser = getAuthUser(req);
+
+    const validatedData = markCommissionPaidValidation.parse({
+      params: req.params,
+      body: req.body,
+    });
+
+
+    const result =
+      await commissionLedgerService.sendCommissionPaymentIntoDB(
+        validatedData.params.id,
+        authUser,
+        validatedData.body
+      );
+
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: 'Commission payment sent successfully',
+      data: result,
+    });
+
+  } catch(error){
+    next(error);
+  }
+};
+
 export const commissionLedgerController = {
   getMyCommissions,
   getAllCommissions,
@@ -292,4 +326,5 @@ export const commissionLedgerController = {
   confirmCommissionReceived,
   disputeCommission,
   resolveCommissionDispute,
+  sendCommissionPayment
 };
