@@ -197,7 +197,6 @@ const updateListing = async (
       ...(images && { images }),
     };
 
-    console.log(updatePayload);
 
     const results = await listingsService.updateListingInDB(
       id as string,
@@ -225,7 +224,7 @@ const deleteListing = async (
     const userId = req.user?.id;
     const role = req.user?.role;
 
-    //  console.log(id, req.user, role)
+
 
     const results = await listingsService.deleteListingFromDB(
       id as string,
