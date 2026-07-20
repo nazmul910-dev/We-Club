@@ -9,6 +9,19 @@ export interface ILocation {
   country: string;
 }
 
+export type AreaUnit = 
+  | "sqft"
+  | "sqm"
+  | "acre"
+  | "katha"
+  | "decimal"
+  | "bigha";
+
+export interface IArea {
+  value: number;
+  unit: AreaUnit;
+}
+
 export interface IPrice {
   amount: number;
   currency: string;
@@ -28,7 +41,7 @@ export interface IListing {
   price: IPrice;
   bedrooms: number;
   bathrooms: number;
-  area_sqm: number;
+  area_sqm: IArea;
   referral_commission: IReferralCommission;
   cover_image: string;
   images: string[];
