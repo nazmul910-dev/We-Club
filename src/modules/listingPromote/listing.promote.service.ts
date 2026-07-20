@@ -133,7 +133,10 @@ const getMyListingsPromoteRequestFromDB = async (
     PromoteRequest.find({ listing_id: { $in: myListingIds } }).populate(
       "listing_id",
       "title ref_code cover_image",
-    ),
+    ).populate(
+  "requester.user_id",
+  "fullName email profileImage licenseNumber phone country city role"
+),
     queryWithDefaultSort,
   )
     .search(["message"])

@@ -33,6 +33,7 @@ const createListing = async (req: Request, res: Response) => {
       ...req.body,
       location: parseIfString(req.body.location),
       price: parseIfString(req.body.price),
+      area_sqm: parseIfString(req.body.area_sqm),
       referral_commission: parseIfString(req.body.referral_commission),
     };
 
