@@ -1,10 +1,13 @@
 import { Schema, model, Types, Document } from "mongoose";
-import { IListing, ILocation, IPrice, IReferralCommission } from "./listings.interface";
-
+import {
+  IListing,
+  ILocation,
+  IPrice,
+  IReferralCommission,
+  IArea,
+} from "./listings.interface";
 
 export type ListingStatus = "active" | "pending" | "sold" | "draft";
-
-
 
 const LocationSchema = new Schema<ILocation>(
   {
@@ -12,7 +15,7 @@ const LocationSchema = new Schema<ILocation>(
     region: { type: String, required: true },
     country: { type: String, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const PriceSchema = new Schema<IPrice>(
@@ -20,7 +23,23 @@ const PriceSchema = new Schema<IPrice>(
     amount: { type: Number, required: true },
     currency: { type: String, required: true },
   },
-  { _id: false }
+  { _id: false },
+);
+const AreaSchema = new Schema<IArea>(
+  {
+    value: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    unit: {
+      type: String,
+      required: true,
+      enum: ["sqft", "sqm", "acre", "katha", "decimal", "bigha"],
+    },
+  },
+  { _id: false },
 );
 
 const ReferralCommissionSchema = new Schema<IReferralCommission>(
@@ -28,7 +47,7 @@ const ReferralCommissionSchema = new Schema<IReferralCommission>(
     offered_amount: { type: Number, required: true },
     confirmed_amount: { type: Number },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const ListingSchema = new Schema<IListing>(
@@ -40,12 +59,15 @@ const ListingSchema = new Schema<IListing>(
       enum: ["active", "pending", "sold", "draft"],
       default: "pending",
     },
-    
+
     location: { type: LocationSchema, required: true },
     price: { type: PriceSchema, required: true },
     bedrooms: { type: Number, required: true, min: 0 },
     bathrooms: { type: Number, required: true, min: 0 },
-    area_sqm: { type: Number, required: true, min: 0 },
+    area_sqm: {
+      type: AreaSchema,
+      required: true,
+    },
     referral_commission: { type: ReferralCommissionSchema, required: true },
     cover_image: { type: String, required: true },
     images: { type: [String], default: [] },
@@ -56,31 +78,31 @@ const ListingSchema = new Schema<IListing>(
       required: true,
     },
     promoters: {
-    type: [{
-        _id: false,
-        user_id: { type: Schema.Types.ObjectId, ref: "User" },
-        tier: { type: String, enum: ["tier_1", "tier_2", "tier_3"] },
-    }],
-     default: [],
+      type: [
+        {
+          _id: false,
+          user_id: { type: Schema.Types.ObjectId, ref: "User" },
+          tier: { type: String, enum: ["tier_1", "tier_2", "tier_3"] },
+        },
+      ],
+      default: [],
     },
-    listings_view : {
-      type : Number,
-      default : 100,
-      
+    listings_view: {
+      type: Number,
+      default: 100,
     },
-    is_deleted : {
-    type : Boolean,
-    default : false,
+    is_deleted: {
+      type: Boolean,
+      default: false,
+    },
+    deleted_at: {
+      type: Date,
+    },
   },
-  deleted_at : {
-    type : Date
-  }
-  },
-  
+
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
-  }
-
+  },
 );
 
 // Indexes
