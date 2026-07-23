@@ -12,6 +12,8 @@ import { profileRoutes } from "../modules/profile/profile.route";
 import { discountRoutes } from "../modules/discount/discount.route";
 import { promoterRoutes } from "../modules/promoters/promoters.routes";
 import { dashboardAnalyticsRoutes } from "../modules/dashboardAnalytics/dashboard.analytics.route";
+import { challengePillarRoutes } from "../modules/challengePillars/challenge.pillar.route";
+import { courseModuleRoutes } from "../modules/courseModules/course.module.route";
 // import { userRoutes } from '../modules/user/user.route';
 // import { adminRoutes } from '../modules/admin/admin.route';
 // import { courseRoutes } from '../modules/course/course.route';
@@ -71,6 +73,15 @@ const moduleRoutes: TModuleRoute[] = [
   {
     path: "/dashboard",
     route: dashboardAnalyticsRoutes,
+  },
+  {
+    path: '/invictus/challenge-pillars',
+    route: challengePillarRoutes,
+  },
+
+  {
+    path: '/invictus/course-modules',
+    route: courseModuleRoutes,
   },
 ];
 
