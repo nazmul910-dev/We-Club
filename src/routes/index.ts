@@ -15,7 +15,8 @@ import { dashboardAnalyticsRoutes } from "../modules/dashboardAnalytics/dashboar
 // import { userRoutes } from '../modules/user/user.route';
 // import { adminRoutes } from '../modules/admin/admin.route';
 // import { courseRoutes } from '../modules/course/course.route';
-
+import roomRoutes from "../modules/room/room.route";
+import messageRoutes from "../modules/message/message.route";
 const router = Router();
 
 type TModuleRoute = {
@@ -71,6 +72,14 @@ const moduleRoutes: TModuleRoute[] = [
   {
     path: "/dashboard",
     route: dashboardAnalyticsRoutes,
+  },
+  {
+    path: "/rooms",
+    route: roomRoutes,
+  },
+  {
+    path: "/messages",
+    route: messageRoutes,
   },
 ];
 
