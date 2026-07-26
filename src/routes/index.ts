@@ -14,6 +14,8 @@ import { promoterRoutes } from "../modules/promoters/promoters.routes";
 import { dashboardAnalyticsRoutes } from "../modules/dashboardAnalytics/dashboard.analytics.route";
 import { challengePillarRoutes } from "../modules/challengePillars/challenge.pillar.route";
 import { courseModuleRoutes } from "../modules/courseModules/course.module.route";
+import { moduleVideoRoutes } from "../modules/moduleVideos/module.video.route";
+import { moduleResourceRoutes } from "../modules/moduleResources/module.resource.route";
 // import { userRoutes } from '../modules/user/user.route';
 // import { adminRoutes } from '../modules/admin/admin.route';
 // import { courseRoutes } from '../modules/course/course.route';
@@ -82,6 +84,14 @@ const moduleRoutes: TModuleRoute[] = [
   {
     path: '/invictus/course-modules',
     route: courseModuleRoutes,
+  },
+  {
+    path:'/invictus/module-videos',
+    route: moduleVideoRoutes
+  },
+  {
+    path:'/invictus/module-resources',
+    route:moduleResourceRoutes
   },
 ];
 
