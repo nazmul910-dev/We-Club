@@ -105,10 +105,15 @@ const moduleRoutes: TModuleRoute[] = [
     route:moduleActionRoutes
   }
    ,
+   {
+    path:"/rooms",
+    route:roomRoutes
+  },
   {
     path: "/messages",
     route: messageRoutes,
-  },
+  }
+  
 ];
 
 moduleRoutes.forEach((route) => {
