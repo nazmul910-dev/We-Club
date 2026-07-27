@@ -127,6 +127,46 @@ export const getPricingByRoleAndAccess = (
   let displayName = '';
   let items: PricingItem[] = [];
 
+
+  if (role === 'ceo' || role === 'ceo_partner') {
+    const isCeo = role === 'ceo';
+
+    displayName = isCeo ? 'CEO Club Membership' : 'CEO Partner Membership';
+
+    items = [
+      createPricingItem({
+        name: displayName,
+        description: isCeo
+          ? 'INVICTUS Academy Accountability, courses, online events and content creation. Includes WÉ Command Center + INVICTUS Academy access.'
+          : 'Annual CEO Partner access. Includes WÉ Command Center + INVICTUS Academy access.',
+        amountCents: parseDollarAmountToCents(
+          isCeo
+            ? config.STRIPE_PRICE_CEO_YEARLY
+            : config.STRIPE_PRICE_CEO_PARTNER_YEARLY,
+          isCeo ? 'STRIPE_PRICE_CEO_YEARLY' : 'STRIPE_PRICE_CEO_PARTNER_YEARLY'
+        ),
+        interval: 'year',
+      }),
+    ];
+
+    const totalFirstPaymentCents = items.reduce(
+      (total, item) => total + item.amountCents,
+      0
+    );
+
+    return {
+      role,
+      accessTo: 'both', 
+      displayName,
+      requiresPayment: true,
+      items,
+      totalFirstPaymentCents,
+      totalFirstPayment: totalFirstPaymentCents / 100,
+      totalFirstPaymentFormatted: formatAmount(totalFirstPaymentCents),
+    };
+  }
+
+ 
   const accessName = getAccessDisplayName(accessTo);
 
   if (['associate', 'partner', 'ambassador'].includes(role)) {
@@ -140,83 +180,6 @@ export const getPricingByRoleAndAccess = (
         interval: 'month',
       }),
     ];
-  }
-
-  if (role === 'ceo') {
-    displayName = 'CEO Club Membership';
-
-    if (accessTo === 'we_command_center') {
-      items = [
-        createPricingItem({
-          name: 'WÉ Command Center Access',
-          description: 'Access to WÉ Command Center.',
-          amountCents: getMemberAccessPrice('we_command_center'),
-          interval: 'month',
-        }),
-      ];
-    } else {
-      items = [
-        createPricingItem({
-          name: 'CEO Club Membership',
-          description:
-            'INVICTUS Academy Accountability, courses, online events and content creation.',
-          amountCents: parseDollarAmountToCents(
-            config.STRIPE_PRICE_CEO_YEARLY,
-            'STRIPE_PRICE_CEO_YEARLY'
-          ),
-          interval: 'year',
-        }),
-      ];
-
-      if (accessTo === 'both') {
-        items.push(
-          createPricingItem({
-            name: 'WÉ Command Center Access',
-            description: 'Access to WÉ Command Center.',
-            amountCents: getMemberAccessPrice('we_command_center'),
-            interval: 'month',
-          })
-        );
-      }
-    }
-  }
-
-  if (role === 'ceo_partner') {
-    displayName = 'CEO Partner Membership';
-
-    if (accessTo === 'we_command_center') {
-      items = [
-        createPricingItem({
-          name: 'WÉ Command Center Access',
-          description: 'Access to WÉ Command Center.',
-          amountCents: getMemberAccessPrice('we_command_center'),
-          interval: 'month',
-        }),
-      ];
-    } else {
-      items = [
-        createPricingItem({
-          name: 'CEO Partner Yearly Membership',
-          description: 'Annual CEO Partner access.',
-          amountCents: parseDollarAmountToCents(
-            config.STRIPE_PRICE_CEO_PARTNER_YEARLY,
-            'STRIPE_PRICE_CEO_PARTNER_YEARLY'
-          ),
-          interval: 'year',
-        }),
-      ];
-
-      if (accessTo === 'both') {
-        items.push(
-          createPricingItem({
-            name: 'WÉ Command Center Access',
-            description: 'Access to WÉ Command Center.',
-            amountCents: getMemberAccessPrice('we_command_center'),
-            interval: 'month',
-          })
-        );
-      }
-    }
   }
 
   const totalFirstPaymentCents = items.reduce(

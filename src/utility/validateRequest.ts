@@ -3,7 +3,7 @@ import { catchAsync } from "./catchAsync";
 
 const validateRequest = (schema:ZodType)=>{
     return catchAsync(async(req,res,next) =>{
-        await schema.parseAsync({body:req.body, cookies:req.cookies});
+        await schema.parseAsync({body:req.body,  params: req.params, cookies:req.cookies});
          return next();
     })
 }

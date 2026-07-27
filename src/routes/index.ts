@@ -12,6 +12,12 @@ import { profileRoutes } from "../modules/profile/profile.route";
 import { discountRoutes } from "../modules/discount/discount.route";
 import { promoterRoutes } from "../modules/promoters/promoters.routes";
 import { dashboardAnalyticsRoutes } from "../modules/dashboardAnalytics/dashboard.analytics.route";
+import { challengePillarRoutes } from "../modules/challengePillars/challenge.pillar.route";
+import { courseModuleRoutes } from "../modules/courseModules/course.module.route";
+import { moduleVideoRoutes } from "../modules/moduleVideos/module.video.route";
+import { moduleResourceRoutes } from "../modules/moduleResources/module.resource.route";
+import { quizQuestionRoutes } from "../modules/quizeQuestions/quiz.question.route";
+import { moduleActionRoutes } from "../modules/moduleActions/module.action.route";
 // import { userRoutes } from '../modules/user/user.route';
 // import { adminRoutes } from '../modules/admin/admin.route';
 // import { courseRoutes } from '../modules/course/course.route';
@@ -72,6 +78,31 @@ const moduleRoutes: TModuleRoute[] = [
     path: "/dashboard",
     route: dashboardAnalyticsRoutes,
   },
+  {
+    path: '/invictus/challenge-pillars',
+    route: challengePillarRoutes,
+  },
+
+  {
+    path: '/invictus/course-modules',
+    route: courseModuleRoutes,
+  },
+  {
+    path:'/invictus/module-videos',
+    route: moduleVideoRoutes
+  },
+  {
+    path:'/invictus/module-resources',
+    route:moduleResourceRoutes
+  },
+  {
+    path:'/invictus/quiz-questions',
+    route:quizQuestionRoutes
+  },
+  {
+    path:'/invictus/module-actions',
+    route:moduleActionRoutes
+  }
 ];
 
 moduleRoutes.forEach((route) => {

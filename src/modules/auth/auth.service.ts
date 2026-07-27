@@ -146,11 +146,14 @@ export const createUser = async (payload: unknown) => {
 
   const requiresPayment = isPaidRole(body.role);
 
+    const resolvedAccessTo =
+    body.role === 'ceo' || body.role === 'ceo_partner' ? 'both' : body.accessTo;
+
   const userPayload: Record<string, unknown> = {
     fullName: body.fullName,
     email: body.email,
     role: body.role,
-    accessTo: body.accessTo,
+    accessTo: resolvedAccessTo,
     password: hashedPassword,
 
     paymentStatus: requiresPayment ? 'unpaid' : 'paid',
