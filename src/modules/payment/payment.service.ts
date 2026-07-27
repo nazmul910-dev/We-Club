@@ -590,6 +590,7 @@ const verifyCheckoutSessionFromStripe = async (sessionId: string) => {
   const stripeClient = getStripeClient();
   const session = await stripeClient.checkout.sessions.retrieve(sessionId);
 
+
   if (session.payment_status !== 'paid') {
     return {
       paid: false,
@@ -598,6 +599,7 @@ const verifyCheckoutSessionFromStripe = async (sessionId: string) => {
   }
 
   await activateUserSubscription(session);
+
 
   return {
     paid: true,
