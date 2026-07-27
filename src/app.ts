@@ -29,6 +29,10 @@ app.get("/", (req, res) => {
     res.send("Hello World Bro!");
 })
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", time: new Date().toISOString() });
+});
+
 app.use(
   "/api-docs",
   swaggerUi.serve,
