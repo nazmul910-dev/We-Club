@@ -21,7 +21,8 @@ import { moduleActionRoutes } from "../modules/moduleActions/module.action.route
 // import { userRoutes } from '../modules/user/user.route';
 // import { adminRoutes } from '../modules/admin/admin.route';
 // import { courseRoutes } from '../modules/course/course.route';
-
+import roomRoutes from "../modules/room/room.route";
+import messageRoutes from "../modules/message/message.route";
 const router = Router();
 
 type TModuleRoute = {
@@ -103,6 +104,11 @@ const moduleRoutes: TModuleRoute[] = [
     path:'/invictus/module-actions',
     route:moduleActionRoutes
   }
+   ,
+  {
+    path: "/messages",
+    route: messageRoutes,
+  },
 ];
 
 moduleRoutes.forEach((route) => {
