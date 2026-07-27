@@ -11,6 +11,7 @@ export default {
     JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
     SMTP_AUTH_USER: process.env.SMTP_AUTH_USER,
     SMTP_AUTH_PASS: process.env.SMTP_AUTH_PASS,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
     NODE_ENV: process.env.NODE_ENV,
     JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
     CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
