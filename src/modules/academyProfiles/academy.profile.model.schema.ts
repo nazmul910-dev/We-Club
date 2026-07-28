@@ -1,186 +1,113 @@
 import { Schema, model } from "mongoose";
-import {
-  IAcademyProfile
-} from "./academy.profile.interface";
+import { IAcademyProfile } from "./academy.profile.interface";
 
+const AcademyProfileSchema = new Schema<IAcademyProfile>(
+  {
+    user: {
+      type: Schema.Types.ObjectId,
 
+      ref: "User",
 
-const AcademyProfileSchema =
-new Schema<IAcademyProfile>(
-{
+      required: true,
 
-user:{
+      unique: true,
 
-type:Schema.Types.ObjectId,
+      index: true,
+    },
 
-ref:"User",
+    mentor: {
+      type: Schema.Types.ObjectId,
 
-required:true,
+      ref: "User",
+    },
 
-unique:true,
+    currentPillar: {
+      type: Schema.Types.ObjectId,
 
-index:true
+      ref: "ChallengePillar",
+    },
 
-},
+    academyName: {
+      type: String,
 
+      trim: true,
 
+      maxlength: 100,
+    },
 
-mentor:{
+    bio: {
+      type: String,
 
-type:Schema.Types.ObjectId,
+      trim: true,
 
-ref:"User",
+      maxlength: 1000,
+    },
 
-},
+    experienceLevel: {
+      type: String,
 
+      enum: ["beginner", "intermediate", "advanced"],
+    },
 
+    goals: [
+      {
+        type: String,
 
-currentPillar:{
+        trim: true,
+      },
+    ],
 
-type:Schema.Types.ObjectId,
+    totalPoints: {
+      type: Number,
 
-ref:"ChallengePillar",
+      default: 0,
 
-},
+      min: 0,
+    },
 
+    currentStreak: {
+      type: Number,
 
+      default: 0,
 
-academyName:{
+      min: 0,
+    },
 
-type:String,
+    longestStreak: {
+      type: Number,
 
-trim:true,
+      default: 0,
 
-maxlength:100
+      min: 0,
+    },
 
-},
+    notificationPreferences: {
+      email: {
+        type: Boolean,
 
+        default: true,
+      },
 
+      push: {
+        type: Boolean,
 
-bio:{
+        default: true,
+      },
 
-type:String,
+      sms: {
+        type: Boolean,
 
-trim:true,
-
-maxlength:1000
-
-},
-
-
-
-experienceLevel:{
-
-type:String,
-
-enum:[
-"beginner",
-"intermediate",
-"advanced"
-]
-
-},
-
-
-
-goals:[
-
-{
-
-type:String,
-
-trim:true
-
-}
-
-],
-
-
-
-totalPoints:{
-
-type:Number,
-
-default:0,
-
-min:0
-
-},
-
-
-
-currentStreak:{
-
-type:Number,
-
-default:0,
-
-min:0
-
-},
-
-
-
-longestStreak:{
-
-type:Number,
-
-default:0,
-
-min:0
-
-},
-
-
-
-notificationPreferences:{
-
-
-email:{
-
-type:Boolean,
-
-default:true
-
-},
-
-
-push:{
-
-type:Boolean,
-
-default:true
-
-},
-
-
-sms:{
-
-type:Boolean,
-
-default:false
-
-}
-
-
-
-}
-
-
-},
-
-{
-
-timestamps:true
-
-}
-
+        default: false,
+      },
+    },
+  },
+
+  {
+    timestamps: true,
+  },
 );
 
-
-
-export const AcademyProfile =
-model<IAcademyProfile>(
-"AcademyProfile",
-AcademyProfileSchema
+export const AcademyProfile = model<IAcademyProfile>(
+  "AcademyProfile",
+  AcademyProfileSchema,
 );

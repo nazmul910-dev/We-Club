@@ -1,16 +1,16 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model } from "mongoose";
 import {
   IPaymentSession,
   PAYMENT_PURPOSES,
   PAYMENT_SESSION_STATUSES,
-} from './payment.interface';
-import { USER_ROLES,ACCESS_TO_OPTIONS } from '../users/user.interface';
+} from "./payment.interface";
+import { USER_ROLES, ACCESS_TO_OPTIONS } from "../users/user.interface";
 
 const PaymentSessionSchema = new Schema<IPaymentSession>(
   {
     user: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       index: true,
     },
@@ -35,7 +35,7 @@ const PaymentSessionSchema = new Schema<IPaymentSession>(
     status: {
       type: String,
       enum: PAYMENT_SESSION_STATUSES,
-      default: 'pending',
+      default: "pending",
       index: true,
     },
 
@@ -93,10 +93,10 @@ const PaymentSessionSchema = new Schema<IPaymentSession>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export const PaymentSession = model<IPaymentSession>(
-  'PaymentSession',
-  PaymentSessionSchema
+  "PaymentSession",
+  PaymentSessionSchema,
 );

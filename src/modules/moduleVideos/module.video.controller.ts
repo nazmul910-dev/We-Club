@@ -74,12 +74,6 @@ const createModuleVideo = async (
       durationSeconds:
         uploaded.durationSeconds,
 
-      /**
-       * Frontend থেকে true/false আসবে।
-       *
-       * false = free video
-       * true = parent pillar purchase required
-       */
       isPaid: body.isPaid ?? false,
 
       isRequired:
@@ -96,11 +90,7 @@ const createModuleVideo = async (
       uploadStatus: "ready",
     };
 
-    /**
-     * exactOptionalPropertyTypes support:
-     * undefined optional property সরাসরি
-     * object-এর মধ্যে পাঠানো হচ্ছে না।
-     */
+
     if (body.description !== undefined) {
       payload.description =
         body.description;

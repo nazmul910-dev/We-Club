@@ -18,8 +18,10 @@ const createProfile = async (
   try {
     const user = getAuthUser(req);
 
-
-    const result = await academyProfileService.createProfile(user.id as string, req.body);
+    const result = await academyProfileService.createProfile(
+      user.id as string,
+      req.body,
+    );
 
     sendResponse(res, {
       statusCode: 201,
@@ -67,7 +69,10 @@ const updateProfile = async (
   try {
     const user = getAuthUser(req);
 
-    const result = await academyProfileService.updateProfile(user.id as string, req.body);
+    const result = await academyProfileService.updateProfile(
+      user.id as string,
+      req.body,
+    );
 
     sendResponse(res, {
       statusCode: 200,

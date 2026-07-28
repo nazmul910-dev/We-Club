@@ -1,76 +1,33 @@
 import { z } from "zod";
 
+const createAcademyProfileValidation = z.object({
+  body: z.object({
+    academyName: z.string().max(100).optional(),
 
+    bio: z.string().max(1000).optional(),
 
-const createAcademyProfileValidation =
-z.object({
+    experienceLevel: z
+      .enum(["beginner", "intermediate", "advanced"])
+      .optional(),
 
-body:z.object({
+    goals: z.array(z.string()).optional(),
 
-academyName:
-z.string()
-.max(100)
-.optional(),
+    notificationPreferences: z
+      .object({
+        email: z.boolean().optional(),
 
+        push: z.boolean().optional(),
 
-bio:
-z.string()
-.max(1000)
-.optional(),
-
-
-experienceLevel:
-z.enum([
-"beginner",
-"intermediate",
-"advanced"
-])
-.optional(),
-
-
-goals:
-z.array(
-z.string()
-)
-.optional(),
-
-
-
-notificationPreferences:
-z.object({
-
-email:z.boolean()
-.optional(),
-
-push:z.boolean()
-.optional(),
-
-sms:z.boolean()
-.optional()
-
-
-})
-.optional()
-
-
-
-})
-
-
+        sms: z.boolean().optional(),
+      })
+      .optional(),
+  }),
 });
 
-
-
-
-const updateAcademyProfileValidation =
-createAcademyProfileValidation;
-
-
+const updateAcademyProfileValidation = createAcademyProfileValidation;
 
 export const AcademyProfileValidations = {
+  createAcademyProfileValidation,
 
-createAcademyProfileValidation,
-
-updateAcademyProfileValidation
-
+  updateAcademyProfileValidation,
 };

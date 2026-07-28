@@ -1,23 +1,17 @@
-import {
-  NextFunction,
-  Request,
-  Response,
-} from 'express';
+import { NextFunction, Request, Response } from "express";
 
-import sendResponse from '../../utility/sendResponse';
+import sendResponse from "../../utility/sendResponse";
 
-import { challengePillarService } from './challenge.pillar.service';
+import { challengePillarService } from "./challenge.pillar.service";
 
 const getAuthUser = (
-  req: Request
+  req: Request,
 ): {
   id: string;
   role: string;
 } => {
   if (!req.user) {
-    const error = new Error(
-      'Authentication required'
-    ) as Error & {
+    const error = new Error("Authentication required") as Error & {
       statusCode?: number;
     };
 
@@ -28,13 +22,10 @@ const getAuthUser = (
 
   const authUser = req.user as any;
 
-  const userId =
-    authUser.id || authUser.userId;
+  const userId = authUser.id || authUser.userId;
 
   if (!userId) {
-    const error = new Error(
-      'Authenticated user ID is missing'
-    ) as Error & {
+    const error = new Error("Authenticated user ID is missing") as Error & {
       statusCode?: number;
     };
 
@@ -52,23 +43,20 @@ const getAuthUser = (
 const createChallengePillar = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await challengePillarService
-        .createChallengePillar(
-          req.body,
-          authUser.id
-        );
+    const result = await challengePillarService.createChallengePillar(
+      req.body,
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 201,
       success: true,
-      message:
-        'Challenge pillar created successfully',
+      message: "Challenge pillar created successfully",
       data: result,
     });
   } catch (error) {
@@ -79,22 +67,19 @@ const createChallengePillar = async (
 const seedDefaultChallengePillars = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await challengePillarService
-        .seedDefaultChallengePillars(
-          authUser.id
-        );
+    const result = await challengePillarService.seedDefaultChallengePillars(
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Default challenge pillars initialized successfully',
+      message: "Default challenge pillars initialized successfully",
       data: result,
     });
   } catch (error) {
@@ -105,26 +90,21 @@ const seedDefaultChallengePillars = async (
 const getAllChallengePillars = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await challengePillarService
-        .getAllChallengePillars({
-          actorRole: authUser.role,
+    const result = await challengePillarService.getAllChallengePillars({
+      actorRole: authUser.role,
 
-          includeArchived:
-            req.query.includeArchived ===
-            'true',
-        });
+      includeArchived: req.query.includeArchived === "true",
+    });
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Challenge pillars retrieved successfully',
+      message: "Challenge pillars retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -135,23 +115,20 @@ const getAllChallengePillars = async (
 const getChallengePillarBySlug = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await challengePillarService
-        .getChallengePillarBySlug(
-          req.params.slug as any,
-          authUser.role
-        );
+    const result = await challengePillarService.getChallengePillarBySlug(
+      req.params.slug as any,
+      authUser.role,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Challenge pillar retrieved successfully',
+      message: "Challenge pillar retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -162,24 +139,21 @@ const getChallengePillarBySlug = async (
 const updateChallengePillar = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await challengePillarService
-        .updateChallengePillar(
-          String(req.params.id),
-          req.body,
-          authUser.id
-        );
+    const result = await challengePillarService.updateChallengePillar(
+      String(req.params.id),
+      req.body,
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Challenge pillar updated successfully',
+      message: "Challenge pillar updated successfully",
       data: result,
     });
   } catch (error) {
@@ -190,23 +164,20 @@ const updateChallengePillar = async (
 const publishChallengePillar = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await challengePillarService
-        .publishChallengePillar(
-          String(req.params.id),
-          authUser.id
-        );
+    const result = await challengePillarService.publishChallengePillar(
+      String(req.params.id),
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Challenge pillar published successfully',
+      message: "Challenge pillar published successfully",
       data: result,
     });
   } catch (error) {
@@ -217,23 +188,20 @@ const publishChallengePillar = async (
 const moveChallengePillarToDraft = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await challengePillarService
-        .moveChallengePillarToDraft(
-          String(req.params.id),
-          authUser.id
-        );
+    const result = await challengePillarService.moveChallengePillarToDraft(
+      String(req.params.id),
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Challenge pillar moved to draft successfully',
+      message: "Challenge pillar moved to draft successfully",
       data: result,
     });
   } catch (error) {
@@ -244,23 +212,20 @@ const moveChallengePillarToDraft = async (
 const archiveChallengePillar = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await challengePillarService
-        .archiveChallengePillar(
-          String(req.params.id),
-          authUser.id
-        );
+    const result = await challengePillarService.archiveChallengePillar(
+      String(req.params.id),
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Challenge pillar archived successfully',
+      message: "Challenge pillar archived successfully",
       data: result,
     });
   } catch (error) {

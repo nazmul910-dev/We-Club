@@ -1,50 +1,29 @@
-import { Types } from 'mongoose';
+import { Types } from "mongoose";
 
-export const PILLAR_NAMES = [
-  'FEARLESS',
-  'LIMITLESS',
-  'BORDERLESS',
-] as const;
+export const PILLAR_NAMES = ["FEARLESS", "LIMITLESS", "BORDERLESS"] as const;
 
-export const PILLAR_SLUGS = [
-  'fearless',
-  'limitless',
-  'borderless',
-] as const;
+export const PILLAR_SLUGS = ["fearless", "limitless", "borderless"] as const;
 
-export const PILLAR_ICONS = [
-  'crown',
-  'infinity',
-  'globe',
-] as const;
+export const PILLAR_ICONS = ["crown", "infinity", "globe"] as const;
 
-export const PILLAR_STATUSES = [
-  'draft',
-  'published',
-  'archived',
-] as const;
+export const PILLAR_STATUSES = ["draft", "published", "archived"] as const;
 
 export const INTRO_VIDEO_STATUSES = [
-  'not_uploaded',
-  'processing',
-  'ready',
-  'failed',
+  "not_uploaded",
+  "processing",
+  "ready",
+  "failed",
 ] as const;
 
-export type PillarName =
-  (typeof PILLAR_NAMES)[number];
+export type PillarName = (typeof PILLAR_NAMES)[number];
 
-export type PillarSlug =
-  (typeof PILLAR_SLUGS)[number];
+export type PillarSlug = (typeof PILLAR_SLUGS)[number];
 
-export type PillarIcon =
-  (typeof PILLAR_ICONS)[number];
+export type PillarIcon = (typeof PILLAR_ICONS)[number];
 
-export type PillarStatus =
-  (typeof PILLAR_STATUSES)[number];
+export type PillarStatus = (typeof PILLAR_STATUSES)[number];
 
-export type IntroVideoStatus =
-  (typeof INTRO_VIDEO_STATUSES)[number];
+export type IntroVideoStatus = (typeof INTRO_VIDEO_STATUSES)[number];
 
 export interface IPillarIntroVideo {
   cloudinaryPublicId?: string | undefined;

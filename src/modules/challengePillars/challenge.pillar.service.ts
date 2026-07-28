@@ -1,17 +1,14 @@
-import { Types } from 'mongoose';
+import { Types } from "mongoose";
 
 import {
   ICreateChallengePillar,
   IUpdateChallengePillar,
   PillarSlug,
-} from './challenge.pillar.interface';
+} from "./challenge.pillar.interface";
 
-import { ChallengePillar } from './challenge.pillar.model.schema';
+import { ChallengePillar } from "./challenge.pillar.model.schema";
 
-const throwServiceError = (
-  message: string,
-  statusCode: number
-): never => {
+const throwServiceError = (message: string, statusCode: number): never => {
   const error = new Error(message) as Error & {
     statusCode?: number;
   };
@@ -21,20 +18,17 @@ const throwServiceError = (
   throw error;
 };
 
-
 function assertPillarExists<T>(
   pillar: T | null | undefined,
-  message = 'Challenge pillar not found'
+  message = "Challenge pillar not found",
 ): asserts pillar is T {
   if (!pillar) {
     throwServiceError(message, 404);
   }
 }
 
-const isAdminOrManager = (
-  role?: string
-): boolean => {
-  return role === 'admin' || role === 'manager';
+const isAdminOrManager = (role?: string): boolean => {
+  return role === "admin" || role === "manager";
 };
 
 const validatePaymentConfiguration = ({
@@ -46,182 +40,155 @@ const validatePaymentConfiguration = ({
   priceCents: number;
   stripePriceId?: string | undefined;
 }) => {
-  if (
-    isPaid &&
-    priceCents <= 0 &&
-    !stripePriceId
-  ) {
+  if (isPaid && priceCents <= 0 && !stripePriceId) {
     throwServiceError(
-      'Paid pillar requires priceCents or Stripe Price ID',
-      400
+      "Paid pillar requires priceCents or Stripe Price ID",
+      400,
     );
   }
 
   if (!isPaid && priceCents > 0) {
-    throwServiceError(
-      'Free pillar price must be zero',
-      400
-    );
+    throwServiceError("Free pillar price must be zero", 400);
   }
 
   if (!isPaid && stripePriceId) {
-    throwServiceError(
-      'Free pillar cannot have Stripe Price ID',
-      400
-    );
+    throwServiceError("Free pillar cannot have Stripe Price ID", 400);
   }
 };
 
 const createChallengePillar = async (
   payload: ICreateChallengePillar,
-  actorId: string
+  actorId: string,
 ) => {
-  const existingPillar =
-    await ChallengePillar.findOne({
-      $or: [
-        { name: payload.name },
-        { slug: payload.slug },
-        { order: payload.order },
-      ],
-    });
+  const existingPillar = await ChallengePillar.findOne({
+    $or: [
+      { name: payload.name },
+      { slug: payload.slug },
+      { order: payload.order },
+    ],
+  });
 
   if (existingPillar) {
-    throwServiceError(
-      'Challenge pillar already exists',
-      409
-    );
+    throwServiceError("Challenge pillar already exists", 409);
   }
 
   const isPaid = payload.isPaid ?? false;
-  const priceCents =
-    payload.priceCents ?? 0;
+  const priceCents = payload.priceCents ?? 0;
 
   validatePaymentConfiguration({
     isPaid,
     priceCents,
-    stripePriceId:
-      payload.stripePriceId,
+    stripePriceId: payload.stripePriceId,
   });
 
-  const pillar =
-    await ChallengePillar.create({
-      ...payload,
+  const pillar = await ChallengePillar.create({
+    ...payload,
 
-      accentColor:
-        payload.accentColor ?? '#C9A84C',
+    accentColor: payload.accentColor ?? "#C9A84C",
 
-      isPaid,
-      priceCents,
+    isPaid,
+    priceCents,
 
-      currency: payload.currency ?? 'usd',
+    currency: payload.currency ?? "usd",
 
-      introVideo: {
-        status: 'not_uploaded',
-        ...payload.introVideo,
-      },
+    introVideo: {
+      status: "not_uploaded",
+      ...payload.introVideo,
+    },
 
-      status: 'draft',
+    status: "draft",
 
-      createdBy:
-        new Types.ObjectId(actorId),
-    });
+    createdBy: new Types.ObjectId(actorId),
+  });
 
   return pillar;
 };
 
-const seedDefaultChallengePillars = async (
-  actorId: string
-) => {
-  const createdBy =
-    new Types.ObjectId(actorId);
+const seedDefaultChallengePillars = async (actorId: string) => {
+  const createdBy = new Types.ObjectId(actorId);
 
   const defaultPillars = [
     {
-      name: 'FEARLESS',
-      slug: 'fearless',
+      name: "FEARLESS",
+      slug: "fearless",
 
-      title: 'FEARLESS',
+      title: "FEARLESS",
 
-      tagline:
-        'Conquer what holds you back.',
+      tagline: "Conquer what holds you back.",
 
-      description:
-        'Conquer fear, build confidence and take decisive action.',
+      description: "Conquer fear, build confidence and take decisive action.",
 
-      icon: 'crown',
+      icon: "crown",
 
-      accentColor: '#C9A84C',
+      accentColor: "#C9A84C",
 
       isPaid: false,
       priceCents: 0,
-      currency: 'usd',
+      currency: "usd",
 
       introVideo: {
-        status: 'not_uploaded',
+        status: "not_uploaded",
       },
 
       order: 1,
-      status: 'draft',
+      status: "draft",
 
       createdBy,
     },
 
     {
-      name: 'LIMITLESS',
-      slug: 'limitless',
+      name: "LIMITLESS",
+      slug: "limitless",
 
-      title: 'LIMITLESS',
+      title: "LIMITLESS",
 
-      tagline:
-        'Expand beyond every boundary.',
+      tagline: "Expand beyond every boundary.",
 
-      description:
-        'Expand your capacity, ambition and personal limits.',
+      description: "Expand your capacity, ambition and personal limits.",
 
-      icon: 'infinity',
+      icon: "infinity",
 
-      accentColor: '#C9A84C',
+      accentColor: "#C9A84C",
 
       isPaid: true,
       priceCents: 0,
-      currency: 'usd',
+      currency: "usd",
 
       introVideo: {
-        status: 'not_uploaded',
+        status: "not_uploaded",
       },
 
       order: 2,
-      status: 'draft',
+      status: "draft",
 
       createdBy,
     },
 
     {
-      name: 'BORDERLESS',
-      slug: 'borderless',
+      name: "BORDERLESS",
+      slug: "borderless",
 
-      title: 'BORDERLESS',
+      title: "BORDERLESS",
 
-      tagline:
-        'Build without limits or geography.',
+      tagline: "Build without limits or geography.",
 
       description:
-        'Build business, opportunities and relationships without geographic limits.',
+        "Build business, opportunities and relationships without geographic limits.",
 
-      icon: 'globe',
+      icon: "globe",
 
-      accentColor: '#C9A84C',
+      accentColor: "#C9A84C",
 
       isPaid: true,
       priceCents: 0,
-      currency: 'usd',
+      currency: "usd",
 
       introVideo: {
-        status: 'not_uploaded',
+        status: "not_uploaded",
       },
 
       order: 3,
-      status: 'draft',
+      status: "draft",
 
       createdBy,
     },
@@ -240,15 +207,12 @@ const seedDefaultChallengePillars = async (
 
         upsert: true,
       },
-    })) as any
+    })) as any,
   );
 
   return ChallengePillar.find()
     .sort({ order: 1 })
-    .populate(
-      'createdBy',
-      'fullName email role profileImage'
-    );
+    .populate("createdBy", "fullName email role profileImage");
 };
 
 const getAllChallengePillars = async ({
@@ -261,47 +225,34 @@ const getAllChallengePillars = async ({
   const filter: Record<string, unknown> = {};
 
   if (!isAdminOrManager(actorRole)) {
-    filter.status = 'published';
+    filter.status = "published";
   } else if (!includeArchived) {
     filter.status = {
-      $ne: 'archived',
+      $ne: "archived",
     };
   }
 
   return ChallengePillar.find(filter)
     .sort({ order: 1 })
-    .populate(
-      'createdBy',
-      'fullName email role profileImage'
-    )
-    .populate(
-      'updatedBy',
-      'fullName email role profileImage'
-    );
+    .populate("createdBy", "fullName email role profileImage")
+    .populate("updatedBy", "fullName email role profileImage");
 };
 
 const getChallengePillarBySlug = async (
   slug: PillarSlug,
-  actorRole?: string
+  actorRole?: string,
 ) => {
   const filter: Record<string, unknown> = {
     slug,
   };
 
   if (!isAdminOrManager(actorRole)) {
-    filter.status = 'published';
+    filter.status = "published";
   }
 
-  const pillar =
-    await ChallengePillar.findOne(filter)
-      .populate(
-        'createdBy',
-        'fullName email role profileImage'
-      )
-      .populate(
-        'updatedBy',
-        'fullName email role profileImage'
-      );
+  const pillar = await ChallengePillar.findOne(filter)
+    .populate("createdBy", "fullName email role profileImage")
+    .populate("updatedBy", "fullName email role profileImage");
 
   assertPillarExists(pillar);
 
@@ -311,32 +262,24 @@ const getChallengePillarBySlug = async (
 const updateChallengePillar = async (
   pillarId: string,
   payload: IUpdateChallengePillar,
-  actorId: string
+  actorId: string,
 ) => {
-  const pillar =
-    await ChallengePillar.findById(pillarId);
+  const pillar = await ChallengePillar.findById(pillarId);
 
   assertPillarExists(pillar);
 
-  if (pillar.status === 'archived') {
-    throwServiceError(
-      'Archived pillar cannot be updated',
-      400
-    );
+  if (pillar.status === "archived") {
+    throwServiceError("Archived pillar cannot be updated", 400);
   }
 
-  const nextIsPaid =
-    payload.isPaid ?? pillar.isPaid;
+  const nextIsPaid = payload.isPaid ?? pillar.isPaid;
 
-  let nextPriceCents =
-    payload.priceCents ??
-    pillar.priceCents;
+  let nextPriceCents = payload.priceCents ?? pillar.priceCents;
 
   let nextStripePriceId =
     payload.stripePriceId === null
       ? undefined
-      : payload.stripePriceId ??
-        pillar.stripePriceId;
+      : (payload.stripePriceId ?? pillar.stripePriceId);
 
   if (!nextIsPaid) {
     nextPriceCents = 0;
@@ -346,8 +289,7 @@ const updateChallengePillar = async (
   validatePaymentConfiguration({
     isPaid: nextIsPaid,
     priceCents: nextPriceCents,
-    stripePriceId:
-      nextStripePriceId,
+    stripePriceId: nextStripePriceId,
   });
 
   if (payload.title !== undefined) {
@@ -359,74 +301,54 @@ const updateChallengePillar = async (
   }
 
   if (payload.description !== undefined) {
-    pillar.description =
-      payload.description;
+    pillar.description = payload.description;
   }
 
   if (payload.accentColor !== undefined) {
-    pillar.accentColor =
-      payload.accentColor;
+    pillar.accentColor = payload.accentColor;
   }
 
   pillar.isPaid = nextIsPaid;
-  pillar.priceCents =
-    nextPriceCents;
+  pillar.priceCents = nextPriceCents;
 
-  pillar.currency =
-    payload.currency ??
-    pillar.currency;
+  pillar.currency = payload.currency ?? pillar.currency;
 
-  pillar.stripePriceId =
-    nextStripePriceId;
+  pillar.stripePriceId = nextStripePriceId;
 
   if (payload.introVideo !== undefined) {
-    pillar.set('introVideo', {
-      ...((pillar.introVideo as any)?.toObject?.() ??
-        pillar.introVideo),
+    pillar.set("introVideo", {
+      ...((pillar.introVideo as any)?.toObject?.() ?? pillar.introVideo),
       ...payload.introVideo,
     });
   }
 
-  pillar.updatedBy =
-    new Types.ObjectId(actorId);
+  pillar.updatedBy = new Types.ObjectId(actorId);
 
   await pillar.save();
 
-  return pillar.populate(
-    'updatedBy',
-    'fullName email role profileImage'
-  );
+  return pillar.populate("updatedBy", "fullName email role profileImage");
 };
 
-const publishChallengePillar = async (
-  pillarId: string,
-  actorId: string
-) => {
-  const pillar =
-    await ChallengePillar.findById(pillarId);
+const publishChallengePillar = async (pillarId: string, actorId: string) => {
+  const pillar = await ChallengePillar.findById(pillarId);
 
   assertPillarExists(pillar);
 
-  if (pillar.status === 'archived') {
-    throwServiceError(
-      'Archived pillar cannot be published',
-      400
-    );
+  if (pillar.status === "archived") {
+    throwServiceError("Archived pillar cannot be published", 400);
   }
 
   validatePaymentConfiguration({
     isPaid: pillar.isPaid,
     priceCents: pillar.priceCents,
-    stripePriceId:
-      pillar.stripePriceId,
+    stripePriceId: pillar.stripePriceId,
   });
 
-  pillar.status = 'published';
+  pillar.status = "published";
   pillar.publishedAt = new Date();
   pillar.archivedAt = undefined;
 
-  pillar.updatedBy =
-    new Types.ObjectId(actorId);
+  pillar.updatedBy = new Types.ObjectId(actorId);
 
   await pillar.save();
 
@@ -435,46 +357,36 @@ const publishChallengePillar = async (
 
 const moveChallengePillarToDraft = async (
   pillarId: string,
-  actorId: string
+  actorId: string,
 ) => {
-  const pillar =
-    await ChallengePillar.findById(pillarId);
+  const pillar = await ChallengePillar.findById(pillarId);
 
   assertPillarExists(pillar);
 
-  if (pillar.status === 'archived') {
-    throwServiceError(
-      'Archived pillar cannot be moved to draft',
-      400
-    );
+  if (pillar.status === "archived") {
+    throwServiceError("Archived pillar cannot be moved to draft", 400);
   }
 
-  pillar.status = 'draft';
+  pillar.status = "draft";
   pillar.publishedAt = undefined;
 
-  pillar.updatedBy =
-    new Types.ObjectId(actorId);
+  pillar.updatedBy = new Types.ObjectId(actorId);
 
   await pillar.save();
 
   return pillar;
 };
 
-const archiveChallengePillar = async (
-  pillarId: string,
-  actorId: string
-) => {
-  const pillar =
-    await ChallengePillar.findById(pillarId);
+const archiveChallengePillar = async (pillarId: string, actorId: string) => {
+  const pillar = await ChallengePillar.findById(pillarId);
 
   assertPillarExists(pillar);
 
-  pillar.status = 'archived';
+  pillar.status = "archived";
   pillar.archivedAt = new Date();
   pillar.publishedAt = undefined;
 
-  pillar.updatedBy =
-    new Types.ObjectId(actorId);
+  pillar.updatedBy = new Types.ObjectId(actorId);
 
   await pillar.save();
 

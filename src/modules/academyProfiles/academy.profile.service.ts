@@ -14,12 +14,10 @@ const throwServiceError = (message: string, statusCode: number): never => {
   throw error;
 };
 
-
-
 function assertFound<T>(
   value: T | null | undefined,
   message: string,
-  statusCode: number
+  statusCode: number,
 ): asserts value is T {
   if (value === null || value === undefined) {
     throwServiceError(message, statusCode);

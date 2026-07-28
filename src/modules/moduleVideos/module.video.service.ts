@@ -7,6 +7,7 @@ import {
   IUpdateModuleVideo,
 } from "./module.video.interface";
 import { ModuleVideo } from "./module.video.model.schema";
+import { userEntitlementService } from "../userEntitlements/userEntitlements.service";
 
 const throwServiceError = (
   message: string,
@@ -280,6 +281,63 @@ const getSingleModuleVideo = async (
   return video;
 };
 
+const checkVideoAccess = async (
+  videoId: string,
+  userId: string
+) => {
+  const video = await ModuleVideo.findById(videoId).populate({
+    path: "module",
+    select: "title slug moduleNumber pillar status",
+    populate: {
+      path: "pillar",
+      model: "ChallengePillar",
+      select: "name slug title isPaid priceCents currency status",
+    },
+  });
+
+  assertFound(video, "Module video not found", 404);
+
+  if (!video.isPaid) {
+    return {
+      canWatch: true,
+      isLocked: false,
+      reason: "free_video",
+      playbackUrl: video.playbackUrl ?? video.secureUrl,
+    };
+  }
+
+  const moduleData = video.module as unknown as {
+    pillar: {
+      _id: Types.ObjectId;
+    };
+  };
+
+  const access = await userEntitlementService.checkPillarAccess(
+    userId,
+    String(moduleData.pillar._id)
+  );
+
+  if (!access.hasAccess) {
+    return {
+      canWatch: false,
+      isLocked: true,
+      paymentRequired: true,
+      reason: "pillar_purchase_required",
+      playbackUrl: null,
+      secureUrl: null,
+      pillar: access.pillar,
+    };
+  }
+
+  return {
+    canWatch: true,
+    isLocked: false,
+    paymentRequired: false,
+    reason: "pillar_entitlement_active",
+    playbackUrl: video.playbackUrl ?? video.secureUrl,
+  };
+};
+
 const updateModuleVideo = async (
   videoId: string,
   payload: IUpdateModuleVideo,
@@ -460,6 +518,7 @@ export const moduleVideoService = {
   getAllModuleVideos,
   getVideosByModule,
   getSingleModuleVideo,
+  checkVideoAccess,
   updateModuleVideo,
   publishModuleVideo,
   moveModuleVideoToDraft,

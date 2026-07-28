@@ -1,60 +1,22 @@
 import { Router } from "express";
 
+import { verifyToken, authorizeRoles } from "../../middleware/authMiddleware";
 
-import {
-verifyToken,
-authorizeRoles
-}
-from "../../middleware/authMiddleware";
+import { academyProfileController } from "./academy.profile.controller";
 
+const router = Router();
 
-import {
-academyProfileController
-}
-from "./academy.profile.controller";
+router.post("/", verifyToken, academyProfileController.createProfile);
 
+router.get("/me", verifyToken, academyProfileController.getMyProfile);
 
-
-const router =
-Router();
-
-
-
-router.post(
-"/",
-verifyToken,
-academyProfileController.createProfile
-);
-
-
+router.patch("/me", verifyToken, academyProfileController.updateProfile);
 
 router.get(
-"/me",
-verifyToken,
-academyProfileController.getMyProfile
+  "/",
+  verifyToken,
+  authorizeRoles("admin", "manager"),
+  academyProfileController.getAllProfiles,
 );
 
-
-
-router.patch(
-"/me",
-verifyToken,
-academyProfileController.updateProfile
-);
-
-
-
-router.get(
-"/",
-verifyToken,
-authorizeRoles(
-"admin",
-"manager"
-),
-academyProfileController.getAllProfiles
-);
-
-
-
-export const academyProfileRoutes =
-router;
+export const academyProfileRoutes = router;

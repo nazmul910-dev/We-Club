@@ -24,6 +24,8 @@ import { moduleActionRoutes } from "../modules/moduleActions/module.action.route
 import roomRoutes from "../modules/room/room.route";
 import messageRoutes from "../modules/message/message.route";
 import { LogoRoutes } from "../modules/manageLogo/logo.route";
+import { academyProfileRoutes } from "../modules/academyProfiles/academy.profile.route";
+import { userEntitlementRoutes } from "../modules/userEntitlements/userEntitlements.route";
 const router = Router();
 
 type TModuleRoute = {
@@ -81,44 +83,50 @@ const moduleRoutes: TModuleRoute[] = [
     route: dashboardAnalyticsRoutes,
   },
   {
-    path: '/invictus/challenge-pillars',
+    path: "/invictus/challenge-pillars",
     route: challengePillarRoutes,
   },
 
   {
-    path: '/invictus/course-modules',
+    path: "/invictus/course-modules",
     route: courseModuleRoutes,
   },
   {
-    path:'/invictus/module-videos',
-    route: moduleVideoRoutes
+    path: "/invictus/module-videos",
+    route: moduleVideoRoutes,
   },
   {
-    path:'/invictus/module-resources',
-    route:moduleResourceRoutes
+    path: "/invictus/module-resources",
+    route: moduleResourceRoutes,
   },
   {
-    path:'/invictus/quiz-questions',
-    route:quizQuestionRoutes
+    path: "/invictus/quiz-questions",
+    route: quizQuestionRoutes,
   },
   {
-    path:'/invictus/module-actions',
-    route:moduleActionRoutes
-  }
-   ,
-   {
-    path:"/rooms",
-    route:roomRoutes
+    path: "/invictus/module-actions",
+    route: moduleActionRoutes,
+  },
+  {
+    path: "/rooms",
+    route: roomRoutes,
   },
   {
     path: "/messages",
     route: messageRoutes,
   },
   {
-    path:"/logo",
-    route:LogoRoutes,
+    path: "/logo",
+    route: LogoRoutes,
+  },
+  {
+    path: "/invictus/academy-profile",
+    route: academyProfileRoutes,
+  },
+  {
+    path:"/invictus/user-entitlements",
+    route:userEntitlementRoutes
   }
-  
 ];
 
 moduleRoutes.forEach((route) => {
