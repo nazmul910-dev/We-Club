@@ -23,6 +23,7 @@ import { moduleActionRoutes } from "../modules/moduleActions/module.action.route
 // import { courseRoutes } from '../modules/course/course.route';
 import roomRoutes from "../modules/room/room.route";
 import messageRoutes from "../modules/message/message.route";
+import { LogoRoutes } from "../modules/manageLogo/logo.route";
 const router = Router();
 
 type TModuleRoute = {
@@ -112,6 +113,10 @@ const moduleRoutes: TModuleRoute[] = [
   {
     path: "/messages",
     route: messageRoutes,
+  },
+  {
+    path:"/logo",
+    route:LogoRoutes,
   }
   
 ];

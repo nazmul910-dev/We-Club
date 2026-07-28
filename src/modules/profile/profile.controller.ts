@@ -192,7 +192,7 @@ const updateMarketingChannels = async (
 const updateProfileImage = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction 
 ) => {
   try {
     const userId = getAuthenticatedUserId(req);

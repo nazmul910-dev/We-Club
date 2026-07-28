@@ -9,7 +9,7 @@ cloudinary.config({
 
 export const uploadImageToCloudinary = async (
   file: Express.Multer.File,
-  folder = 'newaza/profile-images'
+  folder = 'adam/profile-images'
 ): Promise<string> => {
   const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
     'base64'
@@ -28,6 +28,22 @@ export const uploadImageToCloudinary = async (
         fetch_format: 'auto',
       },
     ],
+  });
+
+  return result.secure_url;
+};
+
+export const uploadLogoToCloudinary = async (
+  file: Express.Multer.File,
+  folder = 'adam/logo'
+): Promise<string> => {
+  const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
+    'base64'
+  )}`;
+
+  const result = await cloudinary.uploader.upload(base64Image, {
+    folder,
+    resource_type: 'image',
   });
 
   return result.secure_url;
