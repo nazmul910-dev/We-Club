@@ -1,9 +1,6 @@
 import { Router } from "express";
 
-import {
-  authorizeRoles,
-  verifyToken,
-} from "../../middleware/authMiddleware";
+import { authorizeRoles, verifyToken } from "../../middleware/authMiddleware";
 
 import { requireInvictusAccess } from "../../middleware/invictusAccessMiddleware";
 
@@ -26,12 +23,9 @@ router.get(
 
   requireInvictusAccess,
 
-  validateRequest(
-    moduleProgressModuleIdValidation
-  ),
+  validateRequest(moduleProgressModuleIdValidation),
 
-  moduleProgressController
-    .getMyModuleProgress
+  moduleProgressController.getMyModuleProgress,
 );
 
 router.post(
@@ -41,12 +35,9 @@ router.post(
 
   requireInvictusAccess,
 
-  validateRequest(
-    moduleProgressModuleIdValidation
-  ),
+  validateRequest(moduleProgressModuleIdValidation),
 
-  moduleProgressController
-    .recalculateMyModuleProgress
+  moduleProgressController.recalculateMyModuleProgress,
 );
 
 router.get(
@@ -56,8 +47,7 @@ router.get(
 
   requireInvictusAccess,
 
-  moduleProgressController
-    .getMyAllModuleProgress
+  moduleProgressController.getMyAllModuleProgress,
 );
 
 router.get(
@@ -65,17 +55,11 @@ router.get(
 
   verifyToken,
 
-  authorizeRoles(
-    "admin",
-    "manager"
-  ),
+  authorizeRoles("admin", "manager"),
 
-  validateRequest(
-    adminModuleProgressValidation
-  ),
+  validateRequest(adminModuleProgressValidation),
 
-  moduleProgressController
-    .getUserModuleProgress
+  moduleProgressController.getUserModuleProgress,
 );
 
 router.get(
@@ -83,18 +67,11 @@ router.get(
 
   verifyToken,
 
-  authorizeRoles(
-    "admin",
-    "manager"
-  ),
+  authorizeRoles("admin", "manager"),
 
-  validateRequest(
-    getAllModuleProgressValidation
-  ),
+  validateRequest(getAllModuleProgressValidation),
 
-  moduleProgressController
-    .getAllModuleProgress
+  moduleProgressController.getAllModuleProgress,
 );
 
-export const moduleProgressRoutes =
-  router;
+export const moduleProgressRoutes = router;
