@@ -26,7 +26,7 @@ const assertFound: <T>(
     throwControllerError(message, statusCode);
   }
 };
-
+ 
 const getAuthUser = (
   req: Request,
 ): {
