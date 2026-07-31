@@ -34,6 +34,25 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
       type: Boolean,
       default: false,
     },
+    proposed_commission_pct: {
+      type: Number,
+      // required: true,
+      min: 0,
+      max: 100,
+    },
+    confirmed_commission_pct: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
+    marketing_channels: {
+      type: [String],
+      default: [],
+    },
+    message: {
+      type: String,
+      trim: true,
+    },
     selected_tier: {
       type: String,
       enum: ["tier_1", "tier_2", "tier_3"],

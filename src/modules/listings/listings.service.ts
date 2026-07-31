@@ -37,7 +37,7 @@ const getAllListingFromDB = async (
   const listingQuery = new QueryBuilder<IListing>(
     Listing.find().populate(
       "associate_id",
-      "fullName email phone city country brokerage profileImage licenseNumber role accountStatus approvalStatus"
+      "fullName email bio phone city country brokerage profileImage licenseNumber role accountStatus approvalStatus"
     ),
     
     queryWithDefaultSort,

@@ -87,9 +87,9 @@ const getAllListingPromoteRequest = async (
   };
 
   const promoteRequestQuery = new QueryBuilder<IPromoteRequest>(
-    PromoteRequest.find().populate("listing_id", "title ref_code cover_image").populate(
+    PromoteRequest.find().populate("listing_id", "title ref_code cover_image price referral_commission").populate(
       "requester.user_id",
-      "fullName email profileImage licenseNumber phone country city role"
+      "fullName email profileImage licenseNumber phone country city role bio"
     ),
     // no populate on requester — email is already embedded
     queryWithDefaultSort,
@@ -132,10 +132,10 @@ const getMyListingsPromoteRequestFromDB = async (
   const promoteRequestQuery = new QueryBuilder<IPromoteRequest>(
     PromoteRequest.find({ listing_id: { $in: myListingIds } }).populate(
       "listing_id",
-      "title ref_code cover_image",
+      "title ref_code cover_image price referral_commission location.city location.region location.country",
     ).populate(
   "requester.user_id",
-  "fullName email profileImage licenseNumber phone country city role"
+  "fullName email profileImage licenseNumber phone country city role bio"
 ),
     queryWithDefaultSort,
   )
