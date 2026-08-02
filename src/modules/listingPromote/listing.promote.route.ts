@@ -242,4 +242,20 @@ router.get(
   listingPromoteRequestController.getPublicPromoteRequestDetails,
 );
 
+
+/**
+ * @openapi
+ * /listings/promote-request/{id}/accept-owner-terms:
+ *   patch:
+ *     tags: [Listing Promote Requests]
+ *     summary: Promoter accepts the listing owner's approved terms
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch(
+  "/:id/accept-owner-terms",
+  verifyToken,
+  listingPromoteRequestController.respondToOwnerTerms,
+);
+
 export const listingPromoteRequestRoutes = router;

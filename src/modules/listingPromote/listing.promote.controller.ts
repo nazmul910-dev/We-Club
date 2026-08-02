@@ -229,6 +229,93 @@ const getPublicPromoteRequestDetails = async (
   }
 };
 
+
+// const acceptOwnerTerms = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   try {
+//     const { id } = req.params;
+//     const requesterId =
+//       typeof req.user?.id === "string" ? req.user.id : undefined;
+
+//     if (!requesterId) {
+//       throw new UnauthorizedError(
+//         "You must be logged in to accept the terms",
+//       );
+//     }
+
+//     const promoteRequestId = Array.isArray(id) ? id[0] : id;
+
+//     if (!promoteRequestId) {
+//       throw new UnauthorizedError("Promote request id is required");
+//     }
+
+//     const result =
+//       await listingPromoteRequestService.acceptOwnerTermsInDB(
+//         promoteRequestId,
+//         requesterId,
+//         req.body,
+//       );
+
+//     sendResponse(res, {
+//       statusCode: 200,
+//       success: true,
+//       message:
+//         "Owner terms accepted and promotion activated successfully",
+//       data: result,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+const respondToOwnerTerms = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const requesterId =
+      typeof req.user?.id === "string" ? req.user.id : undefined;
+
+    if (!requesterId) {
+      throw new UnauthorizedError(
+        "You must be logged in to respond to the terms",
+      );
+    }
+
+    const promoteRequestId = Array.isArray(id) ? id[0] : id;
+
+    if (!promoteRequestId) {
+      throw new UnauthorizedError("Promote request id is required");
+    }
+
+    const result =
+      await listingPromoteRequestService.respondToOwnerTermsInDB(
+        promoteRequestId,
+        requesterId,
+        req.body,
+      );
+
+    const message =
+      req.body.decision === "accepted"
+        ? "Owner terms accepted and promotion activated successfully"
+        : "Owner terms rejected successfully. You cannot request this listing again.";
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const listingPromoteRequestController = {
   createListingPromoteRequest,
   getAllListingPromoteRequest,
@@ -238,4 +325,6 @@ export const listingPromoteRequestController = {
   cencelPromoteRequest,
   deletePromoteRequest,
   getPublicPromoteRequestDetails,
+  // acceptOwnerTerms,
+  respondToOwnerTerms
 };

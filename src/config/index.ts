@@ -29,7 +29,7 @@ export default {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
 
-    FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
+    FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
 
 STRIPE_PRICE_WE_COMMAND_CENTER_MONTHLY:
   process.env.STRIPE_PRICE_WE_COMMAND_CENTER_MONTHLY,

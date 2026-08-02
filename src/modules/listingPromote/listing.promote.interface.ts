@@ -1,8 +1,14 @@
 import { Schema, model, Types, Document } from "mongoose";
 
-export type PromoteReqStatus = "pending" | "approved" | "rejected" | "cancelled";
+export type PromoteReqStatus = "pending" |"owner_approved" | "approved" | "rejected" | "cancelled" | "promoter_rejected";
 
 export type PromotionTier = "tier_1" | "tier_2" | "tier_3";
+
+export type PromoterAgreementStatus =
+  | "not_started"
+  | "pending"
+  | "accepted"
+  | "rejected";
 
 export const TIER_PERMISSIONS: Record<PromotionTier, {
   address_revealed: boolean;
@@ -58,7 +64,19 @@ export interface IPromoteRequest extends Document {
   status: PromoteReqStatus;
   is_deleted: boolean;
   selected_tier: PromotionTier | null;
+
+   promoter_agreement_status: PromoterAgreementStatus;
+
+  promoter_website_url?: string | undefined;
+  marketing_document_url?: string | undefined;
+  access_url?: string | undefined;
+
+  promoter_rejection_reason?: string;
+  promoter_rejected_at?: Date;
+
   deleted_at?: Date;
   requested_at: Date;
-  resolved_at?: Date;
+  owner_approved_at?: Date;
+  promoter_accepted_at?: Date;
+  resolved_at?: Date | undefined;
 }

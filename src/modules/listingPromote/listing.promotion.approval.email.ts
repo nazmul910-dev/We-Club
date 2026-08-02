@@ -55,7 +55,10 @@ export const getPromotionApprovalEmailHtml = (
   listingTitle: string,
   listingId: string,
   tier: "tier_1" | "tier_2" | "tier_3",
-  confirmedCommissionPct: number
+  confirmedCommissionPct: number,
+  accessUrl: string,
+  promoterWebsiteUrl?: string,
+  marketingDocumentUrl?: string,
 ): string => {
   const tierInfo = TIER_DETAILS[tier];
   const tierColor = TIER_COLORS[tier];
@@ -68,7 +71,7 @@ export const getPromotionApprovalEmailHtml = (
           <span style="color:${tierColor};font-weight:bold;margin-right:8px;">✓</span>
           ${escapeHtml(f)}
         </td>
-      </tr>`
+      </tr>`,
     )
     .join("");
 
@@ -110,6 +113,48 @@ export const getPromotionApprovalEmailHtml = (
             ${featureRows}
           </table>
         </div>
+        <div style="margin-top:24px;text-align:center;">
+  <a
+    href="${escapeHtml(accessUrl)}"
+    style="
+      display:inline-block;
+      background:${tierColor};
+      color:#ffffff;
+      text-decoration:none;
+      padding:12px 22px;
+      border-radius:8px;
+      font-weight:700;
+    "
+  >
+    View Promotion Details
+  </a>
+</div>
+
+${
+  promoterWebsiteUrl
+    ? `
+      <p style="margin-top:20px;">
+        <strong>Promoter Website:</strong><br>
+        <a href="${escapeHtml(promoterWebsiteUrl)}">
+          ${escapeHtml(promoterWebsiteUrl)}
+        </a>
+      </p>
+    `
+    : ""
+}
+
+${
+  marketingDocumentUrl
+    ? `
+      <p>
+        <strong>Marketing Document:</strong><br>
+        <a href="${escapeHtml(marketingDocumentUrl)}">
+          Open marketing document
+        </a>
+      </p>
+    `
+    : ""
+}
 
         <p style="margin-top:20px;">
           Please ensure all promotion activities remain within the permissions
@@ -118,7 +163,7 @@ export const getPromotionApprovalEmailHtml = (
 
         <p>
           Regards,<br>
-          <strong>NEWAZA Team</strong>
+          <strong>World Elite Team</strong>
         </p>
 
       </div>
@@ -133,6 +178,9 @@ export const sendPromotionApprovalEmail = async ({
   listingId,
   tier,
   confirmedCommissionPct,
+  accessUrl,
+  promoterWebsiteUrl,
+  marketingDocumentUrl,
 }: {
   toEmail: string;
   promoterName: string;
@@ -140,11 +188,15 @@ export const sendPromotionApprovalEmail = async ({
   listingId: string;
   tier: "tier_1" | "tier_2" | "tier_3";
   confirmedCommissionPct: number;
+  accessUrl: string;
+  promoterWebsiteUrl?: string;
+  marketingDocumentUrl?: string;
 }): Promise<void> => {
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 587,
     secure: false,
+
     auth: {
       user: config.SMTP_AUTH_USER,
       pass: config.SMTP_AUTH_PASS,
@@ -152,19 +204,31 @@ export const sendPromotionApprovalEmail = async ({
   });
 
   await transporter.sendMail({
-    from: config.SMTP_AUTH_USER,
+    from: `"World Elite Team" <${config.SMTP_AUTH_USER}>`,
     to: toEmail,
-    subject: `You've been approved to promote: ${listingTitle}`,
-    text: `Hello ${promoterName}, your request to promote "${listingTitle}" has been approved under ${tier.replace(
-      "_",
-      " "
-    ).toUpperCase()} with a confirmed commission of ${confirmedCommissionPct}%.`,
+
+    subject: `Congratulations! You are approved to promote ${listingTitle}`,
+
+    text: `
+Hello ${promoterName},
+
+You have accepted the listing owner's terms and your promotion is now active.
+
+Listing: ${listingTitle}
+Tier: ${tier.replace("_", " ").toUpperCase()}
+Commission: ${confirmedCommissionPct}%
+Access link: ${accessUrl}
+    `.trim(),
+
     html: getPromotionApprovalEmailHtml(
       promoterName,
       listingTitle,
       listingId,
       tier,
-      confirmedCommissionPct
+      confirmedCommissionPct,
+      accessUrl,
+      promoterWebsiteUrl,
+      marketingDocumentUrl,
     ),
   });
 };

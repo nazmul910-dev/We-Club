@@ -17,7 +17,7 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
       user_id: {
         type: Schema.Types.ObjectId,
         ref: "User",
-        require : true
+        require: true,
       },
 
       email: {
@@ -25,10 +25,22 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
         required: true,
       },
     },
-    status: { 
+    status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "cancelled"],
+      enum: [
+        "pending",
+        "owner_approved",
+        "approved",
+        "rejected",
+        "promoter_rejected",
+        "cancelled",
+      ],
       default: "pending",
+    },
+    promoter_agreement_status: {
+      type: String,
+      enum: ["not_started", "pending", "accepted", "rejected"],
+      default: "not_started",
     },
     is_deleted: {
       type: Boolean,
@@ -53,10 +65,19 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
       type: String,
       trim: true,
     },
+    promoter_rejection_reason: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
+
+    promoter_rejected_at: {
+  type: Date,
+},
     selected_tier: {
       type: String,
       enum: ["tier_1", "tier_2", "tier_3"],
-      default: null, 
+      default: null,
     },
     deleted_at: Date,
     requested_at: { type: Date, default: Date.now },
@@ -64,7 +85,7 @@ const PromoteRequestSchema = new Schema<IPromoteRequest>(
   },
 
   {
-    timestamps: false, 
+    timestamps: false,
   },
 );
 
@@ -87,11 +108,8 @@ PromoteRequestSchema.index({ "requester.user_id": 1 });
 PromoteRequestSchema.pre("save", function (this: IPromoteRequest) {
   if (this.isModified("status") && this.status !== "pending") {
     this.resolved_at = this.resolved_at ?? new Date();
-
   }
 });
-
-
 
 export const PromoteRequest = model<IPromoteRequest>(
   "PromoteRequest",
