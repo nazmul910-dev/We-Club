@@ -28,6 +28,10 @@ export const registerValidation = z.object({
     password: passwordSchema,
 
     role: z.enum([
+      'founder',
+      'manager',
+      'community_manager',
+      'super_admin',
       'admin',
       'associate',
       'partner',
@@ -93,5 +97,20 @@ export const createManagerByAdminValidation = z.object({
       "invictus",
       "both",
     ]),
+  }),
+});
+
+
+export const createAdminAccountValidation = z.object({
+  body: z.object({
+    fullName: z.string().trim().min(2).max(100),
+    email: emailSchema,
+    password: passwordSchema,
+
+    // ekhane sob possible creatable role rakhlam,
+    // kon requester kon role banate parbe seta service e check hobe
+    role: z.enum(["manager", "super_admin", "community_manager"]),
+
+    accessTo: z.enum(["we_command_center", "invictus", "both"]),
   }),
 });

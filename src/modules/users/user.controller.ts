@@ -11,33 +11,21 @@ const getSingleParamId = (value: string | string[] | undefined): string | null =
 };
 
 const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const query = req.query;
 
-    try {
+    const result = await userService.getAllUsersFromDB(query);
 
-        const query = req.query;
-
-        const users = await userService.getAllUsersFromDB(query);
-
-        if(!users || users.length === 0) {
-            return sendResponse(res, {
-                statusCode : 404,   
-                success: false,
-                message : "No users found",
-                data : []
-            });
-        }
-
-        sendResponse(res, {
-            statusCode : 200,
-            success: true,  
-            message : "Users retrieved successfully",
-            data : users
-        });
-
-    }catch (error) {
-       next(error);
-    }
-}
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Users retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const getSingleUser= async (req:Request, res:Response, next:NextFunction) =>{
     try {
@@ -72,17 +60,19 @@ const createManagerByAdmin = async (
   next: NextFunction
 ) => {
   try {
-    const adminId = (req.user as any).id;
+    const requesterId = (req.user as any).id;
+    const requesterRole = (req.user as any).role; 
 
-    const result = await userService.createManagerByAdmin(
+    const result = await userService.createAdminAccount(
       req.body,
-      adminId
+      requesterId,
+      requesterRole
     );
 
     sendResponse(res, {
       statusCode: 201,
       success: true,
-      message: "Manager created successfully.",
+      message: "Account created successfully.",
       data: result,
     });
   } catch (error) {

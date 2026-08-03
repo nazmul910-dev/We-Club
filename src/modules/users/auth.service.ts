@@ -1,37 +1,82 @@
 import QueryBuilder from "../../utility/queryBuilder";
-import { IUser } from "./user.interface";
+import { IUser, UserRole } from "./user.interface";
 import { User } from "./users.model.schema";
-
-
-import { createManagerByAdminValidation } from "./user.validation";
+import { createAdminAccountValidation } from "./user.validation";
 import { ExistingUserError } from "../../utility/errorResponses";
 import { hashPassword } from "../../utility/passwordUtil";
 
-const getAllUsersFromDB  = async (query: any) => {
 
-    const queryBuilder = new QueryBuilder<IUser>(User.find().select("-password"), query).search(["name", "email"]).filter().sort().paginate();
-    
-    const users = await queryBuilder.modelQuery;
-    return users;
-}
-
-const getSingleUserFromDB = async(id:any) =>{
-    const user = await User.findById(id)
-    return user;
-}
+const CREATABLE_ROLES_BY_ROLE: Record<string, UserRole[]> = {
+  founder: ["manager", "super_admin", "community_manager"],
+  manager: ["super_admin", "community_manager"],
+};
 
 
-const createManagerByAdmin = async (
+const getAllUsersFromDB = async (
+  query: Record<string, unknown>,
+): Promise<{
+  data: IUser[];
+  meta: { page: number; limit: number; total: number; totalPage: number };
+}> => {
+  const { role, ...restQuery } = query as { role?: string; [key: string]: unknown };
+
+  let baseFilter: Record<string, unknown> = {};
+
+  if (role) {
+    const roleList = String(role)
+      .split(",")
+      .map((r) => r.trim())
+      .filter(Boolean);
+
+    if (roleList.length > 1) {
+      baseFilter.role = { $in: roleList };
+    } else if (roleList.length === 1) {
+      baseFilter.role = roleList[0];
+    }
+  }
+
+  const userQuery = new QueryBuilder<IUser>(
+    User.find(baseFilter).select("-password"),
+    restQuery,
+  )
+    .search(["fullName", "email"])
+    .filter()
+    .sort()
+    .paginate();
+
+  const data = await userQuery.modelQuery;
+  const meta = await userQuery.countTotal();
+
+  return {
+    data,
+    meta,
+  };
+};
+
+
+const getSingleUserFromDB = async (id: any) => {
+  const user = await User.findById(id);
+  return user;
+};
+
+const createAdminAccount = async (
   payload: unknown,
-  adminId: string
+  requesterId: string,
+  requesterRole: string
 ) => {
-  const { body } = createManagerByAdminValidation.parse({
+  const { body } = createAdminAccountValidation.parse({
     body: payload,
   });
 
-  const existingUser = await User.findOne({
-    email: body.email,
-  });
+  const allowedRoles = CREATABLE_ROLES_BY_ROLE[requesterRole];
+
+  if (!allowedRoles || !allowedRoles.includes(body.role)) {
+    throw new Error(
+      `You are not permitted to create a '${body.role}' account.`
+    );
+  }
+
+  const existingUser = await User.findOne({ email: body.email });
 
   if (existingUser) {
     throw new ExistingUserError("User already exists");
@@ -54,12 +99,11 @@ const createManagerByAdmin = async (
     accountStatus: "active",
     licenseVerificationStatus: "verified",
 
-    approvedBy: adminId,
+    approvedBy: requesterId,
     approvedAt: new Date(),
   });
 
   const userObject = user.toObject();
-
   const { password, ...safeUser } = userObject;
 
   return safeUser;
@@ -72,12 +116,12 @@ const activateManagerByAdmin = async (id: string) => {
     throw new Error("User not found.");
   }
 
-  if (user.role !== "manager") {
-    throw new Error("Only managers can be activated.");
+  if (!["manager", "super_admin", "community_manager"].includes(user.role)) {
+    throw new Error("Only admin accounts can be activated.");
   }
 
   if (user.accountStatus === "active") {
-    throw new Error("Manager is already active.");
+    throw new Error("Account is already active.");
   }
 
   user.accountStatus = "active";
@@ -101,22 +145,25 @@ const suspendManagerByAdmin = async (id: string) => {
     throw new Error("User not found.");
   }
 
-  if (user.role !== "manager") {
-    throw new Error("Only managers can be suspended.");
+  if (!["manager", "super_admin", "community_manager"].includes(user.role)) {
+    throw new Error("Only admin accounts can be suspended.");
   }
 
   if (user.accountStatus === "suspended") {
-    throw new Error("Manager is already suspended.");
+    throw new Error("Account is already suspended.");
   }
 
   user.accountStatus = "suspended";
 
   await user.save();
 
-  return user;
+  const userObject = user.toObject();
+  const { password, ...safeUser } = userObject;
+
+  return safeUser;
 };
 
-
+// 🔒 Delete: spec onujayi SHUDU Founder pare
 const deleteManagerByAdmin = async (id: string) => {
   const user = await User.findById(id);
 
@@ -124,8 +171,8 @@ const deleteManagerByAdmin = async (id: string) => {
     throw new Error("User not found.");
   }
 
-  if (user.role !== "manager") {
-    throw new Error("Only managers can be deleted.");
+  if (user.role === "founder") {
+    throw new Error("The Founder account cannot be deleted.");
   }
 
   await User.findByIdAndDelete(id);
@@ -133,4 +180,11 @@ const deleteManagerByAdmin = async (id: string) => {
   return null;
 };
 
-export const userService = { getAllUsersFromDB,getSingleUserFromDB,createManagerByAdmin,deleteManagerByAdmin,suspendManagerByAdmin ,activateManagerByAdmin};
+export const userService = {
+  getAllUsersFromDB,
+  getSingleUserFromDB,
+  createAdminAccount,
+  deleteManagerByAdmin,
+  suspendManagerByAdmin,
+  activateManagerByAdmin,
+};

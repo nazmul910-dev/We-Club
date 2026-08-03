@@ -27,7 +27,7 @@ const router = Router();
  *                   items:
  *                     $ref: '#/components/schemas/User'
  */
-router.get("/", userController.getAllUsers);  //verifyToken, authorizeRoles("ADMIN", "MANAGER" ),
+router.get("/", verifyToken, authorizeRoles("founder", "manager","admin","super_admin"), userController.getAllUsers);
 
 /**
  * @openapi
@@ -65,7 +65,7 @@ router.get("/:id", userController.getSingleUser);
 router.post(
   "/admin-create",
   verifyToken,
-  authorizeRoles("admin"),
+  authorizeRoles("founder","manager"),
   userController.createManagerByAdmin
 );
 
@@ -73,21 +73,21 @@ router.post(
 router.delete(
   "/:id",
   verifyToken,
-  authorizeRoles("admin"),
+  authorizeRoles("founder"),
   userController.deleteManagerByAdmin
 );
 
 router.patch(
   "/:id/suspend",
   verifyToken,
-  authorizeRoles("admin"),
+  authorizeRoles("founder","manager"),
   userController.suspendManagerByAdmin
 );
 
 router.patch(
   "/:id/activate",
   verifyToken,
-  authorizeRoles("admin"),
+  authorizeRoles("founder","manager"),
   userController.activateManagerByAdmin
 );
 

@@ -1,6 +1,9 @@
 import { Types } from 'mongoose';
 
 export const USER_ROLES = [
+    'founder',
+    'super_admin',
+    'community_manager',
     'admin',
     'manager',
     'ceo',

@@ -34,7 +34,7 @@ const updateUserApprovalStatus = async (
       validatedData.body,
       adminId
     );
-
+ 
     sendResponse(res, {
       statusCode: 200,
       success: true,
@@ -101,8 +101,28 @@ const updateUserAccountStatus = async (
   }
 };
 
+
+
+const userDeleteByFounder = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.params.id;
+
+    const result = await adminService.deleteUserIntoDB(userId as string);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: 'User deleted successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const adminController = {
   updateUserApprovalStatus,
   updateUserLicenseVerificationStatus,
   updateUserAccountStatus,
-};
+  userDeleteByFounder,
+}; 

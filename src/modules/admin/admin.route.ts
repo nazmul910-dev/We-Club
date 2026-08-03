@@ -45,7 +45,7 @@ const router = Router();
 router.patch(
   '/users/:id/approval-status',
   verifyToken,
-  authorizeRoles('admin', 'manager'),
+  authorizeRoles('admin'),
   adminController.updateUserApprovalStatus
 );
 
@@ -87,7 +87,7 @@ router.patch(
 router.patch(
   '/users/:id/license-verification-status',
   verifyToken,
-  authorizeRoles('admin', 'manager'),
+  authorizeRoles('admin', 'manager', 'founder'),
   adminController.updateUserLicenseVerificationStatus
 );
 
@@ -130,8 +130,16 @@ router.patch(
 router.patch(
   '/users/:id/account-status',
   verifyToken,
-  authorizeRoles('admin', 'manager'),
+  authorizeRoles('admin', 'manager', 'founder'),
   adminController.updateUserAccountStatus
+);
+
+
+router.delete(
+  '/users/:id',
+  verifyToken,
+  authorizeRoles('founder'),
+  adminController.userDeleteByFounder
 );
 
 export const adminRoutes = router;
