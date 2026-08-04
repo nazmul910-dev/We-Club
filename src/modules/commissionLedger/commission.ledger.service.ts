@@ -94,7 +94,7 @@ const toObjectId = (id: string): Types.ObjectId => {
 };
 
 const isAdminOrManager = (role: UserRole): boolean => {
-  return role === 'admin' || role === 'manager';
+  return role === 'founder' || role === 'manager';
 };
 
 const isSameId = (idA: unknown, idB: string): boolean => {
@@ -478,7 +478,16 @@ const markCommissionPaidIntoDB = async (
     { returnDocument: 'after', runValidators: true }
   );
 
-  return ensureCommissionExists(updatedCommission);
+  const safeUpdatedCommission = ensureCommissionExists(updatedCommission);
+
+  await Listing.findByIdAndUpdate(safeUpdatedCommission.listing_id, {
+    $set: {
+      status: "sold",
+      sold_at: new Date(),
+    },
+  });
+
+  return safeUpdatedCommission;
 };
 
 const confirmCommissionReceivedIntoDB = async (

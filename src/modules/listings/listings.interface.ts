@@ -48,6 +48,8 @@ export interface IListing {
   associate_id: Types.ObjectId;   
   promoters: Types.ObjectId[];  
   listings_view : number;
+  sold_at?: Date;
+  is_sale_finalized?: boolean;
   is_deleted : boolean;
   deleted_at? : Date;  
   created_at: Date;

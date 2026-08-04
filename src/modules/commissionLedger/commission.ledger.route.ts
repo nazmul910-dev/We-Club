@@ -39,7 +39,7 @@ router.use(verifyToken);
  */
 router.get(
   '/admin/all',
-  authorizeRoles('admin', 'manager'),
+  authorizeRoles('founder', 'manager'),
   commissionLedgerController.getAllCommissions
 );
 
@@ -83,7 +83,7 @@ router.get(
  */
 router.patch(
   '/admin/:id/resolve-dispute',
-  authorizeRoles('admin', 'manager'),
+  authorizeRoles('founder', 'manager'),
   commissionLedgerController.resolveCommissionDispute
 );
 
@@ -245,7 +245,7 @@ router.patch('/:id/confirm', commissionLedgerController.confirmCommission);
  *                 data:
  *                   $ref: '#/components/schemas/CommissionLedger'
  */
-router.patch('/:id/mark-paid', commissionLedgerController.markCommissionPaid);
+router.patch('/:id/mark-paid',verifyToken,authorizeRoles('founder', 'manager'), commissionLedgerController.markCommissionPaid);
 
 /**
  * @openapi

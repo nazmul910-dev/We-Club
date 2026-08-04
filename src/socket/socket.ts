@@ -88,7 +88,7 @@ export const initSocket = (httpServer: HttpServer) => {
       // send the current online users list to the newly connected socket only
       socket.emit("presence:list", Array.from(onlineUsers.keys()));
 
-      console.log(`Socket connected: ${socket.id} (user: ${userId})`);
+      // console.log(`Socket connected: ${socket.id} (user: ${userId})`);
 
       // socket.on("message:send", async (content: string) => {
       //   try {
@@ -102,18 +102,18 @@ export const initSocket = (httpServer: HttpServer) => {
       // });
       socket.on("message:send", async (content: string) => {
         try {
-          console.log(
-            "message:send received from",
-            userId,
-            "roomId:",
-            roomId,
-            "content:",
-            content,
-          );
+          // console.log(
+          //   "message:send received from",
+          //   userId,
+          //   "roomId:",
+          //   roomId,
+          //   "content:",
+          //   content,
+          // );
           if (!content || !content.trim()) return;
 
           const message = await createMessage(roomId, userId, content.trim());
-          console.log("message saved, broadcasting to room:", roomId);
+          // console.log("message saved, broadcasting to room:", roomId);
           io.to(roomId).emit("message:new", message);
         } catch (error) {
           console.error("message:send error:", error);

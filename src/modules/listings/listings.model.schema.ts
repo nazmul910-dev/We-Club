@@ -91,6 +91,9 @@ const ListingSchema = new Schema<IListing>(
       type: Number,
       default: 100,
     },
+    sold_at: {
+      type: Date,
+    },
     is_deleted: {
       type: Boolean,
       default: false,
@@ -102,8 +105,16 @@ const ListingSchema = new Schema<IListing>(
 
   {
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   },
 );
+
+ListingSchema.virtual('is_sale_finalized').get(function (this: any) {
+  if (this.status !== 'sold' || !this.sold_at) return false;
+  const finalizationMs = 30 * 24 * 60 * 60 * 1000;
+  return Date.now() - this.sold_at.getTime() >= finalizationMs;
+});
 
 // Indexes
 ListingSchema.index({ status: 1 });
@@ -111,6 +122,7 @@ ListingSchema.index({ "location.country": 1 });
 ListingSchema.index({ associate_id: 1 });
 // ListingSchema.index({ ref_code: 1 }, { unique: true });
 ListingSchema.index({ is_deleted: 1 });
+ListingSchema.index({ status: 1, sold_at: 1 });
 
 ListingSchema.pre(/^find/, function (this: any) {
   if (this.getFilter().is_deleted === undefined) {
