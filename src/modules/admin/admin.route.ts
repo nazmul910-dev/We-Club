@@ -45,7 +45,7 @@ const router = Router();
 router.patch(
   '/users/:id/approval-status',
   verifyToken,
-  authorizeRoles('admin'),
+  authorizeRoles('founder'),
   adminController.updateUserApprovalStatus
 );
 

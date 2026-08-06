@@ -18,6 +18,7 @@ const updateUserApprovalStatus = async (
       return next(new UnauthorizedError('Authentication required'));
     }
 
+
     const adminId = req.user.id;
 
     if (typeof adminId !== 'string') {

@@ -7,6 +7,17 @@ import { CommissionLedger } from "../commissionLedger/commission.ledger.model.sc
 import { UserRole } from "../users/user.interface";
 import { ListingViewStats } from "../listings/listings.viewsHistory.modal.schema";
 
+const FULL_ANALYTICS_ACCESS_ROLES: UserRole[] = [
+  "manager",
+  "founder",
+  // পরে প্রয়োজন হলে:
+  // "admin",
+  // "super_admin",
+];
+
+const hasFullAnalyticsAccess = (role: UserRole): boolean =>
+  FULL_ANALYTICS_ACCESS_ROLES.includes(role);
+
 const isAdminOrManager = (role: UserRole): boolean =>
   role === "admin" || role === "manager";
 
@@ -156,19 +167,67 @@ interface IChartData {
   value: number;
 }
 
-const getListingsViewsAnalytics = async () => {
+const getListingsViewsAnalytics = async (
+  userId: string,
+  role: UserRole,
+) => {
+  const ownerId = new Types.ObjectId(userId);
+  const canViewAllAnalytics = hasFullAnalyticsAccess(role);
+
+  /**
+   * Manager/Founder হলে সব listing।
+   * অন্য role হলে শুধু নিজের তৈরি listing।
+   */
+  const listingMatch: Record<string, unknown> = canViewAllAnalytics
+    ? {}
+    : {
+        associate_id: ownerId,
+      };
+
+  /**
+   * সাধারণ user-এর listing IDs বের করা হচ্ছে।
+   * ListingViewStats-এর data filter করতে এগুলো প্রয়োজন।
+   */
+  const listingIds = canViewAllAnalytics
+    ? []
+    : await Listing.distinct("_id", listingMatch);
+
+  /**
+   * গুরুত্বপূর্ণ:
+   * এখানে ধরে নেওয়া হয়েছে ListingViewStats schema-তে
+   * listing_id field রয়েছে।
+   */
+  const viewStatsMatch: Record<string, unknown> = canViewAllAnalytics
+    ? {}
+    : {
+        listing_id: {
+          $in: listingIds,
+        },
+      };
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  const endOfToday = new Date(today);
+  endOfToday.setHours(23, 59, 59, 999);
+
   /**
    * TOTAL VIEWS
+   *
+   * Manager/Founder = সব listing-এর views।
+   * অন্য user = নিজের listing-এর views।
    */
   const totalViewsResult = await Listing.aggregate([
+    {
+      $match: listingMatch,
+    },
     {
       $group: {
         _id: null,
         total: {
-          $sum: "$listings_view",
+          $sum: {
+            $ifNull: ["$listings_view", 0],
+          },
         },
       },
     },
@@ -179,7 +238,6 @@ const getListingsViewsAnalytics = async () => {
   /**
    * LAST 7 DAYS
    */
-
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 6);
 
@@ -190,17 +248,25 @@ const getListingsViewsAnalytics = async () => {
   const dailyResult = await ListingViewStats.aggregate([
     {
       $match: {
+        ...viewStatsMatch,
         date: {
           $gte: sevenDaysAgo,
-          $lte: today,
+          $lte: endOfToday,
         },
       },
     },
     {
       $group: {
-        _id: "$date",
+        _id: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$date",
+          },
+        },
         value: {
-          $sum: "$views",
+          $sum: {
+            $ifNull: ["$views", 0],
+          },
         },
       },
     },
@@ -215,9 +281,13 @@ const getListingsViewsAnalytics = async () => {
     const date = new Date(sevenDaysAgo);
     date.setDate(sevenDaysAgo.getDate() + i);
 
-    const found = dailyResult.find(
-      (item) => new Date(item._id).toDateString() === date.toDateString(),
-    );
+    const dateKey = [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, "0"),
+      String(date.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    const found = dailyResult.find((item) => item._id === dateKey);
 
     daily.push({
       label: date.toLocaleDateString("en-US", {
@@ -230,19 +300,19 @@ const getListingsViewsAnalytics = async () => {
   /**
    * LAST 4 WEEKS
    */
-
   for (let week = 3; week >= 0; week--) {
     const start = new Date(today);
-
     start.setDate(today.getDate() - week * 7 - 6);
+    start.setHours(0, 0, 0, 0);
 
     const end = new Date(today);
-
     end.setDate(today.getDate() - week * 7);
+    end.setHours(23, 59, 59, 999);
 
     const result = await ListingViewStats.aggregate([
       {
         $match: {
+          ...viewStatsMatch,
           date: {
             $gte: start,
             $lte: end,
@@ -253,7 +323,9 @@ const getListingsViewsAnalytics = async () => {
         $group: {
           _id: null,
           total: {
-            $sum: "$views",
+            $sum: {
+              $ifNull: ["$views", 0],
+            },
           },
         },
       },
@@ -268,17 +340,27 @@ const getListingsViewsAnalytics = async () => {
   /**
    * LAST 6 MONTHS
    */
-
   for (let i = 5; i >= 0; i--) {
-    const start = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const start = new Date(
+      today.getFullYear(),
+      today.getMonth() - i,
+      1,
+    );
 
-    const end = new Date(today.getFullYear(), today.getMonth() - i + 1, 0);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(
+      today.getFullYear(),
+      today.getMonth() - i + 1,
+      0,
+    );
 
     end.setHours(23, 59, 59, 999);
 
     const result = await ListingViewStats.aggregate([
       {
         $match: {
+          ...viewStatsMatch,
           date: {
             $gte: start,
             $lte: end,
@@ -289,7 +371,9 @@ const getListingsViewsAnalytics = async () => {
         $group: {
           _id: null,
           total: {
-            $sum: "$views",
+            $sum: {
+              $ifNull: ["$views", 0],
+            },
           },
         },
       },
@@ -304,25 +388,24 @@ const getListingsViewsAnalytics = async () => {
   }
 
   /**
-   * Average
+   * DAILY AVERAGE
    */
-
   const average =
-    daily.reduce((sum, item) => sum + item.value, 0) / daily.length;
+    daily.length > 0
+      ? daily.reduce((sum, item) => sum + item.value, 0) / daily.length
+      : 0;
 
   /**
-   * Growth
+   * GROWTH
    */
-
   let growth = 0;
 
-  if (daily.length >= 2) {
-    const firstDay = daily[0];
-    const lastDay = daily[daily.length - 1];
+  const firstDay = daily[0];
+  const lastDay = daily[daily.length - 1];
 
-    if (firstDay && lastDay && firstDay.value > 0) {
-      growth = ((lastDay.value - firstDay.value) / firstDay.value) * 100;
-    }
+  if (firstDay && lastDay && firstDay.value > 0) {
+    growth =
+      ((lastDay.value - firstDay.value) / firstDay.value) * 100;
   }
 
   return {

@@ -50,7 +50,19 @@ const getListingsViewsAnaliticsController = async (
   next: NextFunction,
 ) => {
   try {
-    const result = await dashboardService.getListingsViewsAnalytics();
+    const user = req.user;
+    if (!user || !user.id) {
+      throw new Error("User not authenticated");
+    }
+
+    const userId = user.id as string;
+    const role = user.role;
+
+    const result =
+      await dashboardService.getListingsViewsAnalytics(
+        userId,
+        role,
+      );
 
     sendResponse(res, {
       success: true,

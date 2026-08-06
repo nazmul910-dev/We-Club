@@ -32,7 +32,7 @@ const getDefaultProfileImage = (): string => {
 const formatProfileResponse = <T extends Record<string, any>>(user: T) => {
   return {
     ...user,
-    profileImage: user.profileImage || getDefaultProfileImage(),
+    profileImage: user.profileImage ,  //  || getDefaultProfileImage()
   };
 };
 
