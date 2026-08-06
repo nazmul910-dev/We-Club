@@ -89,7 +89,7 @@ const ListingSchema = new Schema<IListing>(
     },
     listings_view: {
       type: Number,
-      default: 100,
+      default: 0,
     },
     sold_at: {
       type: Date,

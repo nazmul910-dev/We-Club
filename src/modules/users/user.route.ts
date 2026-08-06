@@ -27,7 +27,7 @@ const router = Router();
  *                   items:
  *                     $ref: '#/components/schemas/User'
  */
-router.get("/", verifyToken, authorizeRoles("founder", "manager","admin","super_admin"), userController.getAllUsers);
+router.get("/", verifyToken, userController.getAllUsers);  //, authorizeRoles("founder", "manager","admin","super_admin"),
 
 /**
  * @openapi

@@ -19,7 +19,7 @@ const hasFullAnalyticsAccess = (role: UserRole): boolean =>
   FULL_ANALYTICS_ACCESS_ROLES.includes(role);
 
 const isAdminOrManager = (role: UserRole): boolean =>
-  role === "admin" || role === "manager";
+  role === "manager" || role === "founder" ;
 
 const getDashboardStats = async (
   userId: string,
@@ -192,6 +192,37 @@ const getListingsViewsAnalytics = async (
     ? []
     : await Listing.distinct("_id", listingMatch);
 
+
+//     console.log("Analytics debug:", {
+//   role,
+//   userId,
+//   canViewAllAnalytics,
+//   listingIds: listingIds.map((id) => id.toString()),
+// });
+
+// const userViewStats = await ListingViewStats.find(
+//   canViewAllAnalytics
+//     ? {}
+//     : {
+//         listing_id: {
+//           $in: listingIds,
+//         },
+//       },
+// )
+//   .select("listing_id date views")
+//   .lean();
+
+// console.log("Matched ListingViewStats:", userViewStats);
+
+
+// const sampleViewStats = await ListingViewStats.findOne().lean();
+
+// console.log("Sample ListingViewStats:", sampleViewStats);
+// console.log(
+//   "listing_id type:",
+//   sampleViewStats?.listing_id?.constructor?.name,
+// );
+
   /**
    * গুরুত্বপূর্ণ:
    * এখানে ধরে নেওয়া হয়েছে ListingViewStats schema-তে
@@ -200,7 +231,7 @@ const getListingsViewsAnalytics = async (
   const viewStatsMatch: Record<string, unknown> = canViewAllAnalytics
     ? {}
     : {
-        listing_id: {
+        listing: {
           $in: listingIds,
         },
       };
