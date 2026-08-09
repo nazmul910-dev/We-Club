@@ -251,6 +251,7 @@ export const loginUser = async (payload: unknown) => {
     email: user.email,
     role: user.role,
     accessTo: user.accessTo,
+    membershipAccessStatus: user.membershipAccessStatus,
   };
 
   const accessToken = jwt.sign(

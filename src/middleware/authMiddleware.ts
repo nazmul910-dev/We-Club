@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import  jwt from "jsonwebtoken";
 import config from "../config";
-import { UserRole,AccessTo } from "../modules/users/user.interface";
+import { UserRole, AccessTo, MembershipAccessStatus } from "../modules/users/user.interface";
 import { UnauthorizedError, ForbiddenError } from "../utility/errorResponses";
 
 interface JwtPayloadWithRole extends jwt.JwtPayload {
@@ -9,7 +9,7 @@ interface JwtPayloadWithRole extends jwt.JwtPayload {
   email: string;
   role: UserRole;
   accessTo?: AccessTo;
-  // membershipAccessStatus:membershipAccessStatus as string;
+  membershipAccessStatus?: MembershipAccessStatus;
 }
 
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
@@ -35,6 +35,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
       email: decoded.email,
       role: decoded.role,
       accessTo: decoded.accessTo,
+      membershipAccessStatus: decoded.membershipAccessStatus
     };
 
     return next();
