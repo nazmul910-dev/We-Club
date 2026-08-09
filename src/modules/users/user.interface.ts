@@ -20,6 +20,12 @@ export const ACCESS_TO_OPTIONS = [
   'both',
 ] as const;
 
+
+export const MEMBERSHIP_DURATIONS = [3, 6, 12] as const;
+
+export type MembershipDurationMonths =
+  (typeof MEMBERSHIP_DURATIONS)[number];
+
 export const PAYMENT_STATUSES = [
     'unpaid',
     'paid',
@@ -60,6 +66,15 @@ export const SUBSCRIPTION_STATUSES = [
 ] as const;
 
 
+export const MEMBERSHIP_ACCESS_STATUSES = [
+  'pending',
+  'active',
+  'expired',
+] as const;
+
+export type MembershipAccessStatus =
+  (typeof MEMBERSHIP_ACCESS_STATUSES)[number];
+
 export type AccessTo = (typeof ACCESS_TO_OPTIONS)[number];
 export type UserRole = (typeof USER_ROLES)[number];
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
@@ -84,6 +99,9 @@ export interface IUser {
     role: UserRole;
     accessTo: AccessTo ;
 
+    membershipDurationMonths?: MembershipDurationMonths;
+    membershipAccessStatus: MembershipAccessStatus;
+    
     licenseNumber?: string | undefined;
     brokerage?: string | undefined;
     phone?: string | undefined;

@@ -1,5 +1,8 @@
 import { Types } from 'mongoose';
 import { UserRole,AccessTo } from '../users/user.interface';
+import {
+  MembershipDurationMonths,
+} from '../users/user.interface';
 
 export const PAYMENT_PURPOSES = ['registration', 'upgrade'] as const;
 
@@ -21,6 +24,7 @@ export interface IPaymentSession {
   role: UserRole;
   accessTo: AccessTo;
 
+  durationMonths: MembershipDurationMonths;
 
   purpose: PaymentPurpose;
   status: PaymentSessionStatus;
@@ -29,7 +33,7 @@ export interface IPaymentSession {
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
 
-  checkoutUrl?: string;
+  checkoutUrl?: string ;
 
   amountTotal?: number;
   originalAmountTotal?: number;

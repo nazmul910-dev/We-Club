@@ -1,10 +1,21 @@
 import { z } from 'zod';
 
-export const createUpgradeCheckoutValidation = z.object({
-  body: z.object({
-    discountCode: z.string().trim().max(50).optional(),
-  }).optional(),
-});
+export const createUpgradeCheckoutValidation =
+  z.object({
+    body: z.object({
+      durationMonths: z.union([
+        z.literal(3),
+        z.literal(6),
+        z.literal(12),
+      ]),
+
+      discountCode: z
+        .string()
+        .trim()
+        .max(50)
+        .optional(),
+    }),
+  });
 
 export const paymentRolePricingValidation = z.object({
   params: z.object({

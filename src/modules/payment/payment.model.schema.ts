@@ -32,6 +32,11 @@ const PaymentSessionSchema = new Schema<IPaymentSession>(
       required: true,
     },
 
+    durationMonths: {
+  type: Number,
+  enum: [3, 6, 12],
+  required: true,
+},
     status: {
       type: String,
       enum: PAYMENT_SESSION_STATUSES,

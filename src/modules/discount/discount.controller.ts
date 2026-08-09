@@ -116,9 +116,35 @@ const sendDiscountCodeEmail = async (
   }
 };
 
+const deleteDiscountCode = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const id = req.params.id;
+
+    if (!id) {
+      throw new Error('Discount code ID is required');
+    }
+
+    const result = await discountService.deleteDiscountCodeFromDB(id as string);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: 'Discount code deleted successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const discountController = {
   createDiscountCode,
   getAllDiscountCodes,
   validateDiscountCode,
   sendDiscountCodeEmail,
+  deleteDiscountCode,
 };

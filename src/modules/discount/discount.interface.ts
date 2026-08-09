@@ -10,7 +10,7 @@ export interface IDiscountCode {
   allowedRoles?: UserRole[];
   allowedAccessTo?: AccessTo[];
 
-  maxRedemptionsPerRole: number;
+  maxRedemptions: number;
 
   expiresAt?: Date;
 
@@ -28,8 +28,8 @@ export interface IDiscountRedemption {
   code: string;
 
   user: Types.ObjectId;
-  role: UserRole;
-  accessTo: AccessTo;
+  role?: UserRole;
+  accessTo?: AccessTo;
 
   stripeCheckoutSessionId: string;
 

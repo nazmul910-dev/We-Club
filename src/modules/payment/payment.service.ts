@@ -2,15 +2,25 @@ import Stripe from 'stripe';
 import config from '../../config';
 import { sendCalendlyMeetingMail } from '../../utility/sendCalendlyMeeting';
 import { User } from '../users/users.model.schema';
-import { UserRole,AccessTo } from '../users/user.interface';
+import { UserRole,AccessTo,MembershipDurationMonths, } from '../users/user.interface';
 import { PaymentSession } from './payment.model.schema';
 import { discountService } from '../discount/discount.service';
+
 import {
   applyDiscountToPricingPlan,
   getAllPricingPlans,
   getPricingByRoleAndAccess,
   isPaidRole,
 } from './payment.pricing';
+
+import {
+  RegistrationPaymentLink,
+} from './registrationPaymentLink.model';
+
+import assertFound from '../../utility/assertFound';
+import { syncMembershipExpiry } from '../../utility/membership/membership.service';
+import { sendRegistrationPaymentLinkMail } from '../../utility/sendRegistrationPaymentLinkMail ';
+
 
 
 
@@ -64,6 +74,24 @@ const getPricingPlanByRoleAndAccess = (
 ) => {
   return getPricingByRoleAndAccess(role, accessTo);
 };
+
+
+const addMonths = (
+  date: Date,
+  months: number
+): Date => {
+  const result =
+    new Date(date);
+
+  result.setUTCMonth(
+    result.getUTCMonth() +
+    months
+  );
+
+  return result;
+};
+
+
 
 const createCheckoutSession = async ({
   userId,
@@ -160,7 +188,7 @@ const createCheckoutSession = async ({
     sessionCreateParams.customer_email = email;
   }
 
-  // FIX 1: use getStripeClient() instead of the raw nullable `stripe` variable
+
   const stripeClient = getStripeClient();
 
   const session = await stripeClient.checkout.sessions.create(sessionCreateParams as any);
@@ -214,8 +242,426 @@ const createCheckoutSession = async ({
   };
 };
 
+const getRegistrationPaymentDetails = async (
+  token: string
+) => {
+  const paymentLink =
+    await RegistrationPaymentLink.findOne({
+      token,
+      status: {
+        $in: ['active', 'checkout_created'],
+      },
+    });
+
+  if (!paymentLink) {
+    throwError(
+      'Payment link is invalid or expired',
+      404
+    );
+  }
+
+  const user = await User.findById(
+    paymentLink!.user
+  ).select(
+    'fullName email role accessTo membershipDurationMonths paymentStatus subscriptionStatus approvalStatus accountStatus'
+  );
+  assertFound(user, 'User not found', 404);
+
+
+  if (!user) {
+    throwError(
+      'User not found',
+      404
+    );
+  }
+
+  assertFound(user, 'User not found', 404);
+
+  if (user.paymentStatus === 'paid') {
+    return {
+      alreadyPaid: true,
+
+      user: {
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        accessTo: user.accessTo,
+        durationMonths:
+          user.membershipDurationMonths,
+      },
+
+      paymentStatus:
+        user.paymentStatus,
+
+      message:
+        'Payment has already been completed.',
+    };
+  }
+
+  if (!user.membershipDurationMonths) {
+    throwError(
+      'Membership duration is missing',
+      400
+    );
+  }
+
+  const pricing =
+    getPricingByRoleAndAccess(
+      user.role,
+      user.accessTo,
+      user.membershipDurationMonths as MembershipDurationMonths
+    );
+
+  return {
+    alreadyPaid: false,
+
+    user: {
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      accessTo: user.accessTo,
+
+      durationMonths:
+        user.membershipDurationMonths,
+    },
+
+    pricing,
+
+    paymentStatus:
+      user.paymentStatus,
+  };
+};
+
+const createRegistrationCheckoutByToken = async (
+  token: string,
+  discountCode?: string
+) => {
+  const paymentLink =
+    await RegistrationPaymentLink.findOne({
+      token,
+
+      status: {
+        $in: [
+          'active',
+          'checkout_created',
+        ],
+      },
+    });
+
+  if (!paymentLink) {
+    throwError(
+      'Invalid or expired payment link',
+      404
+    );
+  }
+
+  const user =
+    await User.findById(
+      paymentLink!.user
+    ).select('-password');
+
+  if (!user) {
+    throwError(
+      'User not found',
+      404
+    );
+  }
+  
+  assertFound(user, 'User not found', 404);
+
+  if (
+    user.paymentStatus === 'paid'
+  ) {
+    throwError(
+      'Payment has already been completed',
+      400
+    );
+  }
+
+  if (
+    !user.membershipDurationMonths
+  ) {
+    throwError(
+      'Membership duration is missing',
+      400
+    );
+  }
+
+  const durationMonths =
+    user.membershipDurationMonths as MembershipDurationMonths;
+
+  const originalPricing =
+    getPricingByRoleAndAccess(
+      user.role,
+      user.accessTo,
+      durationMonths
+    );
+
+  const discount =
+    await discountService
+      .validateDiscountCodeForCheckout({
+        code:
+          discountCode,
+
+        role:
+          user.role,
+
+        accessTo:
+          user.accessTo,
+
+        userId:
+          String(user._id),
+      });
+
+  const finalPricing =
+    discount
+      ? applyDiscountToPricingPlan(
+          originalPricing,
+          discount.discountPercent
+        )
+      : originalPricing;
+
+  const stripeClient =
+    getStripeClient();
+
+  const session =
+    await stripeClient.checkout.sessions.create({
+      mode: 'payment',
+
+      customer_email:
+        user.email,
+
+      client_reference_id:
+        String(user._id),
+
+      line_items:
+        finalPricing.items.map(
+          item => ({
+            quantity: 1,
+
+            price_data: {
+              currency:
+                item.currency,
+
+              unit_amount:
+                item.amountCents,
+
+              product_data: {
+                name:
+                  item.name,
+
+                description:
+                  item.description,
+              },
+            },
+          })
+        ),
+
+      success_url:
+        `${config.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+
+      cancel_url:
+        `${config.FRONTEND_URL}/payment/registration/${token}`,
+
+      metadata: {
+        userId:
+          String(user._id),
+
+        role:
+          user.role,
+
+        accessTo:
+          user.accessTo,
+
+        purpose:
+          'registration',
+
+        durationMonths:
+          String(durationMonths),
+
+        paymentLinkId:
+          String(paymentLink!._id),
+
+        originalAmountCents:
+          String(
+            originalPricing
+              .totalFirstPaymentCents
+          ),
+
+        finalAmountCents:
+          String(
+            finalPricing
+              .totalFirstPaymentCents
+          ),
+
+        discountCode:
+          discount?.code || '',
+
+        discountPercent:
+          String(
+            discount?.discountPercent ||
+            0
+          ),
+      },
+    });
+
+  if (!session.url) {
+    throwError(
+      'Stripe checkout URL was not created',
+      500
+    );
+  }
+
+
+
+  await PaymentSession.create({
+    user:
+      user._id,
+
+    role:
+      user.role,
+
+    accessTo:
+      user.accessTo,
+
+    durationMonths,
+
+    purpose:
+      'registration',
+
+    status:
+      'pending',
+
+    stripeCheckoutSessionId:
+      session.id,
+
+    checkoutUrl:
+      session.url,
+
+    amountTotal:
+      finalPricing
+        .totalFirstPaymentCents,
+
+    originalAmountTotal:
+      originalPricing
+        .totalFirstPaymentCents,
+
+    discountAmountTotal:
+      originalPricing
+        .totalFirstPaymentCents -
+      finalPricing
+        .totalFirstPaymentCents,
+
+    discountCode:
+      discount?.code,
+
+    discountPercent:
+      discount?.discountPercent,
+
+    currency:
+      'usd',
+  } as any);
+
+  await RegistrationPaymentLink.findByIdAndUpdate(
+    paymentLink!._id,
+    {
+      $set: {
+        status:
+          'checkout_created',
+
+        stripeCheckoutSessionId:
+          session.id,
+      },
+    }
+  );
+
+  await User.findByIdAndUpdate(
+    user._id,
+    {
+      $set: {
+        stripeCheckoutSessionId:
+          session.id,
+
+        subscriptionStatus:
+          'incomplete',
+      },
+    }
+  );
+
+  return {
+    checkoutUrl:
+      session.url,
+
+    sessionId:
+      session.id,
+
+    user: {
+      fullName:
+        user.fullName,
+
+      email:
+        user.email,
+
+      role:
+        user.role,
+
+      accessTo:
+        user.accessTo,
+
+      durationMonths,
+    },
+
+    originalPricing,
+
+    pricing:
+      finalPricing,
+
+    discount,
+  };
+};
+
+const getPendingRegistrationPayments =
+  async () => {
+
+  const links =
+    await RegistrationPaymentLink
+      .find({
+        status: {
+          $in: [
+            'active',
+            'checkout_created',
+          ],
+        },
+      })
+
+      .populate({
+        path: 'user',
+
+        select:
+          'fullName email phone city country brokerage role accessTo membershipDurationMonths paymentStatus subscriptionStatus approvalStatus accountStatus createdAt',
+      })
+
+      .sort({
+        createdAt: -1,
+      })
+
+      .lean();
+
+  return links
+    .filter(
+      link => link.user
+    )
+    .map(link => ({
+      ...link,
+
+      paymentLink:
+        `${config.FRONTEND_URL}/payment/registration/${link.token}`,
+    }));
+};
+
 const createUpgradeCheckoutSessionIntoStripe = async (
   userId: string,
+  durationMonths: MembershipDurationMonths,
   discountCode?: string
 ) => {
   const user = await User.findById(userId).select('-password');
@@ -224,16 +670,124 @@ const createUpgradeCheckoutSessionIntoStripe = async (
     throwError('User not found', 404);
   }
 
-  return createCheckoutSession({
-    userId: String(user!._id),
-    fullName: user!.fullName,
-    email: user!.email,
-    role: user!.role,
-    accessTo: user!.accessTo,
-    purpose: 'upgrade',
-    discountCode,
-    stripeCustomerId: user!.stripeCustomerId,
+  const currentUser = user!;
+
+  // Upgrade only after expiry
+  if (currentUser.membershipAccessStatus !== 'expired') {
+    throwError('Your current membership is still active.', 400);
+  }
+
+  if (
+    currentUser.approvalStatus !== 'approved' ||
+    currentUser.accountStatus !== 'active'
+  ) {
+    throwError('Your account is not eligible for membership renewal.', 403);
+  }
+
+  let resolvedDuration: MembershipDurationMonths = durationMonths;
+
+  // CEO / CEO Partner always 12 months
+  if (currentUser.role === 'ceo' || currentUser.role === 'ceo_partner') {
+    resolvedDuration = 12;
+  }
+
+  const originalPricing = getPricingByRoleAndAccess(
+    currentUser.role,
+    currentUser.accessTo,
+    resolvedDuration
+  );
+
+  const discount = await discountService.validateDiscountCodeForCheckout({
+    code: discountCode,
+    role: currentUser.role,
+    accessTo: currentUser.accessTo,
+    userId: String(currentUser._id),
   });
+
+  const finalPricing = discount
+    ? applyDiscountToPricingPlan(originalPricing, discount.discountPercent)
+    : originalPricing;
+
+  const stripeClient = getStripeClient();
+
+  const session = await stripeClient.checkout.sessions.create({
+    mode: 'payment',
+
+    customer: currentUser.stripeCustomerId || undefined,
+    customer_email: currentUser.stripeCustomerId ? undefined : currentUser.email,
+
+    client_reference_id: String(currentUser._id),
+
+    line_items: finalPricing.items.map((item) => ({
+      quantity: 1,
+      price_data: {
+        currency: item.currency,
+        unit_amount: item.amountCents,
+        product_data: {
+          name: item.name,
+          description: `${resolvedDuration} month membership renewal`,
+        },
+      },
+    })),
+
+    success_url: `${config.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config.FRONTEND_URL}/upgrade-plan`,
+
+    metadata: {
+      userId: String(currentUser._id),
+      role: currentUser.role,
+      accessTo: currentUser.accessTo,
+      purpose: 'upgrade',
+      durationMonths: String(resolvedDuration),
+      originalAmountCents: String(originalPricing.totalFirstPaymentCents),
+      finalAmountCents: String(finalPricing.totalFirstPaymentCents),
+      discountCode: discount?.code || '',
+      discountPercent: String(discount?.discountPercent ?? 0),
+    },
+  } as any);
+
+  if (!session.url) {
+    throwError('Stripe Checkout session could not be created.', 500);
+  }
+
+  await PaymentSession.create(
+    stripUndefined({
+      user: currentUser._id,
+      role: currentUser.role,
+      accessTo: currentUser.accessTo,
+      durationMonths: resolvedDuration,
+      purpose: 'upgrade',
+      status: 'pending',
+      stripeCheckoutSessionId: session.id,
+      checkoutUrl: session.url ?? undefined,
+      amountTotal: finalPricing.totalFirstPaymentCents,
+      originalAmountTotal: originalPricing.totalFirstPaymentCents,
+      discountAmountTotal:
+        originalPricing.totalFirstPaymentCents -
+        finalPricing.totalFirstPaymentCents,
+      discountCode: discount?.code,
+      discountPercent: discount?.discountPercent,
+      currency: 'usd',
+    }) as any
+  );
+
+  await User.findByIdAndUpdate(currentUser._id, {
+    $set: {
+      stripeCheckoutSessionId: session.id,
+      subscriptionStatus: 'incomplete',
+    },
+  });
+
+  return {
+    checkoutUrl: session.url ?? null,
+    sessionId: session.id,
+    role: currentUser.role,
+    accessTo: currentUser.accessTo,
+    durationMonths: resolvedDuration,
+    pricing: finalPricing,
+    originalPricing,
+    discount,
+  };
 };
 
 const getSubscriptionPeriodEnd = (
@@ -250,151 +804,266 @@ const getSubscriptionPeriodEnd = (
   return new Date(subscriptionWithPeriod.current_period_end * 1000);
 };
 
-const activateUserSubscription = async (
+const activateRegistrationPayment =
+async (
   session: Stripe.Checkout.Session
 ) => {
-  const userId = session.metadata?.userId;
-  const role = session.metadata?.role as UserRole | undefined;
-  const accessTo = session.metadata?.accessTo as AccessTo | undefined;
-  const purpose = session.metadata?.purpose as CheckoutPurpose | undefined;
-  const discountCode = session.metadata?.discountCode || undefined;
+  const userId =
+    session.metadata?.userId;
 
-  if (!userId || !role || !accessTo || !purpose) {
-    throwError('Stripe session metadata is missing', 400);
+  const durationMonths =
+    Number(
+      session.metadata?.durationMonths
+    ) as MembershipDurationMonths;
+
+  const discountCode =
+    session.metadata?.discountCode ||
+    undefined;
+
+  if (
+    !userId ||
+    ![3, 6, 12].includes(
+      durationMonths
+    )
+  ) {
+    throwError(
+      'Invalid Stripe payment metadata',
+      400
+    );
   }
 
-  const userIdVal = userId as string;
-  const roleVal = role as UserRole;
-  const accessToVal = accessTo as AccessTo;
-  const purposeVal = purpose as CheckoutPurpose;
+   const paymentSession =
+    await PaymentSession.findOne({
+      stripeCheckoutSessionId:
+        session.id,
+    });
 
-  const subscriptionId =
-    typeof session.subscription === 'string'
-      ? session.subscription
-      : session.subscription?.id;
+  if (
+    paymentSession?.status === 'paid'
+  ) {
+    return User.findById(
+      paymentSession.user
+    );
+  }
+
+  const existingUser =
+    await User.findById(userId);
+
+
+  if (!existingUser) {
+    throwError(
+      'User not found',
+      404
+    );
+  }
+
+  const now =
+    new Date();
+
+  const expiresAt =
+    addMonths(
+      now,
+      durationMonths
+    );
 
   const customerId =
     typeof session.customer === 'string'
       ? session.customer
       : session.customer?.id;
 
-  let subscriptionExpiresAt: Date | undefined;
+  const accountStatus =
+    existingUser!.approvalStatus ===
+    'approved'
+      ? 'active'
+      : 'pending_approval';
 
-  const stripeClient = getStripeClient();
+  const updatePayload:
+    Record<string, unknown> = {
+      paymentStatus:
+        'paid',
 
-  if (subscriptionId) {
-    const subscription =
-      await stripeClient.subscriptions.retrieve(subscriptionId);
+      subscriptionStatus:
+        'active',
 
-    subscriptionExpiresAt = getSubscriptionPeriodEnd(subscription);
+      accountStatus,
+
+      subscriptionStartAt:
+        now,
+
+      subscriptionExpiresAt:
+        expiresAt,
+
+      stripeCheckoutSessionId:
+        session.id,
+    };
+
+  if (customerId) {
+    updatePayload.stripeCustomerId =
+      customerId;
   }
 
-  const userSetPayload: Record<string, unknown> = {
+  const user =
+    await User.findByIdAndUpdate(
+      userId as string,
+      {
+        $set:
+          updatePayload,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+  await PaymentSession
+    .findOneAndUpdate(
+      {
+        stripeCheckoutSessionId:
+          session.id,
+      },
+      {
+        $set: {
+          status:
+            'paid',
+
+          amountTotal:
+            session.amount_total ??
+            undefined,
+
+          currency:
+            session.currency ??
+            'usd',
+        },
+      }
+    );
+
+  await RegistrationPaymentLink
+    .findOneAndUpdate(
+      {
+        stripeCheckoutSessionId:
+          session.id,
+      },
+      {
+        $set: {
+          status:
+            'paid',
+
+          paidAt:
+            new Date(),
+        },
+      }
+    );
+
+  if (discountCode) {
+    await discountService
+      .redeemDiscountCodeAfterPayment({
+        code:
+          discountCode,
+
+        userId : userId as string,
+
+        role:
+          existingUser!.role,
+
+        accessTo:
+          existingUser!.accessTo,
+
+        stripeCheckoutSessionId:
+          session.id,
+      });
+  }
+
+  return user;
+};
+
+const activateUpgradePayment = async (
+  session: Stripe.Checkout.Session
+) => {
+  const userId = session.metadata?.userId;
+
+  const durationMonths = Number(
+    session.metadata?.durationMonths
+  ) as MembershipDurationMonths;
+
+  const discountCode =
+    session.metadata?.discountCode || undefined;
+
+  if (!userId) {
+    throwError('User ID missing from payment metadata.', 400);
+  }
+
+  if (![3, 6, 12].includes(durationMonths)) {
+    throwError('Invalid membership duration.', 400);
+  }
+
+  const existingPayment = await PaymentSession.findOne({
+    stripeCheckoutSessionId: session.id,
+  });
+
+  if (existingPayment?.status === 'paid') {
+    return User.findById(userId);
+  }
+
+  const user = await User.findById(userId);
+
+  assertFound(user, 'User not found.', 404);
+
+  const now = new Date();
+  const expiresAt = addMonths(now, durationMonths);
+
+  const customerId =
+    typeof session.customer === 'string'
+      ? session.customer
+      : session.customer?.id;
+
+  const updatePayload: Record<string, unknown> = {
+    membershipDurationMonths: durationMonths,
+    membershipAccessStatus: 'active',
     paymentStatus: 'paid',
     subscriptionStatus: 'active',
-    accessTo: accessToVal,
-    stripeCheckoutSessionId: session.id,
-    subscriptionStartAt: new Date(),
+    subscriptionStartAt: now,
+    subscriptionExpiresAt: expiresAt,
   };
 
   if (customerId) {
-    userSetPayload.stripeCustomerId = customerId;
+    updatePayload.stripeCustomerId = customerId;
   }
 
-  if (subscriptionId) {
-    userSetPayload.stripeSubscriptionId = subscriptionId;
-  }
-
-  if (subscriptionExpiresAt) {
-    userSetPayload.subscriptionExpiresAt = subscriptionExpiresAt;
-  }
-
-  if (purposeVal === 'registration') {
-    userSetPayload.accountStatus = 'pending_approval';
-  }
-
-  const user = await User.findByIdAndUpdate(
-    userIdVal,
+  await User.findByIdAndUpdate(
+    userId,
     {
-      $set: userSetPayload,
+      $set: updatePayload,
     },
     {
-      returnDocument: 'after',
+      new: true,
       runValidators: true,
     }
-  ).select('-password');
-
-  if (!user) {
-    throwError('User not found while activating subscription', 404);
-  }
-
-  const currentUser = user as NonNullable<typeof user>;
-
-  const paymentSetPayload: Record<string, unknown> = {
-    status: 'paid',
-    amountTotal:
-      session.amount_total ||
-      Number(session.metadata?.finalAmountCents) ||
-      Number(session.metadata?.totalFirstPaymentCents) ||
-      undefined,
-    originalAmountTotal:
-      Number(session.metadata?.originalAmountCents) || undefined,
-    discountAmountTotal:
-      Number(session.metadata?.originalAmountCents || 0) -
-        Number(session.metadata?.finalAmountCents || 0) || undefined,
-    discountCode: discountCode || undefined,
-    discountPercent:
-      Number(session.metadata?.discountPercent) || undefined,
-    currency: session.currency || 'usd',
-  };
-
-  if (customerId) {
-    paymentSetPayload.stripeCustomerId = customerId;
-  }
-
-  if (subscriptionId) {
-    paymentSetPayload.stripeSubscriptionId = subscriptionId;
-  }
+  );
 
   await PaymentSession.findOneAndUpdate(
     {
       stripeCheckoutSessionId: session.id,
     },
     {
-      $set: paymentSetPayload,
-    },
-    {
-      returnDocument: 'after',
-      runValidators: true,
+      $set: {
+        status: 'paid',
+        amountTotal: session.amount_total ?? undefined,
+        currency: session.currency ?? 'usd',
+      },
     }
   );
 
   if (discountCode) {
     await discountService.redeemDiscountCodeAfterPayment({
       code: discountCode,
-      userId: userIdVal,
-      role: roleVal,
-      accessTo: accessToVal,
+      userId: userId as string,
+      role: user.role,
+      accessTo: user.accessTo,
       stripeCheckoutSessionId: session.id,
     });
   }
 
-  if (purposeVal === 'registration') {
-    try {
-      await sendCalendlyMeetingMail({
-        fullName: currentUser.fullName,
-        email: currentUser.email,
-        role: currentUser.role,
-      });
-    } catch (error) {
-      console.error(
-        'Calendly meeting email failed:',
-        error instanceof Error ? error.message : error
-      );
-    }
-  }
-
-  return user;
+  return User.findById(userId);
 };
 
 const handleCheckoutSessionCompleted = async (
@@ -408,7 +1077,19 @@ const handleCheckoutSessionCompleted = async (
     return;
   }
 
-  await activateUserSubscription(session);
+  const purpose = session.metadata?.purpose as CheckoutPurpose | undefined;
+
+  if (purpose === 'registration') {
+    await activateRegistrationPayment(session);
+    return;
+  }
+
+  if (purpose === 'upgrade') {
+    await activateUpgradePayment(session);
+    return;
+  }
+
+  throwError('Stripe session purpose is missing or invalid', 400);
 };
 
 const getInvoiceSubscriptionId = (
@@ -527,13 +1208,18 @@ const handleStripeWebhook = async (
   rawBody: Buffer,
   signature: string | string[] | undefined
 ) => {
-  const stripeSignatureValue = Array.isArray(signature) ? signature[0] : signature;
 
-  if (typeof stripeSignatureValue !== 'string' || !stripeSignatureValue.trim()) {
+  const stripeSignatureValue = Array.isArray(signature)
+    ? signature[0]
+    : signature;
+
+  if (
+    typeof stripeSignatureValue !== 'string' ||
+    !stripeSignatureValue.trim()
+  ) {
     throwError('Stripe signature is missing', 400);
   }
 
-  const stripeSignature = stripeSignatureValue as string;
   const webhookSecret = config.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
@@ -541,38 +1227,68 @@ const handleStripeWebhook = async (
   }
 
   const stripeClient = getStripeClient();
-  const stripeWebhookSecret = webhookSecret as string;
-  let event: Stripe.Event | undefined;
+
+  let webhookEvent: Stripe.Event;
 
   try {
-    event = stripeClient.webhooks.constructEvent(
+    webhookEvent = stripeClient.webhooks.constructEvent(
       rawBody,
-      stripeSignature,
-      stripeWebhookSecret
+      stripeSignatureValue as string,
+      webhookSecret as string
     );
-  } catch {
-    throwError('Invalid Stripe webhook signature', 400);
+  } catch (error) {
+    console.error(
+      'Stripe webhook signature verification failed:',
+      error instanceof Error ? error.message : error
+    );
+    return throwError('Invalid Stripe webhook signature', 400);
   }
 
-  if (!event) {
-    throwError('Unable to process Stripe webhook event', 500);
-  }
-
-  const webhookEvent = event as Stripe.Event;
 
   switch (webhookEvent.type) {
-    case 'checkout.session.completed':
-      await handleCheckoutSessionCompleted(
-        webhookEvent.data.object as Stripe.Checkout.Session
+    case 'checkout.session.completed': {
+      const session = webhookEvent.data.object as Stripe.Checkout.Session;
+
+      if (session.payment_status !== 'paid') {
+        console.log(
+          `Stripe checkout ${session.id} completed but payment status is ${session.payment_status}`
+        );
+        break;
+      }
+
+      const purpose = session.metadata?.purpose;
+
+      if (!purpose) {
+        console.error(
+          `Stripe checkout ${session.id} has no payment purpose in metadata`
+        );
+        break;
+      }
+
+      if (purpose === 'registration') {
+        await activateRegistrationPayment(session);
+        break;
+      }
+
+      if (purpose === 'upgrade') {
+        await activateUpgradePayment(session);
+        break;
+      }
+
+      console.warn(
+        `Unknown Stripe checkout purpose "${purpose}" for session ${session.id}`
       );
       break;
+    }
 
     case 'invoice.paid':
       await handleInvoicePaid(webhookEvent.data.object as Stripe.Invoice);
       break;
 
     case 'invoice.payment_failed':
-      await handleInvoicePaymentFailed(webhookEvent.data.object as Stripe.Invoice);
+      await handleInvoicePaymentFailed(
+        webhookEvent.data.object as Stripe.Invoice
+      );
       break;
 
     case 'customer.subscription.deleted':
@@ -581,29 +1297,169 @@ const handleStripeWebhook = async (
       );
       break;
 
-    default:
+    default: {
+      console.log(`Unhandled Stripe webhook event: ${webhookEvent.type}`);
       break;
+    }
   }
 };
 
-const verifyCheckoutSessionFromStripe = async (sessionId: string) => {
-  const stripeClient = getStripeClient();
-  const session = await stripeClient.checkout.sessions.retrieve(sessionId);
+const verifyCheckoutSessionFromStripe =
+async (
+  sessionId: string
+) => {
+  const stripeClient =
+    getStripeClient();
 
+  const session =
+    await stripeClient
+      .checkout.sessions
+      .retrieve(sessionId);
 
-  if (session.payment_status !== 'paid') {
+  if (
+    session.payment_status !==
+    'paid'
+  ) {
     return {
       paid: false,
-      message: 'Payment is not completed yet',
+
+      message:
+        'Payment is not completed yet',
     };
   }
 
-  await activateUserSubscription(session);
-
+  await activateRegistrationPayment(
+    session
+  );
 
   return {
     paid: true,
-    message: 'Payment verified successfully',
+
+    message:
+      'Payment verified successfully',
+  };
+};
+
+
+const getMyUpgradePlans =
+async (
+  userId: string
+) => {
+  await syncMembershipExpiry(
+    userId
+  );
+
+  const user =
+    await User.findById(
+      userId
+    ).select(
+      'role accessTo membershipAccessStatus subscriptionExpiresAt'
+    );
+
+  if (!user) {
+    throwError(
+      'User not found',
+      404
+    );
+  }
+
+  assertFound(user, 'User not found', 404);
+
+  if (
+    user.membershipAccessStatus !==
+    'expired'
+  ) {
+    throwError(
+      'Upgrade plans are only available after membership expiry.',
+      400
+    );
+  }
+
+  const durations:
+    MembershipDurationMonths[] =
+      user.role === 'ceo' ||
+      user.role === 'ceo_partner'
+        ? [12]
+        : [3, 6, 12];
+
+  const plans =
+    durations.map(
+      durationMonths => ({
+        durationMonths,
+
+        pricing:
+          getPricingByRoleAndAccess(
+            user.role,
+            user.accessTo,
+            durationMonths
+          ),
+      })
+    );
+
+  return {
+    role:
+      user.role,
+
+    accessTo:
+      user.accessTo,
+
+    membershipAccessStatus:
+      user.membershipAccessStatus,
+
+    expiredAt:
+      user.subscriptionExpiresAt,
+
+    plans,
+  };
+};
+
+
+const sendRegistrationPaymentLinkEmail = async (
+  paymentLinkId: string
+) => {
+  const paymentLink = await RegistrationPaymentLink.findById(
+    paymentLinkId
+  ).populate({
+    path: 'user',
+    select: 'fullName email role',
+  });
+
+  if (!paymentLink) {
+    throwError('Payment link not found', 404);
+  }
+
+  const currentPaymentLink = paymentLink!;
+
+  if (
+    !['active', 'checkout_created'].includes(
+      currentPaymentLink.status
+    )
+  ) {
+    throwError(
+      'This payment link is no longer active (already paid or revoked).',
+      400
+    );
+  }
+
+  const user = currentPaymentLink.user as any;
+
+  if (!user) {
+    throwError('User not found for this payment link', 404);
+  }
+
+  const paymentUrl = `${config.FRONTEND_URL}/payment/registration/${currentPaymentLink.token}`;
+
+  await sendRegistrationPaymentLinkMail({
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+    paymentLink: paymentUrl,
+  });
+
+  return {
+    sent: true,
+    email: user.email,
+    paymentLink: paymentUrl,
   };
 };
 
@@ -614,4 +1470,11 @@ export const paymentService = {
   createUpgradeCheckoutSessionIntoStripe,
   handleStripeWebhook,
   verifyCheckoutSessionFromStripe,
+
+  getMyUpgradePlans,
+  getRegistrationPaymentDetails,
+  createRegistrationCheckoutByToken,
+  getPendingRegistrationPayments,
+
+  sendRegistrationPaymentLinkEmail,
 };

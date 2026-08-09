@@ -1,6 +1,17 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model } from "mongoose";
 
-import { ACCOUNT_STATUSES, APPROVAL_STATUSES, IUser, SUBSCRIPTION_STATUSES, LICENSE_VERIFICATION_STATUSES, PAYMENT_STATUSES, USER_ROLES, ACCESS_TO_OPTIONS } from './user.interface';
+import {
+  ACCOUNT_STATUSES,
+  APPROVAL_STATUSES,
+  IUser,
+  SUBSCRIPTION_STATUSES,
+  LICENSE_VERIFICATION_STATUSES,
+  PAYMENT_STATUSES,
+  USER_ROLES,
+  ACCESS_TO_OPTIONS,
+  MEMBERSHIP_DURATIONS,
+  MEMBERSHIP_ACCESS_STATUSES,
+} from "./user.interface";
 
 const userSchema = new Schema<IUser>(
   {
@@ -36,6 +47,16 @@ const userSchema = new Schema<IUser>(
       required: true,
       enum: ACCESS_TO_OPTIONS,
     },
+    membershipDurationMonths: {
+      type: Number,
+      enum: MEMBERSHIP_DURATIONS,
+    },
+    membershipAccessStatus: {
+      type: String,
+      enum: MEMBERSHIP_ACCESS_STATUSES,
+      default: "pending",
+      index: true,
+    },
     licenseNumber: {
       type: String,
       trim: true,
@@ -69,7 +90,7 @@ const userSchema = new Schema<IUser>(
 
     profileImage: {
       type: String,
-      trim: true
+      trim: true,
     },
 
     socialLinks: {
@@ -105,31 +126,31 @@ const userSchema = new Schema<IUser>(
     approvalStatus: {
       type: String,
       enum: APPROVAL_STATUSES,
-      default: 'pending',
+      default: "pending",
     },
 
     accountStatus: {
       type: String,
       enum: ACCOUNT_STATUSES,
-      default: 'pending_payment',
+      default: "pending_payment",
     },
 
     licenseVerificationStatus: {
       type: String,
       enum: LICENSE_VERIFICATION_STATUSES,
-      default: 'pending',
+      default: "pending",
     },
 
     paymentStatus: {
       type: String,
       enum: PAYMENT_STATUSES,
-      default: 'unpaid',
+      default: "unpaid",
     },
 
     subscriptionStatus: {
       type: String,
       enum: SUBSCRIPTION_STATUSES,
-      default: 'none',
+      default: "none",
     },
 
     stripeCustomerId: {
@@ -155,10 +176,9 @@ const userSchema = new Schema<IUser>(
       type: Date,
     },
 
-
     approvedBy: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
 
     approvedAt: {
@@ -187,7 +207,7 @@ const userSchema = new Schema<IUser>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-export const User = model<IUser>('User', userSchema);
+export const User = model<IUser>("User", userSchema);

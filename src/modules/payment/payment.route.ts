@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken } from '../../middleware/authMiddleware';
+import { verifyToken,authorizeRoles, } from '../../middleware/authMiddleware';
 import { paymentController } from './payment.controller';
 
 const router = Router();
@@ -161,5 +161,46 @@ router.get(
 // Note: this route is actually registered directly in app.ts (before express.json())
 // It is documented here for completeness.
 
+
+router.get(
+  '/registration-link/:token',
+
+  paymentController
+    .getRegistrationPaymentDetails
+);
+
+router.post(
+  '/registration-link/:token/checkout',
+
+  paymentController
+    .createRegistrationCheckout
+);
+
+router.get(
+  '/registration-pending',
+
+  verifyToken,
+
+  authorizeRoles(
+    'founder'
+  ),
+
+  paymentController
+    .getPendingRegistrationPayments
+);
+
+router.get(
+  '/upgrade/plans',
+  verifyToken,
+  paymentController.getMyUpgradePlans
+);
+
+
+router.post(
+  '/registration-link/:linkId/send',
+  verifyToken,
+  authorizeRoles('founder'),
+  paymentController.sendRegistrationPaymentLink
+);
 
 export const paymentRoutes = router; 

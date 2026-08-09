@@ -16,7 +16,10 @@ type ListingForAssetPdf = {
   };
   bedrooms: number;
   bathrooms: number;
-  area_sqm: number;
+  area_sqm: {
+    value: number;
+    unit:string
+  };
   referral_commission: {
     offered_amount: number;
     confirmed_amount?: number | undefined;
@@ -222,7 +225,7 @@ export const generateListingOnePagerPdf = async (
       .text(`Price: ${formatPrice(listing.price.amount, listing.price.currency)}`)
       .text(`Bedrooms: ${listing.bedrooms}`)
       .text(`Bathrooms: ${listing.bathrooms}`)
-      .text(`Area: ${listing.area_sqm} sqm`)
+      .text(`Area: ${listing.area_sqm.value} - ${listing.area_sqm.unit}`)
       .text(`Referral Commission Offered: ${listing.referral_commission.offered_amount}%`);
 
     doc.moveDown(1);

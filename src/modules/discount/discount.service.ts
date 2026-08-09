@@ -8,14 +8,14 @@ import {
 
 type ValidateDiscountPayload = {
   code?: string | undefined;
-  role: UserRole;
-  accessTo: AccessTo;
+  role?: UserRole | undefined;
+  accessTo?: AccessTo | undefined;
   userId?: string | undefined;
 };
 
 type RedeemDiscountPayload = {
   code?: string | undefined;
-  userId: string;
+  userId: string ;
   role: UserRole;
   accessTo: AccessTo;
   stripeCheckoutSessionId: string;
@@ -51,12 +51,16 @@ const createDiscountCodeIntoDB = async (
     throwError('Discount code already exists', 409);
   }
 
-  const createPayload: Record<string, unknown> = {
-    code,
-    discountPercent: payload.discountPercent,
-    maxRedemptionsPerRole: payload.maxRedemptionsPerRole ?? 20,
-    isActive: true,
-  };
+const createPayload: Record<string, unknown> = {
+  code,
+  discountPercent: payload.discountPercent,
+
+  maxRedemptions: 1,
+
+  usedCount: 0,
+
+  isActive: true,
+};
 
   if (payload.allowedRoles !== undefined) {
     createPayload.allowedRoles = payload.allowedRoles;
@@ -95,6 +99,14 @@ const validateDiscountCodeForCheckout = async ({
     return null;
   }
 
+  if(!role){
+    return null
+  }
+
+  if(!accessTo){
+    return null
+  }
+  
   const normalizedCode = normalizeCode(code);
 
   const discount = await DiscountCode.findOne({
@@ -131,14 +143,16 @@ const validateDiscountCodeForCheckout = async ({
     throwError('This discount code is not valid for this access type', 400);
   }
 
-  const usedForRole = await DiscountRedemption.countDocuments({
-    discountCode: discountCode._id,
-    role,
-  });
+if (
+  (discountCode.usedCount ?? 0) >= 1
+) {
+  throwError(
+    'This discount code has already been used',
+    400
+  );
+}
 
-  if (usedForRole >= discountCode.maxRedemptionsPerRole) {
-    throwError('Discount code redemption limit reached for this role', 400);
-  }
+
 
   if (userId) {
     const alreadyUsedByUser = await DiscountRedemption.findOne({
@@ -156,53 +170,86 @@ const validateDiscountCodeForCheckout = async ({
     code: discountCode.code,
     discountPercent: discountCode.discountPercent,
   };
-};
+}; 
 
-const redeemDiscountCodeAfterPayment = async ({
+const redeemDiscountCodeAfterPayment =
+async ({
   code,
   userId,
   role,
   accessTo,
   stripeCheckoutSessionId,
-}: RedeemDiscountPayload) => {
+}: RedeemDiscountPayload ) => {
   if (!code) {
     return null;
   }
 
-  const normalizedCode = normalizeCode(code);
+  const normalizedCode =
+    normalizeCode(code);
 
-  const discount = await DiscountCode.findOne({
-    code: normalizedCode,
-  });
+  const discount =
+    await DiscountCode.findOne({
+      code:
+        normalizedCode,
+    });
 
   if (!discount) {
     return null;
   }
 
-  const existing = await DiscountRedemption.findOne({
-    discountCode: discount._id,
-    user: userId,
-  });
+  if (
+    (discount.usedCount ?? 0) >= 1
+  ) {
+    return null;
+  }
+
+  const existing =
+    await DiscountRedemption
+      .findOne({
+        discountCode:
+          discount._id,
+      });
 
   if (existing) {
     return existing;
   }
 
-  const redemption = await DiscountRedemption.create({
-    discountCode: discount._id,
-    code: discount.code,
-    user: userId,
-    role,
-    accessTo,
-    stripeCheckoutSessionId,
-    redeemedAt: new Date(),
-  });
+  const redemption =
+    await DiscountRedemption.create({
+      discountCode:
+        discount._id,
 
-  await DiscountCode.findByIdAndUpdate(discount._id, {
-    $inc: {
-      usedCount: 1,
-    },
-  });
+      code:
+        discount.code,
+
+      user:
+        userId,
+
+      role,
+
+      accessTo,
+
+      stripeCheckoutSessionId,
+
+      redeemedAt:
+        new Date(),
+    });
+
+  await DiscountCode
+    .findByIdAndUpdate(
+      discount._id,
+      {
+        $set: {
+          isActive:
+            false,
+        },
+
+        $inc: {
+          usedCount:
+            1,
+        },
+      }
+    );
 
   return redemption;
 };
@@ -234,10 +281,23 @@ const sendDiscountCodeByEmail = async (email: string, code: string) => {
   };
 };
 
+const deleteDiscountCodeFromDB = async (id: string) => {
+  const discount = await DiscountCode.findById(id);
+
+  if (!discount) {
+    throwError('Discount code not found', 404);
+  }
+
+  await DiscountCode.findByIdAndDelete(id);
+
+  return { deleted: true };
+};
+
 export const discountService = {
   createDiscountCodeIntoDB,
   getAllDiscountCodesFromDB,
   validateDiscountCodeForCheckout,
   redeemDiscountCodeAfterPayment,
   sendDiscountCodeByEmail,
+  deleteDiscountCodeFromDB,
 };

@@ -58,6 +58,9 @@ export const registerValidation = z.object({
 
     marketingChannels: z.array(z.string()).optional(),
     discountCode: z.string().trim().optional(),
+    membershipDurationMonths: z
+      .union([z.literal(3), z.literal(6), z.literal(12)])
+      .optional(),
   }),
 });
 
@@ -112,5 +115,6 @@ export const createAdminAccountValidation = z.object({
     role: z.enum(["manager", "super_admin", "community_manager"]),
 
     accessTo: z.enum(["we_command_center", "invictus", "both"]),
+    
   }),
 });

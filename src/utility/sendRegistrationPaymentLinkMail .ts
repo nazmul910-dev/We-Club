@@ -1,54 +1,32 @@
 import sendCustomMail from './sendCustomMail';
-import { AccessTo, UserRole } from '../modules/users/user.interface';
+import { UserRole } from '../modules/users/user.interface';
 
-type SendAccountApprovedMailPayload = {
+type SendRegistrationPaymentLinkMailPayload = {
   fullName: string;
   email: string;
   role: UserRole;
-  accessTo?: AccessTo;
+  paymentLink: string;
 };
 
-const WEBSITE_URL = 'https://we-command-center.vercel.app/';
-
-const getAccessLabel = (accessTo?: AccessTo): string => {
-  if (accessTo === 'we_command_center') {
-    return 'WÉ Command Center';
-  }
-
-  if (accessTo === 'invictus') {
-    return 'INVICTUS Academy';
-  }
-
-  if (accessTo === 'both') {
-    return 'WÉ Command Center + INVICTUS Academy';
-  }
-
-  return 'your approved dashboard';
-};
-
-export const sendAccountApprovedMail = async ({
+export const sendRegistrationPaymentLinkMail = async ({
   fullName,
   email,
   role,
-  accessTo,
-}: SendAccountApprovedMailPayload) => {
-  const accessLabel = getAccessLabel(accessTo);
-
+  paymentLink,
+}: SendRegistrationPaymentLinkMailPayload) => {
   await sendCustomMail({
     to: email,
-    subject: 'Your World Elite Account Has Been Approved',
+    subject: 'Complete Your World Elite Membership Payment',
 
     text: `Hello ${fullName},
 
-Your World Elite account has been approved successfully.
+Your World Elite registration has been reviewed.
+
+Please complete your membership payment using the following link to activate your account:
+
+${paymentLink}
 
 Role: ${role}
-Access: ${accessLabel}
-
-You can now log in to your account and access your approved dashboard.
-
-Go to the website:
-${WEBSITE_URL}
 
 Thank you,
 World Elite Team`,
@@ -72,8 +50,8 @@ World Elite Team`,
           <div
             style="
               background-color: #ffffff;
-              padding: 32px;
               border-radius: 12px;
+              padding: 32px;
               box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             "
           >
@@ -81,15 +59,17 @@ World Elite Team`,
               style="
                 margin: 0 0 24px;
                 font-size: 24px;
+                line-height: 1.3;
                 color: #111827;
                 text-align: center;
               "
             >
-              Your Account Has Been Approved
+              Complete Your Membership Payment
             </h2>
 
             <p
               style="
+                margin: 0 0 16px;
                 font-size: 15px;
                 line-height: 1.6;
                 color: #374151;
@@ -100,12 +80,15 @@ World Elite Team`,
 
             <p
               style="
+                margin: 0 0 16px;
                 font-size: 15px;
                 line-height: 1.6;
                 color: #374151;
               "
             >
-              Your World Elite account has been approved successfully.
+              Your World Elite registration has been reviewed. Please complete
+              your membership payment using the button below to activate your
+              account.
             </p>
 
             <div
@@ -118,32 +101,14 @@ World Elite Team`,
             >
               <p
                 style="
-                  margin: 0 0 8px;
+                  margin: 0;
+                  font-size: 15px;
                   color: #111827;
                 "
               >
                 <strong>Role:</strong> ${role}
               </p>
-
-              <p
-                style="
-                  margin: 0;
-                  color: #111827;
-                "
-              >
-                <strong>Access:</strong> ${accessLabel}
-              </p>
             </div>
-
-            <p
-              style="
-                font-size: 15px;
-                line-height: 1.6;
-                color: #374151;
-              "
-            >
-              You can now log in to your account and access your approved dashboard.
-            </p>
 
             <div
               style="
@@ -152,11 +117,10 @@ World Elite Team`,
               "
             >
               <a
-                href="${WEBSITE_URL}"
+                href="${paymentLink}"
                 target="_blank"
                 rel="noopener noreferrer"
                 style="
-                  display: inline-block;
                   background-color: #111827;
                   color: #ffffff;
                   padding: 12px 28px;
@@ -164,24 +128,26 @@ World Elite Team`,
                   text-decoration: none;
                   font-size: 15px;
                   font-weight: 600;
+                  display: inline-block;
                 "
               >
-                Go to Website
+                Complete Payment
               </a>
             </div>
 
             <p
               style="
+                margin: 0;
                 font-size: 13px;
                 line-height: 1.6;
                 color: #6b7280;
                 word-break: break-all;
               "
             >
-              Website URL:
+              Or copy and paste this link into your browser:
               <br />
               <a
-                href="${WEBSITE_URL}"
+                href="${paymentLink}"
                 target="_blank"
                 rel="noopener noreferrer"
                 style="
@@ -189,16 +155,16 @@ World Elite Team`,
                   text-decoration: underline;
                 "
               >
-                ${WEBSITE_URL}
+                ${paymentLink}
               </a>
             </p>
 
             <p
               style="
+                margin: 25px 0 0;
                 font-size: 14px;
                 line-height: 1.6;
                 color: #6b7280;
-                margin-top: 25px;
               "
             >
               Thank you,

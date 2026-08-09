@@ -40,8 +40,8 @@ export const validateDiscountCodeValidation = z.object({
       'ceo',
       'ceo_partner',
       'we_club_member',
-    ]),
-    accessTo: z.enum(['we_command_center', 'invictus', 'both']),
+    ]).optional(),
+    accessTo: z.enum(['we_command_center', 'invictus', 'both']).optional(),
   }),
 });
 

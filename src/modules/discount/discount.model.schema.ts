@@ -46,9 +46,9 @@ const DiscountCodeSchema = new Schema<IDiscountCode>(
       },
     ],
 
-    maxRedemptionsPerRole: {
+     maxRedemptions: {
       type: Number,
-      default: 20,
+      default: 1,
       min: 1,
     },
 
@@ -104,14 +104,14 @@ const DiscountRedemptionSchema = new Schema<IDiscountRedemption>(
     role: {
       type: String,
       enum: USER_ROLES,
-      required: true,
+      // required: true,
       index: true,
     },
 
     accessTo: {
       type: String,
       enum: ACCESS_TO_OPTIONS,
-      required: true,
+      // required: true,
     },
 
     stripeCheckoutSessionId: {
@@ -133,7 +133,6 @@ const DiscountRedemptionSchema = new Schema<IDiscountRedemption>(
 DiscountRedemptionSchema.index(
   {
     discountCode: 1,
-    user: 1,
   },
   {
     unique: true,

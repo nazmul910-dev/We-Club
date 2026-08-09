@@ -76,6 +76,7 @@ const createUpgradeCheckout = async (
     const result =
       await paymentService.createUpgradeCheckoutSessionIntoStripe(
         userId,
+        validatedData.body.durationMonths,
         validatedData.body?.discountCode
       );
 
@@ -133,10 +134,182 @@ const stripeWebhook = async (
   }
 };
 
+
+
+const getRegistrationPaymentDetails =
+  async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const token =
+        req.params.token;
+
+      if (!token) {
+        throw new Error(
+          'Payment token is required'
+        );
+      }
+
+      const result =
+        await paymentService
+          .getRegistrationPaymentDetails(
+            token as string
+          );
+
+      sendResponse(res, {
+        statusCode: 200,
+
+        success: true,
+
+        message:
+          'Registration payment details retrieved successfully',
+
+        data: result,
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  };
+
+
+  const createRegistrationCheckout =
+  async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const token =
+        req.params.token;
+
+      if (!token) {
+        throw new Error(
+          'Payment token is required'
+        );
+      }
+
+      const result =
+        await paymentService
+          .createRegistrationCheckoutByToken(
+            token as string,
+            req.body?.discountCode
+          );
+
+      sendResponse(res, {
+        statusCode: 200,
+
+        success: true,
+
+        message:
+          'Stripe checkout session created successfully',
+
+        data: result,
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  const getPendingRegistrationPayments =
+  async (
+    _req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+
+      const result =
+        await paymentService
+          .getPendingRegistrationPayments();
+
+      sendResponse(res, {
+        statusCode: 200,
+
+        success: true,
+
+        message:
+          'Pending registration payments retrieved successfully',
+
+        data: result,
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  };
+
+
+  const getMyUpgradePlans =
+async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId =
+      getAuthUserId(req);
+
+    const result =
+      await paymentService
+        .getMyUpgradePlans(
+          userId
+        );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+
+      message:
+        'Upgrade plans retrieved successfully',
+
+      data:
+        result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+const sendRegistrationPaymentLink = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const linkId = req.params.linkId;
+
+    if (!linkId) {
+      throw new Error('Payment link ID is required');
+    }
+
+    const result =
+      await paymentService.sendRegistrationPaymentLinkEmail(linkId as string);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: 'Payment link sent to user successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const paymentController = {
   getAllPricingPlans,
   getPricingPlanByRoleAndAccess,
   createUpgradeCheckout,
   verifyCheckoutSession,
   stripeWebhook,
+getMyUpgradePlans,
+  getRegistrationPaymentDetails,
+  createRegistrationCheckout,
+  getPendingRegistrationPayments,
+  sendRegistrationPaymentLink,
 };

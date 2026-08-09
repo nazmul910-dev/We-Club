@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 // import * as jwt from "jsonwebtoken";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import config from "../../config";
-
+import crypto from 'crypto';
 import { ExistingUserError } from "../../utility/errorResponses";
 import { loginValidation, registerValidation } from "../users/user.validation";
 import { User } from "../users/users.model.schema";
@@ -13,14 +13,20 @@ import sendMail from "../../utility/SendMail";
 import { sendCalendlyMeetingMail } from "../../utility/sendCalendlyMeeting";
 import { paymentService } from "../payment/payment.service";
 import { isPaidRole } from "../payment/payment.pricing";
+import { RegistrationPaymentLink } from "../payment/registrationPaymentLink.model";
+import { syncMembershipExpiry } from "../../utility/membership/membership.service";
 
 
 
 
 export const createUser = async (payload: unknown) => {
-  const { body } = registerValidation.parse({ body: payload });
+  const { body } = registerValidation.parse({
+    body: payload,
+  });
 
-  const existingUser = await User.findOne({ email: body.email });
+  const existingUser = await User.findOne({
+    email: body.email,
+  });
 
   if (existingUser) {
     throw new ExistingUserError('User already exists');
@@ -30,100 +36,147 @@ export const createUser = async (payload: unknown) => {
 
   const requiresPayment = isPaidRole(body.role);
 
-    const resolvedAccessTo =
-    body.role === 'ceo' || body.role === 'ceo_partner' ? 'both' : body.accessTo;
+  const isCeoRole =
+    body.role === 'ceo' ||
+    body.role === 'ceo_partner';
+
+  const resolvedAccessTo = isCeoRole
+    ? 'both'
+    : body.accessTo;
+
+  const resolvedDuration = isCeoRole
+    ? 12
+    : body.membershipDurationMonths;
+
+  if (
+    requiresPayment &&
+    !resolvedDuration
+  ) {
+    throw new Error(
+      'Membership duration is required. Please select 3, 6 or 12 months.'
+    );
+  }
 
   const userPayload: Record<string, unknown> = {
     fullName: body.fullName,
     email: body.email,
     role: body.role,
     accessTo: resolvedAccessTo,
+    membershipDurationMonths: resolvedDuration,
+    membershipAccessStatus: requiresPayment
+  ? 'pending'
+  : 'active',
+
     password: hashedPassword,
 
-    paymentStatus: requiresPayment ? 'unpaid' : 'paid',
-    subscriptionStatus: requiresPayment ? 'none' : 'active',
+    paymentStatus: requiresPayment
+      ? 'unpaid'
+      : 'paid',
+
+    subscriptionStatus: requiresPayment
+      ? 'none'
+      : 'active',
 
     approvalStatus: 'pending',
-    accountStatus: requiresPayment ? 'pending_payment' : 'pending_approval',
+
+    accountStatus: requiresPayment
+      ? 'pending_payment'
+      : 'pending_approval',
+
     licenseVerificationStatus: 'pending',
   };
 
   if (body.licenseNumber !== undefined) {
-    userPayload.licenseNumber = body.licenseNumber;
+    userPayload.licenseNumber =
+      body.licenseNumber;
   }
 
   if (body.brokerage !== undefined) {
-    userPayload.brokerage = body.brokerage;
+    userPayload.brokerage =
+      body.brokerage;
   }
 
   if (body.phone !== undefined) {
-    userPayload.phone = body.phone;
+    userPayload.phone =
+      body.phone;
   }
 
   if (body.city !== undefined) {
-    userPayload.city = body.city;
+    userPayload.city =
+      body.city;
   }
 
   if (body.country !== undefined) {
-    userPayload.country = body.country;
+    userPayload.country =
+      body.country;
   }
 
   if (body.bio !== undefined) {
-    userPayload.bio = body.bio;
+    userPayload.bio =
+      body.bio;
   }
 
   if (body.marketingChannels !== undefined) {
-    userPayload.marketingChannels = body.marketingChannels;
+    userPayload.marketingChannels =
+      body.marketingChannels;
   }
 
   if (body.socialLinks !== undefined) {
-    userPayload.socialLinks = body.socialLinks;
+    userPayload.socialLinks =
+      body.socialLinks;
   }
 
   const user = await User.create(
-    userPayload as Parameters<typeof User.create>[0]
+    userPayload as any
   );
 
-  const userObject = user.toObject();
+  try {
+    if (requiresPayment) {
+      const paymentToken =
+        crypto.randomBytes(32).toString('hex');
 
-  const { password: _password, ...safeUserObject } = userObject;
+      await RegistrationPaymentLink.create({
+        user: user._id,
+        token: paymentToken,
+        status: 'active',
+      });
+    }
 
-  if (!requiresPayment) {
+    // চাইলে founder discussion-এর জন্য
+    // registration-এর পর Calendly mail পাঠাতে পারো।
+    try {
+      await sendCalendlyMeetingMail({
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+      });
+    } catch (mailError) {
+      console.error(
+        'Calendly mail failed:',
+        mailError
+      );
+    }
+
+    const userObject = user.toObject();
+
+    const {
+      password: _password,
+      ...safeUserObject
+    } = userObject;
+
     return {
       user: safeUserObject,
       checkoutUrl: null,
-      sessionId: null,
-      pricing: null,
-      message: 'User created successfully. Waiting for admin approval.',
-    };
-  }
-
-  try {
-    const checkout = await paymentService.createCheckoutSession({
-      userId: String(user._id),
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-      accessTo: user.accessTo,
-      purpose: 'registration',
-      discountCode: body.discountCode,
-    });
-
-    return {
-      user: safeUserObject,
-      checkoutUrl: checkout.checkoutUrl,
-      sessionId: checkout.sessionId,
-      pricing: checkout.pricing,
-      originalPricing: checkout.originalPricing,
-      discount: checkout.discount,
-      message: 'User created. Please complete payment to continue registration.',
+      message: requiresPayment
+        ? 'Registration completed. Your payment link will be provided after review.'
+        : 'User created successfully. Waiting for admin approval.',
     };
   } catch (error) {
     await User.findByIdAndDelete(user._id);
+
     throw error;
   }
 };
-
 
 
 export const loginUser = async (payload: unknown) => {
@@ -143,6 +196,10 @@ export const loginUser = async (payload: unknown) => {
     throw new Error('Invalid email or password.');
   }
 
+
+  await syncMembershipExpiry(
+  user._id.toString()
+);
 
   if (user.approvalStatus === 'pending') {
     throw new Error(

@@ -2,6 +2,7 @@ import config from '../../config';
 import {
   AccessTo,
   UserRole,
+  MembershipDurationMonths,
 } from '../users/user.interface';
 
 export type BillingInterval = 'month' | 'year';
@@ -122,80 +123,132 @@ const getAccessDisplayName = (accessTo: AccessTo): string => {
 
 export const getPricingByRoleAndAccess = (
   role: UserRole,
-  accessTo: AccessTo
+  accessTo: AccessTo,
+  durationMonths: MembershipDurationMonths = 3
 ): RolePricingPlan => {
   let displayName = '';
   let items: PricingItem[] = [];
 
-
-  if (role === 'ceo' || role === 'ceo_partner') {
+  if (
+    role === 'ceo' ||
+    role === 'ceo_partner'
+  ) {
     const isCeo = role === 'ceo';
 
-    displayName = isCeo ? 'CEO Club Membership' : 'CEO Partner Membership';
+    displayName = isCeo
+      ? 'CEO Club Membership'
+      : 'CEO Partner Membership';
+
+    const yearlyPrice =
+      parseDollarAmountToCents(
+        isCeo
+          ? config.STRIPE_PRICE_CEO_YEARLY
+          : config.STRIPE_PRICE_CEO_PARTNER_YEARLY,
+        isCeo
+          ? 'STRIPE_PRICE_CEO_YEARLY'
+          : 'STRIPE_PRICE_CEO_PARTNER_YEARLY'
+      );
 
     items = [
-      createPricingItem({
+      {
         name: displayName,
-        description: isCeo
-          ? 'INVICTUS Academy Accountability, courses, online events and content creation. Includes WÉ Command Center + INVICTUS Academy access.'
-          : 'Annual CEO Partner access. Includes WÉ Command Center + INVICTUS Academy access.',
-        amountCents: parseDollarAmountToCents(
-          isCeo
-            ? config.STRIPE_PRICE_CEO_YEARLY
-            : config.STRIPE_PRICE_CEO_PARTNER_YEARLY,
-          isCeo ? 'STRIPE_PRICE_CEO_YEARLY' : 'STRIPE_PRICE_CEO_PARTNER_YEARLY'
-        ),
+        description:
+          '12 month WÉ Command Center + INVICTUS Academy membership.',
+        amountCents: yearlyPrice,
+        amount: yearlyPrice / 100,
+        currency: 'usd',
         interval: 'year',
-      }),
+        formattedAmount:
+          formatAmount(yearlyPrice),
+        billingText:
+          `${formatAmount(yearlyPrice)} / 12 months`,
+      },
     ];
-
-    const totalFirstPaymentCents = items.reduce(
-      (total, item) => total + item.amountCents,
-      0
-    );
 
     return {
       role,
-      accessTo: 'both', 
+      accessTo: 'both',
       displayName,
       requiresPayment: true,
+
       items,
-      totalFirstPaymentCents,
-      totalFirstPayment: totalFirstPaymentCents / 100,
-      totalFirstPaymentFormatted: formatAmount(totalFirstPaymentCents),
+
+      totalFirstPaymentCents:
+        yearlyPrice,
+
+      totalFirstPayment:
+        yearlyPrice / 100,
+
+      totalFirstPaymentFormatted:
+        formatAmount(yearlyPrice),
     };
   }
 
- 
-  const accessName = getAccessDisplayName(accessTo);
+  const accessName =
+    getAccessDisplayName(accessTo);
 
-  if (['associate', 'partner', 'ambassador'].includes(role)) {
-    displayName = `${role.toUpperCase()} - ${accessName}`;
+  if (
+    ['associate', 'partner', 'ambassador']
+      .includes(role)
+  ) {
+    displayName =
+      `${role.toUpperCase()} - ${accessName}`;
+
+      const monthlyPrice =
+      getMemberAccessPrice(accessTo);
+
+    const totalPrice =
+      monthlyPrice * durationMonths;
 
     items = [
-      createPricingItem({
+      {
         name: displayName,
-        description: `Access to ${accessName}.`,
-        amountCents: getMemberAccessPrice(accessTo),
+
+        description:
+          `${durationMonths} month access to ${accessName}.`,
+
+        amountCents: totalPrice,
+
+        amount: totalPrice / 100,
+
+        currency: 'usd',
+
         interval: 'month',
-      }),
+
+        formattedAmount:
+          formatAmount(totalPrice),
+
+        billingText:
+          `${formatAmount(totalPrice)} / ${durationMonths} months`,
+      },
     ];
   }
 
-  const totalFirstPaymentCents = items.reduce(
-    (total, item) => total + item.amountCents,
-    0
-  );
+  const totalFirstPaymentCents =
+    items.reduce(
+      (total, item) =>
+        total + item.amountCents,
+      0
+    );
 
   return {
     role,
     accessTo,
     displayName,
-    requiresPayment: items.length > 0,
+    requiresPayment:
+      items.length > 0,
+
     items,
+
     totalFirstPaymentCents,
-    totalFirstPayment: totalFirstPaymentCents / 100,
-    totalFirstPaymentFormatted: formatAmount(totalFirstPaymentCents),
+
+    totalFirstPayment:
+      totalFirstPaymentCents / 100,
+
+    totalFirstPaymentFormatted:
+      formatAmount(
+        totalFirstPaymentCents
+      ),
   };
 };
 

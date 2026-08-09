@@ -9,6 +9,7 @@ interface JwtPayloadWithRole extends jwt.JwtPayload {
   email: string;
   role: UserRole;
   accessTo?: AccessTo;
+  // membershipAccessStatus:membershipAccessStatus as string;
 }
 
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
