@@ -48,7 +48,7 @@ const DiscountCodeSchema = new Schema<IDiscountCode>(
 
      maxRedemptions: {
       type: Number,
-      default: 1,
+      default: 20,
       min: 1,
     },
 
@@ -133,11 +133,12 @@ const DiscountRedemptionSchema = new Schema<IDiscountRedemption>(
 DiscountRedemptionSchema.index(
   {
     discountCode: 1,
+    user:1
   },
   {
     unique: true,
   }
-);
+); 
 
 export const DiscountCode = model<IDiscountCode>(
   'DiscountCode',
