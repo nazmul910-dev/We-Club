@@ -98,6 +98,11 @@ const CommissionLedgerSchema = new Schema<ICommissionLedger>(
       required: true,
       min: 0,
     },
+     final_commission_pct: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
 
     final_commission_amount: {
       type: Number,

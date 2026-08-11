@@ -1,7 +1,7 @@
-import { NextFunction, Request, Response } from 'express';
-import sendResponse from '../../utility/sendResponse';
-import { UnauthorizedError } from '../../utility/errorResponses';
-import { commissionLedgerService } from './commission.ledger.service';
+import { NextFunction, Request, Response } from "express";
+import sendResponse from "../../utility/sendResponse";
+import { UnauthorizedError } from "../../utility/errorResponses";
+import { commissionLedgerService } from "./commission.ledger.service";
 import {
   commissionIdValidation,
   confirmCommissionReceivedValidation,
@@ -10,15 +10,16 @@ import {
   disputeCommissionValidation,
   markCommissionPaidValidation,
   resolveDisputeValidation,
-} from './commission.ledger.validation';
+  sendCommissionPaymentValidation,
+} from "./commission.ledger.validation";
 
 const getAuthUser = (req: Request) => {
   if (!req.user) {
-    throw new UnauthorizedError('Authentication required');
+    throw new UnauthorizedError("Authentication required");
   }
 
-  if (typeof req.user.id !== 'string') {
-    throw new UnauthorizedError('Invalid authenticated user');
+  if (typeof req.user.id !== "string") {
+    throw new UnauthorizedError("Invalid authenticated user");
   }
 
   return {
@@ -31,20 +32,20 @@ const getAuthUser = (req: Request) => {
 const getMyCommissions = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
     const result = await commissionLedgerService.getMyCommissionsFromDB(
       authUser,
-      req.query
+      req.query,
     );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'My commission records retrieved successfully',
+      message: "My commission records retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -55,18 +56,17 @@ const getMyCommissions = async (
 const getAllCommissions = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const result = await commissionLedgerService.getAllCommissionsFromDB(
-      req.query
+      req.query,
     );
-
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Commission records retrieved successfully',
+      message: "Commission records retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -77,7 +77,7 @@ const getAllCommissions = async (
 const getSingleCommission = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
@@ -88,13 +88,13 @@ const getSingleCommission = async (
 
     const result = await commissionLedgerService.getSingleCommissionFromDB(
       validatedData.params.id,
-      authUser
+      authUser,
     );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Commission record retrieved successfully',
+      message: "Commission record retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -105,7 +105,7 @@ const getSingleCommission = async (
 const createManualCommission = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
@@ -116,13 +116,13 @@ const createManualCommission = async (
 
     const result = await commissionLedgerService.createManualCommissionIntoDB(
       authUser,
-      validatedData.body
+      validatedData.body,
     );
 
     sendResponse(res, {
       statusCode: 201,
       success: true,
-      message: 'Manual commission record created successfully',
+      message: "Manual commission record created successfully",
       data: result,
     });
   } catch (error) {
@@ -133,7 +133,7 @@ const createManualCommission = async (
 const confirmCommission = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
@@ -146,13 +146,13 @@ const confirmCommission = async (
     const result = await commissionLedgerService.confirmCommissionIntoDB(
       validatedData.params.id,
       authUser,
-      validatedData.body
+      validatedData.body,
     );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Commission confirmed successfully',
+      message: "Commission confirmed successfully",
       data: result,
     });
   } catch (error) {
@@ -163,7 +163,7 @@ const confirmCommission = async (
 const markCommissionPaid = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
@@ -176,13 +176,13 @@ const markCommissionPaid = async (
     const result = await commissionLedgerService.markCommissionPaidIntoDB(
       validatedData.params.id,
       authUser,
-      validatedData.body
+      validatedData.body,
     );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Commission marked as paid successfully',
+      message: "Commission marked as paid successfully",
       data: result,
     });
   } catch (error) {
@@ -193,7 +193,7 @@ const markCommissionPaid = async (
 const confirmCommissionReceived = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
@@ -207,13 +207,13 @@ const confirmCommissionReceived = async (
       await commissionLedgerService.confirmCommissionReceivedIntoDB(
         validatedData.params.id,
         authUser,
-        validatedData.body
+        validatedData.body,
       );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Commission payment received confirmation saved successfully',
+      message: "Commission payment received confirmation saved successfully",
       data: result,
     });
   } catch (error) {
@@ -224,7 +224,7 @@ const confirmCommissionReceived = async (
 const disputeCommission = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
@@ -237,13 +237,13 @@ const disputeCommission = async (
     const result = await commissionLedgerService.disputeCommissionIntoDB(
       validatedData.params.id,
       authUser,
-      validatedData.body
+      validatedData.body,
     );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Commission disputed successfully',
+      message: "Commission disputed successfully",
       data: result,
     });
   } catch (error) {
@@ -254,7 +254,7 @@ const disputeCommission = async (
 const resolveCommissionDispute = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
@@ -264,17 +264,16 @@ const resolveCommissionDispute = async (
       body: req.body,
     });
 
-    const result =
-      await commissionLedgerService.resolveCommissionDisputeIntoDB(
-        validatedData.params.id,
-        authUser,
-        validatedData.body
-      );
+    const result = await commissionLedgerService.resolveCommissionDisputeIntoDB(
+      validatedData.params.id,
+      authUser,
+      validatedData.body,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Commission dispute resolved successfully',
+      message: "Commission dispute resolved successfully",
       data: result,
     });
   } catch (error) {
@@ -285,33 +284,71 @@ const resolveCommissionDispute = async (
 const sendCommissionPayment = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const validatedData = markCommissionPaidValidation.parse({
+    const validatedData = sendCommissionPaymentValidation.parse({
       params: req.params,
       body: req.body,
     });
 
-
-    const result =
-      await commissionLedgerService.sendCommissionPaymentIntoDB(
-        validatedData.params.id,
-        authUser,
-        validatedData.body
-      );
-
+    const result = await commissionLedgerService.sendCommissionPaymentIntoDB(
+      validatedData.params.id,
+      authUser,
+      validatedData.body,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Commission payment sent successfully',
+      message: "Commission payment sent successfully",
       data: result,
     });
+  } catch (error) {
+    next(error);
+  }
+};
 
-  } catch(error){
+const getMyFinalCommissionTotal = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+
+    const result =
+      await commissionLedgerService.getMyFinalCommissionTotalFromDB(authUser);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "My final commission total retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAllFinalCommissionTotal = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result =
+      await commissionLedgerService.getAllFinalCommissionTotalFromDB();
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "All users final commission total retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
     next(error);
   }
 };
@@ -326,5 +363,7 @@ export const commissionLedgerController = {
   confirmCommissionReceived,
   disputeCommission,
   resolveCommissionDispute,
-  sendCommissionPayment
+  sendCommissionPayment,
+  getMyFinalCommissionTotal,
+  getAllFinalCommissionTotal,
 };

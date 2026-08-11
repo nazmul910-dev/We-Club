@@ -1,9 +1,6 @@
-import { Router } from 'express';
-import {
-  authorizeRoles,
-  verifyToken,
-} from '../../middleware/authMiddleware';
-import { commissionLedgerController } from './commission.ledger.controller';
+import { Router } from "express";
+import { authorizeRoles, verifyToken } from "../../middleware/authMiddleware";
+import { commissionLedgerController } from "./commission.ledger.controller";
 
 const router = Router();
 
@@ -38,9 +35,9 @@ router.use(verifyToken);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get(
-  '/admin/all',
-  authorizeRoles('founder', 'manager'),
-  commissionLedgerController.getAllCommissions
+  "/admin/all",
+  authorizeRoles("founder", "manager"),
+  commissionLedgerController.getAllCommissions,
 );
 
 /**
@@ -82,9 +79,9 @@ router.get(
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.patch(
-  '/admin/:id/resolve-dispute',
-  authorizeRoles('founder', 'manager'),
-  commissionLedgerController.resolveCommissionDispute
+  "/admin/:id/resolve-dispute",
+  authorizeRoles("founder", "manager"),
+  commissionLedgerController.resolveCommissionDispute,
 );
 
 /**
@@ -109,7 +106,7 @@ router.patch(
  *                   items:
  *                     $ref: '#/components/schemas/CommissionLedger'
  */
-router.get('/my', commissionLedgerController.getMyCommissions);
+router.get("/my", commissionLedgerController.getMyCommissions);
 
 /**
  * @openapi
@@ -145,9 +142,9 @@ router.get('/my', commissionLedgerController.getMyCommissions);
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post(
-  '/manual',
-  authorizeRoles('associate', 'partner', 'admin', 'manager'),
-  commissionLedgerController.createManualCommission
+  "/manual",
+  authorizeRoles("associate", "partner", "admin", "manager"),
+  commissionLedgerController.createManualCommission,
 );
 
 /**
@@ -182,7 +179,7 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:id', commissionLedgerController.getSingleCommission);
+router.get("/:id", commissionLedgerController.getSingleCommission);
 
 /**
  * @openapi
@@ -210,8 +207,7 @@ router.get('/:id', commissionLedgerController.getSingleCommission);
  *                 data:
  *                   $ref: '#/components/schemas/CommissionLedger'
  */
-router.patch('/:id/confirm', commissionLedgerController.confirmCommission);
-
+router.patch("/:id/confirm", commissionLedgerController.confirmCommission);
 
 /**
  * @openapi
@@ -245,7 +241,12 @@ router.patch('/:id/confirm', commissionLedgerController.confirmCommission);
  *                 data:
  *                   $ref: '#/components/schemas/CommissionLedger'
  */
-router.patch('/:id/mark-paid',verifyToken,authorizeRoles('founder', 'manager'), commissionLedgerController.markCommissionPaid);
+router.patch(
+  "/:id/mark-paid",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  commissionLedgerController.markCommissionPaid,
+);
 
 /**
  * @openapi
@@ -274,8 +275,8 @@ router.patch('/:id/mark-paid',verifyToken,authorizeRoles('founder', 'manager'), 
  *                   $ref: '#/components/schemas/CommissionLedger'
  */
 router.patch(
-  '/:id/confirm-received',
-  commissionLedgerController.confirmCommissionReceived
+  "/:id/confirm-received",
+  commissionLedgerController.confirmCommissionReceived,
 );
 
 /**
@@ -310,17 +311,24 @@ router.patch(
  *                 data:
  *                   $ref: '#/components/schemas/CommissionLedger'
  */
-router.patch('/:id/dispute', commissionLedgerController.disputeCommission);
+router.patch("/:id/dispute", commissionLedgerController.disputeCommission);
 
 router.patch(
-  '/:id/send-payment',
-  commissionLedgerController.sendCommissionPayment
+  "/:id/send-payment",
+  commissionLedgerController.sendCommissionPayment,
 );
 
-
 router.patch(
-  '/:id/confirm-received',
-  commissionLedgerController.confirmCommissionReceived
+  "/:id/confirm-received",
+  commissionLedgerController.confirmCommissionReceived,
+);
+
+router.get("/my/total", commissionLedgerController.getMyFinalCommissionTotal);
+
+router.get(
+  "/admin/total",
+  authorizeRoles("founder", "manager"),
+  commissionLedgerController.getAllFinalCommissionTotal,
 );
 
 export const commissionLedgerRoutes = router;

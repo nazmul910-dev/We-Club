@@ -89,6 +89,7 @@ export interface ICommissionLedger {
   commission_rate_percent: number;
 
   estimated_commission_amount: number;
+  final_commission_pct?: number;
   final_commission_amount?: number;
 
   deal_closed_at?: Date;

@@ -25,7 +25,7 @@ const router = Router();
  *                   items:
  *                     $ref: '#/components/schemas/PromoteRequest'
  */
-router.get("/all", listingPromoteRequestController.getAllListingPromoteRequest);
+router.get("/all",verifyToken, listingPromoteRequestController.getAllListingPromoteRequest);
 
 /**
  * @openapi

@@ -15,3 +15,9 @@ export const calculatePlatformFeeAmount = (
     ((finalCommissionAmount * platformFeeRatePercent) / 100).toFixed(2)
   );
 };
+
+export const shouldApplyPlatformFee = (
+  paymentMethod?: string
+): boolean => {
+  return paymentMethod === 'stripe' || paymentMethod === 'helcim';
+};

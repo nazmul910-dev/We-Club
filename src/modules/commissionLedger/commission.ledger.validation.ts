@@ -31,7 +31,8 @@ export const confirmCommissionValidation = z.object({
     id: mongoIdValidation,
   }),
   body: z.object({
-    final_commission_amount: z.number().min(0),
+    // final_commission_amount: z.number().min(0),
+    final_commission_pct: z.number().min(0).max(100),
     deal_closed_at: z.string().datetime().optional(),
     note: z.string().trim().max(1000).optional(),
   }),
@@ -53,6 +54,7 @@ export const confirmCommissionReceivedValidation = z.object({
     id: mongoIdValidation,
   }),
   body: z.object({
+    
     note: z.string().trim().max(1000).optional(),
   }),
 });
@@ -80,3 +82,29 @@ export const resolveDisputeValidation = z.object({
     resolution_note: z.string().trim().min(5).max(1000),
   }),
 });
+
+export const sendCommissionPaymentValidation =
+  z.object({
+    params: z.object({
+      id: z.string().min(1),
+    }),
+
+    body: z.object({
+      payment_method: z.enum([
+        'bank_transfer',
+        'stripe',
+        'helcim',
+        'cash',
+        'check',
+        'other',
+      ]),
+
+      payment_reference: z
+        .string()
+        .optional(),
+
+      note: z
+        .string()
+        .optional(),
+    }),
+  });

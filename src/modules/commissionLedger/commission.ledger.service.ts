@@ -1,15 +1,17 @@
-import { ClientSession, Types } from 'mongoose';
-import { Listing } from '../listings/listings.model.schema';
-import { UserRole } from '../users/user.interface';
-import { CommissionLedger } from './commission.ledger.model.schema';
+import { ClientSession, Types } from "mongoose";
+import { Listing } from "../listings/listings.model.schema";
+import { UserRole } from "../users/user.interface";
+import { CommissionLedger } from "./commission.ledger.model.schema";
 import {
   calculateCommissionAmount,
   calculatePlatformFeeAmount,
-} from './commission.ledger.utils';
-import { PromoteRequest } from '../listingPromote/listings.promote.request.model.schema';
-import { IPromoteRequest } from '../listingPromote/listing.promote.interface';
-import { IListing } from '../listings/listings.interface';
-import { CommissionPaymentMethod } from './commision.ledger.interface';
+  shouldApplyPlatformFee,
+} from "./commission.ledger.utils";
+import { PromoteRequest } from "../listingPromote/listings.promote.request.model.schema";
+import { IPromoteRequest } from "../listingPromote/listing.promote.interface";
+import { IListing } from "../listings/listings.interface";
+import { CommissionPaymentMethod } from "./commision.ledger.interface";
+import assertFound from "../../utility/assertFound";
 
 type AuthUser = {
   id: string;
@@ -21,9 +23,9 @@ type CreatePendingCommissionPayload = {
   listing_id: string;
   promotion_request_id: string;
   approved_by: string;
-  promoteRequest: IPromoteRequest; // ← pass it in
-  listing: IListing;     
-  session : ClientSession          // ← pass it in
+  promoteRequest: IPromoteRequest;
+  listing: IListing;
+  session: ClientSession;
 };
 
 type CreateManualCommissionPayload = {
@@ -34,19 +36,20 @@ type CreateManualCommissionPayload = {
 };
 
 type ConfirmCommissionPayload = {
-  final_commission_amount: number;
+  final_commission_pct: number;
   deal_closed_at?: string | undefined;
   note?: string | undefined;
 };
 
 type MarkCommissionPaidPayload = {
   payment_method?:
-    | 'bank_transfer'
-    | 'stripe'
-    | 'helcim'
-    | 'cash'
-    | 'check'
-    | 'other' | undefined;
+    | "bank_transfer"
+    | "stripe"
+    | "helcim"
+    | "cash"
+    | "check"
+    | "other"
+    | undefined;
   payment_reference?: string | undefined;
   note?: string | undefined;
 };
@@ -60,7 +63,7 @@ type DisputeCommissionPayload = {
 };
 
 type ResolveDisputePayload = {
-  final_status: 'pending' | 'confirmed' | 'paid' | 'cancelled';
+  final_status: "pending" | "confirmed" | "paid" | "cancelled";
   resolution_note: string;
 };
 
@@ -70,14 +73,13 @@ interface PaginationMeta {
   total: number;
   totalPage: number;
 }
- 
+
 const getPaginationParams = (query: Record<string, unknown>) => {
   const page = Math.max(1, Number(query.page) || 1);
   const limit = Math.max(1, Number(query.limit) || 10);
   const skip = (page - 1) * limit;
   return { page, limit, skip };
 };
- 
 
 const throwError = (message: string, statusCode: number): never => {
   const error = new Error(message) as Error & { statusCode?: number };
@@ -87,14 +89,14 @@ const throwError = (message: string, statusCode: number): never => {
 
 const toObjectId = (id: string): Types.ObjectId => {
   if (!Types.ObjectId.isValid(id)) {
-    throwError('Invalid id', 400);
+    throwError("Invalid id", 400);
   }
 
   return new Types.ObjectId(id);
 };
 
 const isAdminOrManager = (role: UserRole): boolean => {
-  return role === 'founder' || role === 'manager';
+  return role === "founder" || role === "manager";
 };
 
 const isSameId = (idA: unknown, idB: string): boolean => {
@@ -104,7 +106,7 @@ const isSameId = (idA: unknown, idB: string): boolean => {
 const ensureValueExists = <T>(
   value: T | null | undefined,
   message: string,
-  statusCode: number
+  statusCode: number,
 ): NonNullable<T> => {
   if (value == null) {
     throwError(message, statusCode);
@@ -114,20 +116,22 @@ const ensureValueExists = <T>(
 };
 
 const ensureCommissionExists = <T extends object>(
-  commission: T | null | undefined
+  commission: T | null | undefined,
 ): T => {
-  return ensureValueExists(commission, 'Commission record not found', 404);
+  return ensureValueExists(commission, "Commission record not found", 404);
 };
 
 const populateCommissionQuery = () => {
   return [
-    { path: 'listing_id', select: 'title ref_code price referral_commission cover_image' },
-    { path: 'listing_owner_id', select: 'fullName email role' },
-    { path: 'promoter_id', select: 'fullName email role' },
-    { path: 'created_by', select: 'fullName email role' },
+    {
+      path: "listing_id",
+      select: "title ref_code price referral_commission cover_image",
+    },
+    { path: "listing_owner_id", select: "fullName email role" },
+    { path: "promoter_id", select: "fullName email role" },
+    { path: "created_by", select: "fullName email role" },
   ];
 };
-
 
 export const createPendingCommissionFromPromotionApproval = async ({
   listing_id,
@@ -135,21 +139,26 @@ export const createPendingCommissionFromPromotionApproval = async ({
   approved_by,
   promoteRequest,
   listing,
-  session
+  session,
 }: CreatePendingCommissionPayload & {
-  session? : ClientSession
+  session?: ClientSession;
 }) => {
- 
   // promoter_id comes from the passed-in promoteRequest — no extra DB query needed
   const promoter_id = promoteRequest.requester.user_id.toString();
- 
+
   const listingPriceAmount = listing.price.amount;
-  const commissionRatePercent = listing.referral_commission.offered_amount;
+
+  // const commissionRatePercent = listing.referral_commission.offered_amount;
+
+  const commissionRatePercent =
+    promoteRequest.proposed_commission_pct ??
+    listing.referral_commission.offered_amount;
+
   const estimatedCommissionAmount = calculateCommissionAmount(
     listingPriceAmount,
-    commissionRatePercent
+    commissionRatePercent,
   );
- 
+
   const commission = await CommissionLedger.findOneAndUpdate(
     {
       promotion_request_id: toObjectId(promotion_request_id),
@@ -162,41 +171,40 @@ export const createPendingCommissionFromPromotionApproval = async ({
         listing_owner_id: listing.associate_id,
         promoter_id: toObjectId(promoter_id),
         created_by: toObjectId(approved_by),
- 
-        status: 'pending',
+
+        status: "pending",
         currency: listing.price.currency,
- 
+
         listing_price_amount: listingPriceAmount,
         commission_rate_percent: commissionRatePercent,
         estimated_commission_amount: estimatedCommissionAmount,
- 
+
         is_frozen: false,
- 
+
         status_history: [
           {
-            status: 'pending',
+            status: "pending",
             changed_by: toObjectId(approved_by),
             changed_at: new Date(),
-            note: 'Commission created automatically when promotion request was approved.',
+            note: "Commission created automatically when promotion request was approved.",
           },
         ],
       },
     },
     {
       upsert: true,
-      returnDocument: 'after',
+      returnDocument: "after",
       runValidators: true,
-      session
-    }
+      session,
+    },
   );
- 
+
   return ensureCommissionExists(commission);
 };
 
-
 const getMyCommissionsFromDB = async (
   authUser: AuthUser,
-  query: Record<string, unknown>
+  query: Record<string, unknown>,
 ): Promise<{ data: unknown[]; meta: PaginationMeta }> => {
   const filter: Record<string, unknown> = {
     $or: [
@@ -204,13 +212,13 @@ const getMyCommissionsFromDB = async (
       { promoter_id: toObjectId(authUser.id) },
     ],
   };
- 
-  if (typeof query.status === 'string') {
+
+  if (typeof query.status === "string") {
     filter.status = query.status;
   }
- 
+
   const { page, limit, skip } = getPaginationParams(query);
- 
+
   // Run the page of results and the total count in parallel — same filter,
   // one for `.find()`, one for `.countDocuments()`.
   const [data, total] = await Promise.all([
@@ -221,7 +229,7 @@ const getMyCommissionsFromDB = async (
       .limit(limit),
     CommissionLedger.countDocuments(filter),
   ]);
- 
+
   return {
     data,
     meta: {
@@ -234,24 +242,24 @@ const getMyCommissionsFromDB = async (
 };
 
 const getAllCommissionsFromDB = async (
-  query: Record<string, unknown>
+  query: Record<string, unknown>,
 ): Promise<{ data: unknown[]; meta: PaginationMeta }> => {
   const filter: Record<string, unknown> = {};
- 
-  if (typeof query.status === 'string') {
+
+  if (typeof query.status === "string") {
     filter.status = query.status;
   }
- 
-  if (typeof query.promoter_id === 'string') {
+
+  if (typeof query.promoter_id === "string") {
     filter.promoter_id = toObjectId(query.promoter_id);
   }
- 
-  if (typeof query.listing_owner_id === 'string') {
+
+  if (typeof query.listing_owner_id === "string") {
     filter.listing_owner_id = toObjectId(query.listing_owner_id);
   }
- 
+
   const { page, limit, skip } = getPaginationParams(query);
- 
+
   const [data, total] = await Promise.all([
     CommissionLedger.find(filter)
       .populate(populateCommissionQuery())
@@ -260,7 +268,7 @@ const getAllCommissionsFromDB = async (
       .limit(limit),
     CommissionLedger.countDocuments(filter),
   ]);
- 
+
   return {
     data,
     meta: {
@@ -272,10 +280,9 @@ const getAllCommissionsFromDB = async (
   };
 };
 
-
 const getSingleCommissionFromDB = async (
   commissionId: string,
-  authUser: AuthUser
+  authUser: AuthUser,
 ) => {
   const commission = await CommissionLedger.findById(commissionId)
     .populate(populateCommissionQuery())
@@ -289,7 +296,7 @@ const getSingleCommissionFromDB = async (
     isSameId(safeCommission.promoter_id, authUser.id);
 
   if (!canView) {
-    throwError('You are not allowed to view this commission record', 403);
+    throwError("You are not allowed to view this commission record", 403);
   }
 
   return safeCommission;
@@ -297,22 +304,25 @@ const getSingleCommissionFromDB = async (
 
 const createManualCommissionIntoDB = async (
   authUser: AuthUser,
-  payload: CreateManualCommissionPayload
+  payload: CreateManualCommissionPayload,
 ) => {
   const listing = await Listing.findById(payload.listing_id).lean();
-  const safeListing = ensureValueExists(listing, 'Listing not found', 404);
+  const safeListing = ensureValueExists(listing, "Listing not found", 404);
 
   const isListingOwner = isSameId(safeListing.associate_id, authUser.id);
 
   if (!isAdminOrManager(authUser.role) && !isListingOwner) {
-    throwError('Only listing owner, admin, or manager can create commission', 403);
+    throwError(
+      "Only listing owner, admin, or manager can create commission",
+      403,
+    );
   }
 
   const listingPriceAmount = safeListing.price.amount;
   const commissionRatePercent = safeListing.referral_commission.offered_amount;
   const estimatedCommissionAmount = calculateCommissionAmount(
     listingPriceAmount,
-    commissionRatePercent
+    commissionRatePercent,
   );
 
   const finalCommissionAmount =
@@ -325,7 +335,7 @@ const createManualCommissionIntoDB = async (
     created_by: toObjectId(authUser.id),
 
     status:
-      payload.final_commission_amount !== undefined ? 'confirmed' : 'pending',
+      payload.final_commission_amount !== undefined ? "confirmed" : "pending",
     currency: safeListing.price.currency,
 
     listing_price_amount: listingPriceAmount,
@@ -336,18 +346,11 @@ const createManualCommissionIntoDB = async (
       ? { final_commission_amount: payload.final_commission_amount }
       : {}),
 
-    platform_fee:
-      payload.final_commission_amount !== undefined
-        ? {
-            rate_percent: 4.5,
-            amount: calculatePlatformFeeAmount(finalCommissionAmount),
-            status: 'pending',
-          }
-        : {
-            rate_percent: 4.5,
-            amount: 0,
-            status: 'not_required',
-          },
+    platform_fee: {
+      rate_percent: 4.5,
+      amount: 0,
+      status: "pending",
+    },
 
     is_frozen: false,
     ...(payload.note !== undefined ? { note: payload.note } : {}),
@@ -355,10 +358,12 @@ const createManualCommissionIntoDB = async (
     status_history: [
       {
         status:
-          payload.final_commission_amount !== undefined ? 'confirmed' : 'pending',
+          payload.final_commission_amount !== undefined
+            ? "confirmed"
+            : "pending",
         changed_by: toObjectId(authUser.id),
         changed_at: new Date(),
-        note: payload.note || 'Manual commission record created.',
+        note: payload.note || "Manual commission record created.",
       },
     ],
   });
@@ -369,58 +374,68 @@ const createManualCommissionIntoDB = async (
 const confirmCommissionIntoDB = async (
   commissionId: string,
   authUser: AuthUser,
-  payload: ConfirmCommissionPayload
+  payload: ConfirmCommissionPayload,
 ) => {
   const commission = await CommissionLedger.findById(commissionId);
 
   const safeCommission = ensureCommissionExists(commission);
 
   if (safeCommission.is_frozen) {
-    throwError('This commission is frozen due to a dispute', 400);
+    throwError("This commission is frozen due to a dispute", 400);
   }
 
   const isListingOwner = isSameId(safeCommission.listing_owner_id, authUser.id);
 
   if (!isAdminOrManager(authUser.role) && !isListingOwner) {
-    throwError('Only listing owner, admin, or manager can confirm commission', 403);
+    throwError(
+      "Only listing owner, admin, or manager can confirm commission",
+      403,
+    );
   }
 
-  if (safeCommission.status !== 'pending') {
-    throwError('Only pending commission can be confirmed', 400);
+  if (safeCommission.status !== "pending") {
+    throwError("Only pending commission can be confirmed", 400);
   }
 
-  const platformFeeAmount = calculatePlatformFeeAmount(
-    payload.final_commission_amount
+  const grossCommissionAmount = calculateCommissionAmount(
+    safeCommission.listing_price_amount,
+    payload.final_commission_pct,
   );
 
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
     commissionId,
     {
       $set: {
-        status: 'confirmed',
-        final_commission_amount: payload.final_commission_amount,
+        status: "confirmed",
+
+        final_commission_pct: payload.final_commission_pct,
+
+        final_commission_amount: grossCommissionAmount,
+
         deal_closed_at: payload.deal_closed_at
           ? new Date(payload.deal_closed_at)
           : new Date(),
+
         platform_fee: {
           rate_percent: 4.5,
-          amount: platformFeeAmount,
-          status: 'pending',
+          amount: 0,
+          status: "pending",
         },
       },
+
       $push: {
         status_history: {
-          status: 'confirmed',
+          status: "confirmed",
           changed_by: toObjectId(authUser.id),
           changed_at: new Date(),
-          note: payload.note || 'Commission confirmed.',
+          note: payload.note || "Commission confirmed.",
         },
       },
     },
     {
-      returnDocument: 'after',
+      returnDocument: "after",
       runValidators: true,
-    }
+    },
   );
 
   return ensureCommissionExists(updatedCommission);
@@ -429,53 +444,56 @@ const confirmCommissionIntoDB = async (
 const markCommissionPaidIntoDB = async (
   commissionId: string,
   authUser: AuthUser,
-  payload: MarkCommissionPaidPayload
+  payload: MarkCommissionPaidPayload,
 ) => {
   const commission = await CommissionLedger.findById(commissionId);
   const safeCommission = ensureCommissionExists(commission);
 
   if (safeCommission.is_frozen) {
-    throwError('This commission is frozen due to a dispute', 400);
+    throwError("This commission is frozen due to a dispute", 400);
   }
-
 
   if (!isAdminOrManager(authUser.role)) {
-    throwError('Only admin or manager can mark commission as paid', 403);
+    throwError("Only admin or manager can mark commission as paid", 403);
   }
 
-  if (safeCommission.status !== 'confirmed') {
-    throwError('Only confirmed commission can be marked as paid', 400);
+  if (safeCommission.status !== "confirmed") {
+    throwError("Only confirmed commission can be marked as paid", 400);
   }
 
   if (!safeCommission.payment_tracking?.sent_at) {
-    throwError('Payment has not been sent by listing owner yet', 400);
+    throwError("Payment has not been sent by listing owner yet", 400);
   }
 
   if (!safeCommission.payment_tracking?.receiver_confirmed_at) {
-    throwError('Promoter has not confirmed receipt yet', 400);
+    throwError("Promoter has not confirmed receipt yet", 400);
   }
 
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
     commissionId,
     {
       $set: {
-        status: 'paid',
-        'payment_tracking.marked_paid_by': toObjectId(authUser.id),
-        'payment_tracking.marked_paid_at': new Date(),
-        ...(payload.payment_method && { 'payment_tracking.payment_method': payload.payment_method }),
-        ...(payload.payment_reference && { 'payment_tracking.payment_reference': payload.payment_reference }),
-        ...(payload.note && { 'payment_tracking.note': payload.note }),
+        status: "paid",
+        "payment_tracking.marked_paid_by": toObjectId(authUser.id),
+        "payment_tracking.marked_paid_at": new Date(),
+        // ...(payload.payment_method && {
+        //   "payment_tracking.payment_method": payload.payment_method,
+        // }),
+        ...(payload.payment_reference && {
+          "payment_tracking.payment_reference": payload.payment_reference,
+        }),
+        ...(payload.note && { "payment_tracking.note": payload.note }),
       },
       $push: {
         status_history: {
-          status: 'paid',
+          status: "paid",
           changed_by: toObjectId(authUser.id),
           changed_at: new Date(),
-          note: payload.note || 'Commission marked as paid by admin.',
+          note: payload.note || "Commission marked as paid by admin.",
         },
       },
     },
-    { returnDocument: 'after', runValidators: true }
+    { returnDocument: "after", runValidators: true },
   );
 
   const safeUpdatedCommission = ensureCommissionExists(updatedCommission);
@@ -493,41 +511,41 @@ const markCommissionPaidIntoDB = async (
 const confirmCommissionReceivedIntoDB = async (
   commissionId: string,
   authUser: AuthUser,
-  payload: ConfirmReceivedPayload
+  payload: ConfirmReceivedPayload,
 ) => {
   const commission = await CommissionLedger.findById(commissionId);
   const safeCommission = ensureCommissionExists(commission);
 
   if (!isSameId(safeCommission.promoter_id, authUser.id)) {
-    throwError('Only the receiving promoter can confirm payment received', 403);
+    throwError("Only the receiving promoter can confirm payment received", 403);
   }
 
   // status na, sent_at check koro
   if (!safeCommission.payment_tracking?.sent_at) {
-    throwError('Payment has not been sent yet', 400);
+    throwError("Payment has not been sent yet", 400);
   }
 
   if (safeCommission.payment_tracking?.receiver_confirmed_at) {
-    throwError('Payment already confirmed as received', 400);
+    throwError("Payment already confirmed as received", 400);
   }
 
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
     commissionId,
     {
       $set: {
-        'payment_tracking.receiver_confirmed_by': toObjectId(authUser.id),
-        'payment_tracking.receiver_confirmed_at': new Date(),
+        "payment_tracking.receiver_confirmed_by": toObjectId(authUser.id),
+        "payment_tracking.receiver_confirmed_at": new Date(),
       },
       $push: {
         status_history: {
           status: safeCommission.status, // still 'confirmed'
           changed_by: toObjectId(authUser.id),
           changed_at: new Date(),
-          note: payload.note || 'Receiver confirmed payment received.',
+          note: payload.note || "Receiver confirmed payment received.",
         },
       },
     },
-    { returnDocument: 'after', runValidators: true }
+    { returnDocument: "after", runValidators: true },
   );
 
   return ensureCommissionExists(updatedCommission);
@@ -536,7 +554,7 @@ const confirmCommissionReceivedIntoDB = async (
 const disputeCommissionIntoDB = async (
   commissionId: string,
   authUser: AuthUser,
-  payload: DisputeCommissionPayload
+  payload: DisputeCommissionPayload,
 ) => {
   const commission = await CommissionLedger.findById(commissionId);
 
@@ -547,22 +565,22 @@ const disputeCommissionIntoDB = async (
     isSameId(safeCommission.promoter_id, authUser.id);
 
   if (!isAdminOrManager(authUser.role) && !isInvolved) {
-    throwError('You are not allowed to dispute this commission', 403);
+    throwError("You are not allowed to dispute this commission", 403);
   }
 
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
     commissionId,
     {
       $set: {
-        status: 'disputed',
+        status: "disputed",
         is_frozen: true,
-        'dispute.opened_by': toObjectId(authUser.id),
-        'dispute.opened_at': new Date(),
-        'dispute.reason': payload.reason,
+        "dispute.opened_by": toObjectId(authUser.id),
+        "dispute.opened_at": new Date(),
+        "dispute.reason": payload.reason,
       },
       $push: {
         status_history: {
-          status: 'disputed',
+          status: "disputed",
           changed_by: toObjectId(authUser.id),
           changed_at: new Date(),
           note: payload.reason,
@@ -570,9 +588,9 @@ const disputeCommissionIntoDB = async (
       },
     },
     {
-      returnDocument: 'after',
+      returnDocument: "after",
       runValidators: true,
-    }
+    },
   );
 
   return ensureCommissionExists(updatedCommission);
@@ -581,10 +599,10 @@ const disputeCommissionIntoDB = async (
 const resolveCommissionDisputeIntoDB = async (
   commissionId: string,
   authUser: AuthUser,
-  payload: ResolveDisputePayload
+  payload: ResolveDisputePayload,
 ) => {
   if (!isAdminOrManager(authUser.role)) {
-    throwError('Only admin or manager can resolve dispute', 403);
+    throwError("Only admin or manager can resolve dispute", 403);
   }
 
   const updatedCommission = await CommissionLedger.findByIdAndUpdate(
@@ -593,9 +611,9 @@ const resolveCommissionDisputeIntoDB = async (
       $set: {
         status: payload.final_status,
         is_frozen: false,
-        'dispute.resolved_by': toObjectId(authUser.id),
-        'dispute.resolved_at': new Date(),
-        'dispute.resolution_note': payload.resolution_note,
+        "dispute.resolved_by": toObjectId(authUser.id),
+        "dispute.resolved_at": new Date(),
+        "dispute.resolution_note": payload.resolution_note,
       },
       $push: {
         status_history: {
@@ -607,63 +625,231 @@ const resolveCommissionDisputeIntoDB = async (
       },
     },
     {
-      returnDocument: 'after',
+      returnDocument: "after",
       runValidators: true,
-    }
+    },
   );
 
   return ensureCommissionExists(updatedCommission);
 };
 
-
 const sendCommissionPaymentIntoDB = async (
   id: string,
-  authUser: { id: string; role: string },
+  authUser: {
+    id: string;
+    role: string;
+  },
   payload: {
-    payment_method?: CommissionPaymentMethod | undefined;
+    payment_method: CommissionPaymentMethod;
     payment_reference?: string | undefined;
     note?: string | undefined;
-  }
+  },
 ) => {
   const commission = await CommissionLedger.findById(id);
 
   if (!commission) {
-    throw new Error("Commission not found");
+    throwError("Commission not found", 404);
   }
+
+  assertFound(commission, "Commission not found", 404);
 
   if (commission.listing_owner_id.toString() !== authUser.id) {
-    throw new Error("Only listing owner can send payment");
+    throwError("Only listing owner can send payment", 403);
   }
 
-  if (commission.status !== 'confirmed') {
-    throw new Error("Only confirmed commission can be sent for payment");
+  if (commission.status !== "confirmed") {
+    throwError("Only confirmed commission can be sent for payment", 400);
   }
 
   if (commission.payment_tracking?.sent_at) {
-    throw new Error("Payment already sent");
+    throwError("Payment already sent", 400);
   }
 
+  if (!payload.payment_method) {
+    throwError("Payment method is required", 400);
+  }
 
- commission.payment_tracking = {
-  ...commission.payment_tracking,
-  sent_by: new Types.ObjectId(authUser.id),
-  sent_at: new Date(),
-  ...(payload.payment_method && { payment_method: payload.payment_method }),
-  ...(payload.payment_reference && { payment_reference: payload.payment_reference }),
-  ...(payload.note && { note: payload.note }),
-};
+  const grossCommissionAmount = Number(commission.final_commission_amount);
+
+  if (!Number.isFinite(grossCommissionAmount) || grossCommissionAmount <= 0) {
+    throwError("Final commission amount is invalid", 400);
+  }
+
+  // ONLY Stripe / Helcim = 4.5%
+  const hasPlatformFee = shouldApplyPlatformFee(payload.payment_method);
+
+  const platformFeeAmount = hasPlatformFee
+    ? calculatePlatformFeeAmount(grossCommissionAmount, 4.5)
+    : 0;
+
+  const netFinalCommissionAmount = Number(
+    (grossCommissionAmount - platformFeeAmount).toFixed(2),
+  );
+
+  // এখানে final commission fix হচ্ছে
+  commission.final_commission_amount = netFinalCommissionAmount;
+
+  commission.platform_fee = {
+    rate_percent: hasPlatformFee ? 4.5 : 0,
+    amount: platformFeeAmount,
+    status: hasPlatformFee ? "pending" : "not_required",
+  };
+
+  commission.payment_tracking = {
+    ...commission.payment_tracking,
+
+    sent_by: new Types.ObjectId(authUser.id),
+
+    sent_at: new Date(),
+
+    payment_method: payload.payment_method,
+
+    ...(payload.payment_reference && {
+      payment_reference: payload.payment_reference,
+    }),
+
+    ...(payload.note && {
+      note: payload.note,
+    }),
+  };
 
   commission.status_history.push({
-    status: commission.status, 
+    status: commission.status,
+
     changed_by: new Types.ObjectId(authUser.id),
+
     changed_at: new Date(),
-    note: payload.note || 'Listing owner sent commission payment.',
+
+    note:
+      payload.note ||
+      `Listing owner sent commission payment via ${payload.payment_method}.`,
   } as any);
 
   await commission.save();
+
   return commission;
 };
 
+
+
+const getMyFinalCommissionTotalFromDB =
+  async (authUser: AuthUser) => {
+    const result =
+      await CommissionLedger.aggregate([
+        {
+          $match: {
+            promoter_id: toObjectId(
+              authUser.id
+            ),
+
+            status: {
+              $in: [
+                'confirmed',
+                'paid',
+              ],
+            },
+
+            final_commission_amount: {
+              $exists: true,
+              $ne: null,
+            },
+
+            // Payment method already selected,
+            // so final amount is really final
+            'payment_tracking.sent_at': {
+              $exists: true,
+            },
+          },
+        },
+
+        {
+          $group: {
+            _id: null,
+
+            total_final_commission: {
+              $sum:
+                '$final_commission_amount',
+            },
+
+            total_commissions: {
+              $sum: 1,
+            },
+          },
+        },
+
+        {
+          $project: {
+            _id: 0,
+            total_final_commission: 1,
+            total_commissions: 1,
+          },
+        },
+      ]);
+
+    return (
+      result[0] ?? {
+        total_final_commission: 0,
+        total_commissions: 0,
+      }
+    );
+  };
+
+
+  const getAllFinalCommissionTotalFromDB =
+  async () => {
+    const result =
+      await CommissionLedger.aggregate([
+        {
+          $match: {
+            status: {
+              $in: [
+                'confirmed',
+                'paid',
+              ],
+            },
+
+            final_commission_amount: {
+              $exists: true,
+              $ne: null,
+            },
+
+            'payment_tracking.sent_at': {
+              $exists: true,
+            },
+          },
+        },
+
+        {
+          $group: {
+            _id: null,
+
+            total_final_commission: {
+              $sum:
+                '$final_commission_amount',
+            },
+
+            total_commissions: {
+              $sum: 1,
+            },
+          },
+        },
+
+        {
+          $project: {
+            _id: 0,
+            total_final_commission: 1,
+            total_commissions: 1,
+          },
+        },
+      ]);
+
+    return (
+      result[0] ?? {
+        total_final_commission: 0,
+        total_commissions: 0,
+      }
+    );
+  };
 
 export const commissionLedgerService = {
   createPendingCommissionFromPromotionApproval,
@@ -676,5 +862,8 @@ export const commissionLedgerService = {
   confirmCommissionReceivedIntoDB,
   disputeCommissionIntoDB,
   resolveCommissionDisputeIntoDB,
-  sendCommissionPaymentIntoDB
+  sendCommissionPaymentIntoDB,
+
+  getMyFinalCommissionTotalFromDB,
+  getAllFinalCommissionTotalFromDB,
 };
