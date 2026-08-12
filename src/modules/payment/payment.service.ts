@@ -757,11 +757,7 @@ const activateRegistrationPayment = async (
         stripeCheckoutSessionId: session.id,
       });
     } catch (error) {
-      // Discount redeem fail করলেও payment activation যেন invalid না হয়ে যায়।
-      // Error টা log করে রাখছি যাতে debug করা যায় — কিন্তু এখানে throw
-      // করলাম না, কারণ throw করলে Stripe retry করবে, আর retry এর সময়
-      // উপরের `paymentSession.status === 'paid'` early-return এর কারণে
-      // এই ব্লকটা আর কখনোই রান হবে না (স্থায়ীভাবে miss হয়ে যাবে)।
+
       console.error(
         `[DISCOUNT REDEEM FAILED] session=${session.id} code=${discountCode} userId=${userId}:`,
         error,

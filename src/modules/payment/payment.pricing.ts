@@ -85,6 +85,7 @@ export const isPaidRole = (role: UserRole): boolean => {
     'ambassador',
     'ceo',
     'ceo_partner',
+    'we_club_member',
   ].includes(role);
 };
 
@@ -99,7 +100,7 @@ const getMemberAccessPrice = (accessTo: AccessTo): number => {
   if (accessTo === 'invictus') {
     return parseDollarAmountToCents(
       config.STRIPE_PRICE_INVICTUS_MONTHLY,
-      'STRIPE_PRICE_INVICTUS_MONTHLY'
+      ' '
     );
   }
 
@@ -186,6 +187,38 @@ export const getPricingByRoleAndAccess = (
 
   const accessName =
     getAccessDisplayName(accessTo);
+
+if (role === 'we_club_member') {
+    displayName = `WE CLUB MEMBER - ${accessName}`;
+ 
+    const monthlyPrice = parseDollarAmountToCents(
+      config.STRIPE_PRICE_WE_CLUB_MEMBER_MONTHLY,
+      'STRIPE_PRICE_WE_CLUB_MEMBER_MONTHLY'
+    );
+ 
+    const totalPrice = monthlyPrice * durationMonths;
+ 
+    items = [
+      {
+        name: displayName,
+ 
+        description: `${durationMonths} month WE Club membership access to ${accessName}.`,
+ 
+        amountCents: totalPrice,
+ 
+        amount: totalPrice / 100,
+ 
+        currency: 'usd',
+ 
+        interval: 'month',
+ 
+        formattedAmount: formatAmount(totalPrice),
+ 
+        billingText: `${formatAmount(totalPrice)} / ${durationMonths} months`,
+      },
+    ];
+  }
+
 
   if (
     ['associate', 'partner', 'ambassador']
@@ -299,6 +332,7 @@ export const getAllPricingPlans = (): RolePricingPlan[] => {
     'ambassador',
     'ceo',
     'ceo_partner',
+    'we_club_member',
   ];
 
   const accessList: AccessTo[] = [
