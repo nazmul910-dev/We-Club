@@ -29,6 +29,7 @@ import { userEntitlementRoutes } from "../modules/userEntitlements/userEntitleme
 import { videoProgressRoutes } from "../modules/videoProgress/video.progress.route";
 import { moduleProgressRoutes } from "../modules/moduleProgress/module.progress.route";
 import { quizAttemptRoutes } from "../modules/quizAttempts/quiz.attempt.route";
+import { quizCertificateRoutes } from "../modules/quizCertificates/quiz.certificate.route";
 const router = Router();
 
 type TModuleRoute = {
@@ -142,6 +143,14 @@ const moduleRoutes: TModuleRoute[] = [
     path: "/invictus/quiz-attempts",
     route: quizAttemptRoutes,
   },
+  {
+    path: "/invictus/quiz-certificates",
+    route: quizCertificateRoutes,
+  },
+  // {
+  //   path: "/invictus/mentorship-profiles",
+  //   route: mentorshipProfileRoutes,
+  // },
 ];
 
 moduleRoutes.forEach((route) => {
