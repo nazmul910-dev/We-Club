@@ -18,9 +18,6 @@ import { moduleVideoRoutes } from "../modules/moduleVideos/module.video.route";
 import { moduleResourceRoutes } from "../modules/moduleResources/module.resource.route";
 import { quizQuestionRoutes } from "../modules/quizeQuestions/quiz.question.route";
 import { moduleActionRoutes } from "../modules/moduleActions/module.action.route";
-// import { userRoutes } from '../modules/user/user.route';
-// import { adminRoutes } from '../modules/admin/admin.route';
-// import { courseRoutes } from '../modules/course/course.route';
 import roomRoutes from "../modules/room/room.route";
 import messageRoutes from "../modules/message/message.route";
 import { LogoRoutes } from "../modules/manageLogo/logo.route";
@@ -30,6 +27,8 @@ import { videoProgressRoutes } from "../modules/videoProgress/video.progress.rou
 import { moduleProgressRoutes } from "../modules/moduleProgress/module.progress.route";
 import { quizAttemptRoutes } from "../modules/quizAttempts/quiz.attempt.route";
 import { quizCertificateRoutes } from "../modules/quizCertificates/quiz.certificate.route";
+import { mentorshipProfileRoutes } from "../modules/mentorshipProfiles/mentorship.profile.route";
+import { mentorBookingRoutes } from "../modules/mentorBookings/mentor.booking.route";
 const router = Router();
 
 type TModuleRoute = {
@@ -147,10 +146,14 @@ const moduleRoutes: TModuleRoute[] = [
     path: "/invictus/quiz-certificates",
     route: quizCertificateRoutes,
   },
-  // {
-  //   path: "/invictus/mentorship-profiles",
-  //   route: mentorshipProfileRoutes,
-  // },
+  {
+    path: "/invictus/mentorship-profiles",
+    route: mentorshipProfileRoutes,
+  },
+  {
+    path: "/invictus/mentor-bookings",
+    route: mentorBookingRoutes,
+  },
 ];
 
 moduleRoutes.forEach((route) => {
