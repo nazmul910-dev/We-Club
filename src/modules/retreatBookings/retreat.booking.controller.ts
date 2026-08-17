@@ -209,7 +209,7 @@ const inviteRetreatBooking = async (
     const authUser = getAuthUser(req);
 
     const booking = await retreatBookingService.inviteRetreatBooking(
-      String(req.params.id),
+      req.params.id as string,
       req.body as IInviteRetreatBooking,
       authUser.id,
     );
@@ -234,7 +234,7 @@ const confirmRetreatBookingAdmin = async (
     const authUser = getAuthUser(req);
 
     const booking = await retreatBookingService.confirmRetreatBookingAdmin(
-      String(req.params.id),
+      req.params.id as string,
       req.body as IConfirmRetreatBookingAdmin,
       authUser.id,
     );
@@ -259,7 +259,7 @@ const refundRetreatBooking = async (
     const authUser = getAuthUser(req);
 
     const booking = await retreatBookingService.refundRetreatBooking(
-      String(req.params.id),
+      req.params.id as string,
       req.body as IRefundRetreatBooking,
       authUser.id,
     );

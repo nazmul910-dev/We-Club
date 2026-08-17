@@ -393,7 +393,8 @@ const confirmRetreatBookingAdmin = async (
   payload: IConfirmRetreatBookingAdmin,
   actorId: string,
 ) => {
-  assertValidObjectId(bookingId, "Retreat booking ID");
+  const test = assertValidObjectId(bookingId, "Retreat booking ID");
+
 
   const booking = await RetreatBooking.findById(bookingId);
   assertFound(booking, "Retreat booking not found", 404);
