@@ -382,12 +382,7 @@ const grantEntitlementByAdmin = async (
   });
 };
 
-/**
- * Stripe webhook payment success হওয়ার পরে
- * এই function call করবে।
- *
- * Frontend থেকে এটি call করা যাবে না।
- */
+
 const activatePillarEntitlementFromPayment = async (
   payload: IActivatePillarFromPaymentInput,
 ) => {

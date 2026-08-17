@@ -65,9 +65,10 @@ export const initSocket = (httpServer: HttpServer) => {
       const userDoc = await User.findById(userId).select(
         "fullName profileImage",
       );
+
+
       socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
       socket.data.user.profileImage = userDoc?.profileImage ?? null;
-
       // auto-join the single General room for now (explicit joinRoom comes later)
       const room = await getGeneralRoom(userId);
       const roomId = room._id.toString();
