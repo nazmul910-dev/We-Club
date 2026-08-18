@@ -33,6 +33,8 @@ import { quizCertificateRoutes } from "../modules/quizCertificates/quiz.certific
 import { mentorshipProfileRoutes } from "../modules/mentorshipProfiles/mentorship.profile.route";
 import { mentorshipReviewRoutes } from "../modules/mentorshipReviews/mentorship.review.route";
 import { retreatLocationRoutes } from "../modules/retreatLocations/retreat.location.route";
+import { leaderboardEntryRoutes } from "../modules/leaderboardEntries/leaderboard.entry.route";
+import { leaderboardRoutes } from "../modules/leaderboards/leaderboard.route";
 const router = Router();
 
 type TModuleRoute = {
@@ -162,6 +164,14 @@ const moduleRoutes: TModuleRoute[] = [
     path: "/invictus/retreat-locations",
     route: retreatLocationRoutes,
   },
+  {
+    path:"/invictus",
+    route:leaderboardEntryRoutes,
+  },
+  {
+    path:"/invictus/leaderboards",
+    route:leaderboardRoutes,
+  }
 ];
 
 moduleRoutes.forEach((route) => {
