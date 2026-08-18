@@ -10,7 +10,7 @@ export const getMessageHistoryHandler = async (
   try {
     const { roomId } = req.params;
     const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 30;
+    const limit = Number(req.query.limit) || 100;
 
     const messages = await getMessageHistory(roomId as string, page, limit);
 
