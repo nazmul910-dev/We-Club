@@ -54,7 +54,7 @@ export const verifyAdmin = (
     return next(new UnauthorizedError("Authentication required"));
   }
 
-  if (req.user.role !== "admin") {
+  if (req.user.role !== "founder") {
     return next(
       new ForbiddenError("You are not authorized to access this resource")
     );

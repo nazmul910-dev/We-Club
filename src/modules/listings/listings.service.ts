@@ -7,16 +7,48 @@ import { PromoteRequest } from "../listingPromote/listings.promote.request.model
 import mongoose from "mongoose";
 import { ListingViewStats } from "./listings.viewsHistory.modal.schema";
 
-/**
- * Service layer: owns all DB interaction + business logic for Listing.
- * Controllers should never talk to the model directly — always go through here.
- */
+const generateRefCode = (): string => {
+  const digits = Math.floor(100000 + Math.random() * 900000); 
+  return `WE-${digits}`;
+};
+
+const generateUniqueRefCode = async (): Promise<string> => {
+  let refCode = generateRefCode();
+  let exists = await Listing.exists({ ref_code: refCode });
+
+  while (exists) {
+    refCode = generateRefCode();
+    exists = await Listing.exists({ ref_code: refCode });
+  }
+
+  return refCode;
+};
 
 const createListingInDB = async (
   payload: Partial<IListing>,
+  creatorRole?: string,
 ): Promise<IListing> => {
-  const listing = new Listing(payload);
-  return await listing.save();
+  const { ref_code, ...safePayload } = payload;
+
+  let attempts = 0;
+  while (attempts < 5) {
+    try {
+      const listing = new Listing({
+        ...safePayload,
+        ref_code: generateRefCode(),
+        ...(creatorRole === "founder" && { status: "active" }),
+      });
+      return await listing.save();
+    } catch (error: any) {
+      if (error.code === 11000 && error.keyPattern?.ref_code) {
+        attempts++;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error("Failed to generate a unique reference code. Please try again.");
 };
 
 const getAllListingFromDB = async (
@@ -25,9 +57,6 @@ const getAllListingFromDB = async (
   data: IListing[];
   meta: { page: number; limit: number; total: number; totalPage: number };
 }> => {
-  // NOTE: QueryBuilder.sort() defaults to "-createdAt", but this schema's
-  // timestamps are mapped to "created_at"/"updated_at" (snake_case).
-  // If the caller doesn't pass ?sort=, force the correct default here.
 
   const queryWithDefaultSort = {
     sort: "-created_at",
@@ -118,12 +147,8 @@ const getMyPromotersFromDB = async (
       },
     },
 
-    // 2. Flatten promoters array — one doc per promoter per listing
     { $unwind: "$promoters" },
 
-    // 3. Group by promoter user_id
-    //    - count how many listings they're promoting
-    //    - collect each listing's price (amount + currency) to handle multi-currency
     {
       $group: {
         _id: "$promoters.user_id",
@@ -138,7 +163,7 @@ const getMyPromotersFromDB = async (
       },
     },
 
-    // 4. Lookup User details — one join, not N queries
+
     {
       $lookup: {
         from: "users",
@@ -149,10 +174,8 @@ const getMyPromotersFromDB = async (
       },
     },
 
-    // 5. Flatten the user array (lookup always returns array)
     { $unwind: "$user" },
 
-    // 6. Shape final output
     {
       $project: {
         _id: 0,
@@ -191,8 +214,6 @@ const updateListingInDB = async (
     );
   }
 
-  // Prevent associates from sneaking in fields they shouldn't control directly
-  // (e.g. promoters is managed only via approved PromoteRequests, not direct edits).
   const { promoters, associate_id, ...safePayload } = payload as Record<
     string,
     unknown
@@ -217,9 +238,9 @@ const deleteListingFromDB = async (
   }
 
   const isOwner = listing.associate_id.toString() === userId.toString();
-  const isAdmin = role === "admin";
+  const isFounder = role === "founder";
 
-  if (!isOwner && !isAdmin) {
+  if (!isOwner && !isFounder) {
     throw new UnauthorizedError(
       "You are not authorized to delete this listing",
     );

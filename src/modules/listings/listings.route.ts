@@ -194,7 +194,7 @@ router.get("/:id",  listingController.getListingById);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete("/:id", verifyToken,  listingController.deleteListing);
+router.delete("/:id", verifyToken, listingController.deleteListing);
 
 router.patch("/:id/view", listingController.incrementListingView);
 

@@ -30,6 +30,9 @@ import { videoProgressRoutes } from "../modules/videoProgress/video.progress.rou
 import { moduleProgressRoutes } from "../modules/moduleProgress/module.progress.route";
 import { quizAttemptRoutes } from "../modules/quizAttempts/quiz.attempt.route";
 import { quizCertificateRoutes } from "../modules/quizCertificates/quiz.certificate.route";
+import { mentorshipProfileRoutes } from "../modules/mentorshipProfiles/mentorship.profile.route";
+import { mentorshipReviewRoutes } from "../modules/mentorshipReviews/mentorship.review.route";
+import { retreatLocationRoutes } from "../modules/retreatLocations/retreat.location.route";
 const router = Router();
 
 type TModuleRoute = {
@@ -147,10 +150,18 @@ const moduleRoutes: TModuleRoute[] = [
     path: "/invictus/quiz-certificates",
     route: quizCertificateRoutes,
   },
-  // {
-  //   path: "/invictus/mentorship-profiles",
-  //   route: mentorshipProfileRoutes,
-  // },
+  {
+    path: "/invictus/mentorship-profiles",
+    route: mentorshipProfileRoutes,
+  },
+  {
+    path: "/invictus/mentorship-reviews",
+    route: mentorshipReviewRoutes,
+  },
+  {
+    path: "/invictus/retreat-locations",
+    route: retreatLocationRoutes,
+  },
 ];
 
 moduleRoutes.forEach((route) => {
