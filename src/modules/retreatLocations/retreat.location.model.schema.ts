@@ -1,65 +1,13 @@
 import { model, Schema } from "mongoose";
 
 import {
-  ILocationCoordinates,
   IRetreatLocation,
-  IVenueDetails,
   RETREAT_LOCATION_STATUSES,
 } from "./retreat.location.interface";
 
-const venueDetailsSchema = new Schema<IVenueDetails>(
-  {
-    venueName: {
-      type: String,
-      trim: true,
-      maxlength: 200,
-    },
-    capacity: {
-      type: Number,
-      min: 1,
-    },
-    accommodationType: {
-      type: String,
-      trim: true,
-      maxlength: 100,
-    },
-    features: {
-      type: [
-        {
-          type: String,
-          trim: true,
-          maxlength: 100,
-        },
-      ],
-      default: [],
-    },
-  },
-  {
-    _id: false,
-  },
-);
-
-const locationCoordinatesSchema = new Schema<ILocationCoordinates>(
-  {
-    latitude: {
-      type: Number,
-      min: -90,
-      max: 90,
-    },
-    longitude: {
-      type: Number,
-      min: -180,
-      max: 180,
-    },
-  },
-  {
-    _id: false,
-  },
-);
-
 const retreatLocationSchema = new Schema<IRetreatLocation>(
   {
-    name: {
+    title: {
       type: String,
       required: true,
       trim: true,
@@ -70,8 +18,8 @@ const retreatLocationSchema = new Schema<IRetreatLocation>(
       type: String,
       required: true,
       unique: true,
-      lowercase: true,
       trim: true,
+      lowercase: true,
       index: true,
     },
 
@@ -80,7 +28,6 @@ const retreatLocationSchema = new Schema<IRetreatLocation>(
       required: true,
       trim: true,
       maxlength: 100,
-      index: true,
     },
 
     city: {
@@ -88,23 +35,12 @@ const retreatLocationSchema = new Schema<IRetreatLocation>(
       required: true,
       trim: true,
       maxlength: 100,
-      index: true,
     },
 
-    stateOrProvince: {
-      type: String,
-      trim: true,
-      maxlength: 100,
-    },
-
-    address: {
+    tagline: {
       type: String,
       trim: true,
       maxlength: 300,
-    },
-
-    coordinates: {
-      type: locationCoordinatesSchema,
     },
 
     description: {
@@ -114,53 +50,29 @@ const retreatLocationSchema = new Schema<IRetreatLocation>(
       maxlength: 5000,
     },
 
-    shortDescription: {
-      type: String,
-      trim: true,
-      maxlength: 500,
-    },
-
-    venueDetails: {
-      type: venueDetailsSchema,
-    },
-
-    amenities: {
-      type: [
-        {
-          type: String,
-          trim: true,
-          maxlength: 100,
-        },
-      ],
-      default: [],
-    },
-
     coverImage: {
       type: String,
-      required: true,
       trim: true,
     },
 
-    gallery: {
-      type: [
-        {
-          type: String,
-          trim: true,
-        },
-      ],
+    promoVideoUrl: {
+      type: String,
+      trim: true,
+    },
+
+    galleryImages: {
+      type: [{ type: String, trim: true }],
       default: [],
     },
 
-    featured: {
-      type: Boolean,
-      default: false,
-      index: true,
+    whatsIncluded: {
+      type: [{ type: String, trim: true }],
+      default: [],
     },
 
-    status: {
-      type: String,
-      enum: RETREAT_LOCATION_STATUSES,
-      default: "draft",
+    isFeatured: {
+      type: Boolean,
+      default: false,
       index: true,
     },
 
@@ -170,17 +82,16 @@ const retreatLocationSchema = new Schema<IRetreatLocation>(
       index: true,
     },
 
+    status: {
+      type: String,
+      enum: RETREAT_LOCATION_STATUSES,
+      default: "published",
+      index: true,
+    },
+
     order: {
       type: Number,
       default: 0,
-    },
-
-    publishedAt: {
-      type: Date,
-    },
-
-    archivedAt: {
-      type: Date,
     },
 
     createdBy: {
@@ -201,28 +112,9 @@ const retreatLocationSchema = new Schema<IRetreatLocation>(
 );
 
 retreatLocationSchema.index({
-  status: 1,
   isActive: 1,
+  status: 1,
   order: 1,
-});
-
-retreatLocationSchema.index({
-  country: 1,
-  city: 1,
-  status: 1,
-});
-
-retreatLocationSchema.index({
-  featured: 1,
-  status: 1,
-  isActive: 1,
-});
-
-retreatLocationSchema.index({
-  name: "text",
-  description: "text",
-  country: "text",
-  city: "text",
 });
 
 export const RetreatLocation = model<IRetreatLocation>(

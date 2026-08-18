@@ -27,7 +27,6 @@ router.get(
   mentorshipProfileController.getSingleMentorshipProfile,
 );
 
-
 router.post(
   "/",
 

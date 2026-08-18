@@ -4,11 +4,11 @@ import assertFound from "../../utility/assertFound";
 import sendResponse from "../../utility/sendResponse";
 
 import {
-  ICreateRetreatLocation,
-  IRetreatLocationQuery,
-  IUpdateRetreatLocation,
-} from "./retreat.location.interface";
-import { retreatLocationService } from "./retreat.location.service";
+  ICreateRetreatBatch,
+  IRetreatBatchQuery,
+  IUpdateRetreatBatch,
+} from "./retreat.batch.interface";
+import { retreatBatchService } from "./retreat.batch.service";
 
 const getAuthUser = (
   req: Request,
@@ -24,7 +24,7 @@ const getAuthUser = (
   };
 };
 
-const createRetreatLocation = async (
+const createRetreatBatch = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -32,23 +32,23 @@ const createRetreatLocation = async (
   try {
     const authUser = getAuthUser(req);
 
-    const location = await retreatLocationService.createRetreatLocation(
-      req.body as ICreateRetreatLocation,
+    const batch = await retreatBatchService.createRetreatBatch(
+      req.body as ICreateRetreatBatch,
       authUser.id,
     );
 
     sendResponse(res, {
       statusCode: 201,
       success: true,
-      message: "Retreat location created successfully",
-      data: location,
+      message: "Retreat batch created successfully",
+      data: batch,
     });
   } catch (error) {
     next(error);
   }
 };
 
-const getAllRetreatLocations = async (
+const getAllRetreatBatches = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -56,15 +56,15 @@ const getAllRetreatLocations = async (
   try {
     const isPublicOnly = !req.user || (req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager");
 
-    const result = await retreatLocationService.getAllRetreatLocations(
-      req.query as IRetreatLocationQuery,
+    const result = await retreatBatchService.getAllRetreatBatches(
+      req.query as IRetreatBatchQuery,
       isPublicOnly,
     );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: "Retreat locations retrieved successfully",
+      message: "Retreat batches retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -72,7 +72,7 @@ const getAllRetreatLocations = async (
   }
 };
 
-const getSingleRetreatLocation = async (
+const getSingleRetreatBatch = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -80,7 +80,7 @@ const getSingleRetreatLocation = async (
   try {
     const isPublicOnly = !req.user || (req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager");
 
-    const location = await retreatLocationService.getSingleRetreatLocation(
+    const batch = await retreatBatchService.getSingleRetreatBatch(
       String(req.params.idOrSlug),
       isPublicOnly,
     );
@@ -88,15 +88,15 @@ const getSingleRetreatLocation = async (
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: "Retreat location retrieved successfully",
-      data: location,
+      message: "Retreat batch retrieved successfully",
+      data: batch,
     });
   } catch (error) {
     next(error);
   }
 };
 
-const updateRetreatLocation = async (
+const updateRetreatBatch = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -104,24 +104,24 @@ const updateRetreatLocation = async (
   try {
     const authUser = getAuthUser(req);
 
-    const location = await retreatLocationService.updateRetreatLocation(
+    const batch = await retreatBatchService.updateRetreatBatch(
       String(req.params.id),
-      req.body as IUpdateRetreatLocation,
+      req.body as IUpdateRetreatBatch,
       authUser.id,
     );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: "Retreat location updated successfully",
-      data: location,
+      message: "Retreat batch updated successfully",
+      data: batch,
     });
   } catch (error) {
     next(error);
   }
 };
 
-const deleteRetreatLocation = async (
+const deleteRetreatBatch = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -129,7 +129,7 @@ const deleteRetreatLocation = async (
   try {
     getAuthUser(req);
 
-    const result = await retreatLocationService.deleteRetreatLocation(
+    const result = await retreatBatchService.deleteRetreatBatch(
       String(req.params.id),
     );
 
@@ -144,10 +144,10 @@ const deleteRetreatLocation = async (
   }
 };
 
-export const retreatLocationController = {
-  createRetreatLocation,
-  getAllRetreatLocations,
-  getSingleRetreatLocation,
-  updateRetreatLocation,
-  deleteRetreatLocation,
+export const retreatBatchController = {
+  createRetreatBatch,
+  getAllRetreatBatches,
+  getSingleRetreatBatch,
+  updateRetreatBatch,
+  deleteRetreatBatch,
 };

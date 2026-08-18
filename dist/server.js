@@ -31,7 +31,11 @@ var routeNotFoundHandler = (req, res, next) => {
 var routeNotFoundHandler_default = routeNotFoundHandler;
 
 // src/routes/index.ts
+<<<<<<< HEAD
 import { Router as Router31 } from "express";
+=======
+import { Router as Router30 } from "express";
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 
 // src/modules/users/user.route.ts
 import { Router } from "express";
@@ -10474,7 +10478,11 @@ var allowedVideoTypes = [
   "video/x-m4v",
   "video/mpeg"
 ];
+<<<<<<< HEAD
 var allowedImageTypes = [
+=======
+var allowedImageTypes2 = [
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
   "image/jpeg",
   "image/jpg",
   "image/png",
@@ -10490,7 +10498,11 @@ var allowedResourceTypes = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "text/plain",
   "text/csv",
+<<<<<<< HEAD
   ...allowedImageTypes
+=======
+  ...allowedImageTypes2
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 ];
 var uploadModuleVideo = multer2({
   storage: memoryStorage,
@@ -10515,7 +10527,11 @@ var uploadModuleResource = multer2({
   },
   fileFilter: (_req, file, callback) => {
     if (file.fieldname === "thumbnail") {
+<<<<<<< HEAD
       if (!allowedImageTypes.includes(file.mimetype)) {
+=======
+      if (!allowedImageTypes2.includes(file.mimetype)) {
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
         return callback(
           new Error("Thumbnail must be JPG, JPEG, PNG, or WEBP")
         );
@@ -11597,6 +11613,7 @@ var assertFound3 = (value, message, statusCode) => {
 var isAdminOrManager7 = (role) => {
   return role === "admin" || role === "manager";
 };
+<<<<<<< HEAD
 var setNullableField = (document, path3, value) => {
   if (value === null) {
     document.set(path3, void 0);
@@ -11604,6 +11621,15 @@ var setNullableField = (document, path3, value) => {
   }
   if (value !== void 0) {
     document.set(path3, value);
+=======
+var setNullableField = (document, path2, value) => {
+  if (value === null) {
+    document.set(path2, void 0);
+    return;
+  }
+  if (value !== void 0) {
+    document.set(path2, value);
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
   }
 };
 var ensureCourseModuleExists = async (moduleId) => {
@@ -12491,6 +12517,7 @@ var assertFound4 = (value, message, statusCode) => {
 var isAdminOrManager8 = (role) => {
   return role === "admin" || role === "manager";
 };
+<<<<<<< HEAD
 var setNullableField2 = (document, path3, value) => {
   if (value === null) {
     document.set(path3, void 0);
@@ -12498,6 +12525,15 @@ var setNullableField2 = (document, path3, value) => {
   }
   if (value !== void 0) {
     document.set(path3, value);
+=======
+var setNullableField2 = (document, path2, value) => {
+  if (value === null) {
+    document.set(path2, void 0);
+    return;
+  }
+  if (value !== void 0) {
+    document.set(path2, value);
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
   }
 };
 var ensureCourseModuleExists2 = async (moduleId) => {
@@ -15147,7 +15183,16 @@ var getGeneralRoom = async (userId) => {
 // src/modules/room/room.controller.ts
 var getGeneralRoomHandler = async (req, res, next) => {
   try {
+<<<<<<< HEAD
     const room = await getGeneralRoom(req.user.id);
+=======
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Authentication required" });
+      return;
+    }
+    const room = await getGeneralRoom(userId);
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     res.status(200).json({
       success: true,
       data: room
@@ -19545,6 +19590,7 @@ router28.patch(
 );
 var mentorshipProfileRoutes = router28;
 
+<<<<<<< HEAD
 // src/modules/mentorshipReviews/mentorship.review.route.ts
 import { Router as Router29 } from "express";
 
@@ -19572,22 +19618,56 @@ var mentorshipReviewSchema = new Schema27(
       index: true
     },
     user: {
+=======
+// src/modules/mentorBookings/mentor.booking.route.ts
+import { Router as Router29 } from "express";
+
+// src/modules/mentorBookings/mentor.booking.service.ts
+import { Types as Types27 } from "mongoose";
+
+// src/modules/mentorBookings/mentor.booking.model.schema.ts
+import { model as model27, Schema as Schema27 } from "mongoose";
+
+// src/modules/mentorBookings/mentor.booking.interface.ts
+var MENTOR_BOOKING_STATUSES = [
+  "requested",
+  "confirmed",
+  "completed",
+  "cancelled",
+  "no_show"
+];
+var NO_SHOW_PARTIES = ["member", "mentor", "both"];
+
+// src/modules/mentorBookings/mentor.booking.model.schema.ts
+var mentorBookingSchema = new Schema27(
+  {
+    member: {
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       type: Schema27.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
+<<<<<<< HEAD
     mentor: {
+=======
+    leadMentor: {
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       type: Schema27.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
+<<<<<<< HEAD
     mentorshipProfile: {
+=======
+    leadMentorProfile: {
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       type: Schema27.Types.ObjectId,
       ref: "MentorshipProfile",
       index: true
     },
+<<<<<<< HEAD
     rating: {
       type: Number,
       required: true,
@@ -19595,12 +19675,57 @@ var mentorshipReviewSchema = new Schema27(
       max: 5
     },
     comment: {
+=======
+    coMentor: {
+      type: Schema27.Types.ObjectId,
+      ref: "User",
+      index: true
+    },
+    coMentorProfile: {
+      type: Schema27.Types.ObjectId,
+      ref: "MentorshipProfile",
+      index: true
+    },
+    scheduledStartTime: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    scheduledEndTime: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    durationMinutes: {
+      type: Number,
+      default: 60,
+      min: 15,
+      max: 180,
+      required: true
+    },
+    timezone: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    meetingUrl: {
+      type: String,
+      trim: true
+    },
+    sessionTopic: {
+      type: String,
+      trim: true,
+      maxlength: 500
+    },
+    notes: {
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       type: String,
       trim: true,
       maxlength: 2e3
     },
     status: {
       type: String,
+<<<<<<< HEAD
       enum: MENTORSHIP_REVIEW_STATUSES,
       default: "published",
       index: true
@@ -19615,20 +19740,67 @@ var mentorshipReviewSchema = new Schema27(
       min: 0
     },
     adminNotes: {
+=======
+      enum: MENTOR_BOOKING_STATUSES,
+      default: "requested",
+      index: true,
+      required: true
+    },
+    cancellationReason: {
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       type: String,
       trim: true,
       maxlength: 1e3
     },
+<<<<<<< HEAD
     moderatedBy: {
       type: Schema27.Types.ObjectId,
       ref: "User"
     },
     moderatedAt: {
       type: Date
+=======
+    cancelledBy: {
+      type: Schema27.Types.ObjectId,
+      ref: "User"
+    },
+    cancelledAt: {
+      type: Date
+    },
+    completedAt: {
+      type: Date
+    },
+    noShowAt: {
+      type: Date
+    },
+    noShowBy: {
+      type: String,
+      enum: NO_SHOW_PARTIES
+    },
+    noShowReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    mentorFeedback: {
+      type: String,
+      trim: true,
+      maxlength: 3e3
+    },
+    createdBy: {
+      type: Schema27.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema27.Types.ObjectId,
+      ref: "User"
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     }
   },
   {
     timestamps: true,
+<<<<<<< HEAD
     collection: "mentorshipreviews"
   }
 );
@@ -19655,6 +19827,37 @@ var MentorshipReview = model27(
 );
 
 // src/modules/mentorshipReviews/mentorship.review.service.ts
+=======
+    collection: "mentorbookings"
+  }
+);
+mentorBookingSchema.index({
+  member: 1,
+  status: 1
+});
+mentorBookingSchema.index({
+  leadMentor: 1,
+  status: 1
+});
+mentorBookingSchema.index({
+  coMentor: 1,
+  status: 1
+});
+mentorBookingSchema.index({
+  scheduledStartTime: 1,
+  scheduledEndTime: 1
+});
+mentorBookingSchema.index({
+  status: 1,
+  scheduledStartTime: 1
+});
+var MentorBooking = model27(
+  "MentorBooking",
+  mentorBookingSchema
+);
+
+// src/modules/mentorBookings/mentor.booking.service.ts
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 var throwServiceError14 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -19670,6 +19873,7 @@ var assertValidObjectId9 = (value, fieldName) => {
     throwServiceError14(`${fieldName} is invalid`, 400);
   }
 };
+<<<<<<< HEAD
 var isDuplicateKeyError9 = (error) => {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
 };
@@ -19880,10 +20084,232 @@ var getMyReviews = async (userId, options2) => {
   return {
     data: reviews,
     pagination: {
+=======
+var isAdminOrManager13 = (role) => {
+  return role === "admin" || role === "manager" || role === "founder" || role === "super_admin";
+};
+var BOOKING_POPULATE = [
+  {
+    path: "member",
+    select: "fullName email role profileImage phone city country"
+  },
+  {
+    path: "leadMentor",
+    select: "fullName email role profileImage"
+  },
+  {
+    path: "leadMentorProfile",
+    select: "bio expertise profileImage sessionDurationMinutes isPrimaryMentor status"
+  },
+  {
+    path: "coMentor",
+    select: "fullName email role profileImage"
+  },
+  {
+    path: "coMentorProfile",
+    select: "bio expertise profileImage sessionDurationMinutes isPrimaryMentor status"
+  },
+  {
+    path: "cancelledBy",
+    select: "fullName email role"
+  },
+  {
+    path: "createdBy",
+    select: "fullName email role"
+  },
+  {
+    path: "updatedBy",
+    select: "fullName email role"
+  }
+];
+var checkUserExists = async (userId, label) => {
+  assertValidObjectId9(userId, label);
+  const user = await User.findById(userId).select("_id fullName email role");
+  assertFound14(user, `${label} not found`, 404);
+  return user;
+};
+var resolveMentorshipProfileId = async (mentorUserId, explicitProfileId) => {
+  if (explicitProfileId) {
+    assertValidObjectId9(explicitProfileId, "Mentorship profile ID");
+    const profile2 = await MentorshipProfile.findById(explicitProfileId);
+    assertFound14(profile2, "Mentorship profile not found", 404);
+    if (String(profile2.mentor) !== mentorUserId) {
+      throwServiceError14(
+        "Provided mentorship profile does not belong to the selected mentor",
+        400
+      );
+    }
+    return profile2._id;
+  }
+  const profile = await MentorshipProfile.findOne({
+    mentor: new Types27.ObjectId(mentorUserId),
+    isActive: true
+  });
+  return profile ? profile._id : void 0;
+};
+var checkSchedulingConflicts = async ({
+  memberId,
+  leadMentorId,
+  coMentorId,
+  startTime,
+  endTime,
+  excludeBookingId
+}) => {
+  const activeStatuses = ["requested", "confirmed"];
+  const baseOverlapFilter = {
+    status: { $in: activeStatuses },
+    scheduledStartTime: { $lt: endTime },
+    scheduledEndTime: { $gt: startTime }
+  };
+  if (excludeBookingId) {
+    baseOverlapFilter._id = { $ne: new Types27.ObjectId(excludeBookingId) };
+  }
+  const memberConflict = await MentorBooking.findOne({
+    ...baseOverlapFilter,
+    member: new Types27.ObjectId(memberId)
+  });
+  if (memberConflict) {
+    throwServiceError14(
+      "You already have a pending or confirmed booking in this time slot",
+      409
+    );
+  }
+  const leadMentorConflict = await MentorBooking.findOne({
+    ...baseOverlapFilter,
+    $or: [
+      { leadMentor: new Types27.ObjectId(leadMentorId) },
+      { coMentor: new Types27.ObjectId(leadMentorId) },
+      { member: new Types27.ObjectId(leadMentorId) }
+    ]
+  });
+  if (leadMentorConflict) {
+    throwServiceError14(
+      "The lead mentor already has a scheduled session during this time slot",
+      409
+    );
+  }
+  if (coMentorId) {
+    const coMentorConflict = await MentorBooking.findOne({
+      ...baseOverlapFilter,
+      $or: [
+        { leadMentor: new Types27.ObjectId(coMentorId) },
+        { coMentor: new Types27.ObjectId(coMentorId) },
+        { member: new Types27.ObjectId(coMentorId) }
+      ]
+    });
+    if (coMentorConflict) {
+      throwServiceError14(
+        "The co-mentor already has a scheduled session during this time slot",
+        409
+      );
+    }
+  }
+};
+var createBooking = async (payload, memberUserId, actorId) => {
+  assertValidObjectId9(payload.leadMentor, "Lead mentor ID");
+  assertValidObjectId9(memberUserId, "Member user ID");
+  if (memberUserId === payload.leadMentor) {
+    throwServiceError14("A member cannot book a mentorship session with themselves", 400);
+  }
+  if (payload.coMentor) {
+    assertValidObjectId9(payload.coMentor, "Co-mentor ID");
+    if (memberUserId === payload.coMentor) {
+      throwServiceError14("A member cannot add themselves as co-mentor", 400);
+    }
+    if (payload.leadMentor === payload.coMentor) {
+      throwServiceError14("Lead mentor and co-mentor cannot be the same user", 400);
+    }
+    await checkUserExists(payload.coMentor, "Co-mentor user");
+  }
+  await checkUserExists(payload.leadMentor, "Lead mentor user");
+  const startTime = new Date(payload.scheduledStartTime);
+  if (Number.isNaN(startTime.getTime())) {
+    throwServiceError14("Invalid scheduledStartTime format", 400);
+  }
+  const durationMinutes = payload.durationMinutes ?? 60;
+  const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1e3);
+  await checkSchedulingConflicts({
+    memberId: memberUserId,
+    leadMentorId: payload.leadMentor,
+    coMentorId: payload.coMentor,
+    startTime,
+    endTime
+  });
+  const leadMentorProfileId = await resolveMentorshipProfileId(
+    payload.leadMentor,
+    payload.leadMentorProfile
+  );
+  let coMentorProfileId;
+  if (payload.coMentor) {
+    coMentorProfileId = await resolveMentorshipProfileId(
+      payload.coMentor,
+      payload.coMentorProfile
+    );
+  }
+  const createData = {
+    member: new Types27.ObjectId(memberUserId),
+    leadMentor: new Types27.ObjectId(payload.leadMentor),
+    scheduledStartTime: startTime,
+    scheduledEndTime: endTime,
+    durationMinutes,
+    timezone: payload.timezone,
+    status: "requested",
+    createdBy: new Types27.ObjectId(actorId)
+  };
+  if (leadMentorProfileId) {
+    createData.leadMentorProfile = leadMentorProfileId;
+  }
+  if (payload.coMentor) {
+    createData.coMentor = new Types27.ObjectId(payload.coMentor);
+  }
+  if (coMentorProfileId) {
+    createData.coMentorProfile = coMentorProfileId;
+  }
+  if (payload.sessionTopic !== void 0) {
+    createData.sessionTopic = payload.sessionTopic;
+  }
+  if (payload.notes !== void 0) {
+    createData.notes = payload.notes;
+  }
+  if (payload.meetingUrl !== void 0) {
+    createData.meetingUrl = payload.meetingUrl;
+  }
+  const booking = await MentorBooking.create(createData);
+  return booking.populate(BOOKING_POPULATE);
+};
+var getMyMemberBookings = async (memberUserId, query = {}) => {
+  assertValidObjectId9(memberUserId, "Member user ID");
+  const filter = {
+    member: new Types27.ObjectId(memberUserId)
+  };
+  if (query.status) {
+    filter.status = query.status;
+  }
+  if (query.startDate || query.endDate) {
+    const timeFilter = {};
+    if (query.startDate) {
+      timeFilter.$gte = new Date(query.startDate);
+    }
+    if (query.endDate) {
+      timeFilter.$lte = new Date(query.endDate);
+    }
+    filter.scheduledStartTime = timeFilter;
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [bookings, total] = await Promise.all([
+    MentorBooking.find(filter).sort({ scheduledStartTime: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
+    MentorBooking.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit)
+<<<<<<< HEAD
     }
   };
 };
@@ -19964,10 +20390,92 @@ var getAllReviewsAdmin = async (query) => {
   if (query.mentorshipProfile) {
     assertValidObjectId9(query.mentorshipProfile, "Mentorship Profile ID");
     filter.mentorshipProfile = new Types27.ObjectId(query.mentorshipProfile);
+=======
+    },
+    data: bookings
+  };
+};
+var getMyMemberSingleBooking = async (bookingId, memberUserId) => {
+  assertValidObjectId9(bookingId, "Booking ID");
+  assertValidObjectId9(memberUserId, "Member user ID");
+  const booking = await MentorBooking.findOne({
+    _id: new Types27.ObjectId(bookingId),
+    member: new Types27.ObjectId(memberUserId)
+  }).populate(BOOKING_POPULATE);
+  assertFound14(booking, "Mentor booking not found", 404);
+  return booking;
+};
+var getMyMentorBookings = async (mentorUserId, query = {}) => {
+  assertValidObjectId9(mentorUserId, "Mentor user ID");
+  const mentorObjectId = new Types27.ObjectId(mentorUserId);
+  const filter = {
+    $or: [{ leadMentor: mentorObjectId }, { coMentor: mentorObjectId }]
+  };
+  if (query.status) {
+    filter.status = query.status;
+  }
+  if (query.startDate || query.endDate) {
+    const timeFilter = {};
+    if (query.startDate) {
+      timeFilter.$gte = new Date(query.startDate);
+    }
+    if (query.endDate) {
+      timeFilter.$lte = new Date(query.endDate);
+    }
+    filter.scheduledStartTime = timeFilter;
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [bookings, total] = await Promise.all([
+    MentorBooking.find(filter).sort({ scheduledStartTime: 1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
+    MentorBooking.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data: bookings
+  };
+};
+var getMyMentorSingleBooking = async (bookingId, mentorUserId) => {
+  assertValidObjectId9(bookingId, "Booking ID");
+  assertValidObjectId9(mentorUserId, "Mentor user ID");
+  const mentorObjectId = new Types27.ObjectId(mentorUserId);
+  const booking = await MentorBooking.findOne({
+    _id: new Types27.ObjectId(bookingId),
+    $or: [{ leadMentor: mentorObjectId }, { coMentor: mentorObjectId }]
+  }).populate(BOOKING_POPULATE);
+  assertFound14(booking, "Mentor booking not found", 404);
+  return booking;
+};
+var getAllBookingsAdmin = async (query = {}) => {
+  const filter = {};
+  if (query.memberId) {
+    assertValidObjectId9(query.memberId, "Member ID");
+    filter.member = new Types27.ObjectId(query.memberId);
+  }
+  if (query.leadMentorId) {
+    assertValidObjectId9(query.leadMentorId, "Lead mentor ID");
+    filter.leadMentor = new Types27.ObjectId(query.leadMentorId);
+  }
+  if (query.coMentorId) {
+    assertValidObjectId9(query.coMentorId, "Co-mentor ID");
+    filter.coMentor = new Types27.ObjectId(query.coMentorId);
+  }
+  if (query.mentorId) {
+    assertValidObjectId9(query.mentorId, "Mentor ID");
+    const mentorObjId = new Types27.ObjectId(query.mentorId);
+    filter.$or = [{ leadMentor: mentorObjId }, { coMentor: mentorObjId }];
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
   }
   if (query.status) {
     filter.status = query.status;
   }
+<<<<<<< HEAD
   if (query.rating) {
     filter.rating = query.rating;
   }
@@ -19980,10 +20488,32 @@ var getAllReviewsAdmin = async (query) => {
   return {
     data: reviews,
     pagination: {
+=======
+  if (query.startDate || query.endDate) {
+    const timeFilter = {};
+    if (query.startDate) {
+      timeFilter.$gte = new Date(query.startDate);
+    }
+    if (query.endDate) {
+      timeFilter.$lte = new Date(query.endDate);
+    }
+    filter.scheduledStartTime = timeFilter;
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [bookings, total] = await Promise.all([
+    MentorBooking.find(filter).sort({ scheduledStartTime: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
+    MentorBooking.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit)
+<<<<<<< HEAD
     }
   };
 };
@@ -20019,6 +20549,281 @@ var mentorshipReviewService = {
 };
 
 // src/modules/mentorshipReviews/mentorship.review.controller.ts
+=======
+    },
+    data: bookings
+  };
+};
+var getSingleBookingAdmin = async (bookingId) => {
+  assertValidObjectId9(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId).populate(
+    BOOKING_POPULATE
+  );
+  assertFound14(booking, "Mentor booking not found", 404);
+  return booking;
+};
+var updateBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId9(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId);
+  assertFound14(booking, "Mentor booking not found", 404);
+  const isMember = String(booking.member) === actorId;
+  const isLead = String(booking.leadMentor) === actorId;
+  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
+  const isAdmin = isAdminOrManager13(actorRole);
+  if (!isMember && !isLead && !isCo && !isAdmin) {
+    throwServiceError14("You are not authorized to update this booking", 403);
+  }
+  if (booking.status === "completed" || booking.status === "cancelled" || booking.status === "no_show") {
+    throwServiceError14(
+      `Cannot update a booking that is already ${booking.status}`,
+      400
+    );
+  }
+  const newLeadMentorId = payload.leadMentor ?? String(booking.leadMentor);
+  let newCoMentorId = booking.coMentor ? String(booking.coMentor) : void 0;
+  if (payload.coMentor === null) {
+    newCoMentorId = void 0;
+  } else if (payload.coMentor !== void 0) {
+    newCoMentorId = payload.coMentor;
+  }
+  if (String(booking.member) === newLeadMentorId) {
+    throwServiceError14("A member cannot book a mentorship session with themselves", 400);
+  }
+  if (newCoMentorId && String(booking.member) === newCoMentorId) {
+    throwServiceError14("A member cannot add themselves as co-mentor", 400);
+  }
+  if (newCoMentorId && newLeadMentorId === newCoMentorId) {
+    throwServiceError14("Lead mentor and co-mentor cannot be the same user", 400);
+  }
+  if (payload.leadMentor && payload.leadMentor !== String(booking.leadMentor)) {
+    await checkUserExists(payload.leadMentor, "Lead mentor user");
+    booking.leadMentor = new Types27.ObjectId(payload.leadMentor);
+  }
+  if (payload.coMentor !== void 0) {
+    if (payload.coMentor === null) {
+      booking.set("coMentor", void 0);
+      booking.set("coMentorProfile", void 0);
+    } else {
+      await checkUserExists(payload.coMentor, "Co-mentor user");
+      booking.coMentor = new Types27.ObjectId(payload.coMentor);
+    }
+  }
+  if (payload.leadMentorProfile !== void 0) {
+    const profileId = await resolveMentorshipProfileId(
+      newLeadMentorId,
+      payload.leadMentorProfile
+    );
+    if (profileId) {
+      booking.leadMentorProfile = profileId;
+    } else {
+      booking.set("leadMentorProfile", void 0);
+    }
+  }
+  if (payload.coMentorProfile !== void 0 && newCoMentorId) {
+    const profileId = await resolveMentorshipProfileId(
+      newCoMentorId,
+      payload.coMentorProfile ?? void 0
+    );
+    if (profileId) {
+      booking.coMentorProfile = profileId;
+    } else {
+      booking.set("coMentorProfile", void 0);
+    }
+  }
+  const durationMinutes = payload.durationMinutes ?? booking.durationMinutes;
+  let startTime = booking.scheduledStartTime;
+  if (payload.scheduledStartTime) {
+    startTime = new Date(payload.scheduledStartTime);
+    if (Number.isNaN(startTime.getTime())) {
+      throwServiceError14("Invalid scheduledStartTime format", 400);
+    }
+  }
+  const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1e3);
+  await checkSchedulingConflicts({
+    memberId: String(booking.member),
+    leadMentorId: newLeadMentorId,
+    coMentorId: newCoMentorId,
+    startTime,
+    endTime,
+    excludeBookingId: String(booking._id)
+  });
+  booking.scheduledStartTime = startTime;
+  booking.scheduledEndTime = endTime;
+  booking.durationMinutes = durationMinutes;
+  if (payload.timezone !== void 0) {
+    booking.timezone = payload.timezone;
+  }
+  if (payload.sessionTopic !== void 0) {
+    booking.sessionTopic = payload.sessionTopic;
+  }
+  if (payload.notes !== void 0) {
+    booking.notes = payload.notes;
+  }
+  if (payload.meetingUrl === null) {
+    booking.set("meetingUrl", void 0);
+  } else if (payload.meetingUrl !== void 0) {
+    booking.meetingUrl = payload.meetingUrl;
+  }
+  booking.updatedBy = new Types27.ObjectId(actorId);
+  await booking.save();
+  return booking.populate(BOOKING_POPULATE);
+};
+var confirmBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId9(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId);
+  assertFound14(booking, "Mentor booking not found", 404);
+  const isLead = String(booking.leadMentor) === actorId;
+  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
+  const isAdmin = isAdminOrManager13(actorRole);
+  if (!isLead && !isCo && !isAdmin) {
+    throwServiceError14("Only assigned mentors or administrators can confirm bookings", 403);
+  }
+  if (booking.status === "confirmed") {
+    if (payload.meetingUrl) {
+      booking.meetingUrl = payload.meetingUrl;
+      booking.updatedBy = new Types27.ObjectId(actorId);
+      await booking.save();
+      return booking.populate(BOOKING_POPULATE);
+    }
+    return booking.populate(BOOKING_POPULATE);
+  }
+  if (booking.status !== "requested") {
+    throwServiceError14(`Cannot confirm a booking with status "${booking.status}"`, 400);
+  }
+  await checkSchedulingConflicts({
+    memberId: String(booking.member),
+    leadMentorId: String(booking.leadMentor),
+    coMentorId: booking.coMentor ? String(booking.coMentor) : void 0,
+    startTime: booking.scheduledStartTime,
+    endTime: booking.scheduledEndTime,
+    excludeBookingId: String(booking._id)
+  });
+  booking.status = "confirmed";
+  if (payload.meetingUrl !== void 0) {
+    booking.meetingUrl = payload.meetingUrl;
+  }
+  booking.updatedBy = new Types27.ObjectId(actorId);
+  await booking.save();
+  return booking.populate(BOOKING_POPULATE);
+};
+var cancelBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId9(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId);
+  assertFound14(booking, "Mentor booking not found", 404);
+  const isMember = String(booking.member) === actorId;
+  const isLead = String(booking.leadMentor) === actorId;
+  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
+  const isAdmin = isAdminOrManager13(actorRole);
+  if (!isMember && !isLead && !isCo && !isAdmin) {
+    throwServiceError14("You are not authorized to cancel this booking", 403);
+  }
+  if (booking.status === "cancelled") {
+    throwServiceError14("Booking is already cancelled", 400);
+  }
+  if (booking.status === "completed") {
+    throwServiceError14("Completed booking cannot be cancelled", 400);
+  }
+  booking.status = "cancelled";
+  booking.cancellationReason = payload.reason;
+  booking.cancelledBy = new Types27.ObjectId(actorId);
+  booking.cancelledAt = /* @__PURE__ */ new Date();
+  booking.updatedBy = new Types27.ObjectId(actorId);
+  await booking.save();
+  return booking.populate(BOOKING_POPULATE);
+};
+var completeBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId9(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId);
+  assertFound14(booking, "Mentor booking not found", 404);
+  const isLead = String(booking.leadMentor) === actorId;
+  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
+  const isAdmin = isAdminOrManager13(actorRole);
+  if (!isLead && !isCo && !isAdmin) {
+    throwServiceError14("Only assigned mentors or administrators can complete bookings", 403);
+  }
+  if (booking.status === "cancelled") {
+    throwServiceError14("Cancelled booking cannot be marked as completed", 400);
+  }
+  if (booking.status === "no_show") {
+    throwServiceError14("No-show booking cannot be marked as completed", 400);
+  }
+  booking.status = "completed";
+  booking.completedAt = /* @__PURE__ */ new Date();
+  if (payload.mentorFeedback !== void 0) {
+    booking.mentorFeedback = payload.mentorFeedback;
+  }
+  booking.updatedBy = new Types27.ObjectId(actorId);
+  await booking.save();
+  return booking.populate(BOOKING_POPULATE);
+};
+var markNoShowBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId9(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId);
+  assertFound14(booking, "Mentor booking not found", 404);
+  const isLead = String(booking.leadMentor) === actorId;
+  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
+  const isAdmin = isAdminOrManager13(actorRole);
+  if (!isLead && !isCo && !isAdmin) {
+    throwServiceError14("Only assigned mentors or administrators can record no-shows", 403);
+  }
+  if (booking.status === "cancelled") {
+    throwServiceError14("Cancelled booking cannot be marked as no-show", 400);
+  }
+  if (booking.status === "completed") {
+    throwServiceError14("Completed booking cannot be marked as no-show", 400);
+  }
+  booking.status = "no_show";
+  booking.noShowAt = /* @__PURE__ */ new Date();
+  booking.noShowBy = payload.noShowBy;
+  if (payload.reason !== void 0) {
+    booking.noShowReason = payload.reason;
+  }
+  booking.updatedBy = new Types27.ObjectId(actorId);
+  await booking.save();
+  return booking.populate(BOOKING_POPULATE);
+};
+var mentorBookingService = {
+  createBooking,
+  getMyMemberBookings,
+  getMyMemberSingleBooking,
+  getMyMentorBookings,
+  getMyMentorSingleBooking,
+  getAllBookingsAdmin,
+  getSingleBookingAdmin,
+  updateBooking,
+  confirmBooking,
+  cancelBooking,
+  completeBooking,
+  markNoShowBooking
+};
+
+// src/modules/mentorBookings/mentor.booking.controller.ts
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 var getAuthUser16 = (req) => {
   assertFound_default(req.user, "Authentication required", 401);
   return {
@@ -20026,23 +20831,38 @@ var getAuthUser16 = (req) => {
     role: req.user.role
   };
 };
+<<<<<<< HEAD
 var createReview2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser16(req);
     const review = await mentorshipReviewService.createReview(
       req.body,
+=======
+var createBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser16(req);
+    const booking = await mentorBookingService.createBooking(
+      req.body,
+      authUser.id,
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       authUser.id
     );
     sendResponse_default(res, {
       statusCode: 201,
       success: true,
+<<<<<<< HEAD
       message: "Mentorship review submitted successfully",
       data: review
+=======
+      message: "Mentor booking requested successfully",
+      data: booking
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     });
   } catch (error) {
     next(error);
   }
 };
+<<<<<<< HEAD
 var getReviewsForMentor2 = async (req, res, next) => {
   try {
     const mentorId = String(req.params.mentorId);
@@ -20090,17 +20910,31 @@ var getSingleReview2 = async (req, res, next) => {
       reviewId,
       actorUserId,
       actorRole
+=======
+var getMyMemberBookings2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser16(req);
+    const result = await mentorBookingService.getMyMemberBookings(
+      authUser.id,
+      req.query
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
+<<<<<<< HEAD
       message: "Mentorship review retrieved successfully",
       data: review
+=======
+      message: "Member bookings retrieved successfully",
+      data: result
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     });
   } catch (error) {
     next(error);
   }
 };
+<<<<<<< HEAD
 var updateReview2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser16(req);
@@ -20108,36 +20942,79 @@ var updateReview2 = async (req, res, next) => {
     const review = await mentorshipReviewService.updateReview(
       reviewId,
       req.body,
+=======
+var getMyMemberSingleBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser16(req);
+    const booking = await mentorBookingService.getMyMemberSingleBooking(
+      String(req.params.id),
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       authUser.id
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
+<<<<<<< HEAD
       message: "Mentorship review updated successfully",
       data: review
+=======
+      message: "Member booking retrieved successfully",
+      data: booking
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     });
   } catch (error) {
     next(error);
   }
 };
+<<<<<<< HEAD
 var deleteReview2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser16(req);
     const reviewId = String(req.params.id);
     const result = await mentorshipReviewService.deleteReview(
       reviewId,
-      authUser.id
+=======
+var getMyMentorBookings2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser16(req);
+    const result = await mentorBookingService.getMyMentorBookings(
+      authUser.id,
+      req.query
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-      message: "Mentorship review deleted successfully",
+      message: "Mentor schedule retrieved successfully",
       data: result
     });
   } catch (error) {
     next(error);
   }
 };
+var getMyMentorSingleBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser16(req);
+    const booking = await mentorBookingService.getMyMentorSingleBooking(
+      String(req.params.id),
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+<<<<<<< HEAD
+      message: "Mentorship review deleted successfully",
+      data: result
+=======
+      message: "Mentor booking retrieved successfully",
+      data: booking
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+<<<<<<< HEAD
 var getAllReviewsAdmin2 = async (req, res, next) => {
   try {
     const query = {
@@ -20171,10 +21048,17 @@ var moderateReview2 = async (req, res, next) => {
       reviewId,
       req.body,
       authUser.id
+=======
+var getAllBookingsAdmin2 = async (req, res, next) => {
+  try {
+    const result = await mentorBookingService.getAllBookingsAdmin(
+      req.query
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
+<<<<<<< HEAD
       message: "Mentorship review moderated successfully",
       data: review
     });
@@ -20190,12 +21074,16 @@ var deleteReviewAdmin2 = async (req, res, next) => {
       statusCode: 200,
       success: true,
       message: "Mentorship review deleted by admin successfully",
+=======
+      message: "All mentor bookings retrieved successfully",
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       data: result
     });
   } catch (error) {
     next(error);
   }
 };
+<<<<<<< HEAD
 var mentorshipReviewController = {
   createReview: createReview2,
   getReviewsForMentor: getReviewsForMentor2,
@@ -20222,29 +21110,223 @@ var createMentorshipReviewValidation = z21.object({
   }).strict()
 });
 var updateMentorshipReviewValidation = z21.object({
+=======
+var getSingleBookingAdmin2 = async (req, res, next) => {
+  try {
+    const booking = await mentorBookingService.getSingleBookingAdmin(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Mentor booking retrieved successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser16(req);
+    const booking = await mentorBookingService.updateBooking({
+      bookingId: String(req.params.id),
+      payload: req.body,
+      actorId: authUser.id,
+      actorRole: authUser.role
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Mentor booking updated successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var confirmBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser16(req);
+    const booking = await mentorBookingService.confirmBooking({
+      bookingId: String(req.params.id),
+      payload: req.body,
+      actorId: authUser.id,
+      actorRole: authUser.role
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Mentor booking confirmed successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var cancelBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser16(req);
+    const booking = await mentorBookingService.cancelBooking({
+      bookingId: String(req.params.id),
+      payload: req.body,
+      actorId: authUser.id,
+      actorRole: authUser.role
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Mentor booking cancelled successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var completeBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser16(req);
+    const booking = await mentorBookingService.completeBooking({
+      bookingId: String(req.params.id),
+      payload: req.body,
+      actorId: authUser.id,
+      actorRole: authUser.role
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Mentor booking marked as completed successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var markNoShowBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser16(req);
+    const booking = await mentorBookingService.markNoShowBooking({
+      bookingId: String(req.params.id),
+      payload: req.body,
+      actorId: authUser.id,
+      actorRole: authUser.role
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Mentor booking marked as no-show successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var mentorBookingController = {
+  createBooking: createBooking2,
+  getMyMemberBookings: getMyMemberBookings2,
+  getMyMemberSingleBooking: getMyMemberSingleBooking2,
+  getMyMentorBookings: getMyMentorBookings2,
+  getMyMentorSingleBooking: getMyMentorSingleBooking2,
+  getAllBookingsAdmin: getAllBookingsAdmin2,
+  getSingleBookingAdmin: getSingleBookingAdmin2,
+  updateBooking: updateBooking2,
+  confirmBooking: confirmBooking2,
+  cancelBooking: cancelBooking2,
+  completeBooking: completeBooking2,
+  markNoShowBooking: markNoShowBooking2
+};
+
+// src/modules/mentorBookings/mentor.booking.validation.ts
+import { z as z21 } from "zod";
+var mongoObjectIdSchema13 = z21.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var createMentorBookingValidation = z21.object({
+  body: z21.object({
+    leadMentor: mongoObjectIdSchema13,
+    leadMentorProfile: mongoObjectIdSchema13.optional(),
+    coMentor: mongoObjectIdSchema13.optional(),
+    coMentorProfile: mongoObjectIdSchema13.optional(),
+    scheduledStartTime: z21.string().datetime({ message: "scheduledStartTime must be a valid ISO 8601 datetime" }),
+    durationMinutes: z21.number().int().min(15).max(180).optional(),
+    timezone: z21.string().trim().min(1).max(100),
+    sessionTopic: z21.string().trim().min(2).max(500).optional(),
+    notes: z21.string().trim().max(2e3).optional(),
+    meetingUrl: z21.string().trim().url().optional()
+  }).strict()
+});
+var updateMentorBookingValidation = z21.object({
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
   params: z21.object({
     id: mongoObjectIdSchema13
   }),
   body: z21.object({
+<<<<<<< HEAD
     rating: z21.number().int().min(1).max(5).optional(),
     comment: z21.string().trim().max(2e3).nullable().optional(),
     isAnonymous: z21.boolean().optional()
   }).strict()
 });
 var moderateMentorshipReviewValidation = z21.object({
+=======
+    leadMentor: mongoObjectIdSchema13.optional(),
+    leadMentorProfile: mongoObjectIdSchema13.optional(),
+    coMentor: mongoObjectIdSchema13.nullable().optional(),
+    coMentorProfile: mongoObjectIdSchema13.nullable().optional(),
+    scheduledStartTime: z21.string().datetime({ message: "scheduledStartTime must be a valid ISO 8601 datetime" }).optional(),
+    durationMinutes: z21.number().int().min(15).max(180).optional(),
+    timezone: z21.string().trim().min(1).max(100).optional(),
+    sessionTopic: z21.string().trim().min(2).max(500).optional(),
+    notes: z21.string().trim().max(2e3).optional(),
+    meetingUrl: z21.string().trim().url().nullable().optional()
+  }).strict()
+});
+var confirmMentorBookingValidation = z21.object({
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
   params: z21.object({
     id: mongoObjectIdSchema13
   }),
   body: z21.object({
+<<<<<<< HEAD
     status: z21.enum(MENTORSHIP_REVIEW_STATUSES),
     adminNotes: z21.string().trim().max(1e3).optional()
   }).strict()
 });
 var mentorshipReviewIdValidation = z21.object({
+=======
+    meetingUrl: z21.string().trim().url().optional()
+  }).strict()
+});
+var cancelMentorBookingValidation = z21.object({
+  params: z21.object({
+    id: mongoObjectIdSchema13
+  }),
+  body: z21.object({
+    reason: z21.string().trim().min(3, "Cancellation reason must be at least 3 characters").max(1e3)
+  }).strict()
+});
+var completeMentorBookingValidation = z21.object({
+  params: z21.object({
+    id: mongoObjectIdSchema13
+  }),
+  body: z21.object({
+    mentorFeedback: z21.string().trim().max(3e3).optional()
+  }).strict()
+});
+var noShowMentorBookingValidation = z21.object({
+  params: z21.object({
+    id: mongoObjectIdSchema13
+  }),
+  body: z21.object({
+    noShowBy: z21.enum(NO_SHOW_PARTIES),
+    reason: z21.string().trim().max(1e3).optional()
+  }).strict()
+});
+var mentorBookingIdValidation = z21.object({
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
   params: z21.object({
     id: mongoObjectIdSchema13
   })
 });
+<<<<<<< HEAD
 var mentorIdParamValidation = z21.object({
   params: z21.object({
     mentorId: mongoObjectIdSchema13
@@ -20264,11 +21346,36 @@ router29.post(
   requireInvictusAccess,
   validateRequest_default(createMentorshipReviewValidation),
   mentorshipReviewController.createReview
+=======
+var queryMentorBookingValidation = z21.object({
+  query: z21.object({
+    memberId: mongoObjectIdSchema13.optional(),
+    leadMentorId: mongoObjectIdSchema13.optional(),
+    coMentorId: mongoObjectIdSchema13.optional(),
+    mentorId: mongoObjectIdSchema13.optional(),
+    status: z21.enum(MENTOR_BOOKING_STATUSES).optional(),
+    startDate: z21.string().optional(),
+    endDate: z21.string().optional(),
+    page: z21.coerce.number().int().min(1).optional(),
+    limit: z21.coerce.number().int().min(1).max(100).optional()
+  }).optional()
+});
+
+// src/modules/mentorBookings/mentor.booking.route.ts
+var router29 = Router29();
+router29.post(
+  "/me",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(createMentorBookingValidation),
+  mentorBookingController.createBooking
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 );
 router29.get(
   "/me",
   verifyToken,
   requireInvictusAccess,
+<<<<<<< HEAD
   mentorshipReviewController.getMyReviews
 );
 router29.patch(
@@ -20284,10 +21391,72 @@ router29.delete(
   requireInvictusAccess,
   validateRequest_default(mentorshipReviewIdValidation),
   mentorshipReviewController.deleteReview
+=======
+  validateRequest_default(queryMentorBookingValidation),
+  mentorBookingController.getMyMemberBookings
+);
+router29.get(
+  "/me/:id",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(mentorBookingIdValidation),
+  mentorBookingController.getMyMemberSingleBooking
+);
+router29.patch(
+  "/me/:id",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(updateMentorBookingValidation),
+  mentorBookingController.updateBooking
+);
+router29.patch(
+  "/me/:id/cancel",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(cancelMentorBookingValidation),
+  mentorBookingController.cancelBooking
+);
+router29.get(
+  "/mentor/me",
+  verifyToken,
+  validateRequest_default(queryMentorBookingValidation),
+  mentorBookingController.getMyMentorBookings
+);
+router29.get(
+  "/mentor/me/:id",
+  verifyToken,
+  validateRequest_default(mentorBookingIdValidation),
+  mentorBookingController.getMyMentorSingleBooking
+);
+router29.patch(
+  "/:id/confirm",
+  verifyToken,
+  validateRequest_default(confirmMentorBookingValidation),
+  mentorBookingController.confirmBooking
+);
+router29.patch(
+  "/:id/complete",
+  verifyToken,
+  validateRequest_default(completeMentorBookingValidation),
+  mentorBookingController.completeBooking
+);
+router29.patch(
+  "/:id/no-show",
+  verifyToken,
+  validateRequest_default(noShowMentorBookingValidation),
+  mentorBookingController.markNoShowBooking
+);
+router29.patch(
+  "/:id/cancel",
+  verifyToken,
+  validateRequest_default(cancelMentorBookingValidation),
+  mentorBookingController.cancelBooking
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 );
 router29.get(
   "/",
   verifyToken,
+<<<<<<< HEAD
   authorizeRoles("founder", "manager", "admin", "super_admin"),
   mentorshipReviewController.getAllReviewsAdmin
 );
@@ -21306,6 +22475,30 @@ var retreatLocationRoutes = router30;
 
 // src/routes/index.ts
 var router31 = Router31();
+=======
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(queryMentorBookingValidation),
+  mentorBookingController.getAllBookingsAdmin
+);
+router29.get(
+  "/:id",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(mentorBookingIdValidation),
+  mentorBookingController.getSingleBookingAdmin
+);
+router29.patch(
+  "/:id",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(updateMentorBookingValidation),
+  mentorBookingController.updateBooking
+);
+var mentorBookingRoutes = router29;
+
+// src/routes/index.ts
+var router30 = Router30();
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 var moduleRoutes = [
   {
     path: "/admin",
@@ -21420,6 +22613,7 @@ var moduleRoutes = [
     route: mentorshipProfileRoutes
   },
   {
+<<<<<<< HEAD
     path: "/invictus/mentorship-reviews",
     route: mentorshipReviewRoutes
   },
@@ -21432,6 +22626,16 @@ moduleRoutes.forEach((route) => {
   router31.use(route.path, route.route);
 });
 var routes_default = router31;
+=======
+    path: "/invictus/mentor-bookings",
+    route: mentorBookingRoutes
+  }
+];
+moduleRoutes.forEach((route) => {
+  router30.use(route.path, route.route);
+});
+var routes_default = router30;
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 
 // src/swagger/swagger.ts
 import swaggerJSDoc from "swagger-jsdoc";
@@ -22020,7 +23224,11 @@ import http from "http";
 var port = process.env.PORT || 3e3;
 var main = async () => {
   try {
+<<<<<<< HEAD
     await mongoose4.connect(config_default.MONGO_URI);
+=======
+    await mongoose3.connect(config_default.MONGO_URI);
+>>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     const httpServer = http.createServer(app_default);
     initSocket(httpServer);
     httpServer.listen(port, () => {

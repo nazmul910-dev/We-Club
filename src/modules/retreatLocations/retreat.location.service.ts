@@ -6,16 +6,11 @@ import {
   IRetreatLocationQuery,
   IUpdateRetreatLocation,
 } from "./retreat.location.interface";
-
 import { RetreatLocation } from "./retreat.location.model.schema";
 
 const throwServiceError = (message: string, statusCode: number): never => {
-  const error = new Error(message) as Error & {
-    statusCode?: number;
-  };
-
+  const error = new Error(message) as Error & { statusCode?: number };
   error.statusCode = statusCode;
-
   throw error;
 };
 
@@ -35,64 +30,24 @@ const assertValidObjectId = (value: string, fieldName: string): void => {
   }
 };
 
-const isAdminOrManager = (role?: string | undefined): boolean => {
-  return (
-    role === "admin" ||
-    role === "manager" ||
-    role === "founder" ||
-    role === "super_admin"
-  );
-};
-
-const isDuplicateKeyError = (error: unknown): boolean => {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: number }).code === 11000
-  );
-};
-
 const slugify = (text: string): string => {
   return text
+    .toString()
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-};
-
-const generateUniqueSlug = async (
-  name: string,
-  excludeId?: Types.ObjectId | string,
-): Promise<string> => {
-  const baseSlug = slugify(name) || "retreat-location";
-  let slug = baseSlug;
-  let counter = 1;
-
-  while (true) {
-    const existing = await RetreatLocation.findOne({
-      slug,
-      ...(excludeId ? { _id: { $ne: new Types.ObjectId(excludeId) } } : {}),
-    });
-
-    if (!existing) {
-      return slug;
-    }
-
-    slug = `${baseSlug}-${counter}`;
-    counter += 1;
-  }
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]+/g, "")
+    .replace(/--+/g, "-");
 };
 
 const LOCATION_POPULATE = [
   {
     path: "createdBy",
-    select: "fullName email role profileImage",
+    select: "fullName email role",
   },
   {
     path: "updatedBy",
-    select: "fullName email role profileImage",
+    select: "fullName email role",
   },
 ];
 
@@ -100,75 +55,51 @@ const createRetreatLocation = async (
   payload: ICreateRetreatLocation,
   actorId: string,
 ) => {
-  assertValidObjectId(actorId, "Actor ID");
+  const slug = payload.slug ? slugify(payload.slug) : slugify(payload.title);
 
-  const slug = payload.slug
-    ? slugify(payload.slug)
-    : await generateUniqueSlug(payload.name);
-
-  const existingWithSlug = await RetreatLocation.findOne({ slug });
-  if (existingWithSlug) {
-    throwServiceError(`Retreat location with slug '${slug}' already exists`, 409);
+  const existing = await RetreatLocation.findOne({ slug });
+  if (existing) {
+    throwServiceError("A retreat location with this slug already exists", 409);
   }
 
   const createData: Record<string, unknown> = {
-    name: payload.name.trim(),
+    title: payload.title,
     slug,
-    country: payload.country.trim(),
-    city: payload.city.trim(),
-    description: payload.description.trim(),
-    coverImage: payload.coverImage.trim(),
-    gallery: payload.gallery ?? [],
-    amenities: payload.amenities ?? [],
-    featured: payload.featured ?? false,
+    country: payload.country,
+    city: payload.city,
+    description: payload.description,
+    galleryImages: payload.galleryImages ?? [],
+    whatsIncluded: payload.whatsIncluded ?? [],
+    isFeatured: payload.isFeatured ?? false,
     isActive: payload.isActive ?? true,
+    status: payload.status ?? "published",
     order: payload.order ?? 0,
-    status: "draft",
     createdBy: new Types.ObjectId(actorId),
   };
 
-  if (payload.stateOrProvince) {
-    createData.stateOrProvince = payload.stateOrProvince.trim();
+  if (payload.tagline !== undefined) {
+    createData.tagline = payload.tagline;
   }
 
-  if (payload.address) {
-    createData.address = payload.address.trim();
+  if (payload.coverImage !== undefined) {
+    createData.coverImage = payload.coverImage;
   }
 
-  if (payload.shortDescription) {
-    createData.shortDescription = payload.shortDescription.trim();
+  if (payload.promoVideoUrl !== undefined) {
+    createData.promoVideoUrl = payload.promoVideoUrl;
   }
 
-  if (payload.coordinates) {
-    createData.coordinates = payload.coordinates;
-  }
-
-  if (payload.venueDetails) {
-    createData.venueDetails = payload.venueDetails;
-  }
-
-  try {
-    const location = await RetreatLocation.create(createData);
-    return location.populate(LOCATION_POPULATE);
-  } catch (error) {
-    if (isDuplicateKeyError(error)) {
-      throwServiceError("A retreat location with this slug already exists", 409);
-    }
-    throw error;
-  }
+  const location = await RetreatLocation.create(createData);
+  return location.populate(LOCATION_POPULATE);
 };
 
 const getAllRetreatLocations = async (
-  query: IRetreatLocationQuery,
-  actorRole?: string,
+  query: IRetreatLocationQuery = {},
+  isPublicOnly = false,
 ) => {
-  const page = Math.max(1, query.page ?? 1);
-  const limit = Math.max(1, Math.min(100, query.limit ?? 20));
-  const skip = (page - 1) * limit;
-
   const filter: QueryFilter<IRetreatLocation> = {};
 
-  if (!isAdminOrManager(actorRole)) {
+  if (isPublicOnly) {
     filter.status = "published";
     filter.isActive = true;
   } else {
@@ -180,36 +111,22 @@ const getAllRetreatLocations = async (
     }
   }
 
-  if (query.country) {
-    filter.country = { $regex: new RegExp(`^${query.country.trim()}$`, "i") };
-  }
-
-  if (query.city) {
-    filter.city = { $regex: new RegExp(`^${query.city.trim()}$`, "i") };
-  }
-
-  if (query.featured !== undefined) {
-    filter.featured = query.featured;
+  if (query.isFeatured !== undefined) {
+    filter.isFeatured = query.isFeatured;
   }
 
   if (query.search) {
-    const searchRegex = new RegExp(query.search.trim(), "i");
-    filter.$or = [
-      { name: searchRegex },
-      { country: searchRegex },
-      { city: searchRegex },
-      { description: searchRegex },
-    ];
+    const regex = new RegExp(query.search, "i");
+    filter.$or = [{ title: regex }, { city: regex }, { country: regex }];
   }
 
-  const sortOrder = query.sortOrder === "asc" ? 1 : -1;
-  const sortOption: Record<string, 1 | -1> = query.sortBy
-    ? { [query.sortBy]: sortOrder }
-    : { featured: -1, order: 1, createdAt: -1 };
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
 
-  const [data, total] = await Promise.all([
+  const [locations, total] = await Promise.all([
     RetreatLocation.find(filter)
-      .sort(sortOption)
+      .sort({ isFeatured: -1, order: 1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate(LOCATION_POPULATE),
@@ -217,35 +134,29 @@ const getAllRetreatLocations = async (
   ]);
 
   return {
-    data,
-    pagination: {
+    meta: {
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit),
     },
+    data: locations,
   };
 };
 
-const getFeaturedRetreatLocations = async () => {
-  return RetreatLocation.find({
-    featured: true,
-    status: "published",
-    isActive: true,
-  })
-    .sort({ order: 1, createdAt: -1 })
-    .populate(LOCATION_POPULATE);
-};
-
-const getSingleRetreatLocationById = async (
-  id: string,
-  actorRole?: string,
+const getSingleRetreatLocation = async (
+  idOrSlug: string,
+  isPublicOnly = false,
 ) => {
-  assertValidObjectId(id, "Retreat location ID");
+  const filter: Record<string, unknown> = {};
 
-  const filter: Record<string, unknown> = { _id: id };
+  if (Types.ObjectId.isValid(idOrSlug)) {
+    filter._id = new Types.ObjectId(idOrSlug);
+  } else {
+    filter.slug = idOrSlug.toLowerCase();
+  }
 
-  if (!isAdminOrManager(actorRole)) {
+  if (isPublicOnly) {
     filter.status = "published";
     filter.isActive = true;
   }
@@ -255,118 +166,81 @@ const getSingleRetreatLocationById = async (
   );
 
   assertFound(location, "Retreat location not found", 404);
-
-  return location;
-};
-
-const getSingleRetreatLocationBySlug = async (
-  slug: string,
-  actorRole?: string,
-) => {
-  const filter: Record<string, unknown> = { slug: slug.toLowerCase().trim() };
-
-  if (!isAdminOrManager(actorRole)) {
-    filter.status = "published";
-    filter.isActive = true;
-  }
-
-  const location = await RetreatLocation.findOne(filter).populate(
-    LOCATION_POPULATE,
-  );
-
-  assertFound(location, "Retreat location not found", 404);
-
   return location;
 };
 
 const updateRetreatLocation = async (
-  id: string,
+  locationId: string,
   payload: IUpdateRetreatLocation,
   actorId: string,
 ) => {
-  assertValidObjectId(id, "Retreat location ID");
-  assertValidObjectId(actorId, "Actor ID");
+  assertValidObjectId(locationId, "Retreat location ID");
 
-  const location = await RetreatLocation.findById(id);
+  const location = await RetreatLocation.findById(locationId);
   assertFound(location, "Retreat location not found", 404);
 
-  if (payload.name !== undefined) {
-    location.name = payload.name.trim();
+  if (payload.title !== undefined) {
+    location.title = payload.title;
   }
 
   if (payload.slug !== undefined) {
-    const customSlug = slugify(payload.slug);
-    const existingWithSlug = await RetreatLocation.findOne({
-      slug: customSlug,
-      _id: { $ne: new Types.ObjectId(id) },
+    const slug = slugify(payload.slug);
+    const existing = await RetreatLocation.findOne({
+      slug,
+      _id: { $ne: location._id },
     });
-
-    if (existingWithSlug) {
-      throwServiceError(
-        `Retreat location with slug '${customSlug}' already exists`,
-        409,
-      );
+    if (existing) {
+      throwServiceError("A retreat location with this slug already exists", 409);
     }
-
-    location.slug = customSlug;
-  } else if (payload.name !== undefined && payload.name !== location.name) {
-    location.slug = await generateUniqueSlug(payload.name, id);
+    location.slug = slug;
   }
 
   if (payload.country !== undefined) {
-    location.country = payload.country.trim();
+    location.country = payload.country;
   }
 
   if (payload.city !== undefined) {
-    location.city = payload.city.trim();
+    location.city = payload.city;
   }
 
-  if (payload.stateOrProvince !== undefined) {
-    location.stateOrProvince = payload.stateOrProvince
-      ? payload.stateOrProvince.trim()
-      : undefined;
-  }
-
-  if (payload.address !== undefined) {
-    location.address = payload.address ? payload.address.trim() : undefined;
+  if (payload.tagline !== undefined) {
+    location.tagline = payload.tagline;
   }
 
   if (payload.description !== undefined) {
-    location.description = payload.description.trim();
+    location.description = payload.description;
   }
 
-  if (payload.shortDescription !== undefined) {
-    location.shortDescription = payload.shortDescription
-      ? payload.shortDescription.trim()
-      : undefined;
+  if (payload.coverImage === null) {
+    location.set("coverImage", undefined);
+  } else if (payload.coverImage !== undefined) {
+    location.coverImage = payload.coverImage;
   }
 
-  if (payload.coverImage !== undefined) {
-    location.coverImage = payload.coverImage.trim();
+  if (payload.promoVideoUrl === null) {
+    location.set("promoVideoUrl", undefined);
+  } else if (payload.promoVideoUrl !== undefined) {
+    location.promoVideoUrl = payload.promoVideoUrl;
   }
 
-  if (payload.gallery !== undefined) {
-    location.gallery = payload.gallery;
+  if (payload.galleryImages !== undefined) {
+    location.galleryImages = payload.galleryImages;
   }
 
-  if (payload.amenities !== undefined) {
-    location.amenities = payload.amenities;
+  if (payload.whatsIncluded !== undefined) {
+    location.whatsIncluded = payload.whatsIncluded;
   }
 
-  if (payload.coordinates !== undefined) {
-    location.coordinates = payload.coordinates || undefined;
-  }
-
-  if (payload.venueDetails !== undefined) {
-    location.venueDetails = payload.venueDetails || undefined;
-  }
-
-  if (payload.featured !== undefined) {
-    location.featured = payload.featured;
+  if (payload.isFeatured !== undefined) {
+    location.isFeatured = payload.isFeatured;
   }
 
   if (payload.isActive !== undefined) {
     location.isActive = payload.isActive;
+  }
+
+  if (payload.status !== undefined) {
+    location.status = payload.status;
   }
 
   if (payload.order !== undefined) {
@@ -374,90 +248,25 @@ const updateRetreatLocation = async (
   }
 
   location.updatedBy = new Types.ObjectId(actorId);
-
   await location.save();
 
   return location.populate(LOCATION_POPULATE);
 };
 
-const publishRetreatLocation = async (id: string, actorId: string) => {
-  assertValidObjectId(id, "Retreat location ID");
-  assertValidObjectId(actorId, "Actor ID");
+const deleteRetreatLocation = async (locationId: string) => {
+  assertValidObjectId(locationId, "Retreat location ID");
 
-  const location = await RetreatLocation.findById(id);
+  const location = await RetreatLocation.findById(locationId);
   assertFound(location, "Retreat location not found", 404);
 
-  if (location.status === "archived") {
-    throwServiceError("Archived retreat location cannot be directly published", 400);
-  }
-
-  location.status = "published";
-  location.isActive = true;
-  location.publishedAt = new Date();
-  location.set("archivedAt", undefined);
-  location.updatedBy = new Types.ObjectId(actorId);
-
-  await location.save();
-
-  return location.populate(LOCATION_POPULATE);
-};
-
-const moveRetreatLocationToDraft = async (id: string, actorId: string) => {
-  assertValidObjectId(id, "Retreat location ID");
-  assertValidObjectId(actorId, "Actor ID");
-
-  const location = await RetreatLocation.findById(id);
-  assertFound(location, "Retreat location not found", 404);
-
-  if (location.status === "archived") {
-    throwServiceError("Archived retreat location cannot be moved to draft", 400);
-  }
-
-  location.status = "draft";
-  location.set("publishedAt", undefined);
-  location.updatedBy = new Types.ObjectId(actorId);
-
-  await location.save();
-
-  return location.populate(LOCATION_POPULATE);
-};
-
-const archiveRetreatLocation = async (id: string, actorId: string) => {
-  assertValidObjectId(id, "Retreat location ID");
-  assertValidObjectId(actorId, "Actor ID");
-
-  const location = await RetreatLocation.findById(id);
-  assertFound(location, "Retreat location not found", 404);
-
-  location.status = "archived";
-  location.isActive = false;
-  location.archivedAt = new Date();
-  location.set("publishedAt", undefined);
-  location.updatedBy = new Types.ObjectId(actorId);
-
-  await location.save();
-
-  return location.populate(LOCATION_POPULATE);
-};
-
-const deleteRetreatLocation = async (id: string) => {
-  assertValidObjectId(id, "Retreat location ID");
-
-  const location = await RetreatLocation.findByIdAndDelete(id);
-  assertFound(location, "Retreat location not found", 404);
-
-  return { id, deleted: true };
+  await location.deleteOne();
+  return { success: true, message: "Retreat location deleted successfully" };
 };
 
 export const retreatLocationService = {
   createRetreatLocation,
   getAllRetreatLocations,
-  getFeaturedRetreatLocations,
-  getSingleRetreatLocationById,
-  getSingleRetreatLocationBySlug,
+  getSingleRetreatLocation,
   updateRetreatLocation,
-  publishRetreatLocation,
-  moveRetreatLocationToDraft,
-  archiveRetreatLocation,
   deleteRetreatLocation,
 };

@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import config from "../config";
 import { User } from "../modules/users/users.model.schema";
 import { getGeneralRoom } from "../modules/room/room.service";
-import { createMessage } from "../modules/message/message.services";
+import { createMessage, deleteMessage } from "../modules/message/message.services";
 
 interface DecodedToken {
   id: string;
@@ -65,9 +65,10 @@ export const initSocket = (httpServer: HttpServer) => {
       const userDoc = await User.findById(userId).select(
         "fullName profileImage",
       );
+
+
       socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
       socket.data.user.profileImage = userDoc?.profileImage ?? null;
-
       // auto-join the single General room for now (explicit joinRoom comes later)
       const room = await getGeneralRoom(userId);
       const roomId = room._id.toString();
@@ -100,24 +101,42 @@ export const initSocket = (httpServer: HttpServer) => {
       //     socket.emit("error", "Failed to send message");
       //   }
       // });
-      socket.on("message:send", async (content: string) => {
-        try {
-          // console.log(
-          //   "message:send received from",
-          //   userId,
-          //   "roomId:",
-          //   roomId,
-          //   "content:",
-          //   content,
-          // );
-          if (!content || !content.trim()) return;
+      socket.on(
+        "message:send",
+        async (payload: { content: string; replyTo?: string | null }) => {
+          try {
+            const content = payload?.content;
+            if (!content || !content.trim()) return;
 
-          const message = await createMessage(roomId, userId, content.trim());
-          // console.log("message saved, broadcasting to room:", roomId);
-          io.to(roomId).emit("message:new", message);
-        } catch (error) {
-          console.error("message:send error:", error);
-          socket.emit("error", "Failed to send message");
+            const message = await createMessage(
+              roomId,
+              userId,
+              content.trim(),
+              payload?.replyTo ?? null
+            );
+
+            io.to(roomId).emit("message:new", message);
+          } catch (error: any) {
+            console.error("message:send error:", error);
+            socket.emit("error", error.message || "Failed to send message");
+          }
+        }
+      );
+
+      socket.on("message:delete", async (messageId: string) => {
+        try {
+          if (!messageId) return;
+
+          const deleted = await deleteMessage(messageId, userId);
+
+          // broadcast to everyone in the room (including sender) so all clients update in sync
+          io.to(roomId).emit("message:deleted", {
+            messageId: deleted._id.toString(),
+            content: deleted.content, // "This message was deleted"
+          });
+        } catch (error: any) {
+          console.error("message:delete error:", error);
+          socket.emit("error", error.message || "Failed to delete message");
         }
       });
 

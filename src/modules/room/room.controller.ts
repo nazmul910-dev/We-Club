@@ -8,7 +8,13 @@ export const getGeneralRoomHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const room = await getGeneralRoom(req.user.id as string);
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Authentication required" });
+      return;
+    }
+
+    const room = await getGeneralRoom(userId as string);
 
     res.status(200).json({
       success: true,
