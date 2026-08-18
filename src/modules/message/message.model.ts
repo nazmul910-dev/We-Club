@@ -23,7 +23,19 @@ const messageSchema = new Schema<IMessage>(
       trim: true,
       maxlength: 2000,
     },
+    // NEW: reply support
+    replyTo: {
+      type: Schema.Types.ObjectId,
+      ref: "Message",
+      default: null,
+    },
+
+    // NEW: soft delete support
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
+
   },
+
   {
     timestamps: true,
   },
