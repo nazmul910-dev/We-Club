@@ -22,6 +22,7 @@ import { RegistrationPaymentLink } from "./registrationPaymentLink.model";
 import assertFound from "../../utility/assertFound";
 import { syncMembershipExpiry } from "../../utility/membership/membership.service";
 import { sendRegistrationPaymentLinkMail } from "../../utility/sendRegistrationPaymentLinkMail ";
+import { invictusPaymentService } from "../invictus-payments/invictus.payment.service";
 
 const stripeSecretKey = config.STRIPE_SECRET_KEY;
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
@@ -1055,6 +1056,10 @@ const handleStripeWebhook = async (
         console.error(
           `Stripe checkout ${session.id} has no payment purpose in metadata`,
         );
+        break;
+      }
+      if (purpose === "invictus_purchase") {
+        await invictusPaymentService.activateInvictusPurchase(session);
         break;
       }
 
