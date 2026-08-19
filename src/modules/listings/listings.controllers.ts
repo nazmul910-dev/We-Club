@@ -7,6 +7,9 @@ import { parseIfString } from "../../utility/parseIfString";
 
 const LISTING_IMAGE_TRANSFORM = [{ quality: "auto", fetch_format: "auto" }];
 
+
+
+
 const createListing = async (req: Request, res: Response) => {
   try {
     const files = req.files as {
@@ -14,9 +17,6 @@ const createListing = async (req: Request, res: Response) => {
       images?: Express.Multer.File[];
     };
 
-    // Upload cover_image and ALL gallery images in parallel — not sequentially.
-    // Previously: cover upload finished → then gallery uploads started (sequential).
-    // Now: all uploads fire at the same time, response time = slowest single upload.
     const [cover_image, ...uploadedImages] = await Promise.all([
       files?.cover_image?.[0]
         ? uploadImageToCloudinary(files.cover_image[0], "listings/cover")
@@ -41,7 +41,10 @@ const createListing = async (req: Request, res: Response) => {
       ...body,
       ...(cover_image && { cover_image }),
       ...(images.length > 0 && { images }),
-    });
+      
+    },
+  req.user?.role as string,
+);
 
     res.status(201).json({
       success: true,
