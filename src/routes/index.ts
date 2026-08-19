@@ -245,6 +245,14 @@ const moduleRoutes: TModuleRoute[] = [
         path: "/invictus/retreat-bookings",
         route: retreatBookingRoutes,
     },
+    {
+        path:"/invictus/leaderboards",
+        route: leaderboardEntryRoutes,
+    },
+    {
+        path:"/invictus/leaderboards",
+        route:leaderboardRoutes
+    }
 ];
 
 moduleRoutes.forEach((route) => {
