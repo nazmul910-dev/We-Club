@@ -1,10 +1,10 @@
 import { Types } from 'mongoose';
-import { UserRole,AccessTo } from '../users/user.interface';
+import { UserRole, AccessTo } from '../users/user.interface';
 import {
   MembershipDurationMonths,
 } from '../users/user.interface';
 
-export const PAYMENT_PURPOSES = ['registration', 'upgrade'] as const;
+export const PAYMENT_PURPOSES = ['registration', 'upgrade', 'invictus_purchase'] as const;
 
 export const PAYMENT_SESSION_STATUSES = [
   'pending',
@@ -19,12 +19,12 @@ export type PaymentSessionStatus =
   (typeof PAYMENT_SESSION_STATUSES)[number];
 
 export interface IPaymentSession {
-  user: Types.ObjectId; 
+  user: Types.ObjectId;
 
-  role: UserRole;
-  accessTo: AccessTo;
+  role?: UserRole | undefined;
+  accessTo?: AccessTo | undefined;
 
-  durationMonths: MembershipDurationMonths;
+  durationMonths?: MembershipDurationMonths | undefined;
 
   purpose: PaymentPurpose;
   status: PaymentSessionStatus;
@@ -33,7 +33,7 @@ export interface IPaymentSession {
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
 
-  checkoutUrl?: string ;
+  checkoutUrl?: string;
 
   amountTotal?: number;
   originalAmountTotal?: number;
@@ -41,6 +41,14 @@ export interface IPaymentSession {
   discountCode?: string;
   discountPercent?: number;
   currency?: string;
+
+
+  paymentPlan?: Types.ObjectId | undefined;
+
+  product?: Types.ObjectId | undefined;
+  productRefModel?: 'ChallengePillar' | 'RetreatBatch' | undefined;
+
+  entitlementActivatedAt?: Date | undefined;
 
   createdAt?: Date;
   updatedAt?: Date;

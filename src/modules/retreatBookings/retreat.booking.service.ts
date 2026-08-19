@@ -5,6 +5,7 @@ import config from "../../config";
 import { User } from "../users/users.model.schema";
 import { RetreatBatch } from "../retreatBatches/retreat.batch.model.schema";
 import { RetreatLocation } from "../retreatLocations/retreat.location.model.schema";
+import { notificationService } from "../notifications/notification.service";
 
 import {
   ICancelRetreatBooking,
@@ -146,6 +147,27 @@ const createRetreatBooking = async (
   // Increment waitlist count on batch
   await RetreatBatch.findByIdAndUpdate(batch._id, {
     $inc: { waitlistCount: 1 },
+  });
+
+  const createdBookingId = String(booking._id);
+
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "retreat_booking_waitlisted",
+    fallbackTitle: "Retreat request received",
+    fallbackBody: "Your retreat reservation request has been added to the waitlist.",
+    recipient: userId,
+    actor: actorId,
+    variables: {
+      bookingId: createdBookingId,
+      batchName: batch.batchName,
+    },
+    relatedEntityType: "RetreatBooking",
+    relatedEntityId: createdBookingId,
+    metadata: {
+      status: booking.status,
+      batchId: String(batch._id),
+    },
+    dedupeKey: `retreat_booking_waitlisted:${createdBookingId}`,
   });
 
   return booking.populate(BOOKING_POPULATE);
@@ -343,6 +365,28 @@ const verifyRetreatBookingPayment = async (sessionId: string) => {
   }
   await booking.save();
 
+  const paidBookingId = String(booking._id);
+
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "retreat_booking_confirmed",
+    fallbackTitle: "Retreat booking confirmed",
+    fallbackBody: "Your retreat booking payment was verified and your seat is confirmed.",
+    recipient: String(booking.user),
+    variables: {
+      bookingId: paidBookingId,
+      amountPaid: paidAmount,
+      currency: booking.currency,
+    },
+    relatedEntityType: "RetreatBooking",
+    relatedEntityId: paidBookingId,
+    metadata: {
+      status: booking.status,
+      paymentStatus: "paid",
+      amountPaid: paidAmount,
+    },
+    dedupeKey: `retreat_booking_confirmed:${paidBookingId}`,
+  });
+
   return {
     paid: true,
     message: "Retreat booking confirmed and payment verified successfully",
@@ -384,6 +428,27 @@ const inviteRetreatBooking = async (
       $inc: { waitlistCount: -1 },
     });
   }
+
+  const invitedBookingId = String(booking._id);
+
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "retreat_booking_invited",
+    fallbackTitle: "You have been invited to the retreat",
+    fallbackBody: "Your retreat waitlist request has been invited. Please complete the next required step before the invitation expires.",
+    recipient: String(booking.user),
+    actor: actorId,
+    variables: {
+      bookingId: invitedBookingId,
+      invitationExpiresAt: expiresAt.toISOString(),
+    },
+    relatedEntityType: "RetreatBooking",
+    relatedEntityId: invitedBookingId,
+    metadata: {
+      status: booking.status,
+      invitationExpiresAt: expiresAt.toISOString(),
+    },
+    dedupeKey: `retreat_booking_invited:${invitedBookingId}:${expiresAt.getTime()}`,
+  });
 
   return booking.populate(BOOKING_POPULATE);
 };
@@ -434,6 +499,28 @@ const confirmRetreatBookingAdmin = async (
 
   booking.updatedBy = new Types.ObjectId(actorId);
   await booking.save();
+
+  const confirmedBookingId = String(booking._id);
+
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "retreat_booking_confirmed",
+    fallbackTitle: "Retreat booking confirmed",
+    fallbackBody: "Your retreat booking has been confirmed.",
+    recipient: String(booking.user),
+    actor: actorId,
+    variables: {
+      bookingId: confirmedBookingId,
+      amountPaid: booking.amountPaid ?? booking.amount,
+      currency: booking.currency,
+    },
+    relatedEntityType: "RetreatBooking",
+    relatedEntityId: confirmedBookingId,
+    metadata: {
+      status: booking.status,
+      amountPaid: booking.amountPaid ?? booking.amount,
+    },
+    dedupeKey: `retreat_booking_confirmed:${confirmedBookingId}`,
+  });
 
   return booking.populate(BOOKING_POPULATE);
 };
@@ -490,6 +577,29 @@ const cancelRetreatBooking = async ({
     await batch.save();
   }
 
+  const cancelledBookingId = String(booking._id);
+
+  if (String(booking.user) !== actorId) {
+    await notificationService.safeCreateFromTemplateOrFallback({
+      templateKey: "retreat_booking_cancelled",
+      fallbackTitle: "Retreat booking cancelled",
+      fallbackBody: `Your retreat booking has been cancelled. Reason: ${payload.reason}`,
+      recipient: String(booking.user),
+      actor: actorId,
+      variables: {
+        bookingId: cancelledBookingId,
+        reason: payload.reason,
+      },
+      relatedEntityType: "RetreatBooking",
+      relatedEntityId: cancelledBookingId,
+      metadata: {
+        status: booking.status,
+        reason: payload.reason,
+      },
+      dedupeKey: `retreat_booking_cancelled:${cancelledBookingId}`,
+    });
+  }
+
   return booking.populate(BOOKING_POPULATE);
 };
 
@@ -526,6 +636,30 @@ const refundRetreatBooking = async (
     }
     await batch.save();
   }
+
+  const refundedBookingId = String(booking._id);
+
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "retreat_booking_refunded",
+    fallbackTitle: "Retreat booking refunded",
+    fallbackBody: "Your retreat booking has been marked as refunded.",
+    recipient: String(booking.user),
+    actor: actorId,
+    variables: {
+      bookingId: refundedBookingId,
+      refundAmount: booking.refundAmount ?? 0,
+      currency: booking.currency,
+      reason: booking.refundReason ?? "",
+    },
+    relatedEntityType: "RetreatBooking",
+    relatedEntityId: refundedBookingId,
+    metadata: {
+      status: booking.status,
+      refundAmount: booking.refundAmount ?? null,
+      reason: booking.refundReason ?? null,
+    },
+    dedupeKey: `retreat_booking_refunded:${refundedBookingId}`,
+  });
 
   return booking.populate(BOOKING_POPULATE);
 };

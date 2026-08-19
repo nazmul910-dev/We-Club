@@ -2,6 +2,7 @@ import { QueryFilter, Types } from "mongoose";
 
 import { User } from "../users/users.model.schema";
 import { MentorshipProfile } from "../mentorshipProfiles/mentorship.profile.model.schema";
+import { notificationService } from "../notifications/notification.service";
 
 import {
   ICancelMentorBooking,
@@ -208,6 +209,8 @@ const createBooking = async (
   assertValidObjectId(payload.leadMentor, "Lead mentor ID");
   assertValidObjectId(memberUserId, "Member user ID");
 
+  const memberUser = await checkUserExists(memberUserId, "Member user");
+
   if (memberUserId === payload.leadMentor) {
     throwServiceError("A member cannot book a mentorship session with themselves", 400);
   }
@@ -296,6 +299,37 @@ const createBooking = async (
   }
 
   const booking = await MentorBooking.create(createData);
+
+  const bookingId = String(booking._id);
+
+  const mentorRecipients = [
+    String(booking.leadMentor),
+    ...(booking.coMentor ? [String(booking.coMentor)] : []),
+  ];
+
+  await Promise.all(
+    mentorRecipients.map((recipientId) =>
+      notificationService.safeCreateFromTemplateOrFallback({
+        templateKey: "mentor_booking_requested",
+        fallbackTitle: "New mentorship booking request",
+        fallbackBody: `${memberUser.fullName} requested a mentorship session.`,
+        recipient: recipientId,
+        actor: memberUserId,
+        variables: {
+          memberName: memberUser.fullName,
+          bookingId,
+          scheduledStartTime: booking.scheduledStartTime.toISOString(),
+        },
+        relatedEntityType: "MentorBooking",
+        relatedEntityId: bookingId,
+        metadata: {
+          status: booking.status,
+          timezone: booking.timezone,
+        },
+        dedupeKey: `mentor_booking_requested:${bookingId}:${recipientId}`,
+      }),
+    ),
+  );
 
   return booking.populate(BOOKING_POPULATE);
 };
@@ -667,6 +701,38 @@ const updateBooking = async ({
 
   await booking.save();
 
+  const updatedBookingId = String(booking._id);
+  const updateRecipients = [
+    String(booking.member),
+    String(booking.leadMentor),
+    ...(booking.coMentor ? [String(booking.coMentor)] : []),
+  ].filter((recipientId, index, all) =>
+    recipientId !== actorId && all.indexOf(recipientId) === index,
+  );
+
+  await Promise.all(
+    updateRecipients.map((recipientId) =>
+      notificationService.safeCreateFromTemplateOrFallback({
+        templateKey: "mentor_booking_updated",
+        fallbackTitle: "Mentorship booking updated",
+        fallbackBody: "A mentorship booking you are part of has been updated.",
+        recipient: recipientId,
+        actor: actorId,
+        variables: {
+          bookingId: updatedBookingId,
+          scheduledStartTime: booking.scheduledStartTime.toISOString(),
+        },
+        relatedEntityType: "MentorBooking",
+        relatedEntityId: updatedBookingId,
+        metadata: {
+          status: booking.status,
+          timezone: booking.timezone,
+        },
+        dedupeKey: `mentor_booking_updated:${updatedBookingId}:${booking.updatedAt?.getTime() ?? Date.now()}:${recipientId}`,
+      }),
+    ),
+  );
+
   return booking.populate(BOOKING_POPULATE);
 };
 
@@ -730,6 +796,28 @@ const confirmBooking = async ({
 
   await booking.save();
 
+  const confirmedBookingId = String(booking._id);
+
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "mentor_booking_confirmed",
+    fallbackTitle: "Mentorship booking confirmed",
+    fallbackBody: "Your mentorship session has been confirmed.",
+    recipient: String(booking.member),
+    actor: actorId,
+    variables: {
+      bookingId: confirmedBookingId,
+      scheduledStartTime: booking.scheduledStartTime.toISOString(),
+      meetingUrl: booking.meetingUrl ?? "",
+    },
+    relatedEntityType: "MentorBooking",
+    relatedEntityId: confirmedBookingId,
+    metadata: {
+      status: booking.status,
+      meetingUrl: booking.meetingUrl ?? null,
+    },
+    dedupeKey: `mentor_booking_confirmed:${confirmedBookingId}`,
+  });
+
   return booking.populate(BOOKING_POPULATE);
 };
 
@@ -774,6 +862,38 @@ const cancelBooking = async ({
   booking.updatedBy = new Types.ObjectId(actorId);
 
   await booking.save();
+
+  const cancelledBookingId = String(booking._id);
+  const cancellationRecipients = [
+    String(booking.member),
+    String(booking.leadMentor),
+    ...(booking.coMentor ? [String(booking.coMentor)] : []),
+  ].filter((recipientId, index, all) =>
+    recipientId !== actorId && all.indexOf(recipientId) === index,
+  );
+
+  await Promise.all(
+    cancellationRecipients.map((recipientId) =>
+      notificationService.safeCreateFromTemplateOrFallback({
+        templateKey: "mentor_booking_cancelled",
+        fallbackTitle: "Mentorship booking cancelled",
+        fallbackBody: `A mentorship booking has been cancelled. Reason: ${payload.reason}`,
+        recipient: recipientId,
+        actor: actorId,
+        variables: {
+          bookingId: cancelledBookingId,
+          reason: payload.reason,
+        },
+        relatedEntityType: "MentorBooking",
+        relatedEntityId: cancelledBookingId,
+        metadata: {
+          status: booking.status,
+          reason: payload.reason,
+        },
+        dedupeKey: `mentor_booking_cancelled:${cancelledBookingId}:${recipientId}`,
+      }),
+    ),
+  );
 
   return booking.populate(BOOKING_POPULATE);
 };
@@ -822,6 +942,25 @@ const completeBooking = async ({
 
   await booking.save();
 
+  const completedBookingId = String(booking._id);
+
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "mentor_booking_completed",
+    fallbackTitle: "Mentorship session completed",
+    fallbackBody: "Your mentorship session has been marked as completed.",
+    recipient: String(booking.member),
+    actor: actorId,
+    variables: {
+      bookingId: completedBookingId,
+    },
+    relatedEntityType: "MentorBooking",
+    relatedEntityId: completedBookingId,
+    metadata: {
+      status: booking.status,
+    },
+    dedupeKey: `mentor_booking_completed:${completedBookingId}`,
+  });
+
   return booking.populate(BOOKING_POPULATE);
 };
 
@@ -869,6 +1008,40 @@ const markNoShowBooking = async ({
   booking.updatedBy = new Types.ObjectId(actorId);
 
   await booking.save();
+
+  const noShowBookingId = String(booking._id);
+  const noShowRecipients = [
+    String(booking.member),
+    String(booking.leadMentor),
+    ...(booking.coMentor ? [String(booking.coMentor)] : []),
+  ].filter((recipientId, index, all) =>
+    recipientId !== actorId && all.indexOf(recipientId) === index,
+  );
+
+  await Promise.all(
+    noShowRecipients.map((recipientId) =>
+      notificationService.safeCreateFromTemplateOrFallback({
+        templateKey: "mentor_booking_no_show",
+        fallbackTitle: "Mentorship no-show recorded",
+        fallbackBody: "A no-show has been recorded for a mentorship booking.",
+        recipient: recipientId,
+        actor: actorId,
+        variables: {
+          bookingId: noShowBookingId,
+          noShowBy: payload.noShowBy,
+          reason: payload.reason ?? "",
+        },
+        relatedEntityType: "MentorBooking",
+        relatedEntityId: noShowBookingId,
+        metadata: {
+          status: booking.status,
+          noShowBy: payload.noShowBy,
+          reason: payload.reason ?? null,
+        },
+        dedupeKey: `mentor_booking_no_show:${noShowBookingId}:${recipientId}`,
+      }),
+    ),
+  );
 
   return booking.populate(BOOKING_POPULATE);
 };

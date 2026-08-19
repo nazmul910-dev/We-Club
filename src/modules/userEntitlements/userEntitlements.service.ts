@@ -356,22 +356,22 @@ const grantEntitlementByAdmin = async (
 
     ...(payload.pillar !== undefined
       ? {
-          pillarId: payload.pillar,
-        }
+        pillarId: payload.pillar,
+      }
       : {}),
 
     ...(payload.targetId !== undefined
       ? {
-          targetId: payload.targetId,
-        }
+        targetId: payload.targetId,
+      }
       : {}),
 
     source: payload.source ?? "admin",
 
     ...(payload.paymentSession !== undefined
       ? {
-          paymentSessionId: payload.paymentSession,
-        }
+        paymentSessionId: payload.paymentSession,
+      }
       : {}),
 
     startsAt,
@@ -401,8 +401,50 @@ const activatePillarEntitlementFromPayment = async (
 
     ...(payload.expiresAt !== undefined
       ? {
-          expiresAt: payload.expiresAt,
-        }
+        expiresAt: payload.expiresAt,
+      }
+      : {}),
+  });
+};
+
+/**
+ * Pillar ছাড়াও retreat/event/bundle purchase-এর জন্য reusable।
+ * INVICTUS payments (Stripe checkout) module এটি ব্যবহার করে।
+ */
+const activateEntitlementFromPayment = async (payload: {
+  userId: string;
+
+  entitlementType: "pillar" | "bundle" | "event" | "retreat";
+
+  pillarId?: string | undefined;
+  targetId?: string | undefined;
+
+  paymentSessionId: string;
+
+  startsAt?: Date | undefined;
+  expiresAt?: Date | undefined;
+}) => {
+  return grantEntitlementInternal({
+    userId: payload.userId,
+
+    entitlementType: payload.entitlementType,
+
+    ...(payload.pillarId !== undefined
+      ? { pillarId: payload.pillarId }
+      : {}),
+
+    ...(payload.targetId !== undefined
+      ? { targetId: payload.targetId }
+      : {}),
+
+    source: "stripe",
+
+    paymentSessionId: payload.paymentSessionId,
+
+    startsAt: payload.startsAt ?? new Date(),
+
+    ...(payload.expiresAt !== undefined
+      ? { expiresAt: payload.expiresAt }
       : {}),
   });
 };
@@ -718,8 +760,8 @@ const revokeEntitlement = async (
 
     ...(payload.reason !== undefined
       ? {
-          reason: payload.reason,
-        }
+        reason: payload.reason,
+      }
       : {}),
   });
 };
@@ -736,8 +778,8 @@ const refundEntitlement = async (
 
     ...(payload.reason !== undefined
       ? {
-          reason: payload.reason,
-        }
+        reason: payload.reason,
+      }
       : {}),
   });
 };
@@ -754,8 +796,8 @@ const expireEntitlement = async (
 
     ...(payload.reason !== undefined
       ? {
-          reason: payload.reason,
-        }
+        reason: payload.reason,
+      }
       : {}),
   });
 };
@@ -816,7 +858,7 @@ export const userEntitlementService = {
   grantEntitlementByAdmin,
 
   activatePillarEntitlementFromPayment,
-
+  activateEntitlementFromPayment,
   hasActivePillarEntitlement,
   checkPillarAccess,
 
