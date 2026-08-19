@@ -35,6 +35,8 @@ import { leaderboardRoutes } from "../modules/leaderboards/leaderboard.route";
 import { mentorBookingRoutes } from "../modules/mentorBookings/mentor.booking.route";
 import { retreatBatchRoutes } from "../modules/retreatBatches/retreat.batch.route";
 import { retreatBookingRoutes } from "../modules/retreatBookings/retreat.booking.route";
+import { notificationRoutes } from "../modules/notifications/notification.route";
+import { notificationTemplateRoutes } from "../modules/notificationTemplates/notification.template.route";
 
 const router = Router();
 
@@ -252,6 +254,18 @@ const moduleRoutes: TModuleRoute[] = [
     {
         path:"/invictus/leaderboards",
         route:leaderboardRoutes
+    },
+    {
+        path:"/invictus/leaderboards",
+        route:leaderboardRoutes
+    },
+    {
+        path: "/invictus/notifications",
+        route: notificationRoutes,
+    },
+    {
+        path: "/invictus/notification-templates",
+        route: notificationTemplateRoutes,
     }
 ];
 

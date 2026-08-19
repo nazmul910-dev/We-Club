@@ -16,6 +16,19 @@ interface DecodedToken {
 
 export let io: Server;
 
+const getUserRoom = (userId: string): string => `user:${userId}`;
+
+export const emitNotificationToUser = (
+  userId: string,
+  payload: unknown,
+): void => {
+  if (!io) {
+    return;
+  }
+
+  io.to(getUserRoom(userId)).emit("notification:new", payload);
+};
+
 // userId -> set of socket ids (a user can have multiple tabs/devices open)
 const onlineUsers = new Map<string, Set<string>>();
 
