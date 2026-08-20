@@ -31,7 +31,7 @@ var routeNotFoundHandler = (req, res, next) => {
 var routeNotFoundHandler_default = routeNotFoundHandler;
 
 // src/routes/index.ts
-import { Router as Router42 } from "express";
+import { Router as Router46 } from "express";
 
 // src/modules/users/user.route.ts
 import { Router } from "express";
@@ -5177,6 +5177,8 @@ var ACTIVITY_LOG_ENTITY_TYPES = [
   "EmailTemplate",
   "SessionSchedule",
   "SessionAttendance",
+  "StreakLog",
+  "PointsLedger",
   "AdminSettings",
   "Other"
 ];
@@ -28091,8 +28093,329 @@ router39.patch(
 );
 var notificationTemplateRoutes = router39;
 
-// src/modules/supportTickets/support.ticket.route.ts
+// src/modules/entitlementLogs/entitlementlog.route.ts
 import { Router as Router40 } from "express";
+
+// src/modules/entitlementLogs/entitlementlog.controller.ts
+var throwControllerError9 = (message, status) => {
+  const error = new Error(message);
+  error.status = status;
+  throw error;
+};
+var assertFound23 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwControllerError9(message, statusCode);
+  }
+};
+var getAuthUser27 = (req) => {
+  const user = req.user;
+  assertFound23(user, "Authentication required", 401);
+  return {
+    id: user.id,
+    role: user.role
+  };
+};
+var createEntitlementLog2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser27(req);
+    const result = await entitlementLogService.createEntitlementLog({
+      ...req.body,
+      actor: req.body.actor ?? authUser.id
+    });
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Entitlement log created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllEntitlementLogs2 = async (req, res, next) => {
+  try {
+    const options2 = {
+      page: Number(req.query.page ?? 1),
+      limit: Number(req.query.limit ?? 20)
+    };
+    if (typeof req.query.userId === "string") {
+      options2.userId = req.query.userId;
+    }
+    if (typeof req.query.entitlementId === "string") {
+      options2.entitlementId = req.query.entitlementId;
+    }
+    if (typeof req.query.pillarId === "string") {
+      options2.pillarId = req.query.pillarId;
+    }
+    if (typeof req.query.action === "string") {
+      options2.action = req.query.action;
+    }
+    if (typeof req.query.source === "string") {
+      options2.source = req.query.source;
+    }
+    const result = await entitlementLogService.getAllEntitlementLogs(options2);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Entitlement logs retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyEntitlementLogs2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser27(req);
+    const result = await entitlementLogService.getMyEntitlementLogs(
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Your entitlement logs retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleEntitlementLog2 = async (req, res, next) => {
+  try {
+    const result = await entitlementLogService.getSingleEntitlementLog(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Entitlement log retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var entitlementLogController = {
+  createEntitlementLog: createEntitlementLog2,
+  getAllEntitlementLogs: getAllEntitlementLogs2,
+  getMyEntitlementLogs: getMyEntitlementLogs2,
+  getSingleEntitlementLog: getSingleEntitlementLog2
+};
+
+// src/modules/entitlementLogs/entitlementlog.validaiton.ts
+import { z as z32 } from "zod";
+var mongoObjectIdSchema24 = z32.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var createEntitlementLogBodySchema = z32.object({
+  user: mongoObjectIdSchema24,
+  entitlement: mongoObjectIdSchema24,
+  pillar: mongoObjectIdSchema24.optional(),
+  paymentSession: mongoObjectIdSchema24.optional(),
+  action: z32.enum(ENTITLEMENT_LOG_ACTIONS),
+  source: z32.enum(ENTITLEMENT_LOG_SOURCES),
+  reason: z32.string().trim().max(1e3).optional(),
+  actor: mongoObjectIdSchema24.optional(),
+  metadata: z32.record(z32.string(), z32.unknown()).optional()
+});
+var createEntitlementLogValidation = z32.object({
+  body: createEntitlementLogBodySchema
+});
+var entitlementLogIdValidation = z32.object({
+  params: z32.object({
+    id: mongoObjectIdSchema24
+  })
+});
+var getAllEntitlementLogsValidation = z32.object({
+  query: z32.object({
+    userId: mongoObjectIdSchema24.optional(),
+    entitlementId: mongoObjectIdSchema24.optional(),
+    pillarId: mongoObjectIdSchema24.optional(),
+    action: z32.enum(ENTITLEMENT_LOG_ACTIONS).optional(),
+    source: z32.enum(ENTITLEMENT_LOG_SOURCES).optional(),
+    page: z32.coerce.number().int().min(1).optional(),
+    limit: z32.coerce.number().int().min(1).max(100).optional()
+  })
+});
+
+// src/modules/entitlementLogs/entitlementlog.route.ts
+var router40 = Router40();
+router40.post(
+  "/",
+  verifyToken,
+  authorizeRoles("admin", "manager"),
+  validateRequest_default(createEntitlementLogValidation),
+  entitlementLogController.createEntitlementLog
+);
+router40.get(
+  "/me",
+  verifyToken,
+  entitlementLogController.getMyEntitlementLogs
+);
+router40.get(
+  "/",
+  verifyToken,
+  authorizeRoles("admin", "manager"),
+  validateRequest_default(getAllEntitlementLogsValidation),
+  entitlementLogController.getAllEntitlementLogs
+);
+router40.get(
+  "/:id",
+  verifyToken,
+  authorizeRoles("admin", "manager"),
+  validateRequest_default(entitlementLogIdValidation),
+  entitlementLogController.getSingleEntitlementLog
+);
+var entitlementLogRoutes = router40;
+
+// src/modules/activitylogs/activitylog.route.ts
+import { Router as Router41 } from "express";
+
+// src/modules/activitylogs/activitylog.controller.ts
+var throwControllerError10 = (message, status) => {
+  const error = new Error(message);
+  error.status = status;
+  throw error;
+};
+var assertFound24 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwControllerError10(message, statusCode);
+  }
+};
+var getAuthUser28 = (req) => {
+  const user = req.user;
+  assertFound24(user, "Authentication required", 401);
+  return {
+    id: user.id,
+    role: user.role
+  };
+};
+var createActivityLog2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser28(req);
+    const result = await activityLogService.createActivityLog({
+      ...req.body,
+      actor: req.body.actor ?? authUser.id,
+      ipAddress: req.body.ipAddress ?? req.ip,
+      userAgent: req.body.userAgent ?? req.headers["user-agent"]
+    });
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Activity log created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllActivityLogs2 = async (req, res, next) => {
+  try {
+    const options2 = {
+      page: Number(req.query.page ?? 1),
+      limit: Number(req.query.limit ?? 20)
+    };
+    if (typeof req.query.actorId === "string") {
+      options2.actorId = req.query.actorId;
+    }
+    if (typeof req.query.action === "string") {
+      options2.action = req.query.action;
+    }
+    if (typeof req.query.targetEntityType === "string") {
+      options2.targetEntityType = req.query.targetEntityType;
+    }
+    if (typeof req.query.targetEntityId === "string") {
+      options2.targetEntityId = req.query.targetEntityId;
+    }
+    const result = await activityLogService.getAllActivityLogs(options2);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Activity logs retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleActivityLog2 = async (req, res, next) => {
+  try {
+    const result = await activityLogService.getSingleActivityLog(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Activity log retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var activityLogController = {
+  createActivityLog: createActivityLog2,
+  getAllActivityLogs: getAllActivityLogs2,
+  getSingleActivityLog: getSingleActivityLog2
+};
+
+// src/modules/activitylogs/activitylog.validation.ts
+import { z as z33 } from "zod";
+var mongoObjectIdSchema25 = z33.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var createActivityLogBodySchema = z33.object({
+  actor: mongoObjectIdSchema25.optional(),
+  action: z33.enum(ACTIVITY_LOG_ACTIONS),
+  targetEntityType: z33.enum(ACTIVITY_LOG_ENTITY_TYPES),
+  targetEntityId: mongoObjectIdSchema25.optional(),
+  changeSummary: z33.string().trim().max(1e3).optional(),
+  changes: z33.record(z33.string(), z33.unknown()).optional(),
+  ipAddress: z33.string().trim().optional(),
+  userAgent: z33.string().trim().optional()
+});
+var createActivityLogValidation = z33.object({
+  body: createActivityLogBodySchema
+});
+var activityLogIdValidation = z33.object({
+  params: z33.object({
+    id: mongoObjectIdSchema25
+  })
+});
+var getAllActivityLogsValidation = z33.object({
+  query: z33.object({
+    actorId: mongoObjectIdSchema25.optional(),
+    action: z33.enum(ACTIVITY_LOG_ACTIONS).optional(),
+    targetEntityType: z33.enum(ACTIVITY_LOG_ENTITY_TYPES).optional(),
+    targetEntityId: mongoObjectIdSchema25.optional(),
+    page: z33.coerce.number().int().min(1).optional(),
+    limit: z33.coerce.number().int().min(1).max(100).optional()
+  })
+});
+
+// src/modules/activitylogs/activitylog.route.ts
+var router41 = Router41();
+router41.post(
+  "/",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder", "super_admin"),
+  validateRequest_default(createActivityLogValidation),
+  activityLogController.createActivityLog
+);
+router41.get(
+  "/",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder", "super_admin"),
+  validateRequest_default(getAllActivityLogsValidation),
+  activityLogController.getAllActivityLogs
+);
+router41.get(
+  "/:id",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder", "super_admin"),
+  validateRequest_default(activityLogIdValidation),
+  activityLogController.getSingleActivityLog
+);
+var activityLogRoutes = router41;
+
+// src/modules/supportTickets/support.ticket.route.ts
+import { Router as Router42 } from "express";
 
 // src/modules/supportTickets/support.ticket.service.ts
 import { Types as Types41 } from "mongoose";
@@ -28177,14 +28500,14 @@ var supportTicketService = {
       const assignee = await User.findById(payload.assignedTo).select("_id");
       assertFound_default(assignee, "Assigned user not found", 404);
     }
-    const update = { status: payload.status };
+    const update2 = { status: payload.status };
     if (payload.adminResponse !== void 0) {
-      update.adminResponse = payload.adminResponse;
-      update.respondedAt = /* @__PURE__ */ new Date();
+      update2.adminResponse = payload.adminResponse;
+      update2.respondedAt = /* @__PURE__ */ new Date();
     }
-    if (payload.assignedTo) update.assignedTo = new Types41.ObjectId(payload.assignedTo);
-    if (payload.status === "resolved" || payload.status === "closed") update.resolvedAt = /* @__PURE__ */ new Date();
-    const ticket = await SupportTicket.findByIdAndUpdate(id3, update, { new: true, runValidators: true }).populate(populate);
+    if (payload.assignedTo) update2.assignedTo = new Types41.ObjectId(payload.assignedTo);
+    if (payload.status === "resolved" || payload.status === "closed") update2.resolvedAt = /* @__PURE__ */ new Date();
+    const ticket = await SupportTicket.findByIdAndUpdate(id3, update2, { new: true, runValidators: true }).populate(populate);
     assertFound_default(ticket, "Support ticket not found", 404);
     return ticket;
   }
@@ -28200,96 +28523,132 @@ var auth = (req) => {
   return req.user;
 };
 var admins = ["founder", "super_admin", "admin", "manager"];
-var supportTicketController = {
-  async create(req, res, next) {
-    try {
-      const user = auth(req);
-      const data = await supportTicketService.create(user.id, req.body);
-      sendResponse_default(res, { statusCode: 201, success: true, message: "Support ticket created successfully", data });
-    } catch (error) {
-      next(error);
-    }
-  },
-  async mine(req, res, next) {
-    try {
-      const user = auth(req);
-      const data = await supportTicketService.myTickets(user.id, req.query);
-      sendResponse_default(res, { statusCode: 200, success: true, message: "Support tickets retrieved successfully", data });
-    } catch (error) {
-      next(error);
-    }
-  },
-  async adminList(req, res, next) {
-    try {
-      auth(req);
-      const data = await supportTicketService.adminList(req.query);
-      sendResponse_default(res, { statusCode: 200, success: true, message: "Support tickets retrieved successfully", data });
-    } catch (error) {
-      next(error);
-    }
-  },
-  async getById(req, res, next) {
-    try {
-      const user = auth(req);
-      const data = await supportTicketService.getById(String(req.params.id), user.id, admins.includes(user.role));
-      sendResponse_default(res, { statusCode: 200, success: true, message: "Support ticket retrieved successfully", data });
-    } catch (error) {
-      next(error);
-    }
-  },
-  async update(req, res, next) {
-    try {
-      const user = auth(req);
-      const data = await supportTicketService.update(String(req.params.id), user.id, req.body);
-      sendResponse_default(res, { statusCode: 200, success: true, message: "Support ticket updated successfully", data });
-    } catch (error) {
-      next(error);
-    }
+var create = async (req, res, next) => {
+  try {
+    const user = auth(req);
+    const data = await supportTicketService.create(user.id, req.body);
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Support ticket created successfully",
+      data
+    });
+  } catch (error) {
+    next(error);
   }
+};
+var mine = async (req, res, next) => {
+  try {
+    const user = auth(req);
+    const data = await supportTicketService.myTickets(user.id, req.query);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Support tickets retrieved successfully",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var adminList = async (req, res, next) => {
+  try {
+    auth(req);
+    const data = await supportTicketService.adminList(req.query);
+    sendResponse_default(
+      res,
+      {
+        statusCode: 200,
+        success: true,
+        message: "Support tickets retrieved successfully",
+        data
+      }
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+var getById = async (req, res, next) => {
+  try {
+    const user = auth(req);
+    const data = await supportTicketService.getById(String(req.params.id), user.id, admins.includes(user.role));
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Support ticket retrieved successfully",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var update = async (req, res, next) => {
+  try {
+    const user = auth(req);
+    const data = await supportTicketService.update(String(req.params.id), user.id, req.body);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Support ticket updated successfully",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var supportTicketController = {
+  create,
+  mine,
+  adminList,
+  getById,
+  update
 };
 
 // src/modules/supportTickets/support.ticket.validation.ts
-import { z as z32 } from "zod";
-var id = z32.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var createSupportTicketValidation = z32.object({
-  body: z32.object({
-    subject: z32.string().trim().min(3).max(200),
-    message: z32.string().trim().min(5).max(5e3),
-    category: z32.enum(SUPPORT_TICKET_CATEGORIES).default("general"),
-    priority: z32.enum(SUPPORT_TICKET_PRIORITIES).default("medium")
+import { z as z34 } from "zod";
+var id = z34.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var createSupportTicketValidation = z34.object({
+  body: z34.object({
+    subject: z34.string().trim().min(3).max(200),
+    message: z34.string().trim().min(5).max(5e3),
+    category: z34.enum(SUPPORT_TICKET_CATEGORIES).default("general"),
+    priority: z34.enum(SUPPORT_TICKET_PRIORITIES).default("medium")
   })
 });
-var supportTicketIdValidation = z32.object({ params: z32.object({ id }) });
-var supportTicketListValidation = z32.object({
-  query: z32.object({
-    status: z32.enum(SUPPORT_TICKET_STATUSES).optional(),
-    priority: z32.enum(SUPPORT_TICKET_PRIORITIES).optional(),
-    category: z32.enum(SUPPORT_TICKET_CATEGORIES).optional(),
-    page: z32.coerce.number().int().min(1).optional(),
-    limit: z32.coerce.number().int().min(1).max(100).optional()
+var supportTicketIdValidation = z34.object({ params: z34.object({ id }) });
+var supportTicketListValidation = z34.object({
+  query: z34.object({
+    status: z34.enum(SUPPORT_TICKET_STATUSES).optional(),
+    priority: z34.enum(SUPPORT_TICKET_PRIORITIES).optional(),
+    category: z34.enum(SUPPORT_TICKET_CATEGORIES).optional(),
+    page: z34.coerce.number().int().min(1).optional(),
+    limit: z34.coerce.number().int().min(1).max(100).optional()
   })
 });
-var updateSupportTicketValidation = z32.object({
-  params: z32.object({ id }),
-  body: z32.object({
-    status: z32.enum(SUPPORT_TICKET_STATUSES),
-    adminResponse: z32.string().trim().max(5e3).optional(),
+var updateSupportTicketValidation = z34.object({
+  params: z34.object({ id }),
+  body: z34.object({
+    status: z34.enum(SUPPORT_TICKET_STATUSES),
+    adminResponse: z34.string().trim().max(5e3).optional(),
     assignedTo: id.optional()
   })
 });
 
 // src/modules/supportTickets/support.ticket.route.ts
-var router40 = Router40();
+var router42 = Router42();
 var ADMIN_ROLES3 = ["founder", "super_admin", "admin", "manager"];
-router40.post("/", verifyToken, validateRequest_default(createSupportTicketValidation), supportTicketController.create);
-router40.get("/me", verifyToken, validateRequest_default(supportTicketListValidation), supportTicketController.mine);
-router40.get("/admin", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(supportTicketListValidation), supportTicketController.adminList);
-router40.get("/:id", verifyToken, validateRequest_default(supportTicketIdValidation), supportTicketController.getById);
-router40.patch("/:id", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(updateSupportTicketValidation), supportTicketController.update);
-var supportTicketRoutes = router40;
+router42.get("/", (req, res, next) => {
+  res.status(200).json({ message: "Support ticket creation endpoint" });
+});
+router42.post("/", verifyToken, validateRequest_default(createSupportTicketValidation), supportTicketController.create);
+router42.get("/me", verifyToken, validateRequest_default(supportTicketListValidation), supportTicketController.mine);
+router42.get("/admin", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(supportTicketListValidation), supportTicketController.adminList);
+router42.get("/:id", verifyToken, validateRequest_default(supportTicketIdValidation), supportTicketController.getById);
+router42.patch("/:id", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(updateSupportTicketValidation), supportTicketController.update);
+var supportTicketRoutes = router42;
 
 // src/modules/userDevices/user.device.route.ts
-import { Router as Router41 } from "express";
+import { Router as Router43 } from "express";
 
 // src/modules/userDevices/user.device.service.ts
 import { Types as Types42 } from "mongoose";
@@ -28360,63 +28719,834 @@ var auth2 = (req) => {
   assertFound_default(req.user, "Authentication required", 401);
   return req.user;
 };
-var userDeviceController = {
-  async register(req, res, next) {
-    try {
-      const user = auth2(req);
-      const data = await userDeviceService.register(user.id, req.body);
-      sendResponse_default(res, { statusCode: 200, success: true, message: "Device registered successfully", data });
-    } catch (error) {
-      next(error);
-    }
-  },
-  async list(req, res, next) {
-    try {
-      const user = auth2(req);
-      const data = await userDeviceService.list(user.id);
-      sendResponse_default(res, { statusCode: 200, success: true, message: "Devices retrieved successfully", data });
-    } catch (error) {
-      next(error);
-    }
-  },
-  async revoke(req, res, next) {
-    try {
-      const user = auth2(req);
-      const data = await userDeviceService.revoke(user.id, String(req.params.id));
-      sendResponse_default(res, { statusCode: 200, success: true, message: "Device revoked successfully", data });
-    } catch (error) {
-      next(error);
-    }
+var register = async (req, res, next) => {
+  try {
+    const user = auth2(req);
+    const data = await userDeviceService.register(user.id, req.body);
+    sendResponse_default(
+      res,
+      {
+        statusCode: 200,
+        success: true,
+        message: "Device registered successfully",
+        data
+      }
+    );
+  } catch (error) {
+    next(error);
   }
+};
+var list2 = async (req, res, next) => {
+  try {
+    const user = auth2(req);
+    const data = await userDeviceService.list(user.id);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Devices retrieved successfully",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var revoke = async (req, res, next) => {
+  try {
+    const user = auth2(req);
+    const data = await userDeviceService.revoke(user.id, String(req.params.id));
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Device revoked successfully",
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var userDeviceController = {
+  register,
+  list: list2,
+  revoke
 };
 
 // src/modules/userDevices/user.device.validation.ts
-import { z as z33 } from "zod";
-var id2 = z33.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var registerUserDeviceValidation = z33.object({
-  body: z33.object({
-    deviceIdentifier: z33.string().trim().min(1).max(200),
-    platform: z33.enum(DEVICE_PLATFORMS),
-    deviceName: z33.string().trim().max(120).optional(),
-    appVersion: z33.string().trim().max(40).optional(),
-    pushSubscription: z33.object({
-      endpoint: z33.string().url().max(2e3),
-      p256dh: z33.string().min(1).max(500).optional(),
-      auth: z33.string().min(1).max(500).optional()
+import { z as z35 } from "zod";
+var id2 = z35.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var registerUserDeviceValidation = z35.object({
+  body: z35.object({
+    deviceIdentifier: z35.string().trim().min(1).max(200),
+    platform: z35.enum(DEVICE_PLATFORMS),
+    deviceName: z35.string().trim().max(120).optional(),
+    appVersion: z35.string().trim().max(40).optional(),
+    pushSubscription: z35.object({
+      endpoint: z35.string().url().max(2e3),
+      p256dh: z35.string().min(1).max(500).optional(),
+      auth: z35.string().min(1).max(500).optional()
     }).optional()
   })
 });
-var userDeviceIdValidation = z33.object({ params: z33.object({ id: id2 }) });
+var userDeviceIdValidation = z35.object({ params: z35.object({ id: id2 }) });
 
 // src/modules/userDevices/user.device.route.ts
-var router41 = Router41();
-router41.post("/me", verifyToken, validateRequest_default(registerUserDeviceValidation), userDeviceController.register);
-router41.get("/me", verifyToken, userDeviceController.list);
-router41.patch("/me/:id/revoke", verifyToken, validateRequest_default(userDeviceIdValidation), userDeviceController.revoke);
-var userDeviceRoutes = router41;
+var router43 = Router43();
+router43.post("/me", verifyToken, validateRequest_default(registerUserDeviceValidation), userDeviceController.register);
+router43.get("/me", verifyToken, userDeviceController.list);
+router43.patch("/me/:id/revoke", verifyToken, validateRequest_default(userDeviceIdValidation), userDeviceController.revoke);
+var userDeviceRoutes = router43;
+
+// src/modules/streakLogs/streaklog.route.ts
+import { Router as Router44 } from "express";
+
+// src/modules/streakLogs/streaklog.service.ts
+import { Types as Types43 } from "mongoose";
+
+// src/modules/streakLogs/streaklog.model.schema.ts
+import { model as model41, Schema as Schema41 } from "mongoose";
+
+// src/modules/streakLogs/streaklog.interface.ts
+var STREAK_TIMEZONES = ["UTC", "Asia/Dhaka"];
+var STREAK_ACTIVITY_TYPES = [
+  "login",
+  "module",
+  "quiz",
+  "session",
+  "manual",
+  "other"
+];
+
+// src/modules/streakLogs/streaklog.model.schema.ts
+var streakLogSchema = new Schema41(
+  {
+    user: {
+      type: Schema41.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    academyProfile: {
+      type: Schema41.Types.ObjectId,
+      ref: "AcademyProfile",
+      index: true
+    },
+    activityDate: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    normalizedDate: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 10,
+      match: /^\d{4}-\d{2}-\d{2}$/,
+      index: true
+    },
+    timezone: {
+      type: String,
+      enum: STREAK_TIMEZONES,
+      default: "UTC",
+      required: true,
+      index: true
+    },
+    activityType: {
+      type: String,
+      enum: STREAK_ACTIVITY_TYPES,
+      default: "manual",
+      required: true,
+      index: true
+    },
+    activityCount: {
+      type: Number,
+      default: 1,
+      min: 1,
+      required: true
+    },
+    currentStreakDays: {
+      type: Number,
+      default: 1,
+      min: 0,
+      required: true
+    },
+    longestStreakDays: {
+      type: Number,
+      default: 1,
+      min: 0,
+      required: true
+    },
+    lastActivityDate: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  {
+    timestamps: true,
+    collection: "streaklog"
+  }
+);
+streakLogSchema.index({ user: 1, activityDate: 1 }, { unique: true });
+streakLogSchema.index({ user: 1, normalizedDate: 1 });
+streakLogSchema.index({ academyProfile: 1, normalizedDate: 1 });
+var StreakLog = model41("StreakLog", streakLogSchema);
+
+// src/modules/streakLogs/streaklog.service.ts
+var normalizeDateString = (input, timezone = "UTC") => {
+  const date = input instanceof Date ? input : new Date(input);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Invalid activityDate");
+  }
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
+  const formatted = formatter.format(date);
+  const [year, month, day] = formatted.split("-");
+  return `${year}-${month}-${day}`;
+};
+var getDateFromNormalized = (normalizedDate) => /* @__PURE__ */ new Date(`${normalizedDate}T00:00:00.000Z`);
+var syncStreaksForUser = async (userId) => {
+  const entries = await StreakLog.find({ user: new Types43.ObjectId(userId) }).sort({ normalizedDate: 1 }).lean();
+  if (entries.length === 0) {
+    return;
+  }
+  let currentStreakDays = 0;
+  let longestStreakDays = 0;
+  let previousDate = null;
+  for (const entry of entries) {
+    const currentDate = getDateFromNormalized(entry.normalizedDate);
+    if (previousDate && currentDate.getTime() - previousDate.getTime() === 864e5) {
+      currentStreakDays += 1;
+    } else {
+      currentStreakDays = 1;
+    }
+    longestStreakDays = Math.max(longestStreakDays, currentStreakDays);
+    previousDate = currentDate;
+    await StreakLog.findByIdAndUpdate(
+      entry._id,
+      {
+        currentStreakDays,
+        longestStreakDays,
+        lastActivityDate: currentDate
+      },
+      { runValidators: true }
+    );
+  }
+  await StreakLog.updateMany(
+    { user: new Types43.ObjectId(userId) },
+    {
+      currentStreakDays,
+      longestStreakDays,
+      lastActivityDate: previousDate ?? void 0
+    },
+    { runValidators: true }
+  );
+};
+var createStreakLog = async (payload) => {
+  const user = await User.findById(payload.user).select("_id");
+  assertFound_default(user, "User not found", 404);
+  if (payload.academyProfile) {
+    const academyProfile = await User.findById(payload.academyProfile).select("_id");
+    assertFound_default(academyProfile, "Academy profile not found", 404);
+  }
+  const timezone = payload.timezone ?? "UTC";
+  const normalizedDate = normalizeDateString(payload.activityDate, timezone);
+  const activityDateValue = getDateFromNormalized(normalizedDate);
+  const existing = await StreakLog.findOne({
+    user: new Types43.ObjectId(payload.user),
+    normalizedDate
+  }).select("_id");
+  if (existing) {
+    throw new Error("A streak log already exists for this user and date");
+  }
+  const log = await StreakLog.create({
+    user: new Types43.ObjectId(payload.user),
+    academyProfile: payload.academyProfile ? new Types43.ObjectId(payload.academyProfile) : void 0,
+    activityDate: activityDateValue,
+    normalizedDate,
+    timezone,
+    activityType: payload.activityType ?? "manual",
+    activityCount: payload.activityCount ?? 1,
+    currentStreakDays: 1,
+    longestStreakDays: 1,
+    lastActivityDate: activityDateValue
+  });
+  await syncStreaksForUser(payload.user);
+  return log;
+};
+var getStreakLogs = async (query) => {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const filter = {};
+  if (query.userId) {
+    filter.user = new Types43.ObjectId(query.userId);
+  }
+  if (query.academyProfileId) {
+    filter.academyProfile = new Types43.ObjectId(query.academyProfileId);
+  }
+  if (query.timezone) {
+    filter.timezone = query.timezone;
+  }
+  if (query.fromDate || query.toDate) {
+    filter.normalizedDate = {};
+    if (query.fromDate) {
+      filter.normalizedDate.$gte = query.fromDate;
+    }
+    if (query.toDate) {
+      filter.normalizedDate.$lte = query.toDate;
+    }
+  }
+  const [data, total] = await Promise.all([
+    StreakLog.find(filter).populate("user", "fullName email role").populate("academyProfile", "fullName companyName").sort({ normalizedDate: -1 }).skip(skip).limit(limit),
+    StreakLog.countDocuments(filter)
+  ]);
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+};
+var getSingleStreakLog = async (streakLogId) => {
+  const log = await StreakLog.findById(streakLogId).populate("user", "fullName email role").populate("academyProfile", "fullName companyName");
+  assertFound_default(log, "Streak log not found", 404);
+  return log;
+};
+var streakLogService = {
+  createStreakLog,
+  getStreakLogs,
+  getSingleStreakLog,
+  syncStreaksForUser
+};
+
+// src/modules/streakLogs/streaklog.controller.ts
+var getAuthUser29 = (req) => {
+  assertFound_default(req.user, "Authentication required", 401);
+  return {
+    id: req.user.id,
+    role: req.user.role
+  };
+};
+var createStreakLog2 = async (req, res, next) => {
+  try {
+    const auth3 = getAuthUser29(req);
+    const payload = {
+      ...req.body,
+      user: req.body.user ?? auth3.id
+    };
+    const result = await streakLogService.createStreakLog(payload);
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Streak log created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyStreakLogs = async (req, res, next) => {
+  try {
+    const auth3 = getAuthUser29(req);
+    const query = {
+      userId: auth3.id,
+      page: typeof req.query.page === "string" ? Number(req.query.page) : void 0,
+      limit: typeof req.query.limit === "string" ? Number(req.query.limit) : void 0
+    };
+    if (typeof req.query.fromDate === "string") {
+      query.fromDate = req.query.fromDate;
+    }
+    if (typeof req.query.toDate === "string") {
+      query.toDate = req.query.toDate;
+    }
+    const result = await streakLogService.getStreakLogs(query);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Streak logs retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getStreakLogs2 = async (req, res, next) => {
+  try {
+    getAuthUser29(req);
+    const query = {};
+    if (typeof req.query.userId === "string") {
+      query.userId = req.query.userId;
+    }
+    if (typeof req.query.academyProfileId === "string") {
+      query.academyProfileId = req.query.academyProfileId;
+    }
+    if (typeof req.query.timezone === "string") {
+      query.timezone = req.query.timezone;
+    }
+    if (typeof req.query.fromDate === "string") {
+      query.fromDate = req.query.fromDate;
+    }
+    if (typeof req.query.toDate === "string") {
+      query.toDate = req.query.toDate;
+    }
+    if (typeof req.query.page === "string") {
+      query.page = Number(req.query.page);
+    }
+    if (typeof req.query.limit === "string") {
+      query.limit = Number(req.query.limit);
+    }
+    const result = await streakLogService.getStreakLogs(query);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Streak logs retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleStreakLog2 = async (req, res, next) => {
+  try {
+    getAuthUser29(req);
+    const result = await streakLogService.getSingleStreakLog(String(req.params.id));
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Streak log retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var streakLogController = {
+  createStreakLog: createStreakLog2,
+  getMyStreakLogs,
+  getStreakLogs: getStreakLogs2,
+  getSingleStreakLog: getSingleStreakLog2
+};
+
+// src/modules/streakLogs/streaklog.validation.ts
+import { z as z36 } from "zod";
+var mongoObjectIdSchema26 = z36.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var dateStringSchema = z36.union([
+  z36.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  z36.string().datetime({ offset: true })
+]).or(z36.date());
+var streakLogIdValidation = z36.object({
+  params: z36.object({
+    id: mongoObjectIdSchema26
+  })
+});
+var createStreakLogValidation = z36.object({
+  body: z36.object({
+    user: mongoObjectIdSchema26,
+    academyProfile: mongoObjectIdSchema26.optional(),
+    activityDate: dateStringSchema,
+    timezone: z36.enum(STREAK_TIMEZONES).optional(),
+    activityType: z36.enum(STREAK_ACTIVITY_TYPES).optional(),
+    activityCount: z36.number().int().min(1).max(100).optional()
+  })
+});
+var getStreakLogsValidation = z36.object({
+  query: z36.object({
+    userId: mongoObjectIdSchema26.optional(),
+    academyProfileId: mongoObjectIdSchema26.optional(),
+    timezone: z36.enum(STREAK_TIMEZONES).optional(),
+    fromDate: z36.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    toDate: z36.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    page: z36.coerce.number().int().min(1).optional(),
+    limit: z36.coerce.number().int().min(1).max(100).optional()
+  })
+});
+
+// src/modules/streakLogs/streaklog.route.ts
+var ADMIN_ROLES4 = ["founder", "super_admin", "admin", "manager"];
+var router44 = Router44();
+router44.post(
+  "/",
+  verifyToken,
+  validateRequest_default(createStreakLogValidation),
+  streakLogController.createStreakLog
+);
+router44.get(
+  "/me",
+  verifyToken,
+  streakLogController.getMyStreakLogs
+);
+router44.get(
+  "/",
+  verifyToken,
+  authorizeRoles(...ADMIN_ROLES4),
+  validateRequest_default(getStreakLogsValidation),
+  streakLogController.getStreakLogs
+);
+router44.get(
+  "/:id",
+  verifyToken,
+  validateRequest_default(streakLogIdValidation),
+  streakLogController.getSingleStreakLog
+);
+var streakLogRoutes = router44;
+
+// src/modules/pointsLedger/pointsledger.route.ts
+import { Router as Router45 } from "express";
+
+// src/modules/pointsLedger/pointsledger.service.ts
+import { Types as Types44 } from "mongoose";
+
+// src/modules/pointsLedger/pointsledger.model.schema.ts
+import { model as model42, Schema as Schema42 } from "mongoose";
+
+// src/modules/pointsLedger/pointsledger.interface.ts
+var POINTS_LEDGER_TYPES = [
+  "credit",
+  "debit",
+  "adjustment",
+  "reward",
+  "penalty"
+];
+var POINTS_LEDGER_SOURCE_TYPES = [
+  "module",
+  "video",
+  "quiz",
+  "action",
+  "session",
+  "manual",
+  "system",
+  "other"
+];
+var POINTS_LEDGER_REASONS = [
+  "module_completion",
+  "video_completion",
+  "quiz_pass",
+  "action_complete",
+  "session_attendance",
+  "manual_adjustment",
+  "system_reward",
+  "penalty",
+  "other"
+];
+
+// src/modules/pointsLedger/pointsledger.model.schema.ts
+var pointsLedgerSchema = new Schema42(
+  {
+    user: {
+      type: Schema42.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    sourceType: {
+      type: String,
+      enum: POINTS_LEDGER_SOURCE_TYPES,
+      index: true
+    },
+    sourceId: {
+      type: Schema42.Types.ObjectId,
+      index: true
+    },
+    sourceEntity: {
+      type: String,
+      trim: true,
+      maxlength: 120,
+      index: true
+    },
+    points: {
+      type: Number,
+      required: true,
+      min: -1e6,
+      max: 1e6
+    },
+    transactionType: {
+      type: String,
+      enum: POINTS_LEDGER_TYPES,
+      required: true,
+      index: true
+    },
+    reason: {
+      type: String,
+      enum: POINTS_LEDGER_REASONS,
+      required: true,
+      index: true
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 500
+    },
+    balanceAfter: {
+      type: Number,
+      min: -1e6,
+      max: 1e6
+    },
+    balanceBefore: {
+      type: Number,
+      min: -1e6,
+      max: 1e6
+    },
+    module: {
+      type: Schema42.Types.ObjectId,
+      ref: "CourseModule",
+      index: true
+    },
+    video: {
+      type: Schema42.Types.ObjectId,
+      ref: "ModuleVideo",
+      index: true
+    },
+    action: {
+      type: Schema42.Types.ObjectId,
+      ref: "ModuleAction",
+      index: true
+    },
+    quiz: {
+      type: Schema42.Types.ObjectId,
+      ref: "QuizQuestion",
+      index: true
+    },
+    session: {
+      type: Schema42.Types.ObjectId,
+      ref: "SessionSchedule",
+      index: true
+    },
+    metadata: {
+      type: Schema42.Types.Mixed,
+      default: {}
+    }
+  },
+  {
+    timestamps: true,
+    collection: "pointsledger"
+  }
+);
+pointsLedgerSchema.index(
+  { user: 1, sourceType: 1, sourceId: 1, reason: 1 },
+  { unique: true, sparse: true }
+);
+pointsLedgerSchema.index({ user: 1, createdAt: -1 });
+pointsLedgerSchema.index({ sourceType: 1, sourceId: 1 });
+var PointsLedger = model42("PointsLedger", pointsLedgerSchema);
+
+// src/modules/pointsLedger/pointsledger.service.ts
+var createPointsLedger = async (payload) => {
+  const user = await User.findById(payload.user).select("_id");
+  assertFound_default(user, "User not found", 404);
+  const sourceFilter = payload.sourceType && payload.sourceId ? {
+    user: new Types44.ObjectId(payload.user),
+    sourceType: payload.sourceType,
+    sourceId: new Types44.ObjectId(payload.sourceId),
+    reason: payload.reason
+  } : null;
+  if (sourceFilter) {
+    const duplicate = await PointsLedger.findOne(sourceFilter).select("_id");
+    if (duplicate) {
+      throw new Error("A points entry already exists for this user, source and reason");
+    }
+  }
+  const entry = await PointsLedger.create({
+    user: new Types44.ObjectId(payload.user),
+    sourceType: payload.sourceType,
+    sourceId: payload.sourceId ? new Types44.ObjectId(payload.sourceId) : void 0,
+    sourceEntity: payload.sourceEntity,
+    points: payload.points,
+    transactionType: payload.transactionType,
+    reason: payload.reason,
+    description: payload.description,
+    balanceAfter: payload.balanceAfter,
+    balanceBefore: payload.balanceBefore,
+    module: payload.module ? new Types44.ObjectId(payload.module) : void 0,
+    video: payload.video ? new Types44.ObjectId(payload.video) : void 0,
+    action: payload.action ? new Types44.ObjectId(payload.action) : void 0,
+    quiz: payload.quiz ? new Types44.ObjectId(payload.quiz) : void 0,
+    session: payload.session ? new Types44.ObjectId(payload.session) : void 0,
+    metadata: payload.metadata ?? {}
+  });
+  return entry;
+};
+var getPointsLedger = async (query) => {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const filter = {};
+  if (query.userId) {
+    filter.user = new Types44.ObjectId(query.userId);
+  }
+  if (query.sourceType) {
+    filter.sourceType = query.sourceType;
+  }
+  if (query.sourceEntity) {
+    filter.sourceEntity = query.sourceEntity;
+  }
+  if (query.reason) {
+    filter.reason = query.reason;
+  }
+  if (query.transactionType) {
+    filter.transactionType = query.transactionType;
+  }
+  const [data, total] = await Promise.all([
+    PointsLedger.find(filter).populate("user", "fullName email role").sort({ createdAt: -1 }).skip(skip).limit(limit),
+    PointsLedger.countDocuments(filter)
+  ]);
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+};
+var getSinglePointsLedger = async (entryId) => {
+  const entry = await PointsLedger.findById(entryId).populate("user", "fullName email role");
+  assertFound_default(entry, "Points ledger entry not found", 404);
+  return entry;
+};
+var pointsLedgerService = {
+  createPointsLedger,
+  getPointsLedger,
+  getSinglePointsLedger
+};
+
+// src/modules/pointsLedger/pointsledger.controller.ts
+var getAuthUser30 = (req) => {
+  assertFound_default(req.user, "Authentication required", 401);
+  return {
+    id: req.user.id,
+    role: req.user.role
+  };
+};
+var createPointsLedger2 = async (req, res, next) => {
+  try {
+    getAuthUser30(req);
+    const payload = req.body;
+    const result = await pointsLedgerService.createPointsLedger(payload);
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Points ledger entry created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getPointsLedger2 = async (req, res, next) => {
+  try {
+    getAuthUser30(req);
+    const query = {};
+    if (typeof req.query.userId === "string") query.userId = req.query.userId;
+    if (typeof req.query.sourceType === "string") query.sourceType = req.query.sourceType;
+    if (typeof req.query.sourceEntity === "string") query.sourceEntity = req.query.sourceEntity;
+    if (typeof req.query.reason === "string") query.reason = req.query.reason;
+    if (typeof req.query.transactionType === "string") query.transactionType = req.query.transactionType;
+    if (typeof req.query.page === "string") query.page = Number(req.query.page);
+    if (typeof req.query.limit === "string") query.limit = Number(req.query.limit);
+    const result = await pointsLedgerService.getPointsLedger(query);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Points ledger retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSinglePointsLedger2 = async (req, res, next) => {
+  try {
+    getAuthUser30(req);
+    const result = await pointsLedgerService.getSinglePointsLedger(String(req.params.id));
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Points ledger entry retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var pointsLedgerController = {
+  createPointsLedger: createPointsLedger2,
+  getPointsLedger: getPointsLedger2,
+  getSinglePointsLedger: getSinglePointsLedger2
+};
+
+// src/modules/pointsLedger/pointsledger.validation.ts
+import { z as z37 } from "zod";
+var mongoObjectIdSchema27 = z37.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var pointsLedgerIdValidation = z37.object({
+  params: z37.object({
+    id: mongoObjectIdSchema27
+  })
+});
+var createPointsLedgerValidation = z37.object({
+  body: z37.object({
+    user: mongoObjectIdSchema27,
+    sourceType: z37.enum(POINTS_LEDGER_SOURCE_TYPES).optional(),
+    sourceId: mongoObjectIdSchema27.optional(),
+    sourceEntity: z37.string().trim().max(120).optional(),
+    points: z37.number().int().min(-1e6).max(1e6),
+    transactionType: z37.enum(POINTS_LEDGER_TYPES),
+    reason: z37.enum(POINTS_LEDGER_REASONS),
+    description: z37.string().trim().max(500).optional(),
+    balanceAfter: z37.number().int().min(-1e6).max(1e6).optional(),
+    balanceBefore: z37.number().int().min(-1e6).max(1e6).optional(),
+    module: mongoObjectIdSchema27.optional(),
+    video: mongoObjectIdSchema27.optional(),
+    action: mongoObjectIdSchema27.optional(),
+    quiz: mongoObjectIdSchema27.optional(),
+    session: mongoObjectIdSchema27.optional(),
+    metadata: z37.record(z37.unknown()).optional()
+  })
+});
+var getPointsLedgerValidation = z37.object({
+  query: z37.object({
+    userId: mongoObjectIdSchema27.optional(),
+    sourceType: z37.enum(POINTS_LEDGER_SOURCE_TYPES).optional(),
+    sourceEntity: z37.string().trim().max(120).optional(),
+    reason: z37.enum(POINTS_LEDGER_REASONS).optional(),
+    transactionType: z37.enum(POINTS_LEDGER_TYPES).optional(),
+    page: z37.coerce.number().int().min(1).optional(),
+    limit: z37.coerce.number().int().min(1).max(100).optional()
+  })
+});
+
+// src/modules/pointsLedger/pointsledger.route.ts
+var ADMIN_ROLES5 = ["founder", "super_admin", "admin", "manager"];
+var router45 = Router45();
+router45.post(
+  "/",
+  verifyToken,
+  authorizeRoles(...ADMIN_ROLES5),
+  validateRequest_default(createPointsLedgerValidation),
+  pointsLedgerController.createPointsLedger
+);
+router45.get(
+  "/",
+  verifyToken,
+  authorizeRoles(...ADMIN_ROLES5),
+  validateRequest_default(getPointsLedgerValidation),
+  pointsLedgerController.getPointsLedger
+);
+router45.get(
+  "/:id",
+  verifyToken,
+  validateRequest_default(pointsLedgerIdValidation),
+  pointsLedgerController.getSinglePointsLedger
+);
+var pointsLedgerRoutes = router45;
 
 // src/routes/index.ts
-var router42 = Router42();
+var router46 = Router46();
 var moduleRoutes = [
   {
     path: "/admin",
@@ -28731,18 +29861,34 @@ var moduleRoutes = [
     route: notificationTemplateRoutes
   },
   {
+    path: "/invictus/entitlement-logs",
+    route: entitlementLogRoutes
+  },
+  {
+    path: "/invictus/activity-logs",
+    route: activityLogRoutes
+  },
+  {
     path: "/support-tickets",
     route: supportTicketRoutes
   },
   {
     path: "/user-devices",
     route: userDeviceRoutes
+  },
+  {
+    path: "/invictus/streak-logs",
+    route: streakLogRoutes
+  },
+  {
+    path: "/invictus/points-ledger",
+    route: pointsLedgerRoutes
   }
 ];
 moduleRoutes.forEach((route) => {
-  router42.use(route.path, route.route);
+  router46.use(route.path, route.route);
 });
-var routes_default = router42;
+var routes_default = router46;
 
 // src/swagger/swagger.ts
 import swaggerJSDoc from "swagger-jsdoc";

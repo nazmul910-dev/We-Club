@@ -43,7 +43,8 @@ import { entitlementLogRoutes } from "../modules/entitlementLogs/entitlementlog.
 import { activityLogRoutes } from "../modules/activitylogs/activitylog.route";
 import { supportTicketRoutes } from "../modules/supportTickets/support.ticket.route";
 import { userDeviceRoutes } from "../modules/userDevices/user.device.route";
-
+import { streakLogRoutes } from "../modules/streakLogs/streaklog.route";
+import { pointsLedgerRoutes } from "../modules/pointsLedger/pointsledger.route";
 
 const router = Router();
 
@@ -382,6 +383,14 @@ const moduleRoutes: TModuleRoute[] = [
   {
     path: "/user-devices",
     route: userDeviceRoutes,
+  },
+  {
+    path: "/invictus/streak-logs",
+    route: streakLogRoutes,
+  },
+  {
+    path: "/invictus/points-ledger",
+    route: pointsLedgerRoutes,
   },
 ];
 
