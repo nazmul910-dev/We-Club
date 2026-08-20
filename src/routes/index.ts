@@ -35,10 +35,13 @@ import { leaderboardRoutes } from "../modules/leaderboards/leaderboard.route";
 import { mentorBookingRoutes } from "../modules/mentorBookings/mentor.booking.route";
 import { retreatBatchRoutes } from "../modules/retreatBatches/retreat.batch.route";
 import { retreatBookingRoutes } from "../modules/retreatBookings/retreat.booking.route";
+import { paymentPlanRoutes } from "../modules/paymentPlans/payment.plan.route";
+import { invictusPaymentRoutes } from "../modules/invictus-payments/invictus.payment.route";
 import { notificationRoutes } from "../modules/notifications/notification.route";
 import { notificationTemplateRoutes } from "../modules/notificationTemplates/notification.template.route";
 import { entitlementLogRoutes } from "../modules/entitlementLogs/entitlementlog.route";
 import { activityLogRoutes } from "../modules/activitylogs/activitylog.route";
+
 
 const router = Router();
 
@@ -250,16 +253,108 @@ const moduleRoutes: TModuleRoute[] = [
     route: retreatBookingRoutes,
   },
   {
+    path: "/invictus/payment-plans",
+    route: paymentPlanRoutes,
+  },
+  {
+    path: "/invictus/payments",
+    route: invictusPaymentRoutes,
+  },
+  {
     path: "/invictus/leaderboards",
     route: leaderboardEntryRoutes,
   },
   {
     path: "/invictus/leaderboards",
-    route: leaderboardRoutes,
+    route: leaderboardRoutes
+  },
+  {
+    path: "/invictus/course-modules",
+    route: courseModuleRoutes,
+  },
+  {
+    path: "/invictus/module-videos",
+    route: moduleVideoRoutes,
+  },
+  {
+    path: "/invictus/module-resources",
+    route: moduleResourceRoutes,
+  },
+  {
+    path: "/invictus/quiz-questions",
+    route: quizQuestionRoutes,
+  },
+  {
+    path: "/invictus/module-actions",
+    route: moduleActionRoutes,
+  },
+  {
+    path: "/rooms",
+    route: roomRoutes,
+  },
+  {
+    path: "/messages",
+    route: messageRoutes,
+  },
+  {
+    path: "/logo",
+    route: LogoRoutes,
+  },
+  {
+    path: "/invictus/academy-profile",
+    route: academyProfileRoutes,
+  },
+  {
+    path: "/invictus/user-entitlements",
+    route: userEntitlementRoutes,
+  },
+  {
+    path: "/invictus/video-progress",
+    route: videoProgressRoutes,
+  },
+  {
+    path: "/invictus/module-progress",
+    route: moduleProgressRoutes,
+  },
+  {
+    path: "/invictus/quiz-attempts",
+    route: quizAttemptRoutes,
+  },
+  {
+    path: "/invictus/quiz-certificates",
+    route: quizCertificateRoutes,
+  },
+  {
+    path: "/invictus/mentorship-profiles",
+    route: mentorshipProfileRoutes,
+  },
+  {
+    path: "/invictus/mentor-bookings",
+    route: mentorBookingRoutes,
+  },
+  {
+    path: "/invictus/retreat-locations",
+    route: retreatLocationRoutes,
+  },
+  {
+    path: "/invictus/retreat-batches",
+    route: retreatBatchRoutes,
+  },
+  {
+    path: "/invictus/retreat-bookings",
+    route: retreatBookingRoutes,
   },
   {
     path: "/invictus/leaderboards",
-    route: leaderboardRoutes,
+    route: leaderboardEntryRoutes,
+  },
+  {
+    path: "/invictus/leaderboards",
+    route: leaderboardRoutes
+  },
+  {
+    path: "/invictus/leaderboards",
+    route: leaderboardRoutes
   },
   {
     path: "/invictus/notifications",
@@ -268,15 +363,7 @@ const moduleRoutes: TModuleRoute[] = [
   {
     path: "/invictus/notification-templates",
     route: notificationTemplateRoutes,
-  },
-  {
-    path: "/invictus/entitlement-logs",
-    route: entitlementLogRoutes,
-  },
-  {
-    path: "/invictus/activity-logs",
-    route: activityLogRoutes,
-  },
+  }
 ];
 
 moduleRoutes.forEach((route) => {

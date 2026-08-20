@@ -18,13 +18,11 @@ const PaymentSessionSchema = new Schema<IPaymentSession>(
     role: {
       type: String,
       enum: USER_ROLES,
-      required: true,
     },
 
     accessTo: {
       type: String,
       enum: ACCESS_TO_OPTIONS,
-      required: true,
     },
     purpose: {
       type: String,
@@ -33,10 +31,9 @@ const PaymentSessionSchema = new Schema<IPaymentSession>(
     },
 
     durationMonths: {
-  type: Number,
-  enum: [3, 6, 12],
-  required: true,
-},
+      type: Number,
+      enum: [3, 6, 12],
+    },
     status: {
       type: String,
       enum: PAYMENT_SESSION_STATUSES,
@@ -94,6 +91,26 @@ const PaymentSessionSchema = new Schema<IPaymentSession>(
     currency: {
       type: String,
       trim: true,
+    },
+
+    paymentPlan: {
+      type: Schema.Types.ObjectId,
+      ref: "PaymentPlan",
+      index: true,
+    },
+
+    product: {
+      type: Schema.Types.ObjectId,
+      refPath: "productRefModel",
+    },
+
+    productRefModel: {
+      type: String,
+      enum: ["ChallengePillar", "RetreatBatch"],
+    },
+
+    entitlementActivatedAt: {
+      type: Date,
     },
   },
   {
