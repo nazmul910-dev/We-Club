@@ -7,6 +7,11 @@ import {
 } from '../users/user.interface';
 import { sendApprovalEmailIfFullyApproved } from '../users/user.approvalMail';
 
+
+import { activityLogService } from '../activitylogs/activitylog.service';
+
+import { ActivityLogAction } from '../activitylogs/activitylog.interface';
+
 type UpdateApprovalStatusPayload = {
   approvalStatus: ApprovalStatus;
   rejectedReason?: string | undefined;
@@ -24,6 +29,49 @@ const throwError = (message: string, statusCode: number): never => {
   const error = new Error(message) as Error & { statusCode?: number };
   error.statusCode = statusCode;
   throw error;
+};
+
+/**
+ * ActivityLog-এ audit entry লেখে।
+ *
+ * ইচ্ছাকৃতভাবে error কখনো rethrow করে না —
+ * log লেখা fail করলেও admin-এর মূল action (approve/reject/
+ * delete/status-change) যেন কখনো fail না হয়।
+ */
+const safeLogActivityEvent = async (params: {
+  actorId?: string | undefined;
+
+  action: ActivityLogAction;
+
+  targetEntityId: string;
+
+  changeSummary?: string | undefined;
+  changes?: Record<string, unknown> | undefined;
+}): Promise<void> => {
+  if (!params.actorId) {
+    return;
+  }
+
+  try {
+    await activityLogService.createActivityLog({
+      actor: params.actorId,
+
+      action: params.action,
+
+      targetEntityType: 'User',
+
+      targetEntityId: params.targetEntityId,
+
+      ...(params.changeSummary !== undefined
+        ? { changeSummary: params.changeSummary }
+        : {}),
+
+      ...(params.changes !== undefined ? { changes: params.changes } : {}),
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to write activity log:', error);
+  }
 };
 
 const updateUserApprovalStatusIntoDB = async (
@@ -114,12 +162,28 @@ const updateUserApprovalStatusIntoDB = async (
 
   await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
 
+  await safeLogActivityEvent({
+    actorId: adminId,
+
+    action:
+      payload.approvalStatus === 'approved'
+        ? 'approve'
+        : payload.approvalStatus === 'rejected'
+          ? 'reject'
+          : 'status_change',
+
+    targetEntityId: userId,
+
+    changeSummary: `User approval status changed to "${payload.approvalStatus}"`,
+  });
+
   return updatedUser;
 };
 
 const updateUserLicenseVerificationStatusIntoDB = async (
   userId: string,
-  payload: UpdateLicenseVerificationStatusPayload
+  payload: UpdateLicenseVerificationStatusPayload,
+  actorId?: string | undefined
 ) => {
   if (!Types.ObjectId.isValid(userId)) {
     throwError('Invalid user id', 400);
@@ -144,12 +208,23 @@ const updateUserLicenseVerificationStatusIntoDB = async (
 
   await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
 
+  await safeLogActivityEvent({
+    actorId,
+
+    action: 'status_change',
+
+    targetEntityId: userId,
+
+    changeSummary: `User license verification status changed to "${payload.licenseVerificationStatus}"`,
+  });
+
   return updatedUser;
 };
 
 const updateUserAccountStatusIntoDB = async (
   userId: string,
-  payload: UpdateAccountStatusPayload
+  payload: UpdateAccountStatusPayload,
+  actorId?: string | undefined
 ) => {
   if (!Types.ObjectId.isValid(userId)) {
     throwError('Invalid user id', 400);
@@ -174,10 +249,23 @@ const updateUserAccountStatusIntoDB = async (
 
   await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
 
+  await safeLogActivityEvent({
+    actorId,
+
+    action: 'status_change',
+
+    targetEntityId: userId,
+
+    changeSummary: `User account status changed to "${payload.accountStatus}"`,
+  });
+
   return updatedUser;
 };
 
-const deleteUserIntoDB = async (userId: string) => {
+const deleteUserIntoDB = async (
+  userId: string,
+  actorId?: string | undefined
+) => {
   const user = await User.findById(userId);
 
   if (!user) {
@@ -185,6 +273,16 @@ const deleteUserIntoDB = async (userId: string) => {
   }
 
   await User.findByIdAndDelete(userId);
+
+  await safeLogActivityEvent({
+    actorId,
+
+    action: 'delete',
+
+    targetEntityId: userId,
+
+    changeSummary: `User "${user?.email ?? userId}" was deleted`,
+  });
 
   return { message: 'User deleted successfully' };
 };

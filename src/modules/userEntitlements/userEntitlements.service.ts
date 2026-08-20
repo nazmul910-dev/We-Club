@@ -16,6 +16,16 @@ import {
 
 import { UserEntitlement } from "./userEntitlements.model.schema";
 
+/**
+ * EntitlementLog module আগে থেকেই বানানো আছে — শুধু import করে
+ * প্রতিটা entitlement status change-এর পরে audit entry লেখা হচ্ছে।
+ * Log লেখা fail করলেও মূল entitlement operation fail করবে না
+ * (try/catch দিয়ে wrap করা, নিচে safeLogEntitlementEvent দেখো)।
+ */
+import { entitlementLogService } from "../entitlementLogs/entitlementlog.service";
+
+import { EntitlementLogAction } from "../entitlementLogs/entitlementlog.interface";
+
 const throwServiceError = (message: string, statusCode: number): never => {
   const error = new Error(message) as Error & {
     statusCode?: number;
@@ -39,6 +49,44 @@ const assertFound: <T>(
 const assertValidObjectId = (value: string, fieldName: string): void => {
   if (!Types.ObjectId.isValid(value)) {
     throwServiceError(`${fieldName} is invalid`, 400);
+  }
+};
+
+
+const safeLogEntitlementEvent = async (params: {
+  userId: string;
+  entitlementId: string;
+
+  action: EntitlementLogAction;
+  source: EntitlementSource;
+
+  pillarId?: string | undefined;
+  paymentSessionId?: string | undefined;
+
+  actorId?: string | undefined;
+  reason?: string | undefined;
+}): Promise<void> => {
+  try {
+    await entitlementLogService.createEntitlementLog({
+      user: params.userId,
+      entitlement: params.entitlementId,
+
+      action: params.action,
+      source: params.source,
+
+      ...(params.pillarId ? { pillar: params.pillarId } : {}),
+
+      ...(params.paymentSessionId
+        ? { paymentSession: params.paymentSessionId }
+        : {}),
+
+      ...(params.actorId ? { actor: params.actorId } : {}),
+
+      ...(params.reason !== undefined ? { reason: params.reason } : {}),
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Failed to write entitlement log:", error);
   }
 };
 
@@ -267,6 +315,22 @@ const grantEntitlementInternal = async (input: InternalGrantInput) => {
 
     await existingEntitlement.save();
 
+    await safeLogEntitlementEvent({
+      userId: input.userId,
+      entitlementId: existingEntitlement._id.toString(),
+
+      action: "reactivated",
+      source: input.source,
+
+      ...(input.pillarId ? { pillarId: input.pillarId } : {}),
+
+      ...(input.paymentSessionId
+        ? { paymentSessionId: input.paymentSessionId }
+        : {}),
+
+      ...(input.grantedBy ? { actorId: input.grantedBy } : {}),
+    });
+
     const populated = await populateEntitlement(existingEntitlement._id);
 
     assertFound(populated, "Entitlement not found after update", 500);
@@ -309,16 +373,29 @@ const grantEntitlementInternal = async (input: InternalGrantInput) => {
   try {
     const entitlement = await UserEntitlement.create(createData);
 
+    await safeLogEntitlementEvent({
+      userId: input.userId,
+      entitlementId: entitlement._id.toString(),
+
+      action: "granted",
+      source: input.source,
+
+      ...(input.pillarId ? { pillarId: input.pillarId } : {}),
+
+      ...(input.paymentSessionId
+        ? { paymentSessionId: input.paymentSessionId }
+        : {}),
+
+      ...(input.grantedBy ? { actorId: input.grantedBy } : {}),
+    });
+
     const populated = await populateEntitlement(entitlement._id);
 
     assertFound(populated, "Entitlement not found after creation", 500);
 
     return populated;
   } catch (error) {
-    /**
-     * একই Stripe webhook একাধিকবার আসলেও
-     * duplicate entitlement তৈরি হবে না।
-     */
+
     if (isDuplicateKeyError(error)) {
       const entitlement = await UserEntitlement.findOne({
         user: new Types.ObjectId(input.userId),
@@ -356,22 +433,22 @@ const grantEntitlementByAdmin = async (
 
     ...(payload.pillar !== undefined
       ? {
-          pillarId: payload.pillar,
-        }
+        pillarId: payload.pillar,
+      }
       : {}),
 
     ...(payload.targetId !== undefined
       ? {
-          targetId: payload.targetId,
-        }
+        targetId: payload.targetId,
+      }
       : {}),
 
     source: payload.source ?? "admin",
 
     ...(payload.paymentSession !== undefined
       ? {
-          paymentSessionId: payload.paymentSession,
-        }
+        paymentSessionId: payload.paymentSession,
+      }
       : {}),
 
     startsAt,
@@ -401,8 +478,47 @@ const activatePillarEntitlementFromPayment = async (
 
     ...(payload.expiresAt !== undefined
       ? {
-          expiresAt: payload.expiresAt,
-        }
+        expiresAt: payload.expiresAt,
+      }
+      : {}),
+  });
+};
+
+
+const activateEntitlementFromPayment = async (payload: {
+  userId: string;
+
+  entitlementType: "pillar" | "bundle" | "event" | "retreat";
+
+  pillarId?: string | undefined;
+  targetId?: string | undefined;
+
+  paymentSessionId: string;
+
+  startsAt?: Date | undefined;
+  expiresAt?: Date | undefined;
+}) => {
+  return grantEntitlementInternal({
+    userId: payload.userId,
+
+    entitlementType: payload.entitlementType,
+
+    ...(payload.pillarId !== undefined
+      ? { pillarId: payload.pillarId }
+      : {}),
+
+    ...(payload.targetId !== undefined
+      ? { targetId: payload.targetId }
+      : {}),
+
+    source: "stripe",
+
+    paymentSessionId: payload.paymentSessionId,
+
+    startsAt: payload.startsAt ?? new Date(),
+
+    ...(payload.expiresAt !== undefined
+      ? { expiresAt: payload.expiresAt }
       : {}),
   });
 };
@@ -463,9 +579,6 @@ const checkPillarAccess = async (userId: string, pillarId: string) => {
 
   assertFound(pillar, "Challenge pillar not found or unavailable", 404);
 
-  /**
-   * Free pillar হলে entitlement লাগবে না।
-   */
   if (!pillar.isPaid) {
     return {
       hasAccess: true,
@@ -699,6 +812,26 @@ const changeEntitlementStatus = async (input: StatusChangeInput) => {
 
   await entitlement.save();
 
+  await safeLogEntitlementEvent({
+    userId: entitlement.user.toString(),
+    entitlementId: entitlement._id.toString(),
+
+    action: input.status,
+    source: entitlement.source,
+
+    ...(entitlement.pillar
+      ? { pillarId: entitlement.pillar.toString() }
+      : {}),
+
+    ...(entitlement.paymentSession
+      ? { paymentSessionId: entitlement.paymentSession.toString() }
+      : {}),
+
+    actorId: input.actorId,
+
+    ...(input.reason !== undefined ? { reason: input.reason } : {}),
+  });
+
   const populated = await populateEntitlement(entitlement._id);
 
   assertFound(populated, "Entitlement not found after status update", 500);
@@ -718,8 +851,8 @@ const revokeEntitlement = async (
 
     ...(payload.reason !== undefined
       ? {
-          reason: payload.reason,
-        }
+        reason: payload.reason,
+      }
       : {}),
   });
 };
@@ -736,8 +869,8 @@ const refundEntitlement = async (
 
     ...(payload.reason !== undefined
       ? {
-          reason: payload.reason,
-        }
+        reason: payload.reason,
+      }
       : {}),
   });
 };
@@ -754,8 +887,8 @@ const expireEntitlement = async (
 
     ...(payload.reason !== undefined
       ? {
-          reason: payload.reason,
-        }
+        reason: payload.reason,
+      }
       : {}),
   });
 };
@@ -797,13 +930,23 @@ const reactivateEntitlement = async (
 
   entitlement.set("expiredAt", undefined);
 
-  /**
-   * Manual reactivation হলে পুরোনো payment
-   * session relation clear করা হচ্ছে।
-   */
   entitlement.set("paymentSession", undefined);
 
   await entitlement.save();
+
+  await safeLogEntitlementEvent({
+    userId: entitlement.user.toString(),
+    entitlementId: entitlement._id.toString(),
+
+    action: "reactivated",
+    source: entitlement.source,
+
+    ...(entitlement.pillar
+      ? { pillarId: entitlement.pillar.toString() }
+      : {}),
+
+    actorId,
+  });
 
   const populated = await populateEntitlement(entitlement._id);
 
@@ -816,7 +959,7 @@ export const userEntitlementService = {
   grantEntitlementByAdmin,
 
   activatePillarEntitlementFromPayment,
-
+  activateEntitlementFromPayment,
   hasActivePillarEntitlement,
   checkPillarAccess,
 

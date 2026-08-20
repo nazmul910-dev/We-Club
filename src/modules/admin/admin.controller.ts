@@ -58,10 +58,14 @@ const updateUserLicenseVerificationStatus = async (
       body: req.body,
     });
 
+    const actorId =
+      typeof req.user?.id === 'string' ? req.user.id : undefined;
+
     const result =
       await adminService.updateUserLicenseVerificationStatusIntoDB(
         validatedData.params.id,
-        validatedData.body
+        validatedData.body,
+        actorId
       );
 
     sendResponse(res, {
@@ -86,9 +90,13 @@ const updateUserAccountStatus = async (
       body: req.body,
     });
 
+    const actorId =
+      typeof req.user?.id === 'string' ? req.user.id : undefined;
+
     const result = await adminService.updateUserAccountStatusIntoDB(
       validatedData.params.id,
-      validatedData.body
+      validatedData.body,
+      actorId
     );
 
     sendResponse(res, {
@@ -108,7 +116,13 @@ const userDeleteByFounder = async (req: Request, res: Response, next: NextFuncti
   try {
     const userId = req.params.id;
 
-    const result = await adminService.deleteUserIntoDB(userId as string);
+    const actorId =
+      typeof req.user?.id === 'string' ? req.user.id : undefined;
+
+    const result = await adminService.deleteUserIntoDB(
+      userId as string,
+      actorId
+    );
 
     sendResponse(res, {
       statusCode: 200,
@@ -126,4 +140,4 @@ export const adminController = {
   updateUserLicenseVerificationStatus,
   updateUserAccountStatus,
   userDeleteByFounder,
-}; 
+};
