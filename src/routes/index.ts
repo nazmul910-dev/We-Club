@@ -41,6 +41,8 @@ import { notificationRoutes } from "../modules/notifications/notification.route"
 import { notificationTemplateRoutes } from "../modules/notificationTemplates/notification.template.route";
 import { entitlementLogRoutes } from "../modules/entitlementLogs/entitlementlog.route";
 import { activityLogRoutes } from "../modules/activitylogs/activitylog.route";
+import { supportTicketRoutes } from "../modules/supportTickets/support.ticket.route";
+import { userDeviceRoutes } from "../modules/userDevices/user.device.route";
 
 
 const router = Router();
@@ -363,7 +365,24 @@ const moduleRoutes: TModuleRoute[] = [
   {
     path: "/invictus/notification-templates",
     route: notificationTemplateRoutes,
-  }
+  },
+  {
+    path: "/invictus/entitlement-logs",
+    route: entitlementLogRoutes,
+  },
+  {
+    path: "/invictus/activity-logs",
+    route: activityLogRoutes,
+  },
+
+  {
+    path: "/support-tickets",
+    route: supportTicketRoutes,
+  },
+  {
+    path: "/user-devices",
+    route: userDeviceRoutes,
+  },
 ];
 
 moduleRoutes.forEach((route) => {

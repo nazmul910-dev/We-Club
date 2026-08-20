@@ -4,7 +4,7 @@
     
 
 // src/server.ts
-import mongoose4 from "mongoose";
+import mongoose6 from "mongoose";
 
 // src/app.ts
 import express from "express";
@@ -31,11 +31,7 @@ var routeNotFoundHandler = (req, res, next) => {
 var routeNotFoundHandler_default = routeNotFoundHandler;
 
 // src/routes/index.ts
-<<<<<<< HEAD
-import { Router as Router31 } from "express";
-=======
-import { Router as Router30 } from "express";
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
+import { Router as Router42 } from "express";
 
 // src/modules/users/user.route.ts
 import { Router } from "express";
@@ -564,8 +560,8 @@ var getAllUsersFromDB = async (query) => {
     meta
   };
 };
-var getSingleUserFromDB = async (id) => {
-  const user = await User.findById(id);
+var getSingleUserFromDB = async (id3) => {
+  const user = await User.findById(id3);
   return user;
 };
 var createAdminAccount = async (payload, requesterId, requesterRole) => {
@@ -601,8 +597,8 @@ var createAdminAccount = async (payload, requesterId, requesterRole) => {
   const { password, ...safeUser } = userObject;
   return safeUser;
 };
-var activateManagerByAdmin = async (id) => {
-  const user = await User.findById(id);
+var activateManagerByAdmin = async (id3) => {
+  const user = await User.findById(id3);
   if (!user) {
     throw new Error("User not found.");
   }
@@ -622,8 +618,8 @@ var activateManagerByAdmin = async (id) => {
   const { password, ...safeUser } = userObject;
   return safeUser;
 };
-var suspendManagerByAdmin = async (id) => {
-  const user = await User.findById(id);
+var suspendManagerByAdmin = async (id3) => {
+  const user = await User.findById(id3);
   if (!user) {
     throw new Error("User not found.");
   }
@@ -639,15 +635,15 @@ var suspendManagerByAdmin = async (id) => {
   const { password, ...safeUser } = userObject;
   return safeUser;
 };
-var deleteManagerByAdmin = async (id) => {
-  const user = await User.findById(id);
+var deleteManagerByAdmin = async (id3) => {
+  const user = await User.findById(id3);
   if (!user) {
     throw new Error("User not found.");
   }
   if (user.role === "founder") {
     throw new Error("The Founder account cannot be deleted.");
   }
-  await User.findByIdAndDelete(id);
+  await User.findByIdAndDelete(id3);
   return null;
 };
 var userService = {
@@ -694,8 +690,8 @@ var getAllUsers = async (req, res, next) => {
 };
 var getSingleUser = async (req, res, next) => {
   try {
-    const id = getSingleParamId(req.params.id);
-    if (!id) {
+    const id3 = getSingleParamId(req.params.id);
+    if (!id3) {
       return sendResponse_default(res, {
         statusCode: 400,
         success: false,
@@ -703,7 +699,7 @@ var getSingleUser = async (req, res, next) => {
         data: null
       });
     }
-    const result = await userService.getSingleUserFromDB(id);
+    const result = await userService.getSingleUserFromDB(id3);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -735,8 +731,8 @@ var createManagerByAdmin = async (req, res, next) => {
 };
 var deleteManagerByAdmin2 = async (req, res, next) => {
   try {
-    const id = getSingleParamId(req.params.id);
-    if (!id) {
+    const id3 = getSingleParamId(req.params.id);
+    if (!id3) {
       return sendResponse_default(res, {
         statusCode: 400,
         success: false,
@@ -744,7 +740,7 @@ var deleteManagerByAdmin2 = async (req, res, next) => {
         data: null
       });
     }
-    await userService.deleteManagerByAdmin(id);
+    await userService.deleteManagerByAdmin(id3);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -757,8 +753,8 @@ var deleteManagerByAdmin2 = async (req, res, next) => {
 };
 var activateManagerByAdmin2 = async (req, res, next) => {
   try {
-    const id = getSingleParamId(req.params.id);
-    if (!id) {
+    const id3 = getSingleParamId(req.params.id);
+    if (!id3) {
       return sendResponse_default(res, {
         statusCode: 400,
         success: false,
@@ -766,7 +762,7 @@ var activateManagerByAdmin2 = async (req, res, next) => {
         data: null
       });
     }
-    const result = await userService.activateManagerByAdmin(id);
+    const result = await userService.activateManagerByAdmin(id3);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -779,8 +775,8 @@ var activateManagerByAdmin2 = async (req, res, next) => {
 };
 var suspendManagerByAdmin2 = async (req, res, next) => {
   try {
-    const id = getSingleParamId(req.params.id);
-    if (!id) {
+    const id3 = getSingleParamId(req.params.id);
+    if (!id3) {
       return sendResponse_default(res, {
         statusCode: 400,
         success: false,
@@ -788,7 +784,7 @@ var suspendManagerByAdmin2 = async (req, res, next) => {
         data: null
       });
     }
-    const result = await userService.suspendManagerByAdmin(id);
+    const result = await userService.suspendManagerByAdmin(id3);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -830,7 +826,7 @@ var verifyAdmin = (req, res, next) => {
   if (!req.user) {
     return next(new UnauthorizedError("Authentication required"));
   }
-  if (req.user.role !== "admin") {
+  if (req.user.role !== "founder") {
     return next(
       new ForbiddenError("You are not authorized to access this resource")
     );
@@ -1695,7 +1691,12 @@ var catchAsync = (fn) => {
 // src/utility/validateRequest.ts
 var validateRequest = (schema) => {
   return catchAsync(async (req, res, next) => {
-    await schema.parseAsync({ body: req.body, params: req.params, cookies: req.cookies });
+    await schema.parseAsync({
+      body: req.body ?? {},
+      params: req.params ?? {},
+      query: req.query ?? {},
+      cookies: req.cookies ?? {}
+    });
     return next();
   });
 };
@@ -2006,9 +2007,30 @@ var ListingViewStats = model5(
 );
 
 // src/modules/listings/listings.service.ts
-var createListingInDB = async (payload) => {
-  const listing = new Listing(payload);
-  return await listing.save();
+var generateRefCode = () => {
+  const digits = Math.floor(1e5 + Math.random() * 9e5);
+  return `WE-${digits}`;
+};
+var createListingInDB = async (payload, creatorRole) => {
+  const { ref_code, ...safePayload } = payload;
+  let attempts = 0;
+  while (attempts < 5) {
+    try {
+      const listing = new Listing({
+        ...safePayload,
+        ref_code: generateRefCode(),
+        ...creatorRole === "founder" && { status: "active" }
+      });
+      return await listing.save();
+    } catch (error) {
+      if (error.code === 11e3 && error.keyPattern?.ref_code) {
+        attempts++;
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error("Failed to generate a unique reference code. Please try again.");
 };
 var getAllListingFromDB = async (query) => {
   const queryWithDefaultSort = {
@@ -2047,8 +2069,8 @@ var getMyListingFromDB = async (associateId, query = {}) => {
   };
   return result;
 };
-var getListingByIdFromDB = async (id) => {
-  return await Listing.findById(id).populate("associate_id", "name email");
+var getListingByIdFromDB = async (id3) => {
+  return await Listing.findById(id3).populate("associate_id", "name email");
 };
 var getMyPromotersFromDB = async (associateId) => {
   const result = await Listing.aggregate([
@@ -2059,11 +2081,7 @@ var getMyPromotersFromDB = async (associateId) => {
         is_deleted: false
       }
     },
-    // 2. Flatten promoters array — one doc per promoter per listing
     { $unwind: "$promoters" },
-    // 3. Group by promoter user_id
-    //    - count how many listings they're promoting
-    //    - collect each listing's price (amount + currency) to handle multi-currency
     {
       $group: {
         _id: "$promoters.user_id",
@@ -2077,7 +2095,6 @@ var getMyPromotersFromDB = async (associateId) => {
         }
       }
     },
-    // 4. Lookup User details — one join, not N queries
     {
       $lookup: {
         from: "users",
@@ -2087,9 +2104,7 @@ var getMyPromotersFromDB = async (associateId) => {
         pipeline: [{ $project: { fullName: 1, email: 1, phone: 1, _id: 0 } }]
       }
     },
-    // 5. Flatten the user array (lookup always returns array)
     { $unwind: "$user" },
-    // 6. Shape final output
     {
       $project: {
         _id: 0,
@@ -2106,8 +2121,8 @@ var getMyPromotersFromDB = async (associateId) => {
   ]);
   return result;
 };
-var updateListingInDB = async (id, associateId, payload) => {
-  const listing = await Listing.findById(id);
+var updateListingInDB = async (id3, associateId, payload) => {
+  const listing = await Listing.findById(id3);
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
@@ -2118,19 +2133,19 @@ var updateListingInDB = async (id, associateId, payload) => {
     );
   }
   const { promoters, associate_id, ...safePayload } = payload;
-  return await Listing.findByIdAndUpdate(id, safePayload, {
+  return await Listing.findByIdAndUpdate(id3, safePayload, {
     new: true,
     runValidators: true
   });
 };
-var deleteListingFromDB = async (id, userId, role) => {
-  const listing = await Listing.findById(id);
+var deleteListingFromDB = async (id3, userId, role) => {
+  const listing = await Listing.findById(id3);
   if (!listing) {
     throw new Error("Listing not found");
   }
   const isOwner = listing.associate_id.toString() === userId.toString();
-  const isAdmin = role === "admin";
-  if (!isOwner && !isAdmin) {
+  const isFounder = role === "founder";
+  if (!isOwner && !isFounder) {
     throw new UnauthorizedError(
       "You are not authorized to delete this listing"
     );
@@ -2142,7 +2157,7 @@ var deleteListingFromDB = async (id, userId, role) => {
     listing.deleted_at = /* @__PURE__ */ new Date();
     await listing.save({ session });
     await PromoteRequest.updateMany(
-      { listing_id: id, is_deleted: false },
+      { listing_id: id3, is_deleted: false },
       { is_deleted: true, deleted_at: /* @__PURE__ */ new Date() },
       { session }
     );
@@ -2155,8 +2170,8 @@ var deleteListingFromDB = async (id, userId, role) => {
     session.endSession();
   }
 };
-var cancelPendingListingInDB = async (id, userId) => {
-  const listing = await Listing.findById(id);
+var cancelPendingListingInDB = async (id3, userId) => {
+  const listing = await Listing.findById(id3);
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
@@ -2169,8 +2184,8 @@ var cancelPendingListingInDB = async (id, userId) => {
   listing.status = "draft";
   return await listing.save();
 };
-var deletePendingListingInDB = async (id, userId) => {
-  const listing = await Listing.findById(id);
+var deletePendingListingInDB = async (id3, userId) => {
+  const listing = await Listing.findById(id3);
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
@@ -2184,21 +2199,21 @@ var deletePendingListingInDB = async (id, userId) => {
   listing.deleted_at = /* @__PURE__ */ new Date();
   return await listing.save();
 };
-var manageListings = async (id, status) => {
-  const listing = await Listing.findById(id);
+var manageListings = async (id3, status) => {
+  const listing = await Listing.findById(id3);
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
   listing.status = status;
   return await listing.save();
 };
-var incrementListingViewCountInDB = async (id) => {
+var incrementListingViewCountInDB = async (id3) => {
   const listing = await Listing.findByIdAndUpdate(
-    id,
+    id3,
     { $inc: { listings_view: 1 } },
     { new: true, select: "listings_view" }
   );
-  await trackListingView(id);
+  await trackListingView(id3);
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
@@ -2311,11 +2326,14 @@ var createListing = async (req, res) => {
       area_sqm: parseIfString(req.body.area_sqm),
       referral_commission: parseIfString(req.body.referral_commission)
     };
-    const listing = await listingsService.createListingInDB({
-      ...body,
-      ...cover_image && { cover_image },
-      ...images.length > 0 && { images }
-    });
+    const listing = await listingsService.createListingInDB(
+      {
+        ...body,
+        ...cover_image && { cover_image },
+        ...images.length > 0 && { images }
+      },
+      req.user?.role
+    );
     res.status(201).json({
       success: true,
       message: "Listing created successfully",
@@ -2362,8 +2380,8 @@ var getMyListings = async (req, res, next) => {
 };
 var getListingById = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const result = await listingsService.getListingByIdFromDB(id);
+    const { id: id3 } = req.params;
+    const result = await listingsService.getListingByIdFromDB(id3);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -2390,7 +2408,7 @@ var getMyPromoters = async (req, res, next) => {
 };
 var updateListing = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const associateId = req.user?.id;
     const files = req.files;
     let cover_image;
@@ -2428,7 +2446,7 @@ var updateListing = async (req, res, next) => {
       ...images && { images }
     };
     const results = await listingsService.updateListingInDB(
-      id,
+      id3,
       associateId,
       updatePayload
     );
@@ -2443,11 +2461,11 @@ var updateListing = async (req, res, next) => {
 };
 var deleteListing = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const userId = req.user?.id;
     const role = req.user?.role;
     const results = await listingsService.deleteListingFromDB(
-      id,
+      id3,
       userId,
       role
     );
@@ -2462,10 +2480,10 @@ var deleteListing = async (req, res, next) => {
 };
 var cancelPendingListing = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const userId = req.user?.id;
     const results = await listingsService.cancelPendingListingInDB(
-      id,
+      id3,
       userId
     );
     sendResponse_default(res, {
@@ -2480,10 +2498,10 @@ var cancelPendingListing = async (req, res, next) => {
 };
 var deletePendingListing = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const userId = req.user?.id;
     const results = await listingsService.deletePendingListingInDB(
-      id,
+      id3,
       userId
     );
     sendResponse_default(res, {
@@ -2498,9 +2516,9 @@ var deletePendingListing = async (req, res, next) => {
 };
 var manageListings2 = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const { status } = req.body;
-    const results = await listingsService.manageListings(id, status);
+    const results = await listingsService.manageListings(id3, status);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -2513,9 +2531,9 @@ var manageListings2 = async (req, res, next) => {
 };
 var incrementListingView = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const result = await listingsService.incrementListingViewCountInDB(
-      id
+      id3
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -2889,11 +2907,11 @@ var throwError = (message, statusCode) => {
   error.statusCode = statusCode;
   throw error;
 };
-var toObjectId = (id) => {
-  if (!Types4.ObjectId.isValid(id)) {
+var toObjectId = (id3) => {
+  if (!Types4.ObjectId.isValid(id3)) {
     throwError("Invalid id", 400);
   }
-  return new Types4.ObjectId(id);
+  return new Types4.ObjectId(id3);
 };
 var isAdminOrManager = (role) => {
   return role === "founder" || role === "manager";
@@ -3278,8 +3296,8 @@ var resolveCommissionDisputeIntoDB = async (commissionId, authUser, payload) => 
   );
   return ensureCommissionExists(updatedCommission);
 };
-var sendCommissionPaymentIntoDB = async (id, authUser, payload) => {
-  const commission = await CommissionLedger.findById(id);
+var sendCommissionPaymentIntoDB = async (id3, authUser, payload) => {
+  const commission = await CommissionLedger.findById(id3);
   if (!commission) {
     throwError("Commission not found", 404);
   }
@@ -3841,11 +3859,11 @@ var getMyPromoteRequestsFromDB = async (requesterId, query) => {
     meta
   };
 };
-var deletePromoteRequest = async (id, role) => {
+var deletePromoteRequest = async (id3, role) => {
   if (role !== "admin") {
     throw new UnauthorizedError("Only admins can perform this action");
   }
-  const promoteRequest = await PromoteRequest.findById(id);
+  const promoteRequest = await PromoteRequest.findById(id3);
   if (!promoteRequest) {
     throw new NotFoundError("Promote request not found");
   }
@@ -3918,8 +3936,8 @@ var cancelPromoteRequestInDB = async (requestId, requesterId) => {
   promoteRequest.status = "cancelled";
   return await promoteRequest.save();
 };
-var getPublicPromoteRequestDetailsFromDB = async (id) => {
-  const promoteRequest = await PromoteRequest.findById(id).populate({
+var getPublicPromoteRequestDetailsFromDB = async (id3) => {
+  const promoteRequest = await PromoteRequest.findById(id3).populate({
     path: "listing_id",
     select: "title ref_code cover_image images price location bedrooms bathrooms area_sqm referral_commission status",
     populate: {
@@ -4283,10 +4301,10 @@ var getMyPromoteRequests = async (req, res, next) => {
 };
 var cencelPromoteRequest = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const requesterId = req.user?.id;
     const result = await listingPromoteRequestService.cancelPromoteRequestInDB(
-      id,
+      id3,
       requesterId
     );
     sendResponse_default(res, {
@@ -4301,7 +4319,7 @@ var cencelPromoteRequest = async (req, res, next) => {
 };
 var manageListingPromoteRequest = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const payload = req.body;
     const userId = req.user?.id;
     const role = req.user?.role;
@@ -4315,7 +4333,7 @@ var manageListingPromoteRequest = async (req, res, next) => {
       });
     }
     const result = await listingPromoteRequestService.managePromoteRequestInDB(
-      id,
+      id3,
       {
         id: userId,
         role
@@ -4333,10 +4351,10 @@ var manageListingPromoteRequest = async (req, res, next) => {
 };
 var deletePromoteRequest2 = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const role = req.user?.role;
     const result = await listingPromoteRequestService.deletePromoteRequest(
-      id,
+      id3,
       role
     );
     sendResponse_default(res, {
@@ -4351,9 +4369,9 @@ var deletePromoteRequest2 = async (req, res, next) => {
 };
 var getPublicPromoteRequestDetails = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const result = await listingPromoteRequestService.getPublicPromoteRequestDetailsFromDB(
-      id
+      id3
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -4367,14 +4385,14 @@ var getPublicPromoteRequestDetails = async (req, res, next) => {
 };
 var respondToOwnerTerms = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const requesterId = typeof req.user?.id === "string" ? req.user.id : void 0;
     if (!requesterId) {
       throw new UnauthorizedError(
         "You must be logged in to respond to the terms"
       );
     }
-    const promoteRequestId = Array.isArray(id) ? id[0] : id;
+    const promoteRequestId = Array.isArray(id3) ? id3[0] : id3;
     if (!promoteRequestId) {
       throw new UnauthorizedError("Promote request id is required");
     }
@@ -4433,7 +4451,7 @@ import { Router as Router5 } from "express";
 // src/modules/commissionLedger/commission.ledger.validation.ts
 import { z as z3 } from "zod";
 import { Types as Types7 } from "mongoose";
-var mongoIdValidation = z3.string().refine((id) => Types7.ObjectId.isValid(id), {
+var mongoIdValidation = z3.string().refine((id3) => Types7.ObjectId.isValid(id3), {
   message: "Invalid id"
 });
 var commissionIdValidation = z3.object({
@@ -4830,7 +4848,7 @@ var commissionLedgerRoutes = router5;
 import { Router as Router6 } from "express";
 
 // src/modules/admin/admin.service.ts
-import { Types as Types8 } from "mongoose";
+import { Types as Types9 } from "mongoose";
 
 // src/utility/sendCustomMail.ts
 import nodemailer3 from "nodemailer";
@@ -5107,17 +5125,294 @@ var sendApprovalEmailIfFullyApproved = async (userId) => {
   }
 };
 
+// src/modules/activitylogs/activitylog.service.ts
+import { Types as Types8 } from "mongoose";
+
+// src/modules/activitylogs/activity.model.schema.ts
+import { model as model8, Schema as Schema8 } from "mongoose";
+
+// src/modules/activitylogs/activitylog.interface.ts
+var ACTIVITY_LOG_ACTIONS = [
+  "create",
+  "update",
+  "delete",
+  "approve",
+  "reject",
+  "login",
+  "status_change",
+  "other"
+];
+var ACTIVITY_LOG_ENTITY_TYPES = [
+  "User",
+  "ChallengePillar",
+  "CourseModule",
+  "ModuleVideo",
+  "ModuleResource",
+  "ModuleAction",
+  "QuizQuestion",
+  "AcademyProfile",
+  "UserEntitlement",
+  "ModuleProgress",
+  "QuizAttempt",
+  "QuizCertificate",
+  "MentorshipProfile",
+  "MentorBooking",
+  "MentorshipReview",
+  "RetreatLocation",
+  "RetreatBatch",
+  "RetreatBooking",
+  "CommunityPost",
+  "CommunityComment",
+  "CommunityLike",
+  "Leaderboard",
+  "LeaderboardEntry",
+  "Notification",
+  "NotificationTemplate",
+  "PaymentPlan",
+  "PaymentSession",
+  "EntitlementLog",
+  "SupportTicket",
+  "FAQ",
+  "TermsAndPolicy",
+  "EmailTemplate",
+  "SessionSchedule",
+  "SessionAttendance",
+  "AdminSettings",
+  "Other"
+];
+
+// src/modules/activitylogs/activity.model.schema.ts
+var SENSITIVE_KEYS = [
+  "password",
+  "newPassword",
+  "oldPassword",
+  "confirmPassword",
+  "token",
+  "accessToken",
+  "refreshToken",
+  "otp",
+  "secret",
+  "apiKey"
+];
+var stripSensitiveKeys = (value) => {
+  if (!value) {
+    return value;
+  }
+  const cleaned = {};
+  for (const [key, val] of Object.entries(value)) {
+    const isSensitive = SENSITIVE_KEYS.some(
+      (sensitiveKey) => key.toLowerCase().includes(sensitiveKey.toLowerCase())
+    );
+    if (!isSensitive) {
+      cleaned[key] = val;
+    }
+  }
+  return cleaned;
+};
+var activityLogSchema = new Schema8(
+  {
+    actor: {
+      type: Schema8.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    action: {
+      type: String,
+      enum: ACTIVITY_LOG_ACTIONS,
+      required: true,
+      index: true
+    },
+    targetEntityType: {
+      type: String,
+      enum: ACTIVITY_LOG_ENTITY_TYPES,
+      required: true,
+      index: true
+    },
+    targetEntityId: {
+      type: Schema8.Types.ObjectId,
+      index: true
+    },
+    changeSummary: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    changes: {
+      type: Schema8.Types.Mixed
+    },
+    ipAddress: {
+      type: String,
+      trim: true
+    },
+    userAgent: {
+      type: String,
+      trim: true
+    }
+  },
+  {
+    timestamps: true,
+    collection: "activitylog"
+  }
+);
+activityLogSchema.pre("save", function() {
+  if (this.isModified("changes")) {
+    this.changes = stripSensitiveKeys(
+      this.changes
+    );
+  }
+});
+activityLogSchema.index({
+  actor: 1,
+  createdAt: -1
+});
+activityLogSchema.index({
+  targetEntityType: 1,
+  targetEntityId: 1,
+  createdAt: -1
+});
+activityLogSchema.index({
+  action: 1,
+  createdAt: -1
+});
+var ActivityLog = model8(
+  "ActivityLog",
+  activityLogSchema
+);
+
+// src/modules/activitylogs/activitylog.service.ts
+var throwServiceError2 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound2 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError2(message, statusCode);
+  }
+};
+var assertValidObjectId = (value, fieldName) => {
+  if (!Types8.ObjectId.isValid(value)) {
+    throwServiceError2(`${fieldName} is invalid`, 400);
+  }
+};
+var ensureActorExists = async (actorId) => {
+  assertValidObjectId(actorId, "Actor ID");
+  const actor = await User.findById(actorId).select("_id fullName email role");
+  assertFound2(actor, "Actor not found", 404);
+  return actor;
+};
+var createActivityLog = async (payload) => {
+  await ensureActorExists(payload.actor);
+  if (payload.targetEntityId) {
+    assertValidObjectId(payload.targetEntityId, "Target entity ID");
+  }
+  const createData = {
+    actor: new Types8.ObjectId(payload.actor),
+    action: payload.action,
+    targetEntityType: payload.targetEntityType
+  };
+  if (payload.targetEntityId) {
+    createData.targetEntityId = new Types8.ObjectId(payload.targetEntityId);
+  }
+  if (payload.changeSummary !== void 0) {
+    createData.changeSummary = payload.changeSummary;
+  }
+  if (payload.changes !== void 0) {
+    createData.changes = payload.changes;
+  }
+  if (payload.ipAddress !== void 0) {
+    createData.ipAddress = payload.ipAddress;
+  }
+  if (payload.userAgent !== void 0) {
+    createData.userAgent = payload.userAgent;
+  }
+  const log = await ActivityLog.create(createData);
+  const populated = await ActivityLog.findById(log._id).populate(
+    "actor",
+    "fullName email role"
+  );
+  assertFound2(populated, "Activity log not found after creation", 500);
+  return populated;
+};
+var getAllActivityLogs = async (options2) => {
+  const page = options2.page ?? 1;
+  const limit = options2.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const filter = {};
+  if (options2.actorId) {
+    assertValidObjectId(options2.actorId, "Actor ID");
+    filter.actor = new Types8.ObjectId(options2.actorId);
+  }
+  if (options2.action) {
+    filter.action = options2.action;
+  }
+  if (options2.targetEntityType) {
+    filter.targetEntityType = options2.targetEntityType;
+  }
+  if (options2.targetEntityId) {
+    assertValidObjectId(options2.targetEntityId, "Target entity ID");
+    filter.targetEntityId = new Types8.ObjectId(options2.targetEntityId);
+  }
+  const [data, total] = await Promise.all([
+    ActivityLog.find(filter).sort({
+      createdAt: -1
+    }).skip(skip).limit(limit).populate("actor", "fullName email role"),
+    ActivityLog.countDocuments(filter)
+  ]);
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+};
+var getSingleActivityLog = async (logId) => {
+  assertValidObjectId(logId, "Activity log ID");
+  const log = await ActivityLog.findById(logId).populate(
+    "actor",
+    "fullName email role"
+  );
+  assertFound2(log, "Activity log not found", 404);
+  return log;
+};
+var activityLogService = {
+  createActivityLog,
+  getAllActivityLogs,
+  getSingleActivityLog
+};
+
 // src/modules/admin/admin.service.ts
 var throwError2 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
+var safeLogActivityEvent = async (params) => {
+  if (!params.actorId) {
+    return;
+  }
+  try {
+    await activityLogService.createActivityLog({
+      actor: params.actorId,
+      action: params.action,
+      targetEntityType: "User",
+      targetEntityId: params.targetEntityId,
+      ...params.changeSummary !== void 0 ? { changeSummary: params.changeSummary } : {},
+      ...params.changes !== void 0 ? { changes: params.changes } : {}
+    });
+  } catch (error) {
+    console.error("Failed to write activity log:", error);
+  }
+};
 var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
-  if (!Types8.ObjectId.isValid(userId)) {
+  if (!Types9.ObjectId.isValid(userId)) {
     throwError2("Invalid user id", 400);
   }
-  if (!Types8.ObjectId.isValid(adminId)) {
+  if (!Types9.ObjectId.isValid(adminId)) {
     throwError2("Invalid admin id", 400);
   }
   const updateQuery = {
@@ -5138,7 +5433,7 @@ var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
       updateQuery.$set.licenseVerificationStatus = "verified";
       updateQuery.$set.accountStatus = "active";
     }
-    updateQuery.$set.approvedBy = new Types8.ObjectId(adminId);
+    updateQuery.$set.approvedBy = new Types9.ObjectId(adminId);
     updateQuery.$set.approvedAt = /* @__PURE__ */ new Date();
     updateQuery.$unset = {
       rejectedReason: ""
@@ -5174,10 +5469,16 @@ var updateUserApprovalStatusIntoDB = async (userId, payload, adminId) => {
     throwError2("User not found", 404);
   }
   await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
+  await safeLogActivityEvent({
+    actorId: adminId,
+    action: payload.approvalStatus === "approved" ? "approve" : payload.approvalStatus === "rejected" ? "reject" : "status_change",
+    targetEntityId: userId,
+    changeSummary: `User approval status changed to "${payload.approvalStatus}"`
+  });
   return updatedUser;
 };
-var updateUserLicenseVerificationStatusIntoDB = async (userId, payload) => {
-  if (!Types8.ObjectId.isValid(userId)) {
+var updateUserLicenseVerificationStatusIntoDB = async (userId, payload, actorId) => {
+  if (!Types9.ObjectId.isValid(userId)) {
     throwError2("Invalid user id", 400);
   }
   const updatedUser = await User.findByIdAndUpdate(
@@ -5196,10 +5497,16 @@ var updateUserLicenseVerificationStatusIntoDB = async (userId, payload) => {
     throwError2("User not found", 404);
   }
   await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
+  await safeLogActivityEvent({
+    actorId,
+    action: "status_change",
+    targetEntityId: userId,
+    changeSummary: `User license verification status changed to "${payload.licenseVerificationStatus}"`
+  });
   return updatedUser;
 };
-var updateUserAccountStatusIntoDB = async (userId, payload) => {
-  if (!Types8.ObjectId.isValid(userId)) {
+var updateUserAccountStatusIntoDB = async (userId, payload, actorId) => {
+  if (!Types9.ObjectId.isValid(userId)) {
     throwError2("Invalid user id", 400);
   }
   const updatedUser = await User.findByIdAndUpdate(
@@ -5218,14 +5525,26 @@ var updateUserAccountStatusIntoDB = async (userId, payload) => {
     throwError2("User not found", 404);
   }
   await sendApprovalEmailIfFullyApproved(String(updatedUser?._id));
+  await safeLogActivityEvent({
+    actorId,
+    action: "status_change",
+    targetEntityId: userId,
+    changeSummary: `User account status changed to "${payload.accountStatus}"`
+  });
   return updatedUser;
 };
-var deleteUserIntoDB = async (userId) => {
+var deleteUserIntoDB = async (userId, actorId) => {
   const user = await User.findById(userId);
   if (!user) {
     throwError2("User not found", 404);
   }
   await User.findByIdAndDelete(userId);
+  await safeLogActivityEvent({
+    actorId,
+    action: "delete",
+    targetEntityId: userId,
+    changeSummary: `User "${user?.email ?? userId}" was deleted`
+  });
   return { message: "User deleted successfully" };
 };
 var adminService = {
@@ -5237,8 +5556,8 @@ var adminService = {
 
 // src/modules/admin/admin.validation.ts
 import { z as z4 } from "zod";
-import { Types as Types9 } from "mongoose";
-var mongoIdValidation2 = z4.string().refine((id) => Types9.ObjectId.isValid(id), {
+import { Types as Types10 } from "mongoose";
+var mongoIdValidation2 = z4.string().refine((id3) => Types10.ObjectId.isValid(id3), {
   message: "Invalid user id"
 });
 var updateApprovalStatusValidation = z4.object({
@@ -5310,9 +5629,11 @@ var updateUserLicenseVerificationStatus = async (req, res, next) => {
       params: req.params,
       body: req.body
     });
+    const actorId = typeof req.user?.id === "string" ? req.user.id : void 0;
     const result = await adminService.updateUserLicenseVerificationStatusIntoDB(
       validatedData.params.id,
-      validatedData.body
+      validatedData.body,
+      actorId
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -5330,9 +5651,11 @@ var updateUserAccountStatus = async (req, res, next) => {
       params: req.params,
       body: req.body
     });
+    const actorId = typeof req.user?.id === "string" ? req.user.id : void 0;
     const result = await adminService.updateUserAccountStatusIntoDB(
       validatedData.params.id,
-      validatedData.body
+      validatedData.body,
+      actorId
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -5347,7 +5670,11 @@ var updateUserAccountStatus = async (req, res, next) => {
 var userDeleteByFounder = async (req, res, next) => {
   try {
     const userId = req.params.id;
-    const result = await adminService.deleteUserIntoDB(userId);
+    const actorId = typeof req.user?.id === "string" ? req.user.id : void 0;
+    const result = await adminService.deleteUserIntoDB(
+      userId,
+      actorId
+    );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -5398,26 +5725,26 @@ import { Router as Router7 } from "express";
 
 // src/modules/listingAssets/listing.assets.service.ts
 import { ZipArchive } from "archiver";
-import { Types as Types10 } from "mongoose";
+import { Types as Types11 } from "mongoose";
 
 // src/modules/listingAssets/listing.assets.model.schema.ts
-import { Schema as Schema8, model as model8 } from "mongoose";
-var ListingAssetDownloadSchema = new Schema8(
+import { Schema as Schema9, model as model9 } from "mongoose";
+var ListingAssetDownloadSchema = new Schema9(
   {
     listing_id: {
-      type: Schema8.Types.ObjectId,
+      type: Schema9.Types.ObjectId,
       ref: "Listing",
       required: true,
       index: true
     },
     downloaded_by: {
-      type: Schema8.Types.ObjectId,
+      type: Schema9.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     promotion_request_id: {
-      type: Schema8.Types.ObjectId,
+      type: Schema9.Types.ObjectId,
       ref: "PromoteRequest"
     },
     user_role: {
@@ -5471,7 +5798,7 @@ ListingAssetDownloadSchema.index({
   downloaded_by: 1,
   downloaded_at: -1
 });
-var ListingAssetDownload = model8(
+var ListingAssetDownload = model9(
   "ListingAssetDownload",
   ListingAssetDownloadSchema
 );
@@ -5621,11 +5948,11 @@ var throwError3 = (message, statusCode) => {
   error.statusCode = statusCode;
   throw error;
 };
-var toObjectId2 = (id) => {
-  if (!Types10.ObjectId.isValid(id)) {
+var toObjectId2 = (id3) => {
+  if (!Types11.ObjectId.isValid(id3)) {
     throwError3("Invalid id", 400);
   }
-  return new Types10.ObjectId(id);
+  return new Types11.ObjectId(id3);
 };
 var isAdminOrManager3 = (role) => {
   return role === "admin" || role === "manager";
@@ -5765,8 +6092,8 @@ var listingAssetsService = {
 
 // src/modules/listingAssets/listing.assets.validation.ts
 import { z as z5 } from "zod";
-import { Types as Types11 } from "mongoose";
-var mongoIdValidation3 = z5.string().refine((id) => Types11.ObjectId.isValid(id), {
+import { Types as Types12 } from "mongoose";
+var mongoIdValidation3 = z5.string().refine((id3) => Types12.ObjectId.isValid(id3), {
   message: "Invalid listing id"
 });
 var downloadListingAssetsValidation = z5.object({
@@ -5884,13 +6211,13 @@ var listingAssetsRoutes = router7;
 import { Router as Router8 } from "express";
 
 // src/modules/payment/payment.service.ts
-import Stripe from "stripe";
+import Stripe2 from "stripe";
 
 // src/modules/payment/payment.model.schema.ts
-import { Schema as Schema9, model as model9 } from "mongoose";
+import { Schema as Schema10, model as model10 } from "mongoose";
 
 // src/modules/payment/payment.interface.ts
-var PAYMENT_PURPOSES = ["registration", "upgrade"];
+var PAYMENT_PURPOSES = ["registration", "upgrade", "invictus_purchase"];
 var PAYMENT_SESSION_STATUSES = [
   "pending",
   "paid",
@@ -5899,23 +6226,21 @@ var PAYMENT_SESSION_STATUSES = [
 ];
 
 // src/modules/payment/payment.model.schema.ts
-var PaymentSessionSchema = new Schema9(
+var PaymentSessionSchema = new Schema10(
   {
     user: {
-      type: Schema9.Types.ObjectId,
+      type: Schema10.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     role: {
       type: String,
-      enum: USER_ROLES,
-      required: true
+      enum: USER_ROLES
     },
     accessTo: {
       type: String,
-      enum: ACCESS_TO_OPTIONS,
-      required: true
+      enum: ACCESS_TO_OPTIONS
     },
     purpose: {
       type: String,
@@ -5924,8 +6249,7 @@ var PaymentSessionSchema = new Schema9(
     },
     durationMonths: {
       type: Number,
-      enum: [3, 6, 12],
-      required: true
+      enum: [3, 6, 12]
     },
     status: {
       type: String,
@@ -5974,19 +6298,35 @@ var PaymentSessionSchema = new Schema9(
     currency: {
       type: String,
       trim: true
+    },
+    paymentPlan: {
+      type: Schema10.Types.ObjectId,
+      ref: "PaymentPlan",
+      index: true
+    },
+    product: {
+      type: Schema10.Types.ObjectId,
+      refPath: "productRefModel"
+    },
+    productRefModel: {
+      type: String,
+      enum: ["ChallengePillar", "RetreatBatch"]
+    },
+    entitlementActivatedAt: {
+      type: Date
     }
   },
   {
     timestamps: true
   }
 );
-var PaymentSession = model9(
+var PaymentSession = model10(
   "PaymentSession",
   PaymentSessionSchema
 );
 
 // src/modules/discount/discount.service.ts
-import { Types as Types12 } from "mongoose";
+import { Types as Types13 } from "mongoose";
 
 // src/utility/sendDiscountCodeMail.ts
 var sendDiscountCodeMail = async ({
@@ -6033,8 +6373,8 @@ var sendDiscountCodeMail = async ({
 };
 
 // src/modules/discount/discount.model.schema.ts
-import { Schema as Schema10, model as model10 } from "mongoose";
-var DiscountCodeSchema = new Schema10(
+import { Schema as Schema11, model as model11 } from "mongoose";
+var DiscountCodeSchema = new Schema11(
   {
     code: {
       type: String,
@@ -6076,7 +6416,7 @@ var DiscountCodeSchema = new Schema10(
       type: Date
     },
     createdBy: {
-      type: Schema10.Types.ObjectId,
+      type: Schema11.Types.ObjectId,
       ref: "User"
     },
     note: {
@@ -6093,10 +6433,10 @@ var DiscountCodeSchema = new Schema10(
     timestamps: true
   }
 );
-var DiscountRedemptionSchema = new Schema10(
+var DiscountRedemptionSchema = new Schema11(
   {
     discountCode: {
-      type: Schema10.Types.ObjectId,
+      type: Schema11.Types.ObjectId,
       ref: "DiscountCode",
       required: true,
       index: true
@@ -6109,7 +6449,7 @@ var DiscountRedemptionSchema = new Schema10(
       index: true
     },
     user: {
-      type: Schema10.Types.ObjectId,
+      type: Schema11.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
@@ -6148,11 +6488,11 @@ DiscountRedemptionSchema.index(
     unique: true
   }
 );
-var DiscountCode = model10(
+var DiscountCode = model11(
   "DiscountCode",
   DiscountCodeSchema
 );
-var DiscountRedemption = model10(
+var DiscountRedemption = model11(
   "DiscountRedemption",
   DiscountRedemptionSchema
 );
@@ -6193,7 +6533,7 @@ var createDiscountCodeIntoDB = async (payload, adminId) => {
     createPayload.note = payload.note;
   }
   if (adminId) {
-    createPayload.createdBy = new Types12.ObjectId(adminId);
+    createPayload.createdBy = new Types13.ObjectId(adminId);
   }
   return DiscountCode.create(createPayload);
 };
@@ -6271,7 +6611,7 @@ var validateDiscountCodeForCheckout = async ({
   if (userId) {
     const alreadyUsedByUser = await DiscountRedemption.findOne({
       discountCode: discountCode._id,
-      user: new Types12.ObjectId(userId)
+      user: new Types13.ObjectId(userId)
     });
     if (alreadyUsedByUser) {
       throwError4(
@@ -6305,7 +6645,7 @@ var redeemDiscountCodeAfterPayment = async ({
   if (!discount) {
     return null;
   }
-  const userObjectId = new Types12.ObjectId(userId);
+  const userObjectId = new Types13.ObjectId(userId);
   const existingUserRedemption = await DiscountRedemption.findOne({
     discountCode: discount._id,
     user: userObjectId
@@ -6413,12 +6753,12 @@ var sendDiscountCodeByEmail = async (email, code) => {
     message: "Discount code email sent successfully"
   };
 };
-var deleteDiscountCodeFromDB = async (id) => {
-  const discount = await DiscountCode.findById(id);
+var deleteDiscountCodeFromDB = async (id3) => {
+  const discount = await DiscountCode.findById(id3);
   if (!discount) {
     throwError4("Discount code not found", 404);
   }
-  await DiscountCode.findByIdAndDelete(id);
+  await DiscountCode.findByIdAndDelete(id3);
   return { deleted: true };
 };
 var discountService = {
@@ -6599,10 +6939,1638 @@ World Elite Team`,
   });
 };
 
-// src/modules/payment/payment.service.ts
+// src/modules/invictus-payments/invictus.payment.service.ts
+import Stripe from "stripe";
+import { Types as Types16 } from "mongoose";
+
+// src/modules/challengePillars/challenge.pillar.model.schema.ts
+import { Schema as Schema12, model as model12 } from "mongoose";
+
+// src/modules/challengePillars/challenge.pillar.interface.ts
+var PILLAR_NAMES = ["FEARLESS", "LIMITLESS", "BORDERLESS"];
+var PILLAR_SLUGS = ["fearless", "limitless", "borderless"];
+var PILLAR_ICONS = ["crown", "infinity", "globe"];
+var PILLAR_STATUSES = ["draft", "published", "archived"];
+var INTRO_VIDEO_STATUSES = [
+  "not_uploaded",
+  "processing",
+  "ready",
+  "failed"
+];
+
+// src/modules/challengePillars/challenge.pillar.model.schema.ts
+var pillarIntroVideoSchema = new Schema12(
+  {
+    cloudinaryPublicId: {
+      type: String,
+      trim: true
+    },
+    cloudinaryAssetId: {
+      type: String,
+      trim: true
+    },
+    secureUrl: {
+      type: String,
+      trim: true
+    },
+    playbackUrl: {
+      type: String,
+      trim: true
+    },
+    thumbnailUrl: {
+      type: String,
+      trim: true
+    },
+    durationSeconds: {
+      type: Number,
+      min: 0
+    },
+    format: {
+      type: String,
+      trim: true
+    },
+    bytes: {
+      type: Number,
+      min: 0
+    },
+    status: {
+      type: String,
+      enum: INTRO_VIDEO_STATUSES,
+      default: "not_uploaded"
+    }
+  },
+  {
+    _id: false
+  }
+);
+var challengePillarSchema = new Schema12(
+  {
+    name: {
+      type: String,
+      enum: PILLAR_NAMES,
+      required: true,
+      unique: true,
+      trim: true
+    },
+    slug: {
+      type: String,
+      enum: PILLAR_SLUGS,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 150
+    },
+    tagline: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 250
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 3e3
+    },
+    icon: {
+      type: String,
+      enum: PILLAR_ICONS,
+      required: true
+    },
+    accentColor: {
+      type: String,
+      default: "#C9A84C",
+      trim: true
+    },
+    isPaid: {
+      type: Boolean,
+      default: false,
+      required: true,
+      index: true
+    },
+    priceCents: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    currency: {
+      type: String,
+      enum: ["usd"],
+      default: "usd"
+    },
+    stripePriceId: {
+      type: String,
+      trim: true
+    },
+    introVideo: {
+      type: pillarIntroVideoSchema,
+      default: () => ({
+        status: "not_uploaded"
+      })
+    },
+    order: {
+      type: Number,
+      required: true,
+      unique: true,
+      min: 1,
+      max: 3
+    },
+    status: {
+      type: String,
+      enum: PILLAR_STATUSES,
+      default: "draft",
+      index: true
+    },
+    publishedAt: {
+      type: Date
+    },
+    archivedAt: {
+      type: Date
+    },
+    createdBy: {
+      type: Schema12.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema12.Types.ObjectId,
+      ref: "User"
+    }
+  },
+  {
+    timestamps: true,
+    collection: "challengepillars"
+  }
+);
+challengePillarSchema.index({
+  status: 1,
+  order: 1
+});
+challengePillarSchema.index({
+  isPaid: 1,
+  status: 1
+});
+var ChallengePillar = model12(
+  "ChallengePillar",
+  challengePillarSchema
+);
+
+// src/modules/retreatBatches/retreat.batch.model.schema.ts
+import { model as model13, Schema as Schema13 } from "mongoose";
+
+// src/modules/retreatBatches/retreat.batch.interface.ts
+var RETREAT_BATCH_STATUSES = [
+  "upcoming",
+  "open",
+  "sold_out",
+  "in_progress",
+  "completed",
+  "cancelled"
+];
+
+// src/modules/retreatBatches/retreat.batch.model.schema.ts
+var retreatBatchSchema = new Schema13(
+  {
+    retreatLocation: {
+      type: Schema13.Types.ObjectId,
+      ref: "RetreatLocation",
+      required: true,
+      index: true
+    },
+    batchName: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200
+    },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      index: true
+    },
+    startDate: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    endDate: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    capacity: {
+      type: Number,
+      required: true,
+      min: 1
+    },
+    confirmedBookingsCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    waitlistCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    depositAmount: {
+      type: Number,
+      min: 0
+    },
+    currency: {
+      type: String,
+      default: "usd",
+      lowercase: true,
+      trim: true
+    },
+    status: {
+      type: String,
+      enum: RETREAT_BATCH_STATUSES,
+      default: "upcoming",
+      index: true
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
+    bookingDeadline: {
+      type: Date
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 3e3
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2e3
+    },
+    createdBy: {
+      type: Schema13.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema13.Types.ObjectId,
+      ref: "User"
+    }
+  },
+  {
+    timestamps: true,
+    collection: "retreatbatches"
+  }
+);
+retreatBatchSchema.index({
+  retreatLocation: 1,
+  status: 1
+});
+retreatBatchSchema.index({
+  startDate: 1,
+  endDate: 1
+});
+var RetreatBatch = model13(
+  "RetreatBatch",
+  retreatBatchSchema
+);
+
+// src/modules/paymentPlans/payment.plan.model.schema.ts
+import {
+  model as model14,
+  Schema as Schema14
+} from "mongoose";
+
+// src/modules/paymentPlans/payment.plan.interface.ts
+var PAYMENT_PLAN_MODES = [
+  "one_time",
+  "subscription"
+];
+var PAYMENT_PLAN_PRODUCT_TYPES = [
+  "membership",
+  "pillar",
+  "retreat",
+  "event",
+  "other"
+];
+var PAYMENT_PLAN_PRODUCT_REF_MODELS = [
+  "ChallengePillar",
+  "RetreatBatch"
+];
+var PAYMENT_PLAN_INTERVALS = [
+  "day",
+  "week",
+  "month",
+  "year"
+];
+var PAYMENT_PLAN_STATUSES = [
+  "draft",
+  "active",
+  "archived"
+];
+
+// src/modules/paymentPlans/payment.plan.model.schema.ts
+var paymentPlanSchema = new Schema14(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200
+    },
+    slug: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 200,
+      unique: true,
+      index: true
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 2e3
+    },
+    productType: {
+      type: String,
+      enum: PAYMENT_PLAN_PRODUCT_TYPES,
+      required: true,
+      index: true
+    },
+    product: {
+      type: Schema14.Types.ObjectId,
+      refPath: "productRefModel"
+    },
+    productRefModel: {
+      type: String,
+      enum: PAYMENT_PLAN_PRODUCT_REF_MODELS
+    },
+    mode: {
+      type: String,
+      enum: PAYMENT_PLAN_MODES,
+      required: true
+    },
+    amountCents: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    currency: {
+      type: String,
+      default: "usd",
+      lowercase: true,
+      trim: true
+    },
+    interval: {
+      type: String,
+      enum: PAYMENT_PLAN_INTERVALS
+    },
+    intervalCount: {
+      type: Number,
+      min: 1,
+      default: 1
+    },
+    stripeProductId: {
+      type: String,
+      trim: true
+    },
+    stripePriceId: {
+      type: String,
+      trim: true
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      required: true
+    },
+    status: {
+      type: String,
+      enum: PAYMENT_PLAN_STATUSES,
+      default: "draft",
+      index: true
+    },
+    order: {
+      type: Number,
+      default: 1,
+      min: 1
+    },
+    publishedAt: {
+      type: Date
+    },
+    archivedAt: {
+      type: Date
+    },
+    createdBy: {
+      type: Schema14.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema14.Types.ObjectId,
+      ref: "User"
+    }
+  },
+  {
+    timestamps: true,
+    collection: "paymentplans"
+  }
+);
+paymentPlanSchema.index({
+  productType: 1,
+  status: 1,
+  order: 1
+});
+paymentPlanSchema.index({
+  product: 1,
+  productRefModel: 1
+});
+paymentPlanSchema.index({
+  mode: 1,
+  status: 1
+});
+paymentPlanSchema.index(
+  {
+    product: 1,
+    mode: 1
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      product: { $exists: true }
+    }
+  }
+);
+var PaymentPlan = model14(
+  "PaymentPlan",
+  paymentPlanSchema
+);
+
+// src/modules/userEntitlements/userEntitlements.service.ts
+import { Types as Types15 } from "mongoose";
+
+// src/modules/userEntitlements/userEntitlements.model.schema.ts
+import { model as model15, Schema as Schema15 } from "mongoose";
+
+// src/modules/userEntitlements/userEntitlements.interface.ts
+var ENTITLEMENT_TYPES = [
+  "pillar",
+  "bundle",
+  "event",
+  "retreat"
+];
+var ENTITLEMENT_SOURCES = [
+  "stripe",
+  "admin",
+  "promotion",
+  "complimentary",
+  "migration"
+];
+var ADMIN_ENTITLEMENT_SOURCES = [
+  "admin",
+  "promotion",
+  "complimentary",
+  "migration"
+];
+var ENTITLEMENT_STATUSES = [
+  "active",
+  "revoked",
+  "refunded",
+  "expired"
+];
+
+// src/modules/userEntitlements/userEntitlements.model.schema.ts
+var userEntitlementSchema = new Schema15(
+  {
+    user: {
+      type: Schema15.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    entitlementType: {
+      type: String,
+      enum: ENTITLEMENT_TYPES,
+      required: true,
+      index: true
+    },
+    entitlementKey: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    pillar: {
+      type: Schema15.Types.ObjectId,
+      ref: "ChallengePillar",
+      index: true
+    },
+    targetId: {
+      type: Schema15.Types.ObjectId,
+      index: true
+    },
+    source: {
+      type: String,
+      enum: ENTITLEMENT_SOURCES,
+      required: true,
+      index: true
+    },
+    status: {
+      type: String,
+      enum: ENTITLEMENT_STATUSES,
+      default: "active",
+      required: true,
+      index: true
+    },
+    paymentSession: {
+      type: Schema15.Types.ObjectId,
+      ref: "PaymentSession",
+      index: true
+    },
+    startsAt: {
+      type: Date,
+      required: true,
+      default: Date.now
+    },
+    expiresAt: {
+      type: Date,
+      index: true
+    },
+    grantedBy: {
+      type: Schema15.Types.ObjectId,
+      ref: "User"
+    },
+    statusChangedBy: {
+      type: Schema15.Types.ObjectId,
+      ref: "User"
+    },
+    statusReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    revokedAt: {
+      type: Date
+    },
+    refundedAt: {
+      type: Date
+    },
+    expiredAt: {
+      type: Date
+    }
+  },
+  {
+    timestamps: true,
+    collection: "userentitlements"
+  }
+);
+userEntitlementSchema.index(
+  {
+    user: 1,
+    entitlementKey: 1
+  },
+  {
+    unique: true
+  }
+);
+userEntitlementSchema.index({
+  user: 1,
+  status: 1,
+  startsAt: 1,
+  expiresAt: 1
+});
+userEntitlementSchema.index({
+  user: 1,
+  pillar: 1,
+  status: 1
+});
+userEntitlementSchema.index({
+  entitlementType: 1,
+  status: 1,
+  createdAt: -1
+});
+var UserEntitlement = model15(
+  "UserEntitlement",
+  userEntitlementSchema
+);
+
+// src/modules/entitlementLogs/entitlementlog.service.ts
+import { Types as Types14 } from "mongoose";
+
+// src/modules/entitlementLogs/entitlement.model.schema.ts
+import { model as model16, Schema as Schema16 } from "mongoose";
+
+// src/modules/entitlementLogs/entitlementlog.interface.ts
+var ENTITLEMENT_LOG_ACTIONS = [
+  "granted",
+  "reactivated",
+  "revoked",
+  "refunded",
+  "expired"
+];
+var ENTITLEMENT_LOG_SOURCES = [
+  "stripe",
+  "admin",
+  "promotion",
+  "complimentary",
+  "migration",
+  "system"
+];
+
+// src/modules/entitlementLogs/entitlement.model.schema.ts
+var entitlementLogSchema = new Schema16(
+  {
+    user: {
+      type: Schema16.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    entitlement: {
+      type: Schema16.Types.ObjectId,
+      ref: "UserEntitlement",
+      required: true,
+      index: true
+    },
+    pillar: {
+      type: Schema16.Types.ObjectId,
+      ref: "ChallengePillar",
+      index: true
+    },
+    paymentSession: {
+      type: Schema16.Types.ObjectId,
+      ref: "PaymentSession",
+      index: true
+    },
+    action: {
+      type: String,
+      enum: ENTITLEMENT_LOG_ACTIONS,
+      required: true,
+      index: true
+    },
+    source: {
+      type: String,
+      enum: ENTITLEMENT_LOG_SOURCES,
+      required: true,
+      index: true
+    },
+    reason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    actor: {
+      type: Schema16.Types.ObjectId,
+      ref: "User",
+      index: true
+    },
+    metadata: {
+      type: Schema16.Types.Mixed
+    }
+  },
+  {
+    timestamps: true,
+    collection: "entitlementslog"
+  }
+);
+entitlementLogSchema.index({
+  user: 1,
+  createdAt: -1
+});
+entitlementLogSchema.index({
+  entitlement: 1,
+  createdAt: -1
+});
+entitlementLogSchema.index({
+  action: 1,
+  createdAt: -1
+});
+var EntitlementLog = model16(
+  "EntitlementLog",
+  entitlementLogSchema
+);
+
+// src/modules/entitlementLogs/entitlementlog.service.ts
+var throwServiceError3 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound3 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError3(message, statusCode);
+  }
+};
+var assertValidObjectId2 = (value, fieldName) => {
+  if (!Types14.ObjectId.isValid(value)) {
+    throwServiceError3(`${fieldName} is invalid`, 400);
+  }
+};
+var ensureUserExists = async (userId) => {
+  assertValidObjectId2(userId, "User ID");
+  const user = await User.findById(userId).select("_id fullName email role");
+  assertFound3(user, "User not found", 404);
+  return user;
+};
+var ensureEntitlementExists = async (entitlementId) => {
+  assertValidObjectId2(entitlementId, "Entitlement ID");
+  const entitlement = await UserEntitlement.findById(entitlementId);
+  assertFound3(entitlement, "User entitlement not found", 404);
+  return entitlement;
+};
+var createEntitlementLog = async (payload) => {
+  await ensureUserExists(payload.user);
+  const entitlement = await ensureEntitlementExists(payload.entitlement);
+  if (payload.pillar) {
+    assertValidObjectId2(payload.pillar, "Pillar ID");
+  }
+  if (payload.paymentSession) {
+    assertValidObjectId2(payload.paymentSession, "Payment session ID");
+  }
+  if (payload.actor) {
+    assertValidObjectId2(payload.actor, "Actor ID");
+  }
+  const createData = {
+    user: new Types14.ObjectId(payload.user),
+    entitlement: new Types14.ObjectId(payload.entitlement),
+    action: payload.action,
+    source: payload.source
+  };
+  const pillarId = payload.pillar ?? entitlement.pillar?.toString();
+  if (pillarId) {
+    createData.pillar = new Types14.ObjectId(pillarId);
+  }
+  const paymentSessionId = payload.paymentSession ?? entitlement.paymentSession?.toString();
+  if (paymentSessionId) {
+    createData.paymentSession = new Types14.ObjectId(paymentSessionId);
+  }
+  if (payload.reason !== void 0) {
+    createData.reason = payload.reason;
+  }
+  if (payload.actor) {
+    createData.actor = new Types14.ObjectId(payload.actor);
+  }
+  if (payload.metadata !== void 0) {
+    createData.metadata = payload.metadata;
+  }
+  const log = await EntitlementLog.create(createData);
+  const populated = await EntitlementLog.findById(log._id).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role");
+  assertFound3(populated, "Entitlement log not found after creation", 500);
+  return populated;
+};
+var getAllEntitlementLogs = async (options2) => {
+  const page = options2.page ?? 1;
+  const limit = options2.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const filter = {};
+  if (options2.userId) {
+    assertValidObjectId2(options2.userId, "User ID");
+    filter.user = new Types14.ObjectId(options2.userId);
+  }
+  if (options2.entitlementId) {
+    assertValidObjectId2(options2.entitlementId, "Entitlement ID");
+    filter.entitlement = new Types14.ObjectId(options2.entitlementId);
+  }
+  if (options2.pillarId) {
+    assertValidObjectId2(options2.pillarId, "Pillar ID");
+    filter.pillar = new Types14.ObjectId(options2.pillarId);
+  }
+  if (options2.action) {
+    filter.action = options2.action;
+  }
+  if (options2.source) {
+    filter.source = options2.source;
+  }
+  const [data, total] = await Promise.all([
+    EntitlementLog.find(filter).sort({
+      createdAt: -1
+    }).skip(skip).limit(limit).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role"),
+    EntitlementLog.countDocuments(filter)
+  ]);
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+};
+var getMyEntitlementLogs = async (userId) => {
+  assertValidObjectId2(userId, "User ID");
+  const logs = await EntitlementLog.find({
+    user: new Types14.ObjectId(userId)
+  }).sort({
+    createdAt: -1
+  }).populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title");
+  return logs;
+};
+var getSingleEntitlementLog = async (logId) => {
+  assertValidObjectId2(logId, "Entitlement log ID");
+  const log = await EntitlementLog.findById(logId).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role");
+  assertFound3(log, "Entitlement log not found", 404);
+  return log;
+};
+var entitlementLogService = {
+  createEntitlementLog,
+  getAllEntitlementLogs,
+  getMyEntitlementLogs,
+  getSingleEntitlementLog
+};
+
+// src/modules/userEntitlements/userEntitlements.service.ts
+var throwServiceError4 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound4 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError4(message, statusCode);
+  }
+};
+var assertValidObjectId3 = (value, fieldName) => {
+  if (!Types15.ObjectId.isValid(value)) {
+    throwServiceError4(`${fieldName} is invalid`, 400);
+  }
+};
+var safeLogEntitlementEvent = async (params) => {
+  try {
+    await entitlementLogService.createEntitlementLog({
+      user: params.userId,
+      entitlement: params.entitlementId,
+      action: params.action,
+      source: params.source,
+      ...params.pillarId ? { pillar: params.pillarId } : {},
+      ...params.paymentSessionId ? { paymentSession: params.paymentSessionId } : {},
+      ...params.actorId ? { actor: params.actorId } : {},
+      ...params.reason !== void 0 ? { reason: params.reason } : {}
+    });
+  } catch (error) {
+    console.error("Failed to write entitlement log:", error);
+  }
+};
+var isDuplicateKeyError = (error) => {
+  return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
+};
+var parseOptionalDate = (value) => {
+  return value ? new Date(value) : /* @__PURE__ */ new Date();
+};
+var parseNullableDate = (value) => {
+  if (value === null || value === void 0) {
+    return void 0;
+  }
+  return new Date(value);
+};
+var buildEntitlementKey = ({
+  entitlementType,
+  pillarId,
+  targetId
+}) => {
+  if (entitlementType === "pillar") {
+    if (!pillarId) {
+      throwServiceError4("Pillar ID is required", 400);
+    }
+    return `pillar:${pillarId}`;
+  }
+  if (!targetId) {
+    throwServiceError4("Target ID is required", 400);
+  }
+  return `${entitlementType}:${targetId}`;
+};
+var validateDateRange = (startsAt, expiresAt) => {
+  if (expiresAt && expiresAt <= startsAt) {
+    throwServiceError4("expiresAt must be later than startsAt", 400);
+  }
+};
+var populateEntitlement = (entitlementId) => {
+  return UserEntitlement.findById(entitlementId).populate("user", "fullName email role accessTo profileImage accountStatus").populate("pillar", "name slug title isPaid priceCents currency status").populate(
+    "paymentSession",
+    "purpose status stripeCheckoutSessionId amountTotal currency"
+  ).populate("grantedBy", "fullName email role profileImage").populate("statusChangedBy", "fullName email role profileImage");
+};
+var expirePastEntitlements = async (userId) => {
+  const now = /* @__PURE__ */ new Date();
+  const filter = {
+    status: "active",
+    expiresAt: {
+      $lte: now
+    }
+  };
+  if (userId) {
+    filter.user = new Types15.ObjectId(userId);
+  }
+  await UserEntitlement.updateMany(filter, {
+    $set: {
+      status: "expired",
+      expiredAt: now
+    }
+  });
+};
+var ensureUserExists2 = async (userId) => {
+  assertValidObjectId3(userId, "User ID");
+  const user = await User.findById(userId).select(
+    "_id fullName email role accessTo accountStatus"
+  );
+  assertFound4(user, "User not found", 404);
+  return user;
+};
+var ensurePillarExists = async (pillarId) => {
+  assertValidObjectId3(pillarId, "Pillar ID");
+  const pillar = await ChallengePillar.findById(pillarId);
+  assertFound4(pillar, "Challenge pillar not found", 404);
+  if (pillar.status === "archived") {
+    throwServiceError4("Cannot grant access to an archived pillar", 400);
+  }
+  return pillar;
+};
+var grantEntitlementInternal = async (input) => {
+  await ensureUserExists2(input.userId);
+  if (input.entitlementType === "pillar") {
+    if (!input.pillarId) {
+      throwServiceError4("Pillar ID is required", 400);
+    }
+    await ensurePillarExists(input.pillarId);
+  } else {
+    if (!input.targetId) {
+      throwServiceError4("Target ID is required", 400);
+    }
+    assertValidObjectId3(input.targetId, "Target ID");
+  }
+  if (input.paymentSessionId) {
+    assertValidObjectId3(input.paymentSessionId, "Payment session ID");
+  }
+  if (input.grantedBy) {
+    assertValidObjectId3(input.grantedBy, "Granted by user ID");
+  }
+  validateDateRange(input.startsAt, input.expiresAt);
+  const entitlementKey = buildEntitlementKey({
+    entitlementType: input.entitlementType,
+    pillarId: input.pillarId,
+    targetId: input.targetId
+  });
+  const existingEntitlement = await UserEntitlement.findOne({
+    user: new Types15.ObjectId(input.userId),
+    entitlementKey
+  });
+  if (existingEntitlement) {
+    existingEntitlement.entitlementType = input.entitlementType;
+    existingEntitlement.entitlementKey = entitlementKey;
+    existingEntitlement.source = input.source;
+    existingEntitlement.status = "active";
+    existingEntitlement.startsAt = input.startsAt;
+    existingEntitlement.set("expiresAt", input.expiresAt);
+    if (input.entitlementType === "pillar") {
+      existingEntitlement.pillar = new Types15.ObjectId(input.pillarId);
+      existingEntitlement.set("targetId", void 0);
+    } else {
+      existingEntitlement.targetId = new Types15.ObjectId(input.targetId);
+      existingEntitlement.set("pillar", void 0);
+    }
+    existingEntitlement.set(
+      "paymentSession",
+      input.paymentSessionId ? new Types15.ObjectId(input.paymentSessionId) : void 0
+    );
+    existingEntitlement.set(
+      "grantedBy",
+      input.grantedBy ? new Types15.ObjectId(input.grantedBy) : void 0
+    );
+    existingEntitlement.set("statusChangedBy", void 0);
+    existingEntitlement.set("statusReason", void 0);
+    existingEntitlement.set("revokedAt", void 0);
+    existingEntitlement.set("refundedAt", void 0);
+    existingEntitlement.set("expiredAt", void 0);
+    await existingEntitlement.save();
+    await safeLogEntitlementEvent({
+      userId: input.userId,
+      entitlementId: existingEntitlement._id.toString(),
+      action: "reactivated",
+      source: input.source,
+      ...input.pillarId ? { pillarId: input.pillarId } : {},
+      ...input.paymentSessionId ? { paymentSessionId: input.paymentSessionId } : {},
+      ...input.grantedBy ? { actorId: input.grantedBy } : {}
+    });
+    const populated = await populateEntitlement(existingEntitlement._id);
+    assertFound4(populated, "Entitlement not found after update", 500);
+    return populated;
+  }
+  const createData = {
+    user: new Types15.ObjectId(input.userId),
+    entitlementType: input.entitlementType,
+    entitlementKey,
+    source: input.source,
+    status: "active",
+    startsAt: input.startsAt
+  };
+  if (input.entitlementType === "pillar") {
+    createData.pillar = new Types15.ObjectId(input.pillarId);
+  } else {
+    createData.targetId = new Types15.ObjectId(input.targetId);
+  }
+  if (input.expiresAt) {
+    createData.expiresAt = input.expiresAt;
+  }
+  if (input.paymentSessionId) {
+    createData.paymentSession = new Types15.ObjectId(input.paymentSessionId);
+  }
+  if (input.grantedBy) {
+    createData.grantedBy = new Types15.ObjectId(input.grantedBy);
+  }
+  try {
+    const entitlement = await UserEntitlement.create(createData);
+    await safeLogEntitlementEvent({
+      userId: input.userId,
+      entitlementId: entitlement._id.toString(),
+      action: "granted",
+      source: input.source,
+      ...input.pillarId ? { pillarId: input.pillarId } : {},
+      ...input.paymentSessionId ? { paymentSessionId: input.paymentSessionId } : {},
+      ...input.grantedBy ? { actorId: input.grantedBy } : {}
+    });
+    const populated = await populateEntitlement(entitlement._id);
+    assertFound4(populated, "Entitlement not found after creation", 500);
+    return populated;
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      const entitlement = await UserEntitlement.findOne({
+        user: new Types15.ObjectId(input.userId),
+        entitlementKey
+      });
+      assertFound4(
+        entitlement,
+        "Existing entitlement could not be retrieved",
+        409
+      );
+      return entitlement;
+    }
+    throw error;
+  }
+};
+var grantEntitlementByAdmin = async (payload, actorId) => {
+  const entitlementType = payload.entitlementType ?? "pillar";
+  const startsAt = parseOptionalDate(payload.startsAt);
+  const expiresAt = parseNullableDate(payload.expiresAt);
+  return grantEntitlementInternal({
+    userId: payload.user,
+    entitlementType,
+    ...payload.pillar !== void 0 ? {
+      pillarId: payload.pillar
+    } : {},
+    ...payload.targetId !== void 0 ? {
+      targetId: payload.targetId
+    } : {},
+    source: payload.source ?? "admin",
+    ...payload.paymentSession !== void 0 ? {
+      paymentSessionId: payload.paymentSession
+    } : {},
+    startsAt,
+    ...expiresAt !== void 0 ? { expiresAt } : {},
+    grantedBy: actorId
+  });
+};
+var activatePillarEntitlementFromPayment = async (payload) => {
+  return grantEntitlementInternal({
+    userId: payload.userId,
+    entitlementType: "pillar",
+    pillarId: payload.pillarId,
+    source: "stripe",
+    paymentSessionId: payload.paymentSessionId,
+    startsAt: payload.startsAt ?? /* @__PURE__ */ new Date(),
+    ...payload.expiresAt !== void 0 ? {
+      expiresAt: payload.expiresAt
+    } : {}
+  });
+};
+var activateEntitlementFromPayment = async (payload) => {
+  return grantEntitlementInternal({
+    userId: payload.userId,
+    entitlementType: payload.entitlementType,
+    ...payload.pillarId !== void 0 ? { pillarId: payload.pillarId } : {},
+    ...payload.targetId !== void 0 ? { targetId: payload.targetId } : {},
+    source: "stripe",
+    paymentSessionId: payload.paymentSessionId,
+    startsAt: payload.startsAt ?? /* @__PURE__ */ new Date(),
+    ...payload.expiresAt !== void 0 ? { expiresAt: payload.expiresAt } : {}
+  });
+};
+var hasActivePillarEntitlement = async (userId, pillarId) => {
+  assertValidObjectId3(userId, "User ID");
+  assertValidObjectId3(pillarId, "Pillar ID");
+  await expirePastEntitlements(userId);
+  const now = /* @__PURE__ */ new Date();
+  const filter = {
+    user: new Types15.ObjectId(userId),
+    entitlementType: "pillar",
+    pillar: new Types15.ObjectId(pillarId),
+    status: "active",
+    startsAt: {
+      $lte: now
+    },
+    $or: [
+      {
+        expiresAt: {
+          $exists: false
+        }
+      },
+      {
+        expiresAt: {
+          $gt: now
+        }
+      }
+    ]
+  };
+  const entitlement = await UserEntitlement.exists(filter);
+  return Boolean(entitlement);
+};
+var checkPillarAccess = async (userId, pillarId) => {
+  assertValidObjectId3(userId, "User ID");
+  assertValidObjectId3(pillarId, "Pillar ID");
+  const pillar = await ChallengePillar.findOne({
+    _id: pillarId,
+    status: "published"
+  }).select("name slug title isPaid priceCents currency status");
+  assertFound4(pillar, "Challenge pillar not found or unavailable", 404);
+  if (!pillar.isPaid) {
+    return {
+      hasAccess: true,
+      accessType: "free",
+      reason: "free_pillar",
+      pillar,
+      entitlement: null
+    };
+  }
+  await expirePastEntitlements(userId);
+  const now = /* @__PURE__ */ new Date();
+  const entitlement = await UserEntitlement.findOne({
+    user: new Types15.ObjectId(userId),
+    entitlementType: "pillar",
+    pillar: new Types15.ObjectId(pillarId),
+    status: "active",
+    startsAt: {
+      $lte: now
+    },
+    $or: [
+      {
+        expiresAt: {
+          $exists: false
+        }
+      },
+      {
+        expiresAt: {
+          $gt: now
+        }
+      }
+    ]
+  }).populate("paymentSession", "status purpose amountTotal currency");
+  if (!entitlement) {
+    return {
+      hasAccess: false,
+      accessType: "locked",
+      reason: "pillar_purchase_required",
+      pillar,
+      entitlement: null
+    };
+  }
+  return {
+    hasAccess: true,
+    accessType: "purchased",
+    reason: "active_pillar_entitlement",
+    pillar,
+    entitlement
+  };
+};
+var getMyEntitlements = async (userId) => {
+  assertValidObjectId3(userId, "User ID");
+  await expirePastEntitlements(userId);
+  const entitlements = await UserEntitlement.find({
+    user: new Types15.ObjectId(userId)
+  }).sort({
+    createdAt: -1
+  }).populate("pillar", "name slug title isPaid priceCents currency status").populate(
+    "paymentSession",
+    "purpose status amountTotal currency stripeCheckoutSessionId"
+  );
+  const now = /* @__PURE__ */ new Date();
+  return entitlements.map((entitlement) => {
+    const isCurrentlyActive = entitlement.status === "active" && entitlement.startsAt <= now && (!entitlement.expiresAt || entitlement.expiresAt > now);
+    return {
+      ...entitlement.toObject(),
+      hasAccess: isCurrentlyActive
+    };
+  });
+};
+var getAllEntitlements = async (options2) => {
+  await expirePastEntitlements();
+  const page = options2.page ?? 1;
+  const limit = options2.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const filter = {};
+  if (options2.userId) {
+    assertValidObjectId3(options2.userId, "User ID");
+    filter.user = new Types15.ObjectId(options2.userId);
+  }
+  if (options2.pillarId) {
+    assertValidObjectId3(options2.pillarId, "Pillar ID");
+    filter.pillar = new Types15.ObjectId(options2.pillarId);
+  }
+  if (options2.entitlementType) {
+    filter.entitlementType = options2.entitlementType;
+  }
+  if (options2.source) {
+    filter.source = options2.source;
+  }
+  if (options2.status) {
+    filter.status = options2.status;
+  }
+  const [data, total] = await Promise.all([
+    UserEntitlement.find(filter).sort({
+      createdAt: -1
+    }).skip(skip).limit(limit).populate(
+      "user",
+      "fullName email role accessTo profileImage accountStatus"
+    ).populate("pillar", "name slug title isPaid priceCents currency status").populate(
+      "paymentSession",
+      "purpose status amountTotal currency stripeCheckoutSessionId"
+    ).populate("grantedBy", "fullName email role").populate("statusChangedBy", "fullName email role"),
+    UserEntitlement.countDocuments(filter)
+  ]);
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+};
+var getSingleEntitlement = async (entitlementId) => {
+  assertValidObjectId3(entitlementId, "Entitlement ID");
+  const entitlement = await populateEntitlement(entitlementId);
+  assertFound4(entitlement, "User entitlement not found", 404);
+  return entitlement;
+};
+var changeEntitlementStatus = async (input) => {
+  assertValidObjectId3(input.entitlementId, "Entitlement ID");
+  assertValidObjectId3(input.actorId, "Actor ID");
+  const entitlement = await UserEntitlement.findById(input.entitlementId);
+  assertFound4(entitlement, "User entitlement not found", 404);
+  entitlement.status = input.status;
+  entitlement.statusChangedBy = new Types15.ObjectId(input.actorId);
+  if (input.reason !== void 0) {
+    entitlement.statusReason = input.reason;
+  } else {
+    entitlement.set("statusReason", void 0);
+  }
+  const now = /* @__PURE__ */ new Date();
+  if (input.status === "revoked") {
+    entitlement.revokedAt = now;
+    entitlement.set("refundedAt", void 0);
+    entitlement.set("expiredAt", void 0);
+  }
+  if (input.status === "refunded") {
+    entitlement.refundedAt = now;
+    entitlement.set("revokedAt", void 0);
+    entitlement.set("expiredAt", void 0);
+  }
+  if (input.status === "expired") {
+    entitlement.expiredAt = now;
+    entitlement.set("revokedAt", void 0);
+    entitlement.set("refundedAt", void 0);
+  }
+  await entitlement.save();
+  await safeLogEntitlementEvent({
+    userId: entitlement.user.toString(),
+    entitlementId: entitlement._id.toString(),
+    action: input.status,
+    source: entitlement.source,
+    ...entitlement.pillar ? { pillarId: entitlement.pillar.toString() } : {},
+    ...entitlement.paymentSession ? { paymentSessionId: entitlement.paymentSession.toString() } : {},
+    actorId: input.actorId,
+    ...input.reason !== void 0 ? { reason: input.reason } : {}
+  });
+  const populated = await populateEntitlement(entitlement._id);
+  assertFound4(populated, "Entitlement not found after status update", 500);
+  return populated;
+};
+var revokeEntitlement = async (entitlementId, payload, actorId) => {
+  return changeEntitlementStatus({
+    entitlementId,
+    status: "revoked",
+    actorId,
+    ...payload.reason !== void 0 ? {
+      reason: payload.reason
+    } : {}
+  });
+};
+var refundEntitlement = async (entitlementId, payload, actorId) => {
+  return changeEntitlementStatus({
+    entitlementId,
+    status: "refunded",
+    actorId,
+    ...payload.reason !== void 0 ? {
+      reason: payload.reason
+    } : {}
+  });
+};
+var expireEntitlement = async (entitlementId, payload, actorId) => {
+  return changeEntitlementStatus({
+    entitlementId,
+    status: "expired",
+    actorId,
+    ...payload.reason !== void 0 ? {
+      reason: payload.reason
+    } : {}
+  });
+};
+var reactivateEntitlement = async (entitlementId, payload, actorId) => {
+  assertValidObjectId3(entitlementId, "Entitlement ID");
+  const entitlement = await UserEntitlement.findById(entitlementId);
+  assertFound4(entitlement, "User entitlement not found", 404);
+  const startsAt = parseOptionalDate(payload.startsAt);
+  const expiresAt = parseNullableDate(payload.expiresAt);
+  validateDateRange(startsAt, expiresAt);
+  entitlement.status = "active";
+  entitlement.source = payload.source ?? "admin";
+  entitlement.startsAt = startsAt;
+  entitlement.set("expiresAt", expiresAt);
+  entitlement.grantedBy = new Types15.ObjectId(actorId);
+  entitlement.set("statusChangedBy", void 0);
+  entitlement.set("statusReason", void 0);
+  entitlement.set("revokedAt", void 0);
+  entitlement.set("refundedAt", void 0);
+  entitlement.set("expiredAt", void 0);
+  entitlement.set("paymentSession", void 0);
+  await entitlement.save();
+  await safeLogEntitlementEvent({
+    userId: entitlement.user.toString(),
+    entitlementId: entitlement._id.toString(),
+    action: "reactivated",
+    source: entitlement.source,
+    ...entitlement.pillar ? { pillarId: entitlement.pillar.toString() } : {},
+    actorId
+  });
+  const populated = await populateEntitlement(entitlement._id);
+  assertFound4(populated, "Entitlement not found after reactivation", 500);
+  return populated;
+};
+var userEntitlementService = {
+  grantEntitlementByAdmin,
+  activatePillarEntitlementFromPayment,
+  activateEntitlementFromPayment,
+  hasActivePillarEntitlement,
+  checkPillarAccess,
+  getMyEntitlements,
+  getAllEntitlements,
+  getSingleEntitlement,
+  revokeEntitlement,
+  refundEntitlement,
+  expireEntitlement,
+  reactivateEntitlement
+};
+
+// src/modules/invictus-payments/invictus.payment.service.ts
+var throwServiceError5 = (message, statusCode) => {
+  const error = new Error(
+    message
+  );
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound5 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError5(
+      message,
+      statusCode
+    );
+  }
+};
+var stripUndefined = (obj) => {
+  const result = {};
+  for (const key in obj) {
+    if (obj[key] !== void 0) {
+      result[key] = obj[key];
+    }
+  }
+  return result;
+};
 var stripeSecretKey = config_default.STRIPE_SECRET_KEY;
 var stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
-var stripUndefined = (obj) => {
+var getStripeClient = () => {
+  if (!stripe) {
+    throwServiceError5(
+      "Stripe is not configured. Please set STRIPE_SECRET_KEY.",
+      500
+    );
+  }
+  return stripe;
+};
+var productLookup = {
+  ChallengePillar: {
+    findById: (id3) => ChallengePillar.findById(id3)
+  },
+  RetreatBatch: {
+    findById: (id3) => RetreatBatch.findById(id3)
+  }
+};
+var entitlementTypeForProductType = {
+  pillar: "pillar",
+  retreat: "retreat",
+  event: "event"
+};
+var createInvictusCheckoutSession = async ({
+  userId,
+  fullName,
+  email,
+  input
+}) => {
+  if (!Types16.ObjectId.isValid(
+    input.paymentPlanId
+  )) {
+    throwServiceError5(
+      "Payment plan ID is invalid",
+      400
+    );
+  }
+  const plan = await PaymentPlan.findById(
+    input.paymentPlanId
+  );
+  assertFound5(
+    plan,
+    "Payment plan not found",
+    404
+  );
+  if (plan.status !== "active") {
+    throwServiceError5(
+      "This payment plan is not currently available for purchase",
+      400
+    );
+  }
+  if (plan.productType === "membership") {
+    throwServiceError5(
+      "Membership plans must be purchased through the membership checkout flow",
+      400
+    );
+  }
+  if (plan.mode !== "one_time") {
+    throwServiceError5(
+      "Only one-time payment plans can be purchased through this endpoint",
+      400
+    );
+  }
+  if (plan.product && plan.productRefModel) {
+    const lookup = productLookup[plan.productRefModel];
+    const referencedProduct = await lookup.findById(
+      plan.product.toString()
+    );
+    assertFound5(
+      referencedProduct,
+      "The product linked to this payment plan no longer exists",
+      404
+    );
+  }
+  const stripeClient = getStripeClient();
+  const sessionCreateParams = {
+    mode: "payment",
+    line_items: [
+      plan.stripePriceId ? {
+        price: plan.stripePriceId,
+        quantity: 1
+      } : {
+        quantity: 1,
+        price_data: {
+          currency: plan.currency,
+          unit_amount: plan.amountCents,
+          product_data: {
+            name: plan.name,
+            description: plan.description
+          }
+        }
+      }
+    ],
+    customer_email: email,
+    success_url: `${config_default.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config_default.FRONTEND_URL}/payment/cancel`,
+    metadata: {
+      purpose: "invictus_purchase",
+      userId,
+      fullName,
+      email,
+      paymentPlanId: plan._id.toString(),
+      productType: plan.productType,
+      product: plan.product?.toString() ?? "",
+      productRefModel: plan.productRefModel ?? ""
+    }
+  };
+  const session = await stripeClient.checkout.sessions.create(
+    sessionCreateParams
+  );
+  if (!session.url) {
+    throwServiceError5(
+      "Failed to create Stripe Checkout session",
+      500
+    );
+  }
+  await PaymentSession.create(
+    stripUndefined({
+      user: userId,
+      purpose: "invictus_purchase",
+      status: "pending",
+      stripeCheckoutSessionId: session.id,
+      stripeCustomerId: typeof session.customer === "string" ? session.customer : void 0,
+      checkoutUrl: session.url ?? void 0,
+      amountTotal: plan.amountCents,
+      currency: plan.currency,
+      paymentPlan: plan._id,
+      product: plan.product,
+      productRefModel: plan.productRefModel
+    })
+  );
+  return {
+    checkoutUrl: session.url,
+    sessionId: session.id
+  };
+};
+var activateInvictusPurchase = async (session) => {
+  const paymentSession = await PaymentSession.findOne({
+    stripeCheckoutSessionId: session.id
+  });
+  if (!paymentSession) {
+    console.error(
+      `INVICTUS webhook: no PaymentSession found for checkout ${session.id}`
+    );
+    return;
+  }
+  if (paymentSession.status === "paid") {
+    return;
+  }
+  paymentSession.status = "paid";
+  if (typeof session.amount_total === "number") {
+    paymentSession.amountTotal = session.amount_total;
+  }
+  await paymentSession.save();
+  const userId = paymentSession.user.toString();
+  const productType = session.metadata?.productType;
+  const productId = session.metadata?.product;
+  if (!productType || !productId || productType === "other") {
+    return;
+  }
+  const entitlementType = entitlementTypeForProductType[productType];
+  if (!entitlementType) {
+    console.warn(
+      `INVICTUS webhook: unknown productType "${productType}" for session ${session.id}`
+    );
+    return;
+  }
+  await userEntitlementService.activateEntitlementFromPayment(
+    {
+      userId,
+      entitlementType,
+      ...entitlementType === "pillar" ? { pillarId: productId } : { targetId: productId },
+      paymentSessionId: paymentSession._id.toString()
+    }
+  );
+  paymentSession.entitlementActivatedAt = /* @__PURE__ */ new Date();
+  await paymentSession.save();
+};
+var getMyInvictusPurchases = async (userId) => {
+  return PaymentSession.find({
+    user: new Types16.ObjectId(userId),
+    purpose: "invictus_purchase"
+  }).sort({ createdAt: -1 }).populate(
+    "paymentPlan",
+    "name slug productType mode amountCents currency"
+  );
+};
+var invictusPaymentService = {
+  createInvictusCheckoutSession,
+  activateInvictusPurchase,
+  getMyInvictusPurchases
+};
+
+// src/modules/payment/payment.service.ts
+var stripeSecretKey2 = config_default.STRIPE_SECRET_KEY;
+var stripe2 = stripeSecretKey2 ? new Stripe2(stripeSecretKey2) : null;
+var stripUndefined2 = (obj) => {
   const result = {};
   for (const key in obj) {
     if (obj[key] !== void 0) {
@@ -6616,8 +8584,8 @@ var throwError5 = (message, statusCode) => {
   error.statusCode = statusCode;
   throw error;
 };
-var getStripeClient = () => {
-  const stripeClient = stripe;
+var getStripeClient2 = () => {
+  const stripeClient = stripe2;
   if (!stripeClient) {
     throwError5("Stripe is not configured. Please set STRIPE_SECRET_KEY.", 500);
   }
@@ -6702,7 +8670,7 @@ var createCheckoutSession = async ({
   } else {
     sessionCreateParams.customer_email = email;
   }
-  const stripeClient = getStripeClient();
+  const stripeClient = getStripeClient2();
   const session = await stripeClient.checkout.sessions.create(
     sessionCreateParams
   );
@@ -6710,7 +8678,7 @@ var createCheckoutSession = async ({
     throwError5("Failed to create Stripe Checkout session", 500);
   }
   await PaymentSession.create(
-    stripUndefined({
+    stripUndefined2({
       user: userId,
       role,
       accessTo,
@@ -6835,7 +8803,7 @@ var createRegistrationCheckoutByToken = async (token, discountCode) => {
     userId: String(user._id)
   });
   const finalPricing = discount ? applyDiscountToPricingPlan(originalPricing, discount.discountPercent) : originalPricing;
-  const stripeClient = getStripeClient();
+  const stripeClient = getStripeClient2();
   const session = await stripeClient.checkout.sessions.create({
     mode: "payment",
     customer_email: user.email,
@@ -6956,7 +8924,7 @@ var createUpgradeCheckoutSessionIntoStripe = async (userId, durationMonths, disc
     userId: String(currentUser._id)
   });
   const finalPricing = discount ? applyDiscountToPricingPlan(originalPricing, discount.discountPercent) : originalPricing;
-  const stripeClient = getStripeClient();
+  const stripeClient = getStripeClient2();
   const session = await stripeClient.checkout.sessions.create({
     mode: "payment",
     customer: currentUser.stripeCustomerId || void 0,
@@ -6991,7 +8959,7 @@ var createUpgradeCheckoutSessionIntoStripe = async (userId, durationMonths, disc
     throwError5("Stripe Checkout session could not be created.", 500);
   }
   await PaymentSession.create(
-    stripUndefined({
+    stripUndefined2({
       user: currentUser._id,
       role: currentUser.role,
       accessTo: currentUser.accessTo,
@@ -7210,7 +9178,7 @@ var handleInvoicePaid = async (invoice) => {
   if (!subscriptionId) {
     return;
   }
-  const stripeClient = getStripeClient();
+  const stripeClient = getStripeClient2();
   const subscription = await stripeClient.subscriptions.retrieve(subscriptionId);
   const subscriptionExpiresAt = getSubscriptionPeriodEnd(subscription);
   const setPayload = {
@@ -7288,7 +9256,7 @@ var handleStripeWebhook = async (rawBody, signature) => {
   if (!webhookSecret) {
     throwError5("Stripe webhook secret is missing", 500);
   }
-  const stripeClient = getStripeClient();
+  const stripeClient = getStripeClient2();
   let webhookEvent;
   try {
     webhookEvent = stripeClient.webhooks.constructEvent(
@@ -7317,6 +9285,10 @@ var handleStripeWebhook = async (rawBody, signature) => {
         console.error(
           `Stripe checkout ${session.id} has no payment purpose in metadata`
         );
+        break;
+      }
+      if (purpose === "invictus_purchase") {
+        await invictusPaymentService.activateInvictusPurchase(session);
         break;
       }
       if (purpose === "registration") {
@@ -7352,7 +9324,7 @@ var handleStripeWebhook = async (rawBody, signature) => {
   }
 };
 var verifyCheckoutSessionFromStripe = async (sessionId) => {
-  const stripeClient = getStripeClient();
+  const stripeClient = getStripeClient2();
   const session = await stripeClient.checkout.sessions.retrieve(sessionId);
   if (session.payment_status !== "paid") {
     return { paid: false, message: "Payment is not completed yet" };
@@ -7718,7 +9690,7 @@ var throwError6 = (message, statusCode) => {
   error.statusCode = statusCode;
   throw error;
 };
-var ensureUserExists = (user) => {
+var ensureUserExists3 = (user) => {
   if (user == null) {
     throwError6("User not found", 404);
   }
@@ -7736,7 +9708,7 @@ var getMyProfileFromDB = async (userId) => {
   if (!user) {
     throwError6("User not found", 404);
   }
-  const safeUser = ensureUserExists(user);
+  const safeUser = ensureUserExists3(user);
   return formatProfileResponse(safeUser);
 };
 var updateBasicProfileIntoDB = async (userId, payload) => {
@@ -7764,7 +9736,7 @@ var updateBasicProfileIntoDB = async (userId, payload) => {
       runValidators: true
     }
   ).select("-password").lean();
-  const safeUpdatedUser = ensureUserExists(updatedUser);
+  const safeUpdatedUser = ensureUserExists3(updatedUser);
   return formatProfileResponse(safeUpdatedUser);
 };
 var updateBioIntoDB = async (userId, payload) => {
@@ -7780,7 +9752,7 @@ var updateBioIntoDB = async (userId, payload) => {
       runValidators: true
     }
   ).select("-password").lean();
-  const safeUpdatedUser = ensureUserExists(updatedUser);
+  const safeUpdatedUser = ensureUserExists3(updatedUser);
   return formatProfileResponse(safeUpdatedUser);
 };
 var upsertSocialLinkIntoDB = async (userId, payload) => {
@@ -7796,7 +9768,7 @@ var upsertSocialLinkIntoDB = async (userId, payload) => {
       runValidators: true
     }
   ).select("-password").lean();
-  const safeUpdatedUser = ensureUserExists(updatedUser);
+  const safeUpdatedUser = ensureUserExists3(updatedUser);
   return formatProfileResponse(safeUpdatedUser);
 };
 var deleteSocialLinkFromDB = async (userId, platform) => {
@@ -7812,7 +9784,7 @@ var deleteSocialLinkFromDB = async (userId, platform) => {
       runValidators: true
     }
   ).select("-password").lean();
-  const safeUpdatedUser = ensureUserExists(updatedUser);
+  const safeUpdatedUser = ensureUserExists3(updatedUser);
   return formatProfileResponse(safeUpdatedUser);
 };
 var updateMarketingChannelsIntoDB = async (userId, payload) => {
@@ -7828,7 +9800,7 @@ var updateMarketingChannelsIntoDB = async (userId, payload) => {
       runValidators: true
     }
   ).select("-password").lean();
-  const safeUpdatedUser = ensureUserExists(updatedUser);
+  const safeUpdatedUser = ensureUserExists3(updatedUser);
   return formatProfileResponse(safeUpdatedUser);
 };
 var updateProfileImageIntoDB = async (userId, file) => {
@@ -7848,7 +9820,7 @@ var updateProfileImageIntoDB = async (userId, file) => {
       runValidators: true
     }
   ).select("-password").lean();
-  const safeUpdatedUser = ensureUserExists(updatedUser);
+  const safeUpdatedUser = ensureUserExists3(updatedUser);
   return formatProfileResponse(safeUpdatedUser);
 };
 var deleteProfileImageFromDB = async (userId) => {
@@ -7864,7 +9836,7 @@ var deleteProfileImageFromDB = async (userId) => {
       runValidators: true
     }
   ).select("-password").lean();
-  const safeUpdatedUser = ensureUserExists(updatedUser);
+  const safeUpdatedUser = ensureUserExists3(updatedUser);
   return formatProfileResponse(safeUpdatedUser);
 };
 var profileService = {
@@ -8242,11 +10214,11 @@ var sendDiscountCodeEmail = async (req, res, next) => {
 };
 var deleteDiscountCode = async (req, res, next) => {
   try {
-    const id = req.params.id;
-    if (!id) {
+    const id3 = req.params.id;
+    if (!id3) {
       throw new Error("Discount code ID is required");
     }
-    const result = await discountService.deleteDiscountCodeFromDB(id);
+    const result = await discountService.deleteDiscountCodeFromDB(id3);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -8307,9 +10279,9 @@ var getPromotersFromDB = async (query) => {
   };
   return result;
 };
-var incrementPromoterViewCountInDB = async (id) => {
+var incrementPromoterViewCountInDB = async (id3) => {
   const profile = await Promoter.findByIdAndUpdate(
-    id,
+    id3,
     { $inc: { profile_views: 1 } },
     { new: true, select: "profile_views" }
   );
@@ -8340,9 +10312,9 @@ var getPromoters = async (req, res, next) => {
 };
 var incrementPromoterView = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { id: id3 } = req.params;
     const result = await promotersServices.incrementPromoterViewCountInDB(
-      id
+      id3
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -8369,7 +10341,7 @@ var promoterRoutes = router11;
 import { Router as Router12 } from "express";
 
 // src/modules/dashboardAnalytics/dashboard.analytics.services.ts
-import { Types as Types13 } from "mongoose";
+import { Types as Types17 } from "mongoose";
 var FULL_ANALYTICS_ACCESS_ROLES = [
   "manager",
   "founder"
@@ -8380,7 +10352,7 @@ var FULL_ANALYTICS_ACCESS_ROLES = [
 var hasFullAnalyticsAccess = (role) => FULL_ANALYTICS_ACCESS_ROLES.includes(role);
 var isAdminOrManager4 = (role) => role === "manager" || role === "founder";
 var getDashboardStats = async (userId, role) => {
-  const ownerId = new Types13.ObjectId(userId);
+  const ownerId = new Types17.ObjectId(userId);
   const isPrivileged = isAdminOrManager4(role);
   const listingMatch = isPrivileged ? {} : { associate_id: ownerId };
   const commissionMatch = {
@@ -8480,7 +10452,7 @@ var getTopPromoters = async () => {
   ]);
 };
 var getListingsViewsAnalytics = async (userId, role) => {
-  const ownerId = new Types13.ObjectId(userId);
+  const ownerId = new Types17.ObjectId(userId);
   const canViewAllAnalytics = hasFullAnalyticsAccess(role);
   const listingMatch = canViewAllAnalytics ? {} : {
     associate_id: ownerId
@@ -8870,195 +10842,15 @@ var requireInvictusAccess = async (req, _res, next) => {
 var invictusAccessMiddleware_default = requireInvictusAccess;
 
 // src/modules/challengePillars/challenge.pillar.service.ts
-import { Types as Types14 } from "mongoose";
-
-// src/modules/challengePillars/challenge.pillar.model.schema.ts
-import { Schema as Schema11, model as model11 } from "mongoose";
-
-// src/modules/challengePillars/challenge.pillar.interface.ts
-var PILLAR_NAMES = ["FEARLESS", "LIMITLESS", "BORDERLESS"];
-var PILLAR_SLUGS = ["fearless", "limitless", "borderless"];
-var PILLAR_ICONS = ["crown", "infinity", "globe"];
-var PILLAR_STATUSES = ["draft", "published", "archived"];
-var INTRO_VIDEO_STATUSES = [
-  "not_uploaded",
-  "processing",
-  "ready",
-  "failed"
-];
-
-// src/modules/challengePillars/challenge.pillar.model.schema.ts
-var pillarIntroVideoSchema = new Schema11(
-  {
-    cloudinaryPublicId: {
-      type: String,
-      trim: true
-    },
-    cloudinaryAssetId: {
-      type: String,
-      trim: true
-    },
-    secureUrl: {
-      type: String,
-      trim: true
-    },
-    playbackUrl: {
-      type: String,
-      trim: true
-    },
-    thumbnailUrl: {
-      type: String,
-      trim: true
-    },
-    durationSeconds: {
-      type: Number,
-      min: 0
-    },
-    format: {
-      type: String,
-      trim: true
-    },
-    bytes: {
-      type: Number,
-      min: 0
-    },
-    status: {
-      type: String,
-      enum: INTRO_VIDEO_STATUSES,
-      default: "not_uploaded"
-    }
-  },
-  {
-    _id: false
-  }
-);
-var challengePillarSchema = new Schema11(
-  {
-    name: {
-      type: String,
-      enum: PILLAR_NAMES,
-      required: true,
-      unique: true,
-      trim: true
-    },
-    slug: {
-      type: String,
-      enum: PILLAR_SLUGS,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true
-    },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 150
-    },
-    tagline: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 250
-    },
-    description: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 3e3
-    },
-    icon: {
-      type: String,
-      enum: PILLAR_ICONS,
-      required: true
-    },
-    accentColor: {
-      type: String,
-      default: "#C9A84C",
-      trim: true
-    },
-    isPaid: {
-      type: Boolean,
-      default: false,
-      required: true,
-      index: true
-    },
-    priceCents: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    currency: {
-      type: String,
-      enum: ["usd"],
-      default: "usd"
-    },
-    stripePriceId: {
-      type: String,
-      trim: true
-    },
-    introVideo: {
-      type: pillarIntroVideoSchema,
-      default: () => ({
-        status: "not_uploaded"
-      })
-    },
-    order: {
-      type: Number,
-      required: true,
-      unique: true,
-      min: 1,
-      max: 3
-    },
-    status: {
-      type: String,
-      enum: PILLAR_STATUSES,
-      default: "draft",
-      index: true
-    },
-    publishedAt: {
-      type: Date
-    },
-    archivedAt: {
-      type: Date
-    },
-    createdBy: {
-      type: Schema11.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema11.Types.ObjectId,
-      ref: "User"
-    }
-  },
-  {
-    timestamps: true,
-    collection: "challengepillars"
-  }
-);
-challengePillarSchema.index({
-  status: 1,
-  order: 1
-});
-challengePillarSchema.index({
-  isPaid: 1,
-  status: 1
-});
-var ChallengePillar = model11(
-  "ChallengePillar",
-  challengePillarSchema
-);
-
-// src/modules/challengePillars/challenge.pillar.service.ts
-var throwServiceError2 = (message, statusCode) => {
+import { Types as Types18 } from "mongoose";
+var throwServiceError6 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
 function assertPillarExists(pillar, message = "Challenge pillar not found") {
   if (!pillar) {
-    throwServiceError2(message, 404);
+    throwServiceError6(message, 404);
   }
 }
 var isAdminOrManager5 = (role) => {
@@ -9070,16 +10862,16 @@ var validatePaymentConfiguration = ({
   stripePriceId
 }) => {
   if (isPaid && priceCents <= 0 && !stripePriceId) {
-    throwServiceError2(
+    throwServiceError6(
       "Paid pillar requires priceCents or Stripe Price ID",
       400
     );
   }
   if (!isPaid && priceCents > 0) {
-    throwServiceError2("Free pillar price must be zero", 400);
+    throwServiceError6("Free pillar price must be zero", 400);
   }
   if (!isPaid && stripePriceId) {
-    throwServiceError2("Free pillar cannot have Stripe Price ID", 400);
+    throwServiceError6("Free pillar cannot have Stripe Price ID", 400);
   }
 };
 var createChallengePillar = async (payload, actorId) => {
@@ -9091,7 +10883,7 @@ var createChallengePillar = async (payload, actorId) => {
     ]
   });
   if (existingPillar) {
-    throwServiceError2("Challenge pillar already exists", 409);
+    throwServiceError6("Challenge pillar already exists", 409);
   }
   const isPaid = payload.isPaid ?? false;
   const priceCents = payload.priceCents ?? 0;
@@ -9111,12 +10903,12 @@ var createChallengePillar = async (payload, actorId) => {
       ...payload.introVideo
     },
     status: "draft",
-    createdBy: new Types14.ObjectId(actorId)
+    createdBy: new Types18.ObjectId(actorId)
   });
   return pillar;
 };
 var seedDefaultChallengePillars = async (actorId) => {
-  const createdBy = new Types14.ObjectId(actorId);
+  const createdBy = new Types18.ObjectId(actorId);
   const defaultPillars = [
     {
       name: "FEARLESS",
@@ -9217,7 +11009,7 @@ var updateChallengePillar = async (pillarId, payload, actorId) => {
   const pillar = await ChallengePillar.findById(pillarId);
   assertPillarExists(pillar);
   if (pillar.status === "archived") {
-    throwServiceError2("Archived pillar cannot be updated", 400);
+    throwServiceError6("Archived pillar cannot be updated", 400);
   }
   const nextIsPaid = payload.isPaid ?? pillar.isPaid;
   let nextPriceCents = payload.priceCents ?? pillar.priceCents;
@@ -9253,7 +11045,7 @@ var updateChallengePillar = async (pillarId, payload, actorId) => {
       ...payload.introVideo
     });
   }
-  pillar.updatedBy = new Types14.ObjectId(actorId);
+  pillar.updatedBy = new Types18.ObjectId(actorId);
   await pillar.save();
   return pillar.populate("updatedBy", "fullName email role profileImage");
 };
@@ -9261,7 +11053,7 @@ var publishChallengePillar = async (pillarId, actorId) => {
   const pillar = await ChallengePillar.findById(pillarId);
   assertPillarExists(pillar);
   if (pillar.status === "archived") {
-    throwServiceError2("Archived pillar cannot be published", 400);
+    throwServiceError6("Archived pillar cannot be published", 400);
   }
   validatePaymentConfiguration({
     isPaid: pillar.isPaid,
@@ -9271,7 +11063,7 @@ var publishChallengePillar = async (pillarId, actorId) => {
   pillar.status = "published";
   pillar.publishedAt = /* @__PURE__ */ new Date();
   pillar.archivedAt = void 0;
-  pillar.updatedBy = new Types14.ObjectId(actorId);
+  pillar.updatedBy = new Types18.ObjectId(actorId);
   await pillar.save();
   return pillar;
 };
@@ -9279,11 +11071,11 @@ var moveChallengePillarToDraft = async (pillarId, actorId) => {
   const pillar = await ChallengePillar.findById(pillarId);
   assertPillarExists(pillar);
   if (pillar.status === "archived") {
-    throwServiceError2("Archived pillar cannot be moved to draft", 400);
+    throwServiceError6("Archived pillar cannot be moved to draft", 400);
   }
   pillar.status = "draft";
   pillar.publishedAt = void 0;
-  pillar.updatedBy = new Types14.ObjectId(actorId);
+  pillar.updatedBy = new Types18.ObjectId(actorId);
   await pillar.save();
   return pillar;
 };
@@ -9293,7 +11085,7 @@ var archiveChallengePillar = async (pillarId, actorId) => {
   pillar.status = "archived";
   pillar.archivedAt = /* @__PURE__ */ new Date();
   pillar.publishedAt = void 0;
-  pillar.updatedBy = new Types14.ObjectId(actorId);
+  pillar.updatedBy = new Types18.ObjectId(actorId);
   await pillar.save();
   return pillar;
 };
@@ -9660,10 +11452,10 @@ var challengePillarRoutes = router13;
 import { Router as Router14 } from "express";
 
 // src/modules/courseModules/course.module.service.ts
-import { Types as Types15 } from "mongoose";
+import { Types as Types19 } from "mongoose";
 
 // src/modules/courseModules/course.module.model.schema.ts
-import { Schema as Schema12, model as model12 } from "mongoose";
+import { Schema as Schema17, model as model17 } from "mongoose";
 
 // src/modules/courseModules/course.module.interface.ts
 var COURSE_MODULE_STATUSES = [
@@ -9673,10 +11465,10 @@ var COURSE_MODULE_STATUSES = [
 ];
 
 // src/modules/courseModules/course.module.model.schema.ts
-var courseModuleSchema = new Schema12(
+var courseModuleSchema = new Schema17(
   {
     pillar: {
-      type: Schema12.Types.ObjectId,
+      type: Schema17.Types.ObjectId,
       ref: "ChallengePillar",
       required: true,
       index: true
@@ -9761,12 +11553,12 @@ var courseModuleSchema = new Schema12(
       type: Date
     },
     createdBy: {
-      type: Schema12.Types.ObjectId,
+      type: Schema17.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema12.Types.ObjectId,
+      type: Schema17.Types.ObjectId,
       ref: "User"
     }
   },
@@ -9798,20 +11590,20 @@ courseModuleSchema.index({
   status: 1,
   moduleNumber: 1
 });
-var CourseModule = model12(
+var CourseModule = model17(
   "CourseModule",
   courseModuleSchema
 );
 
 // src/modules/courseModules/course.module.service.ts
-var throwServiceError3 = (message, statusCode) => {
+var throwServiceError7 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
 function assertCourseExists(pillar, message = "Challenge pillar not found") {
   if (!pillar) {
-    throwServiceError3(message, 404);
+    throwServiceError7(message, 404);
   }
 }
 var isAdminOrManager6 = (role) => {
@@ -9823,13 +11615,13 @@ var createCourseModule = async (payload, actorId) => {
   );
   assertCourseExists(pillar);
   if (!pillar) {
-    throwServiceError3(
+    throwServiceError7(
       "Challenge pillar not found",
       404
     );
   }
   if (pillar.status === "archived") {
-    throwServiceError3(
+    throwServiceError7(
       "Cannot create module under archived pillar",
       400
     );
@@ -9846,14 +11638,14 @@ var createCourseModule = async (payload, actorId) => {
     ]
   });
   if (existingModule) {
-    throwServiceError3(
+    throwServiceError7(
       "Module slug or module number already exists in this pillar",
       409
     );
   }
   const courseModule = await CourseModule.create({
     ...payload,
-    pillar: new Types15.ObjectId(
+    pillar: new Types19.ObjectId(
       payload.pillar
     ),
     estimatedDurationMinutes: payload.estimatedDurationMinutes ?? 0,
@@ -9863,7 +11655,7 @@ var createCourseModule = async (payload, actorId) => {
     maximumQuizAttempts: payload.maximumQuizAttempts ?? 2,
     completionPoints: payload.completionPoints ?? 20,
     status: "draft",
-    createdBy: new Types15.ObjectId(actorId)
+    createdBy: new Types19.ObjectId(actorId)
   });
   return courseModule.populate([
     {
@@ -9883,7 +11675,7 @@ var getAllCourseModules = async ({
 }) => {
   const filter = {};
   if (pillarId) {
-    filter.pillar = new Types15.ObjectId(pillarId);
+    filter.pillar = new Types19.ObjectId(pillarId);
   }
   if (!isAdminOrManager6(actorRole)) {
     filter.status = "published";
@@ -9917,7 +11709,7 @@ var getModulesByPillar = async (pillarId, actorRole) => {
     pillarFilter
   );
   if (!pillar) {
-    throwServiceError3(
+    throwServiceError7(
       "Challenge pillar not found or unavailable",
       404
     );
@@ -9961,7 +11753,7 @@ var getSingleCourseModule = async (moduleId, actorRole) => {
     "fullName email role profileImage"
   );
   if (!courseModule) {
-    throwServiceError3(
+    throwServiceError7(
       "Course module not found",
       404
     );
@@ -9974,13 +11766,13 @@ var updateCourseModule = async (moduleId, payload, actorId) => {
   );
   assertCourseExists(courseModule);
   if (!courseModule) {
-    throwServiceError3(
+    throwServiceError7(
       "Course module not found",
       404
     );
   }
   if (courseModule?.status === "archived") {
-    throwServiceError3(
+    throwServiceError7(
       "Archived module cannot be updated",
       400
     );
@@ -10005,7 +11797,7 @@ var updateCourseModule = async (moduleId, payload, actorId) => {
       $or: duplicateConditions
     });
     if (duplicateModule) {
-      throwServiceError3(
+      throwServiceError7(
         "Module slug or module number already exists in this pillar",
         409
       );
@@ -10051,7 +11843,7 @@ var updateCourseModule = async (moduleId, payload, actorId) => {
   if (payload.completionPoints !== void 0) {
     courseModule.completionPoints = payload.completionPoints;
   }
-  courseModule.updatedBy = new Types15.ObjectId(actorId);
+  courseModule.updatedBy = new Types19.ObjectId(actorId);
   await courseModule.save();
   return courseModule.populate([
     {
@@ -10070,13 +11862,13 @@ var publishCourseModule = async (moduleId, actorId) => {
   );
   assertCourseExists(courseModule);
   if (!courseModule) {
-    throwServiceError3(
+    throwServiceError7(
       "Course module not found",
       404
     );
   }
   if (courseModule.status === "archived") {
-    throwServiceError3(
+    throwServiceError7(
       "Archived module cannot be published",
       400
     );
@@ -10086,13 +11878,13 @@ var publishCourseModule = async (moduleId, actorId) => {
   );
   assertCourseExists(pillar);
   if (!pillar) {
-    throwServiceError3(
+    throwServiceError7(
       "Parent challenge pillar not found",
       404
     );
   }
   if (pillar.status !== "published") {
-    throwServiceError3(
+    throwServiceError7(
       "Publish the parent challenge pillar before publishing this module",
       400
     );
@@ -10100,7 +11892,7 @@ var publishCourseModule = async (moduleId, actorId) => {
   courseModule.status = "published";
   courseModule.publishedAt = /* @__PURE__ */ new Date();
   courseModule.archivedAt = void 0;
-  courseModule.updatedBy = new Types15.ObjectId(actorId);
+  courseModule.updatedBy = new Types19.ObjectId(actorId);
   await courseModule.save();
   return courseModule;
 };
@@ -10110,20 +11902,20 @@ var moveCourseModuleToDraft = async (moduleId, actorId) => {
   );
   assertCourseExists(courseModule);
   if (!courseModule) {
-    throwServiceError3(
+    throwServiceError7(
       "Course module not found",
       404
     );
   }
   if (courseModule.status === "archived") {
-    throwServiceError3(
+    throwServiceError7(
       "Archived module cannot be moved to draft",
       400
     );
   }
   courseModule.status = "draft";
   courseModule.publishedAt = void 0;
-  courseModule.updatedBy = new Types15.ObjectId(actorId);
+  courseModule.updatedBy = new Types19.ObjectId(actorId);
   await courseModule.save();
   return courseModule;
 };
@@ -10133,7 +11925,7 @@ var archiveCourseModule = async (moduleId, actorId) => {
   );
   assertCourseExists(courseModule);
   if (!courseModule) {
-    throwServiceError3(
+    throwServiceError7(
       "Course module not found",
       404
     );
@@ -10141,7 +11933,7 @@ var archiveCourseModule = async (moduleId, actorId) => {
   courseModule.status = "archived";
   courseModule.archivedAt = /* @__PURE__ */ new Date();
   courseModule.publishedAt = void 0;
-  courseModule.updatedBy = new Types15.ObjectId(actorId);
+  courseModule.updatedBy = new Types19.ObjectId(actorId);
   await courseModule.save();
   return courseModule;
 };
@@ -10478,11 +12270,7 @@ var allowedVideoTypes = [
   "video/x-m4v",
   "video/mpeg"
 ];
-<<<<<<< HEAD
 var allowedImageTypes = [
-=======
-var allowedImageTypes2 = [
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
   "image/jpeg",
   "image/jpg",
   "image/png",
@@ -10498,11 +12286,7 @@ var allowedResourceTypes = [
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
   "text/plain",
   "text/csv",
-<<<<<<< HEAD
   ...allowedImageTypes
-=======
-  ...allowedImageTypes2
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 ];
 var uploadModuleVideo = multer2({
   storage: memoryStorage,
@@ -10527,11 +12311,7 @@ var uploadModuleResource = multer2({
   },
   fileFilter: (_req, file, callback) => {
     if (file.fieldname === "thumbnail") {
-<<<<<<< HEAD
       if (!allowedImageTypes.includes(file.mimetype)) {
-=======
-      if (!allowedImageTypes2.includes(file.mimetype)) {
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
         return callback(
           new Error("Thumbnail must be JPG, JPEG, PNG, or WEBP")
         );
@@ -10791,10 +12571,10 @@ var uploadThumbnailToCloudinary = async (file, folder) => {
 };
 
 // src/modules/moduleVideos/module.video.service.ts
-import { Types as Types17 } from "mongoose";
+import { Types as Types20 } from "mongoose";
 
 // src/modules/moduleVideos/module.video.model.schema.ts
-import { model as model13, Schema as Schema13 } from "mongoose";
+import { model as model18, Schema as Schema18 } from "mongoose";
 
 // src/modules/moduleVideos/module.video.interface.ts
 var MODULE_VIDEO_STATUSES = [
@@ -10809,10 +12589,10 @@ var VIDEO_UPLOAD_STATUSES = [
 ];
 
 // src/modules/moduleVideos/module.video.model.schema.ts
-var moduleVideoSchema = new Schema13(
+var moduleVideoSchema = new Schema18(
   {
     module: {
-      type: Schema13.Types.ObjectId,
+      type: Schema18.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
@@ -10939,12 +12719,12 @@ var moduleVideoSchema = new Schema13(
       type: Date
     },
     uploadedBy: {
-      type: Schema13.Types.ObjectId,
+      type: Schema18.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema13.Types.ObjectId,
+      type: Schema18.Types.ObjectId,
       ref: "User"
     }
   },
@@ -10961,659 +12741,25 @@ moduleVideoSchema.index({
   status: 1,
   order: 1
 });
-var ModuleVideo = model13(
+var ModuleVideo = model18(
   "ModuleVideo",
   moduleVideoSchema
 );
 
-// src/modules/userEntitlements/userEntitlements.service.ts
-import { Types as Types16 } from "mongoose";
-
-// src/modules/userEntitlements/userEntitlements.model.schema.ts
-import { model as model14, Schema as Schema14 } from "mongoose";
-
-// src/modules/userEntitlements/userEntitlements.interface.ts
-var ENTITLEMENT_TYPES = [
-  "pillar",
-  "bundle",
-  "event",
-  "retreat"
-];
-var ENTITLEMENT_SOURCES = [
-  "stripe",
-  "admin",
-  "promotion",
-  "complimentary",
-  "migration"
-];
-var ADMIN_ENTITLEMENT_SOURCES = [
-  "admin",
-  "promotion",
-  "complimentary",
-  "migration"
-];
-var ENTITLEMENT_STATUSES = [
-  "active",
-  "revoked",
-  "refunded",
-  "expired"
-];
-
-// src/modules/userEntitlements/userEntitlements.model.schema.ts
-var userEntitlementSchema = new Schema14(
-  {
-    user: {
-      type: Schema14.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    entitlementType: {
-      type: String,
-      enum: ENTITLEMENT_TYPES,
-      required: true,
-      index: true
-    },
-    entitlementKey: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    pillar: {
-      type: Schema14.Types.ObjectId,
-      ref: "ChallengePillar",
-      index: true
-    },
-    targetId: {
-      type: Schema14.Types.ObjectId,
-      index: true
-    },
-    source: {
-      type: String,
-      enum: ENTITLEMENT_SOURCES,
-      required: true,
-      index: true
-    },
-    status: {
-      type: String,
-      enum: ENTITLEMENT_STATUSES,
-      default: "active",
-      required: true,
-      index: true
-    },
-    paymentSession: {
-      type: Schema14.Types.ObjectId,
-      ref: "PaymentSession",
-      index: true
-    },
-    startsAt: {
-      type: Date,
-      required: true,
-      default: Date.now
-    },
-    expiresAt: {
-      type: Date,
-      index: true
-    },
-    grantedBy: {
-      type: Schema14.Types.ObjectId,
-      ref: "User"
-    },
-    statusChangedBy: {
-      type: Schema14.Types.ObjectId,
-      ref: "User"
-    },
-    statusReason: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    revokedAt: {
-      type: Date
-    },
-    refundedAt: {
-      type: Date
-    },
-    expiredAt: {
-      type: Date
-    }
-  },
-  {
-    timestamps: true,
-    collection: "userentitlements"
-  }
-);
-userEntitlementSchema.index(
-  {
-    user: 1,
-    entitlementKey: 1
-  },
-  {
-    unique: true
-  }
-);
-userEntitlementSchema.index({
-  user: 1,
-  status: 1,
-  startsAt: 1,
-  expiresAt: 1
-});
-userEntitlementSchema.index({
-  user: 1,
-  pillar: 1,
-  status: 1
-});
-userEntitlementSchema.index({
-  entitlementType: 1,
-  status: 1,
-  createdAt: -1
-});
-var UserEntitlement = model14(
-  "UserEntitlement",
-  userEntitlementSchema
-);
-
-// src/modules/userEntitlements/userEntitlements.service.ts
-var throwServiceError4 = (message, statusCode) => {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  throw error;
-};
-var assertFound2 = (value, message, statusCode) => {
-  if (value === null || value === void 0) {
-    throwServiceError4(message, statusCode);
-  }
-};
-var assertValidObjectId = (value, fieldName) => {
-  if (!Types16.ObjectId.isValid(value)) {
-    throwServiceError4(`${fieldName} is invalid`, 400);
-  }
-};
-var isDuplicateKeyError = (error) => {
-  return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
-};
-var parseOptionalDate = (value) => {
-  return value ? new Date(value) : /* @__PURE__ */ new Date();
-};
-var parseNullableDate = (value) => {
-  if (value === null || value === void 0) {
-    return void 0;
-  }
-  return new Date(value);
-};
-var buildEntitlementKey = ({
-  entitlementType,
-  pillarId,
-  targetId
-}) => {
-  if (entitlementType === "pillar") {
-    if (!pillarId) {
-      throwServiceError4("Pillar ID is required", 400);
-    }
-    return `pillar:${pillarId}`;
-  }
-  if (!targetId) {
-    throwServiceError4("Target ID is required", 400);
-  }
-  return `${entitlementType}:${targetId}`;
-};
-var validateDateRange = (startsAt, expiresAt) => {
-  if (expiresAt && expiresAt <= startsAt) {
-    throwServiceError4("expiresAt must be later than startsAt", 400);
-  }
-};
-var populateEntitlement = (entitlementId) => {
-  return UserEntitlement.findById(entitlementId).populate("user", "fullName email role accessTo profileImage accountStatus").populate("pillar", "name slug title isPaid priceCents currency status").populate(
-    "paymentSession",
-    "purpose status stripeCheckoutSessionId amountTotal currency"
-  ).populate("grantedBy", "fullName email role profileImage").populate("statusChangedBy", "fullName email role profileImage");
-};
-var expirePastEntitlements = async (userId) => {
-  const now = /* @__PURE__ */ new Date();
-  const filter = {
-    status: "active",
-    expiresAt: {
-      $lte: now
-    }
-  };
-  if (userId) {
-    filter.user = new Types16.ObjectId(userId);
-  }
-  await UserEntitlement.updateMany(filter, {
-    $set: {
-      status: "expired",
-      expiredAt: now
-    }
-  });
-};
-var ensureUserExists2 = async (userId) => {
-  assertValidObjectId(userId, "User ID");
-  const user = await User.findById(userId).select(
-    "_id fullName email role accessTo accountStatus"
-  );
-  assertFound2(user, "User not found", 404);
-  return user;
-};
-var ensurePillarExists = async (pillarId) => {
-  assertValidObjectId(pillarId, "Pillar ID");
-  const pillar = await ChallengePillar.findById(pillarId);
-  assertFound2(pillar, "Challenge pillar not found", 404);
-  if (pillar.status === "archived") {
-    throwServiceError4("Cannot grant access to an archived pillar", 400);
-  }
-  return pillar;
-};
-var grantEntitlementInternal = async (input) => {
-  await ensureUserExists2(input.userId);
-  if (input.entitlementType === "pillar") {
-    if (!input.pillarId) {
-      throwServiceError4("Pillar ID is required", 400);
-    }
-    await ensurePillarExists(input.pillarId);
-  } else {
-    if (!input.targetId) {
-      throwServiceError4("Target ID is required", 400);
-    }
-    assertValidObjectId(input.targetId, "Target ID");
-  }
-  if (input.paymentSessionId) {
-    assertValidObjectId(input.paymentSessionId, "Payment session ID");
-  }
-  if (input.grantedBy) {
-    assertValidObjectId(input.grantedBy, "Granted by user ID");
-  }
-  validateDateRange(input.startsAt, input.expiresAt);
-  const entitlementKey = buildEntitlementKey({
-    entitlementType: input.entitlementType,
-    pillarId: input.pillarId,
-    targetId: input.targetId
-  });
-  const existingEntitlement = await UserEntitlement.findOne({
-    user: new Types16.ObjectId(input.userId),
-    entitlementKey
-  });
-  if (existingEntitlement) {
-    existingEntitlement.entitlementType = input.entitlementType;
-    existingEntitlement.entitlementKey = entitlementKey;
-    existingEntitlement.source = input.source;
-    existingEntitlement.status = "active";
-    existingEntitlement.startsAt = input.startsAt;
-    existingEntitlement.set("expiresAt", input.expiresAt);
-    if (input.entitlementType === "pillar") {
-      existingEntitlement.pillar = new Types16.ObjectId(input.pillarId);
-      existingEntitlement.set("targetId", void 0);
-    } else {
-      existingEntitlement.targetId = new Types16.ObjectId(input.targetId);
-      existingEntitlement.set("pillar", void 0);
-    }
-    existingEntitlement.set(
-      "paymentSession",
-      input.paymentSessionId ? new Types16.ObjectId(input.paymentSessionId) : void 0
-    );
-    existingEntitlement.set(
-      "grantedBy",
-      input.grantedBy ? new Types16.ObjectId(input.grantedBy) : void 0
-    );
-    existingEntitlement.set("statusChangedBy", void 0);
-    existingEntitlement.set("statusReason", void 0);
-    existingEntitlement.set("revokedAt", void 0);
-    existingEntitlement.set("refundedAt", void 0);
-    existingEntitlement.set("expiredAt", void 0);
-    await existingEntitlement.save();
-    const populated = await populateEntitlement(existingEntitlement._id);
-    assertFound2(populated, "Entitlement not found after update", 500);
-    return populated;
-  }
-  const createData = {
-    user: new Types16.ObjectId(input.userId),
-    entitlementType: input.entitlementType,
-    entitlementKey,
-    source: input.source,
-    status: "active",
-    startsAt: input.startsAt
-  };
-  if (input.entitlementType === "pillar") {
-    createData.pillar = new Types16.ObjectId(input.pillarId);
-  } else {
-    createData.targetId = new Types16.ObjectId(input.targetId);
-  }
-  if (input.expiresAt) {
-    createData.expiresAt = input.expiresAt;
-  }
-  if (input.paymentSessionId) {
-    createData.paymentSession = new Types16.ObjectId(input.paymentSessionId);
-  }
-  if (input.grantedBy) {
-    createData.grantedBy = new Types16.ObjectId(input.grantedBy);
-  }
-  try {
-    const entitlement = await UserEntitlement.create(createData);
-    const populated = await populateEntitlement(entitlement._id);
-    assertFound2(populated, "Entitlement not found after creation", 500);
-    return populated;
-  } catch (error) {
-    if (isDuplicateKeyError(error)) {
-      const entitlement = await UserEntitlement.findOne({
-        user: new Types16.ObjectId(input.userId),
-        entitlementKey
-      });
-      assertFound2(
-        entitlement,
-        "Existing entitlement could not be retrieved",
-        409
-      );
-      return entitlement;
-    }
-    throw error;
-  }
-};
-var grantEntitlementByAdmin = async (payload, actorId) => {
-  const entitlementType = payload.entitlementType ?? "pillar";
-  const startsAt = parseOptionalDate(payload.startsAt);
-  const expiresAt = parseNullableDate(payload.expiresAt);
-  return grantEntitlementInternal({
-    userId: payload.user,
-    entitlementType,
-    ...payload.pillar !== void 0 ? {
-      pillarId: payload.pillar
-    } : {},
-    ...payload.targetId !== void 0 ? {
-      targetId: payload.targetId
-    } : {},
-    source: payload.source ?? "admin",
-    ...payload.paymentSession !== void 0 ? {
-      paymentSessionId: payload.paymentSession
-    } : {},
-    startsAt,
-    ...expiresAt !== void 0 ? { expiresAt } : {},
-    grantedBy: actorId
-  });
-};
-var activatePillarEntitlementFromPayment = async (payload) => {
-  return grantEntitlementInternal({
-    userId: payload.userId,
-    entitlementType: "pillar",
-    pillarId: payload.pillarId,
-    source: "stripe",
-    paymentSessionId: payload.paymentSessionId,
-    startsAt: payload.startsAt ?? /* @__PURE__ */ new Date(),
-    ...payload.expiresAt !== void 0 ? {
-      expiresAt: payload.expiresAt
-    } : {}
-  });
-};
-var hasActivePillarEntitlement = async (userId, pillarId) => {
-  assertValidObjectId(userId, "User ID");
-  assertValidObjectId(pillarId, "Pillar ID");
-  await expirePastEntitlements(userId);
-  const now = /* @__PURE__ */ new Date();
-  const filter = {
-    user: new Types16.ObjectId(userId),
-    entitlementType: "pillar",
-    pillar: new Types16.ObjectId(pillarId),
-    status: "active",
-    startsAt: {
-      $lte: now
-    },
-    $or: [
-      {
-        expiresAt: {
-          $exists: false
-        }
-      },
-      {
-        expiresAt: {
-          $gt: now
-        }
-      }
-    ]
-  };
-  const entitlement = await UserEntitlement.exists(filter);
-  return Boolean(entitlement);
-};
-var checkPillarAccess = async (userId, pillarId) => {
-  assertValidObjectId(userId, "User ID");
-  assertValidObjectId(pillarId, "Pillar ID");
-  const pillar = await ChallengePillar.findOne({
-    _id: pillarId,
-    status: "published"
-  }).select("name slug title isPaid priceCents currency status");
-  assertFound2(pillar, "Challenge pillar not found or unavailable", 404);
-  if (!pillar.isPaid) {
-    return {
-      hasAccess: true,
-      accessType: "free",
-      reason: "free_pillar",
-      pillar,
-      entitlement: null
-    };
-  }
-  await expirePastEntitlements(userId);
-  const now = /* @__PURE__ */ new Date();
-  const entitlement = await UserEntitlement.findOne({
-    user: new Types16.ObjectId(userId),
-    entitlementType: "pillar",
-    pillar: new Types16.ObjectId(pillarId),
-    status: "active",
-    startsAt: {
-      $lte: now
-    },
-    $or: [
-      {
-        expiresAt: {
-          $exists: false
-        }
-      },
-      {
-        expiresAt: {
-          $gt: now
-        }
-      }
-    ]
-  }).populate("paymentSession", "status purpose amountTotal currency");
-  if (!entitlement) {
-    return {
-      hasAccess: false,
-      accessType: "locked",
-      reason: "pillar_purchase_required",
-      pillar,
-      entitlement: null
-    };
-  }
-  return {
-    hasAccess: true,
-    accessType: "purchased",
-    reason: "active_pillar_entitlement",
-    pillar,
-    entitlement
-  };
-};
-var getMyEntitlements = async (userId) => {
-  assertValidObjectId(userId, "User ID");
-  await expirePastEntitlements(userId);
-  const entitlements = await UserEntitlement.find({
-    user: new Types16.ObjectId(userId)
-  }).sort({
-    createdAt: -1
-  }).populate("pillar", "name slug title isPaid priceCents currency status").populate(
-    "paymentSession",
-    "purpose status amountTotal currency stripeCheckoutSessionId"
-  );
-  const now = /* @__PURE__ */ new Date();
-  return entitlements.map((entitlement) => {
-    const isCurrentlyActive = entitlement.status === "active" && entitlement.startsAt <= now && (!entitlement.expiresAt || entitlement.expiresAt > now);
-    return {
-      ...entitlement.toObject(),
-      hasAccess: isCurrentlyActive
-    };
-  });
-};
-var getAllEntitlements = async (options2) => {
-  await expirePastEntitlements();
-  const page = options2.page ?? 1;
-  const limit = options2.limit ?? 20;
-  const skip = (page - 1) * limit;
-  const filter = {};
-  if (options2.userId) {
-    assertValidObjectId(options2.userId, "User ID");
-    filter.user = new Types16.ObjectId(options2.userId);
-  }
-  if (options2.pillarId) {
-    assertValidObjectId(options2.pillarId, "Pillar ID");
-    filter.pillar = new Types16.ObjectId(options2.pillarId);
-  }
-  if (options2.entitlementType) {
-    filter.entitlementType = options2.entitlementType;
-  }
-  if (options2.source) {
-    filter.source = options2.source;
-  }
-  if (options2.status) {
-    filter.status = options2.status;
-  }
-  const [data, total] = await Promise.all([
-    UserEntitlement.find(filter).sort({
-      createdAt: -1
-    }).skip(skip).limit(limit).populate(
-      "user",
-      "fullName email role accessTo profileImage accountStatus"
-    ).populate("pillar", "name slug title isPaid priceCents currency status").populate(
-      "paymentSession",
-      "purpose status amountTotal currency stripeCheckoutSessionId"
-    ).populate("grantedBy", "fullName email role").populate("statusChangedBy", "fullName email role"),
-    UserEntitlement.countDocuments(filter)
-  ]);
-  return {
-    data,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit)
-    }
-  };
-};
-var getSingleEntitlement = async (entitlementId) => {
-  assertValidObjectId(entitlementId, "Entitlement ID");
-  const entitlement = await populateEntitlement(entitlementId);
-  assertFound2(entitlement, "User entitlement not found", 404);
-  return entitlement;
-};
-var changeEntitlementStatus = async (input) => {
-  assertValidObjectId(input.entitlementId, "Entitlement ID");
-  assertValidObjectId(input.actorId, "Actor ID");
-  const entitlement = await UserEntitlement.findById(input.entitlementId);
-  assertFound2(entitlement, "User entitlement not found", 404);
-  entitlement.status = input.status;
-  entitlement.statusChangedBy = new Types16.ObjectId(input.actorId);
-  if (input.reason !== void 0) {
-    entitlement.statusReason = input.reason;
-  } else {
-    entitlement.set("statusReason", void 0);
-  }
-  const now = /* @__PURE__ */ new Date();
-  if (input.status === "revoked") {
-    entitlement.revokedAt = now;
-    entitlement.set("refundedAt", void 0);
-    entitlement.set("expiredAt", void 0);
-  }
-  if (input.status === "refunded") {
-    entitlement.refundedAt = now;
-    entitlement.set("revokedAt", void 0);
-    entitlement.set("expiredAt", void 0);
-  }
-  if (input.status === "expired") {
-    entitlement.expiredAt = now;
-    entitlement.set("revokedAt", void 0);
-    entitlement.set("refundedAt", void 0);
-  }
-  await entitlement.save();
-  const populated = await populateEntitlement(entitlement._id);
-  assertFound2(populated, "Entitlement not found after status update", 500);
-  return populated;
-};
-var revokeEntitlement = async (entitlementId, payload, actorId) => {
-  return changeEntitlementStatus({
-    entitlementId,
-    status: "revoked",
-    actorId,
-    ...payload.reason !== void 0 ? {
-      reason: payload.reason
-    } : {}
-  });
-};
-var refundEntitlement = async (entitlementId, payload, actorId) => {
-  return changeEntitlementStatus({
-    entitlementId,
-    status: "refunded",
-    actorId,
-    ...payload.reason !== void 0 ? {
-      reason: payload.reason
-    } : {}
-  });
-};
-var expireEntitlement = async (entitlementId, payload, actorId) => {
-  return changeEntitlementStatus({
-    entitlementId,
-    status: "expired",
-    actorId,
-    ...payload.reason !== void 0 ? {
-      reason: payload.reason
-    } : {}
-  });
-};
-var reactivateEntitlement = async (entitlementId, payload, actorId) => {
-  assertValidObjectId(entitlementId, "Entitlement ID");
-  const entitlement = await UserEntitlement.findById(entitlementId);
-  assertFound2(entitlement, "User entitlement not found", 404);
-  const startsAt = parseOptionalDate(payload.startsAt);
-  const expiresAt = parseNullableDate(payload.expiresAt);
-  validateDateRange(startsAt, expiresAt);
-  entitlement.status = "active";
-  entitlement.source = payload.source ?? "admin";
-  entitlement.startsAt = startsAt;
-  entitlement.set("expiresAt", expiresAt);
-  entitlement.grantedBy = new Types16.ObjectId(actorId);
-  entitlement.set("statusChangedBy", void 0);
-  entitlement.set("statusReason", void 0);
-  entitlement.set("revokedAt", void 0);
-  entitlement.set("refundedAt", void 0);
-  entitlement.set("expiredAt", void 0);
-  entitlement.set("paymentSession", void 0);
-  await entitlement.save();
-  const populated = await populateEntitlement(entitlement._id);
-  assertFound2(populated, "Entitlement not found after reactivation", 500);
-  return populated;
-};
-var userEntitlementService = {
-  grantEntitlementByAdmin,
-  activatePillarEntitlementFromPayment,
-  hasActivePillarEntitlement,
-  checkPillarAccess,
-  getMyEntitlements,
-  getAllEntitlements,
-  getSingleEntitlement,
-  revokeEntitlement,
-  refundEntitlement,
-  expireEntitlement,
-  reactivateEntitlement
-};
-
 // src/modules/moduleVideos/module.video.service.ts
-var throwServiceError5 = (message, statusCode) => {
+var throwServiceError8 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound3 = (value, message, statusCode) => {
+var assertFound6 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError5(message, statusCode);
+    throwServiceError8(message, statusCode);
   }
 };
 var isAdminOrManager7 = (role) => {
   return role === "admin" || role === "manager";
 };
-<<<<<<< HEAD
 var setNullableField = (document, path3, value) => {
   if (value === null) {
     document.set(path3, void 0);
@@ -11621,22 +12767,13 @@ var setNullableField = (document, path3, value) => {
   }
   if (value !== void 0) {
     document.set(path3, value);
-=======
-var setNullableField = (document, path2, value) => {
-  if (value === null) {
-    document.set(path2, void 0);
-    return;
-  }
-  if (value !== void 0) {
-    document.set(path2, value);
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
   }
 };
 var ensureCourseModuleExists = async (moduleId) => {
   const courseModule = await CourseModule.findById(moduleId);
-  assertFound3(courseModule, "Course module not found", 404);
+  assertFound6(courseModule, "Course module not found", 404);
   if (courseModule.status === "archived") {
-    throwServiceError5(
+    throwServiceError8(
       "Cannot manage videos under an archived course module",
       400
     );
@@ -11653,13 +12790,13 @@ var createModuleVideo = async (moduleId, payload, actorId) => {
     ]
   });
   if (existingVideo) {
-    throwServiceError5(
+    throwServiceError8(
       "Video slug, order or Cloudinary public ID already exists",
       409
     );
   }
   const createData = {
-    module: new Types17.ObjectId(moduleId),
+    module: new Types20.ObjectId(moduleId),
     title: payload.title,
     slug: payload.slug,
     provider: "cloudinary",
@@ -11674,7 +12811,7 @@ var createModuleVideo = async (moduleId, payload, actorId) => {
     order: payload.order,
     uploadStatus: payload.uploadStatus ?? "ready",
     status: "draft",
-    uploadedBy: new Types17.ObjectId(actorId)
+    uploadedBy: new Types20.ObjectId(actorId)
   };
   const optionalValues = [
     ["description", payload.description],
@@ -11716,7 +12853,7 @@ var getAllModuleVideos = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    filter.module = new Types17.ObjectId(moduleId);
+    filter.module = new Types20.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager7(actorRole);
   if (!isPrivileged) {
@@ -11749,13 +12886,13 @@ var getVideosByModule = async (moduleId, actorRole) => {
     "pillar",
     "name slug title isPaid priceCents currency status"
   );
-  assertFound3(
+  assertFound6(
     courseModule,
     "Course module not found or unavailable",
     404
   );
   const filter = {
-    module: new Types17.ObjectId(moduleId)
+    module: new Types20.ObjectId(moduleId)
   };
   const isPrivileged = isAdminOrManager7(actorRole);
   if (!isPrivileged) {
@@ -11798,7 +12935,7 @@ var getSingleModuleVideo = async (videoId, actorRole) => {
     );
   }
   const video = await query;
-  assertFound3(video, "Module video not found", 404);
+  assertFound6(video, "Module video not found", 404);
   return video;
 };
 var checkVideoAccess = async (videoId, userId) => {
@@ -11811,7 +12948,7 @@ var checkVideoAccess = async (videoId, userId) => {
       select: "name slug title isPaid priceCents currency status"
     }
   });
-  assertFound3(video, "Module video not found", 404);
+  assertFound6(video, "Module video not found", 404);
   if (!video.isPaid) {
     return {
       canWatch: true,
@@ -11846,9 +12983,9 @@ var checkVideoAccess = async (videoId, userId) => {
 };
 var updateModuleVideo = async (videoId, payload, actorId) => {
   const video = await ModuleVideo.findById(videoId);
-  assertFound3(video, "Module video not found", 404);
+  assertFound6(video, "Module video not found", 404);
   if (video.status === "archived") {
-    throwServiceError5("Archived video cannot be updated", 400);
+    throwServiceError8("Archived video cannot be updated", 400);
   }
   const duplicateConditions = [];
   if (payload.slug !== void 0) {
@@ -11868,7 +13005,7 @@ var updateModuleVideo = async (videoId, payload, actorId) => {
       $or: duplicateConditions
     });
     if (duplicateVideo) {
-      throwServiceError5(
+      throwServiceError8(
         "Video slug, order or Cloudinary public ID already exists",
         409
       );
@@ -11906,7 +13043,7 @@ var updateModuleVideo = async (videoId, payload, actorId) => {
   setNullableField(video, "bytes", payload.bytes);
   setNullableField(video, "width", payload.width);
   setNullableField(video, "height", payload.height);
-  video.updatedBy = new Types17.ObjectId(actorId);
+  video.updatedBy = new Types20.ObjectId(actorId);
   await video.save();
   return video.populate([
     {
@@ -11926,17 +13063,17 @@ var updateModuleVideo = async (videoId, payload, actorId) => {
 };
 var publishModuleVideo = async (videoId, actorId) => {
   const video = await ModuleVideo.findById(videoId);
-  assertFound3(video, "Module video not found", 404);
+  assertFound6(video, "Module video not found", 404);
   if (video.status === "archived") {
-    throwServiceError5("Archived video cannot be published", 400);
+    throwServiceError8("Archived video cannot be published", 400);
   }
   if (video.uploadStatus !== "ready") {
-    throwServiceError5("Video upload must be ready before publishing", 400);
+    throwServiceError8("Video upload must be ready before publishing", 400);
   }
   const courseModule = await CourseModule.findById(video.module);
-  assertFound3(courseModule, "Parent course module not found", 404);
+  assertFound6(courseModule, "Parent course module not found", 404);
   if (courseModule.status !== "published") {
-    throwServiceError5(
+    throwServiceError8(
       "Publish the parent course module before publishing this video",
       400
     );
@@ -11944,29 +13081,29 @@ var publishModuleVideo = async (videoId, actorId) => {
   video.status = "published";
   video.publishedAt = /* @__PURE__ */ new Date();
   video.set("archivedAt", void 0);
-  video.updatedBy = new Types17.ObjectId(actorId);
+  video.updatedBy = new Types20.ObjectId(actorId);
   await video.save();
   return video;
 };
 var moveModuleVideoToDraft = async (videoId, actorId) => {
   const video = await ModuleVideo.findById(videoId);
-  assertFound3(video, "Module video not found", 404);
+  assertFound6(video, "Module video not found", 404);
   if (video.status === "archived") {
-    throwServiceError5("Archived video cannot be moved to draft", 400);
+    throwServiceError8("Archived video cannot be moved to draft", 400);
   }
   video.status = "draft";
   video.set("publishedAt", void 0);
-  video.updatedBy = new Types17.ObjectId(actorId);
+  video.updatedBy = new Types20.ObjectId(actorId);
   await video.save();
   return video;
 };
 var archiveModuleVideo = async (videoId, actorId) => {
   const video = await ModuleVideo.findById(videoId);
-  assertFound3(video, "Module video not found", 404);
+  assertFound6(video, "Module video not found", 404);
   video.status = "archived";
   video.archivedAt = /* @__PURE__ */ new Date();
   video.set("publishedAt", void 0);
-  video.updatedBy = new Types17.ObjectId(actorId);
+  video.updatedBy = new Types20.ObjectId(actorId);
   await video.save();
   return video;
 };
@@ -12331,10 +13468,10 @@ var moduleVideoRoutes = router15;
 import { Router as Router16 } from "express";
 
 // src/modules/moduleResources/module.resource.service.ts
-import { Types as Types18 } from "mongoose";
+import { Types as Types21 } from "mongoose";
 
 // src/modules/moduleResources/module.resource.model.schema.ts
-import { model as model15, Schema as Schema15 } from "mongoose";
+import { model as model19, Schema as Schema19 } from "mongoose";
 
 // src/modules/moduleResources/module.resource.interface.ts
 var MODULE_RESOURCE_STATUSES = [
@@ -12360,10 +13497,10 @@ var CLOUDINARY_RESOURCE_TYPES = [
 ];
 
 // src/modules/moduleResources/module.resource.model.schema.ts
-var moduleResourceSchema = new Schema15(
+var moduleResourceSchema = new Schema19(
   {
     module: {
-      type: Schema15.Types.ObjectId,
+      type: Schema19.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
@@ -12464,12 +13601,12 @@ var moduleResourceSchema = new Schema15(
       type: Date
     },
     createdBy: {
-      type: Schema15.Types.ObjectId,
+      type: Schema19.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema15.Types.ObjectId,
+      type: Schema19.Types.ObjectId,
       ref: "User"
     }
   },
@@ -12498,26 +13635,25 @@ moduleResourceSchema.index({
   status: 1,
   order: 1
 });
-var ModuleResource = model15(
+var ModuleResource = model19(
   "ModuleResource",
   moduleResourceSchema
 );
 
 // src/modules/moduleResources/module.resource.service.ts
-var throwServiceError6 = (message, statusCode) => {
+var throwServiceError9 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound4 = (value, message, statusCode) => {
+var assertFound7 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError6(message, statusCode);
+    throwServiceError9(message, statusCode);
   }
 };
 var isAdminOrManager8 = (role) => {
   return role === "admin" || role === "manager";
 };
-<<<<<<< HEAD
 var setNullableField2 = (document, path3, value) => {
   if (value === null) {
     document.set(path3, void 0);
@@ -12525,22 +13661,13 @@ var setNullableField2 = (document, path3, value) => {
   }
   if (value !== void 0) {
     document.set(path3, value);
-=======
-var setNullableField2 = (document, path2, value) => {
-  if (value === null) {
-    document.set(path2, void 0);
-    return;
-  }
-  if (value !== void 0) {
-    document.set(path2, value);
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
   }
 };
 var ensureCourseModuleExists2 = async (moduleId) => {
   const courseModule = await CourseModule.findById(moduleId);
-  assertFound4(courseModule, "Course module not found", 404);
+  assertFound7(courseModule, "Course module not found", 404);
   if (courseModule.status === "archived") {
-    throwServiceError6(
+    throwServiceError9(
       "Cannot manage resources under an archived course module",
       400
     );
@@ -12555,14 +13682,14 @@ var validateResourceConfiguration = ({
 }) => {
   if (provider === "cloudinary") {
     if (!cloudinaryPublicId || !secureUrl) {
-      throwServiceError6(
+      throwServiceError9(
         "Cloudinary resource requires cloudinaryPublicId and secureUrl",
         400
       );
     }
   }
   if (provider === "external" && !externalUrl) {
-    throwServiceError6("External resource requires externalUrl", 400);
+    throwServiceError9("External resource requires externalUrl", 400);
   }
 };
 var createModuleResource = async (moduleId, payload, actorId) => {
@@ -12586,13 +13713,13 @@ var createModuleResource = async (moduleId, payload, actorId) => {
     $or: duplicateConditions
   });
   if (existingResource) {
-    throwServiceError6(
+    throwServiceError9(
       "Resource slug, order or Cloudinary public ID already exists",
       409
     );
   }
   const createData = {
-    module: new Types18.ObjectId(moduleId),
+    module: new Types21.ObjectId(moduleId),
     title: payload.title,
     slug: payload.slug,
     resourceType: payload.resourceType,
@@ -12601,7 +13728,7 @@ var createModuleResource = async (moduleId, payload, actorId) => {
     pointsReward: payload.pointsReward ?? 5,
     order: payload.order,
     status: "draft",
-    createdBy: new Types18.ObjectId(actorId)
+    createdBy: new Types21.ObjectId(actorId)
   };
   const optionalValues = [
     ["description", payload.description],
@@ -12645,7 +13772,7 @@ var getAllModuleResources = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    filter.module = new Types18.ObjectId(moduleId);
+    filter.module = new Types21.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager8(actorRole);
   if (!isPrivileged) {
@@ -12678,13 +13805,13 @@ var getResourcesByModule = async (moduleId, actorRole) => {
     "pillar",
     "name slug title isPaid priceCents currency status"
   );
-  assertFound4(
+  assertFound7(
     courseModule,
     "Course module not found or unavailable",
     404
   );
   const filter = {
-    module: new Types18.ObjectId(moduleId)
+    module: new Types21.ObjectId(moduleId)
   };
   const isPrivileged = isAdminOrManager8(actorRole);
   if (!isPrivileged) {
@@ -12727,14 +13854,14 @@ var getSingleModuleResource = async (resourceId, actorRole) => {
     );
   }
   const resource = await query;
-  assertFound4(resource, "Module resource not found", 404);
+  assertFound7(resource, "Module resource not found", 404);
   return resource;
 };
 var updateModuleResource = async (resourceId, payload, actorId) => {
   const resource = await ModuleResource.findById(resourceId);
-  assertFound4(resource, "Module resource not found", 404);
+  assertFound7(resource, "Module resource not found", 404);
   if (resource.status === "archived") {
-    throwServiceError6("Archived resource cannot be updated", 400);
+    throwServiceError9("Archived resource cannot be updated", 400);
   }
   const nextProvider = payload.provider ?? resource.provider;
   const nextCloudinaryPublicId = payload.cloudinaryPublicId === null ? void 0 : payload.cloudinaryPublicId ?? resource.cloudinaryPublicId;
@@ -12764,7 +13891,7 @@ var updateModuleResource = async (resourceId, payload, actorId) => {
       $or: duplicateConditions
     });
     if (duplicateResource) {
-      throwServiceError6(
+      throwServiceError9(
         "Resource slug, order or Cloudinary public ID already exists",
         409
       );
@@ -12806,7 +13933,7 @@ var updateModuleResource = async (resourceId, payload, actorId) => {
   setNullableField2(resource, "secureUrl", payload.secureUrl);
   setNullableField2(resource, "externalUrl", payload.externalUrl);
   setNullableField2(resource, "thumbnailUrl", payload.thumbnailUrl);
-  resource.updatedBy = new Types18.ObjectId(actorId);
+  resource.updatedBy = new Types21.ObjectId(actorId);
   await resource.save();
   return resource.populate([
     {
@@ -12826,9 +13953,9 @@ var updateModuleResource = async (resourceId, payload, actorId) => {
 };
 var publishModuleResource = async (resourceId, actorId) => {
   const resource = await ModuleResource.findById(resourceId);
-  assertFound4(resource, "Module resource not found", 404);
+  assertFound7(resource, "Module resource not found", 404);
   if (resource.status === "archived") {
-    throwServiceError6("Archived resource cannot be published", 400);
+    throwServiceError9("Archived resource cannot be published", 400);
   }
   validateResourceConfiguration({
     provider: resource.provider,
@@ -12837,9 +13964,9 @@ var publishModuleResource = async (resourceId, actorId) => {
     externalUrl: resource.externalUrl
   });
   const courseModule = await CourseModule.findById(resource.module);
-  assertFound4(courseModule, "Parent course module not found", 404);
+  assertFound7(courseModule, "Parent course module not found", 404);
   if (courseModule.status !== "published") {
-    throwServiceError6(
+    throwServiceError9(
       "Publish the parent course module before publishing this resource",
       400
     );
@@ -12847,29 +13974,29 @@ var publishModuleResource = async (resourceId, actorId) => {
   resource.status = "published";
   resource.publishedAt = /* @__PURE__ */ new Date();
   resource.set("archivedAt", void 0);
-  resource.updatedBy = new Types18.ObjectId(actorId);
+  resource.updatedBy = new Types21.ObjectId(actorId);
   await resource.save();
   return resource;
 };
 var moveModuleResourceToDraft = async (resourceId, actorId) => {
   const resource = await ModuleResource.findById(resourceId);
-  assertFound4(resource, "Module resource not found", 404);
+  assertFound7(resource, "Module resource not found", 404);
   if (resource.status === "archived") {
-    throwServiceError6("Archived resource cannot be moved to draft", 400);
+    throwServiceError9("Archived resource cannot be moved to draft", 400);
   }
   resource.status = "draft";
   resource.set("publishedAt", void 0);
-  resource.updatedBy = new Types18.ObjectId(actorId);
+  resource.updatedBy = new Types21.ObjectId(actorId);
   await resource.save();
   return resource;
 };
 var archiveModuleResource = async (resourceId, actorId) => {
   const resource = await ModuleResource.findById(resourceId);
-  assertFound4(resource, "Module resource not found", 404);
+  assertFound7(resource, "Module resource not found", 404);
   resource.status = "archived";
   resource.archivedAt = /* @__PURE__ */ new Date();
   resource.set("publishedAt", void 0);
-  resource.updatedBy = new Types18.ObjectId(actorId);
+  resource.updatedBy = new Types21.ObjectId(actorId);
   await resource.save();
   return resource;
 };
@@ -13246,13 +14373,13 @@ import { Router as Router17 } from "express";
 
 // src/modules/quizeQuestions/quiz.question.service.ts
 import {
-  Types as Types19
+  Types as Types22
 } from "mongoose";
 
 // src/modules/quizeQuestions/quiz.question.model.schema.ts
 import {
-  model as model16,
-  Schema as Schema16
+  model as model20,
+  Schema as Schema20
 } from "mongoose";
 
 // src/modules/quizeQuestions/quiz.question.interface.ts
@@ -13268,10 +14395,10 @@ var QUIZ_QUESTION_STATUSES = [
 ];
 
 // src/modules/quizeQuestions/quiz.question.model.schema.ts
-var quizQuestionSchema = new Schema16(
+var quizQuestionSchema = new Schema20(
   {
     module: {
-      type: Schema16.Types.ObjectId,
+      type: Schema20.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
@@ -13331,12 +14458,12 @@ var quizQuestionSchema = new Schema16(
       type: Date
     },
     createdBy: {
-      type: Schema16.Types.ObjectId,
+      type: Schema20.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema16.Types.ObjectId,
+      type: Schema20.Types.ObjectId,
       ref: "User"
     }
   },
@@ -13359,31 +14486,31 @@ quizQuestionSchema.index({
   status: 1,
   order: 1
 });
-var QuizQuestion = model16(
+var QuizQuestion = model20(
   "QuizQuestion",
   quizQuestionSchema
 );
 
 // src/modules/quizeQuestions/quiz.question.service.ts
 var MAX_QUESTIONS_PER_MODULE = 5;
-var throwServiceError7 = (message, statusCode) => {
+var throwServiceError10 = (message, statusCode) => {
   const error = new Error(
     message
   );
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound5 = (value, message, statusCode) => {
+var assertFound8 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError7(
+    throwServiceError10(
       message,
       statusCode
     );
   }
 };
-var assertValidObjectId2 = (value, fieldName) => {
-  if (!Types19.ObjectId.isValid(value)) {
-    throwServiceError7(
+var assertValidObjectId4 = (value, fieldName) => {
+  if (!Types22.ObjectId.isValid(value)) {
+    throwServiceError10(
       `${fieldName} is invalid`,
       400
     );
@@ -13403,7 +14530,7 @@ var validateQuestionConfiguration = ({
 }) => {
   if (questionType === "true_false") {
     if (typeof correctBooleanAnswer !== "boolean") {
-      return throwServiceError7(
+      return throwServiceError10(
         "True/false question requires correctBooleanAnswer",
         400
       );
@@ -13411,13 +14538,13 @@ var validateQuestionConfiguration = ({
     return;
   }
   if (!options2 || options2.length < 2) {
-    return throwServiceError7(
+    return throwServiceError10(
       "Choice question requires at least two options",
       400
     );
   }
   if (!correctOptionIndexes || correctOptionIndexes.length === 0) {
-    return throwServiceError7(
+    return throwServiceError10(
       "Choice question requires correct option indexes",
       400
     );
@@ -13426,48 +14553,48 @@ var validateQuestionConfiguration = ({
     (option) => option.trim().toLowerCase()
   );
   if (new Set(normalizedOptions).size !== options2.length) {
-    return throwServiceError7(
+    return throwServiceError10(
       "Quiz question options must be unique",
       400
     );
   }
   const uniqueCorrectIndexes = new Set(correctOptionIndexes);
   if (uniqueCorrectIndexes.size !== correctOptionIndexes.length) {
-    return throwServiceError7(
+    return throwServiceError10(
       "Correct option indexes must be unique",
       400
     );
   }
   for (const index of correctOptionIndexes) {
     if (index < 0 || index >= options2.length) {
-      return throwServiceError7(
+      return throwServiceError10(
         "Correct option index is outside the available options",
         400
       );
     }
   }
   if (questionType === "single_choice" && correctOptionIndexes.length !== 1) {
-    return throwServiceError7(
+    return throwServiceError10(
       "Single-choice question requires exactly one correct option",
       400
     );
   }
 };
 var ensureCourseModuleExists3 = async (moduleId) => {
-  assertValidObjectId2(
+  assertValidObjectId4(
     moduleId,
     "Course module ID"
   );
   const courseModule = await CourseModule.findById(
     moduleId
   );
-  assertFound5(
+  assertFound8(
     courseModule,
     "Course module not found",
     404
   );
   if (courseModule.status === "archived") {
-    throwServiceError7(
+    throwServiceError10(
       "Cannot manage quiz questions under an archived module",
       400
     );
@@ -13491,7 +14618,7 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
     }
   });
   if (activeQuestionCount >= MAX_QUESTIONS_PER_MODULE) {
-    throwServiceError7(
+    throwServiceError10(
       `A module can contain a maximum of ${MAX_QUESTIONS_PER_MODULE} active quiz questions`,
       400
     );
@@ -13501,18 +14628,18 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
     order: payload.order
   });
   if (existingQuestion) {
-    throwServiceError7(
+    throwServiceError10(
       "Question order already exists in this module",
       409
     );
   }
   const createData = {
-    module: new Types19.ObjectId(moduleId),
+    module: new Types22.ObjectId(moduleId),
     question: payload.question,
     questionType: payload.questionType,
     order: payload.order,
     status: "draft",
-    createdBy: new Types19.ObjectId(actorId)
+    createdBy: new Types22.ObjectId(actorId)
   };
   if (payload.questionType === "true_false") {
     createData.correctBooleanAnswer = payload.correctBooleanAnswer;
@@ -13544,7 +14671,7 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
     ]);
   } catch (error) {
     if (isDuplicateKeyError2(error)) {
-      throwServiceError7(
+      throwServiceError10(
         "Question order already exists in this module",
         409
       );
@@ -13559,11 +14686,11 @@ var getAllQuizQuestions = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    assertValidObjectId2(
+    assertValidObjectId4(
       moduleId,
       "Course module ID"
     );
-    filter.module = new Types19.ObjectId(moduleId);
+    filter.module = new Types22.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager9(actorRole);
   if (!isPrivileged) {
@@ -13603,7 +14730,7 @@ var getAllQuizQuestions = async ({
   return query;
 };
 var getQuestionsByModule = async (moduleId, actorRole) => {
-  assertValidObjectId2(
+  assertValidObjectId4(
     moduleId,
     "Course module ID"
   );
@@ -13620,13 +14747,13 @@ var getQuestionsByModule = async (moduleId, actorRole) => {
     "pillar",
     "name slug title status"
   );
-  assertFound5(
+  assertFound8(
     courseModule,
     "Course module not found or unavailable",
     404
   );
   const questionFilter = {
-    module: new Types19.ObjectId(moduleId)
+    module: new Types22.ObjectId(moduleId)
   };
   if (!isPrivileged) {
     questionFilter.status = "published";
@@ -13660,7 +14787,7 @@ var getQuestionsByModule = async (moduleId, actorRole) => {
   };
 };
 var getSingleQuizQuestion = async (questionId, actorRole) => {
-  assertValidObjectId2(
+  assertValidObjectId4(
     questionId,
     "Quiz question ID"
   );
@@ -13696,7 +14823,7 @@ var getSingleQuizQuestion = async (questionId, actorRole) => {
     );
   }
   const question = await query;
-  assertFound5(
+  assertFound8(
     question,
     "Quiz question not found",
     404
@@ -13704,20 +14831,20 @@ var getSingleQuizQuestion = async (questionId, actorRole) => {
   return question;
 };
 var updateQuizQuestion = async (questionId, payload, actorId) => {
-  assertValidObjectId2(
+  assertValidObjectId4(
     questionId,
     "Quiz question ID"
   );
   const question = await QuizQuestion.findById(
     questionId
   );
-  assertFound5(
+  assertFound8(
     question,
     "Quiz question not found",
     404
   );
   if (question.status === "archived") {
-    throwServiceError7(
+    throwServiceError10(
       "Archived question cannot be updated",
       400
     );
@@ -13731,7 +14858,7 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
       order: payload.order
     });
     if (duplicateQuestion) {
-      throwServiceError7(
+      throwServiceError10(
         "Question order already exists in this module",
         409
       );
@@ -13803,12 +14930,12 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
   if (payload.order !== void 0) {
     question.order = payload.order;
   }
-  question.updatedBy = new Types19.ObjectId(actorId);
+  question.updatedBy = new Types22.ObjectId(actorId);
   try {
     await question.save();
   } catch (error) {
     if (isDuplicateKeyError2(error)) {
-      throwServiceError7(
+      throwServiceError10(
         "Question order already exists in this module",
         409
       );
@@ -13832,20 +14959,20 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
   ]);
 };
 var publishQuizQuestion = async (questionId, actorId) => {
-  assertValidObjectId2(
+  assertValidObjectId4(
     questionId,
     "Quiz question ID"
   );
   const question = await QuizQuestion.findById(
     questionId
   );
-  assertFound5(
+  assertFound8(
     question,
     "Quiz question not found",
     404
   );
   if (question.status === "archived") {
-    throwServiceError7(
+    throwServiceError10(
       "Archived question cannot be published",
       400
     );
@@ -13861,13 +14988,13 @@ var publishQuizQuestion = async (questionId, actorId) => {
   const courseModule = await CourseModule.findById(
     question.module
   );
-  assertFound5(
+  assertFound8(
     courseModule,
     "Parent course module not found",
     404
   );
   if (courseModule.status !== "published") {
-    throwServiceError7(
+    throwServiceError10(
       "Publish the parent course module before publishing this question",
       400
     );
@@ -13878,25 +15005,25 @@ var publishQuizQuestion = async (questionId, actorId) => {
     "archivedAt",
     void 0
   );
-  question.updatedBy = new Types19.ObjectId(actorId);
+  question.updatedBy = new Types22.ObjectId(actorId);
   await question.save();
   return question;
 };
 var moveQuizQuestionToDraft = async (questionId, actorId) => {
-  assertValidObjectId2(
+  assertValidObjectId4(
     questionId,
     "Quiz question ID"
   );
   const question = await QuizQuestion.findById(
     questionId
   );
-  assertFound5(
+  assertFound8(
     question,
     "Quiz question not found",
     404
   );
   if (question.status === "archived") {
-    throwServiceError7(
+    throwServiceError10(
       "Archived question cannot be moved to draft",
       400
     );
@@ -13906,19 +15033,19 @@ var moveQuizQuestionToDraft = async (questionId, actorId) => {
     "publishedAt",
     void 0
   );
-  question.updatedBy = new Types19.ObjectId(actorId);
+  question.updatedBy = new Types22.ObjectId(actorId);
   await question.save();
   return question;
 };
 var archiveQuizQuestion = async (questionId, actorId) => {
-  assertValidObjectId2(
+  assertValidObjectId4(
     questionId,
     "Quiz question ID"
   );
   const question = await QuizQuestion.findById(
     questionId
   );
-  assertFound5(
+  assertFound8(
     question,
     "Quiz question not found",
     404
@@ -13929,7 +15056,7 @@ var archiveQuizQuestion = async (questionId, actorId) => {
     "publishedAt",
     void 0
   );
-  question.updatedBy = new Types19.ObjectId(actorId);
+  question.updatedBy = new Types22.ObjectId(actorId);
   await question.save();
   return question;
 };
@@ -14309,13 +15436,13 @@ import { Router as Router18 } from "express";
 
 // src/modules/moduleActions/module.action.service.ts
 import {
-  Types as Types20
+  Types as Types23
 } from "mongoose";
 
 // src/modules/moduleActions/module.action.model.schema.ts
 import {
-  model as model17,
-  Schema as Schema17
+  model as model21,
+  Schema as Schema21
 } from "mongoose";
 
 // src/modules/moduleActions/module.action.interface.ts
@@ -14326,10 +15453,10 @@ var MODULE_ACTION_STATUSES = [
 ];
 
 // src/modules/moduleActions/module.action.model.schema.ts
-var moduleActionSchema = new Schema17(
+var moduleActionSchema = new Schema21(
   {
     module: {
-      type: Schema17.Types.ObjectId,
+      type: Schema21.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
@@ -14373,12 +15500,12 @@ var moduleActionSchema = new Schema17(
       type: Date
     },
     createdBy: {
-      type: Schema17.Types.ObjectId,
+      type: Schema21.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema17.Types.ObjectId,
+      type: Schema21.Types.ObjectId,
       ref: "User"
     }
   },
@@ -14406,30 +15533,30 @@ moduleActionSchema.index({
   isRequired: 1,
   status: 1
 });
-var ModuleAction = model17(
+var ModuleAction = model21(
   "ModuleAction",
   moduleActionSchema
 );
 
 // src/modules/moduleActions/module.action.service.ts
-var throwServiceError8 = (message, statusCode) => {
+var throwServiceError11 = (message, statusCode) => {
   const error = new Error(
     message
   );
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound6 = (value, message, statusCode) => {
+var assertFound9 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError8(
+    throwServiceError11(
       message,
       statusCode
     );
   }
 };
-var assertValidObjectId3 = (value, fieldName) => {
-  if (!Types20.ObjectId.isValid(value)) {
-    throwServiceError8(
+var assertValidObjectId5 = (value, fieldName) => {
+  if (!Types23.ObjectId.isValid(value)) {
+    throwServiceError11(
       `${fieldName} is invalid`,
       400
     );
@@ -14442,20 +15569,20 @@ var isDuplicateKeyError3 = (error) => {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
 };
 var ensureCourseModuleExists4 = async (moduleId) => {
-  assertValidObjectId3(
+  assertValidObjectId5(
     moduleId,
     "Course module ID"
   );
   const courseModule = await CourseModule.findById(
     moduleId
   );
-  assertFound6(
+  assertFound9(
     courseModule,
     "Course module not found",
     404
   );
   if (courseModule.status === "archived") {
-    throwServiceError8(
+    throwServiceError11(
       "Cannot manage actions under an archived course module",
       400
     );
@@ -14471,19 +15598,19 @@ var createModuleAction = async (moduleId, payload, actorId) => {
     order: payload.order
   });
   if (existingAction) {
-    throwServiceError8(
+    throwServiceError11(
       "Action order already exists in this module",
       409
     );
   }
   const createData = {
-    module: new Types20.ObjectId(moduleId),
+    module: new Types23.ObjectId(moduleId),
     title: payload.title,
     order: payload.order,
     isRequired: payload.isRequired ?? true,
     pointsReward: payload.pointsReward ?? 5,
     status: "draft",
-    createdBy: new Types20.ObjectId(actorId)
+    createdBy: new Types23.ObjectId(actorId)
   };
   if (payload.description !== void 0) {
     createData.description = payload.description;
@@ -14509,7 +15636,7 @@ var createModuleAction = async (moduleId, payload, actorId) => {
     ]);
   } catch (error) {
     if (isDuplicateKeyError3(error)) {
-      throwServiceError8(
+      throwServiceError11(
         "Action order already exists in this module",
         409
       );
@@ -14524,11 +15651,11 @@ var getAllModuleActions = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    assertValidObjectId3(
+    assertValidObjectId5(
       moduleId,
       "Course module ID"
     );
-    filter.module = new Types20.ObjectId(moduleId);
+    filter.module = new Types23.ObjectId(moduleId);
   }
   if (!isAdminOrManager10(actorRole)) {
     filter.status = "published";
@@ -14557,7 +15684,7 @@ var getAllModuleActions = async ({
   );
 };
 var getActionsByModule = async (moduleId, actorRole) => {
-  assertValidObjectId3(
+  assertValidObjectId5(
     moduleId,
     "Course module ID"
   );
@@ -14574,13 +15701,13 @@ var getActionsByModule = async (moduleId, actorRole) => {
     "pillar",
     "name slug title status"
   );
-  assertFound6(
+  assertFound9(
     courseModule,
     "Course module not found or unavailable",
     404
   );
   const actionFilter = {
-    module: new Types20.ObjectId(moduleId)
+    module: new Types23.ObjectId(moduleId)
   };
   if (!isPrivileged) {
     actionFilter.status = "published";
@@ -14604,7 +15731,7 @@ var getActionsByModule = async (moduleId, actorRole) => {
   };
 };
 var getSingleModuleAction = async (actionId, actorRole) => {
-  assertValidObjectId3(
+  assertValidObjectId5(
     actionId,
     "Module action ID"
   );
@@ -14629,7 +15756,7 @@ var getSingleModuleAction = async (actionId, actorRole) => {
     "updatedBy",
     "fullName email role profileImage"
   );
-  assertFound6(
+  assertFound9(
     action,
     "Module action not found",
     404
@@ -14637,20 +15764,20 @@ var getSingleModuleAction = async (actionId, actorRole) => {
   return action;
 };
 var updateModuleAction = async (actionId, payload, actorId) => {
-  assertValidObjectId3(
+  assertValidObjectId5(
     actionId,
     "Module action ID"
   );
   const action = await ModuleAction.findById(
     actionId
   );
-  assertFound6(
+  assertFound9(
     action,
     "Module action not found",
     404
   );
   if (action.status === "archived") {
-    throwServiceError8(
+    throwServiceError11(
       "Archived action cannot be updated",
       400
     );
@@ -14664,7 +15791,7 @@ var updateModuleAction = async (actionId, payload, actorId) => {
       order: payload.order
     });
     if (duplicateAction) {
-      throwServiceError8(
+      throwServiceError11(
         "Action order already exists in this module",
         409
       );
@@ -14690,12 +15817,12 @@ var updateModuleAction = async (actionId, payload, actorId) => {
   if (payload.pointsReward !== void 0) {
     action.pointsReward = payload.pointsReward;
   }
-  action.updatedBy = new Types20.ObjectId(actorId);
+  action.updatedBy = new Types23.ObjectId(actorId);
   try {
     await action.save();
   } catch (error) {
     if (isDuplicateKeyError3(error)) {
-      throwServiceError8(
+      throwServiceError11(
         "Action order already exists in this module",
         409
       );
@@ -14719,20 +15846,20 @@ var updateModuleAction = async (actionId, payload, actorId) => {
   ]);
 };
 var publishModuleAction = async (actionId, actorId) => {
-  assertValidObjectId3(
+  assertValidObjectId5(
     actionId,
     "Module action ID"
   );
   const action = await ModuleAction.findById(
     actionId
   );
-  assertFound6(
+  assertFound9(
     action,
     "Module action not found",
     404
   );
   if (action.status === "archived") {
-    throwServiceError8(
+    throwServiceError11(
       "Archived action cannot be published",
       400
     );
@@ -14740,13 +15867,13 @@ var publishModuleAction = async (actionId, actorId) => {
   const courseModule = await CourseModule.findById(
     action.module
   );
-  assertFound6(
+  assertFound9(
     courseModule,
     "Parent course module not found",
     404
   );
   if (courseModule.status !== "published") {
-    throwServiceError8(
+    throwServiceError11(
       "Publish the parent course module before publishing this action",
       400
     );
@@ -14757,25 +15884,25 @@ var publishModuleAction = async (actionId, actorId) => {
     "archivedAt",
     void 0
   );
-  action.updatedBy = new Types20.ObjectId(actorId);
+  action.updatedBy = new Types23.ObjectId(actorId);
   await action.save();
   return action;
 };
 var moveModuleActionToDraft = async (actionId, actorId) => {
-  assertValidObjectId3(
+  assertValidObjectId5(
     actionId,
     "Module action ID"
   );
   const action = await ModuleAction.findById(
     actionId
   );
-  assertFound6(
+  assertFound9(
     action,
     "Module action not found",
     404
   );
   if (action.status === "archived") {
-    throwServiceError8(
+    throwServiceError11(
       "Archived action cannot be moved to draft",
       400
     );
@@ -14785,19 +15912,19 @@ var moveModuleActionToDraft = async (actionId, actorId) => {
     "publishedAt",
     void 0
   );
-  action.updatedBy = new Types20.ObjectId(actorId);
+  action.updatedBy = new Types23.ObjectId(actorId);
   await action.save();
   return action;
 };
 var archiveModuleAction = async (actionId, actorId) => {
-  assertValidObjectId3(
+  assertValidObjectId5(
     actionId,
     "Module action ID"
   );
   const action = await ModuleAction.findById(
     actionId
   );
-  assertFound6(
+  assertFound9(
     action,
     "Module action not found",
     404
@@ -14808,7 +15935,7 @@ var archiveModuleAction = async (actionId, actorId) => {
     "publishedAt",
     void 0
   );
-  action.updatedBy = new Types20.ObjectId(actorId);
+  action.updatedBy = new Types23.ObjectId(actorId);
   await action.save();
   return action;
 };
@@ -15134,8 +16261,8 @@ var moduleActionRoutes = router18;
 import { Router as Router19 } from "express";
 
 // src/modules/room/room.modal.ts
-import { Schema as Schema18, model as model18 } from "mongoose";
-var roomSchema = new Schema18(
+import { Schema as Schema22, model as model22 } from "mongoose";
+var roomSchema = new Schema22(
   {
     name: {
       type: String,
@@ -15150,12 +16277,12 @@ var roomSchema = new Schema18(
     },
     members: [
       {
-        type: Schema18.Types.ObjectId,
+        type: Schema22.Types.ObjectId,
         ref: "User"
       }
     ],
     createdBy: {
-      type: Schema18.Types.ObjectId,
+      type: Schema22.Types.ObjectId,
       ref: "User",
       required: true
     }
@@ -15164,7 +16291,7 @@ var roomSchema = new Schema18(
     timestamps: true
   }
 );
-var Room = model18("Room", roomSchema);
+var Room = model22("Room", roomSchema);
 
 // src/modules/room/room.service.ts
 var getGeneralRoom = async (userId) => {
@@ -15183,16 +16310,12 @@ var getGeneralRoom = async (userId) => {
 // src/modules/room/room.controller.ts
 var getGeneralRoomHandler = async (req, res, next) => {
   try {
-<<<<<<< HEAD
-    const room = await getGeneralRoom(req.user.id);
-=======
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ success: false, message: "Authentication required" });
       return;
     }
     const room = await getGeneralRoom(userId);
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     res.status(200).json({
       success: true,
       data: room
@@ -15210,18 +16333,21 @@ var room_route_default = router19;
 // src/modules/message/message.route.ts
 import { Router as Router20 } from "express";
 
+// src/modules/message/message.services.ts
+import { Types as Types24 } from "mongoose";
+
 // src/modules/message/message.model.ts
-import { Schema as Schema19, model as model19 } from "mongoose";
-var messageSchema = new Schema19(
+import { Schema as Schema23, model as model23 } from "mongoose";
+var messageSchema = new Schema23(
   {
     room: {
-      type: Schema19.Types.ObjectId,
+      type: Schema23.Types.ObjectId,
       ref: "Room",
       required: true,
       index: true
     },
     sender: {
-      type: Schema19.Types.ObjectId,
+      type: Schema23.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -15230,27 +16356,68 @@ var messageSchema = new Schema19(
       required: true,
       trim: true,
       maxlength: 2e3
-    }
+    },
+    // NEW: reply support
+    replyTo: {
+      type: Schema23.Types.ObjectId,
+      ref: "Message",
+      default: null
+    },
+    // NEW: soft delete support
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null }
   },
   {
     timestamps: true
   }
 );
-var Message = model19("Message", messageSchema);
+var Message = model23("Message", messageSchema);
 
 // src/modules/message/message.services.ts
 var getMessageHistory = async (roomId, page, limit) => {
   const skip = (page - 1) * limit;
-  const messages = await Message.find({ room: roomId }).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("sender", "fullName profileImage").lean();
+  const messages = await Message.find({ room: roomId }).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("sender", "fullName profileImage").populate({
+    path: "replyTo",
+    select: "content sender isDeleted",
+    populate: { path: "sender", select: "fullName" }
+  }).lean();
   return messages.reverse();
 };
-var createMessage = async (roomId, senderId, content) => {
+var createMessage = async (roomId, senderId, content, replyTo) => {
+  if (replyTo) {
+    const parent = await Message.findOne({ _id: replyTo, room: roomId });
+    if (!parent) {
+      throw new Error("Message you're replying to no longer exists in this room");
+    }
+  }
   const message = await Message.create({
     room: roomId,
     sender: senderId,
-    content
+    content,
+    replyTo: replyTo || null
   });
-  return message.populate("sender", "fullName profileImage");
+  return message.populate([
+    { path: "sender", select: "fullName profileImage" },
+    {
+      path: "replyTo",
+      select: "content sender isDeleted",
+      populate: { path: "sender", select: "fullName" }
+    }
+  ]);
+};
+var deleteMessage = async (messageId, userId) => {
+  if (!Types24.ObjectId.isValid(messageId)) {
+    throw new Error("Invalid message id");
+  }
+  const message = await Message.findById(messageId);
+  if (!message) {
+    throw new Error("Message not found");
+  }
+  message.isDeleted = true;
+  message.deletedAt = /* @__PURE__ */ new Date();
+  message.content = "This message was deleted";
+  await message.save();
+  return message;
 };
 
 // src/modules/message/message.controller.ts
@@ -15258,7 +16425,7 @@ var getMessageHistoryHandler = async (req, res, next) => {
   try {
     const { roomId } = req.params;
     const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 30;
+    const limit = Number(req.query.limit) || 100;
     const messages = await getMessageHistory(roomId, page, limit);
     res.status(200).json({
       success: true,
@@ -15281,8 +16448,8 @@ var message_route_default = router20;
 import { Router as Router21 } from "express";
 
 // src/modules/manageLogo/logo.model.schema.ts
-import { model as model20, Schema as Schema20 } from "mongoose";
-var logoSchema = new Schema20(
+import { model as model24, Schema as Schema24 } from "mongoose";
+var logoSchema = new Schema24(
   {
     logo: {
       type: String,
@@ -15291,7 +16458,7 @@ var logoSchema = new Schema20(
     }
   }
 );
-var logo = model20("logo", logoSchema);
+var logo = model24("logo", logoSchema);
 
 // src/modules/manageLogo/logo.service.ts
 var uploadLogoIntoDB = async (userId, file) => {
@@ -15414,25 +16581,25 @@ var LogoRoutes = router21;
 import { Router as Router22 } from "express";
 
 // src/modules/academyProfiles/academy.profile.service.ts
-import { Types as Types21 } from "mongoose";
+import { Types as Types25 } from "mongoose";
 
 // src/modules/academyProfiles/academy.profile.model.schema.ts
-import { Schema as Schema21, model as model21 } from "mongoose";
-var AcademyProfileSchema = new Schema21(
+import { Schema as Schema25, model as model25 } from "mongoose";
+var AcademyProfileSchema = new Schema25(
   {
     user: {
-      type: Schema21.Types.ObjectId,
+      type: Schema25.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
       index: true
     },
     mentor: {
-      type: Schema21.Types.ObjectId,
+      type: Schema25.Types.ObjectId,
       ref: "User"
     },
     currentPillar: {
-      type: Schema21.Types.ObjectId,
+      type: Schema25.Types.ObjectId,
       ref: "ChallengePillar"
     },
     academyName: {
@@ -15489,20 +16656,20 @@ var AcademyProfileSchema = new Schema21(
     timestamps: true
   }
 );
-var AcademyProfile = model21(
+var AcademyProfile = model25(
   "AcademyProfile",
   AcademyProfileSchema
 );
 
 // src/modules/academyProfiles/academy.profile.service.ts
-var throwServiceError9 = (message, statusCode) => {
+var throwServiceError12 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-function assertFound7(value, message, statusCode) {
+function assertFound10(value, message, statusCode) {
   if (value === null || value === void 0) {
-    throwServiceError9(message, statusCode);
+    throwServiceError12(message, statusCode);
   }
 }
 var createProfile = async (userId, payload) => {
@@ -15510,27 +16677,27 @@ var createProfile = async (userId, payload) => {
     user: userId
   });
   if (existing) {
-    throwServiceError9("Academy profile already exists", 409);
+    throwServiceError12("Academy profile already exists", 409);
   }
   const profile = await AcademyProfile.create({
-    user: new Types21.ObjectId(userId),
+    user: new Types25.ObjectId(userId),
     ...payload
   });
   return profile;
 };
 var getMyProfile2 = async (userId) => {
   const filter = {
-    user: new Types21.ObjectId(userId)
+    user: new Types25.ObjectId(userId)
   };
   const profile = await AcademyProfile.findOne(filter).populate("currentPillar", "name slug title").populate("mentor", "fullName email profileImage");
-  assertFound7(profile, "Academy profile not found", 404);
+  assertFound10(profile, "Academy profile not found", 404);
   return profile;
 };
 var updateProfile = async (userId, payload) => {
   const profile = await AcademyProfile.findOne({
-    user: new Types21.ObjectId(userId)
+    user: new Types25.ObjectId(userId)
   });
-  assertFound7(profile, "Academy profile not found", 404);
+  assertFound10(profile, "Academy profile not found", 404);
   if (payload.academyName !== void 0)
     profile.academyName = payload.academyName;
   if (payload.bio !== void 0) profile.bio = payload.bio;
@@ -15651,14 +16818,14 @@ var throwControllerError5 = (message, status) => {
   error.status = status;
   throw error;
 };
-var assertFound8 = (value, message, statusCode) => {
+var assertFound11 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
     throwControllerError5(message, statusCode);
   }
 };
 var getAuthUser10 = (req) => {
   const user = req.user;
-  assertFound8(user, "Authentication required", 401);
+  assertFound11(user, "Authentication required", 401);
   return {
     id: user.id,
     role: user.role
@@ -16030,11 +17197,11 @@ var userEntitlementRoutes = router23;
 import { Router as Router24 } from "express";
 
 // src/modules/videoProgress/video.progress.service.ts
-import { Types as Types22 } from "mongoose";
+import { Types as Types26 } from "mongoose";
 
 // src/modules/videoProgress/video.progress.model.schema.ts
-import { model as model22, Schema as Schema22 } from "mongoose";
-var watchedRangeSchema = new Schema22(
+import { model as model26, Schema as Schema26 } from "mongoose";
+var watchedRangeSchema = new Schema26(
   {
     startSeconds: {
       type: Number,
@@ -16051,22 +17218,22 @@ var watchedRangeSchema = new Schema22(
     _id: false
   }
 );
-var videoProgressSchema = new Schema22(
+var videoProgressSchema = new Schema26(
   {
     user: {
-      type: Schema22.Types.ObjectId,
+      type: Schema26.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     video: {
-      type: Schema22.Types.ObjectId,
+      type: Schema26.Types.ObjectId,
       ref: "ModuleVideo",
       required: true,
       index: true
     },
     module: {
-      type: Schema22.Types.ObjectId,
+      type: Schema26.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
@@ -16154,7 +17321,7 @@ videoProgressSchema.index({
   user: 1,
   lastWatchedAt: -1
 });
-var VideoProgress = model22(
+var VideoProgress = model26(
   "VideoProgress",
   videoProgressSchema
 );
@@ -16163,8 +17330,8 @@ var VideoProgress = model22(
 var MAX_HEARTBEAT_SEGMENT_SECONDS = 60;
 var VIDEO_DURATION_TOLERANCE_SECONDS = 5;
 var RANGE_MERGE_TOLERANCE_SECONDS = 0.5;
-var assertValidObjectId4 = (value, fieldName) => {
-  if (!Types22.ObjectId.isValid(value)) {
+var assertValidObjectId6 = (value, fieldName) => {
+  if (!Types26.ObjectId.isValid(value)) {
     throwServiceError_default(`${fieldName} is invalid`, 400);
   }
 };
@@ -16226,7 +17393,7 @@ var calculateWatchPercent = (totalWatchedSeconds, durationSeconds) => {
   );
 };
 var ensureVideoIsAvailable = async (videoId) => {
-  assertValidObjectId4(videoId, "Module video ID");
+  assertValidObjectId6(videoId, "Module video ID");
   const video = await ModuleVideo.findById(videoId).select(
     [
       "_id",
@@ -16317,7 +17484,7 @@ var populateVideoProgress = async (progress) => {
   ]);
 };
 var recordVideoHeartbeat = async (userId, videoId, payload) => {
-  assertValidObjectId4(userId, "User ID");
+  assertValidObjectId6(userId, "User ID");
   const { video, courseModule } = await ensureVideoIsAvailable(videoId);
   const durationSeconds = video.durationSeconds;
   const requiredWatchPercent = video.requiredWatchPercent ?? 80;
@@ -16326,8 +17493,8 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
     durationSeconds
   );
   const progressFilter = {
-    user: new Types22.ObjectId(userId),
-    video: new Types22.ObjectId(videoId)
+    user: new Types26.ObjectId(userId),
+    video: new Types26.ObjectId(videoId)
   };
   let progress = await VideoProgress.findOne(progressFilter);
   const now = /* @__PURE__ */ new Date();
@@ -16340,8 +17507,8 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
     );
     const isCompleted = watchPercent2 >= requiredWatchPercent;
     const createData = {
-      user: new Types22.ObjectId(userId),
-      video: new Types22.ObjectId(videoId),
+      user: new Types26.ObjectId(userId),
+      video: new Types26.ObjectId(videoId),
       module: courseModule._id,
       durationSecondsSnapshot: durationSeconds,
       requiredWatchPercentSnapshot: requiredWatchPercent,
@@ -16403,11 +17570,11 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
   return populateVideoProgress(progress);
 };
 var getMyVideoProgress = async (userId, videoId) => {
-  assertValidObjectId4(userId, "User ID");
+  assertValidObjectId6(userId, "User ID");
   const { video, courseModule } = await ensureVideoIsAvailable(videoId);
   const filter = {
-    user: new Types22.ObjectId(userId),
-    video: new Types22.ObjectId(videoId)
+    user: new Types26.ObjectId(userId),
+    video: new Types26.ObjectId(videoId)
   };
   const progress = await VideoProgress.findOne(filter);
   return {
@@ -16449,8 +17616,8 @@ var getMyVideoProgress = async (userId, videoId) => {
   };
 };
 var getMyModuleVideoProgress = async (userId, moduleId) => {
-  assertValidObjectId4(userId, "User ID");
-  assertValidObjectId4(moduleId, "Course module ID");
+  assertValidObjectId6(userId, "User ID");
+  assertValidObjectId6(moduleId, "Course module ID");
   const courseModule = await CourseModule.findById(moduleId).select(
     [
       "_id",
@@ -16467,7 +17634,7 @@ var getMyModuleVideoProgress = async (userId, moduleId) => {
     throwServiceError_default("Course module is not published", 403);
   }
   const videos = await ModuleVideo.find({
-    module: new Types22.ObjectId(moduleId),
+    module: new Types26.ObjectId(moduleId),
     status: "published"
   }).select(
     [
@@ -16485,8 +17652,8 @@ var getMyModuleVideoProgress = async (userId, moduleId) => {
   ).sort({ order: 1 }).lean();
   const videoIds = videos.map((video) => video._id);
   const progressFilter = {
-    user: new Types22.ObjectId(userId),
-    module: new Types22.ObjectId(moduleId),
+    user: new Types26.ObjectId(userId),
+    module: new Types26.ObjectId(moduleId),
     video: {
       $in: videoIds
     }
@@ -16537,9 +17704,9 @@ var getMyModuleVideoProgress = async (userId, moduleId) => {
   };
 };
 var getMyAllVideoProgress = async (userId) => {
-  assertValidObjectId4(userId, "User ID");
+  assertValidObjectId6(userId, "User ID");
   const filter = {
-    user: new Types22.ObjectId(userId)
+    user: new Types26.ObjectId(userId)
   };
   return VideoProgress.find(filter).sort({
     lastWatchedAt: -1
@@ -16569,16 +17736,16 @@ var getMyAllVideoProgress = async (userId) => {
 var getAllVideoProgress = async (query) => {
   const filter = {};
   if (query.userId) {
-    assertValidObjectId4(query.userId, "User ID");
-    filter.user = new Types22.ObjectId(query.userId);
+    assertValidObjectId6(query.userId, "User ID");
+    filter.user = new Types26.ObjectId(query.userId);
   }
   if (query.videoId) {
-    assertValidObjectId4(query.videoId, "Module video ID");
-    filter.video = new Types22.ObjectId(query.videoId);
+    assertValidObjectId6(query.videoId, "Module video ID");
+    filter.video = new Types26.ObjectId(query.videoId);
   }
   if (query.moduleId) {
-    assertValidObjectId4(query.moduleId, "Course module ID");
-    filter.module = new Types22.ObjectId(query.moduleId);
+    assertValidObjectId6(query.moduleId, "Course module ID");
+    filter.module = new Types26.ObjectId(query.moduleId);
   }
   if (query.isCompleted !== void 0) {
     filter.isCompleted = query.isCompleted;
@@ -16639,14 +17806,14 @@ var throwControllerError6 = (message, statusCode) => {
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound9 = (value, message, statusCode) => {
+var assertFound12 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
     throwControllerError6(message, statusCode);
   }
 };
 var getAuthUser11 = (req) => {
   const user = req.user;
-  assertFound9(user, "Authentication required", 401);
+  assertFound12(user, "Authentication required", 401);
   return {
     id: user.id,
     role: user.role
@@ -16863,10 +18030,10 @@ var videoProgressRoutes = router24;
 import { Router as Router25 } from "express";
 
 // src/modules/moduleProgress/module.progress.service.ts
-import { Types as Types23 } from "mongoose";
+import { Types as Types27 } from "mongoose";
 
 // src/modules/moduleProgress/module.progress.model.schema.ts
-import { model as model23, Schema as Schema23 } from "mongoose";
+import { model as model27, Schema as Schema27 } from "mongoose";
 
 // src/modules/moduleProgress/module.progress.interface.ts
 var QUIZ_PROGRESS_STATUSES = [
@@ -16878,7 +18045,7 @@ var QUIZ_PROGRESS_STATUSES = [
 ];
 
 // src/modules/moduleProgress/module.progress.model.schema.ts
-var requirementSummarySchema = new Schema23(
+var requirementSummarySchema = new Schema27(
   {
     totalRequired: {
       type: Number,
@@ -16909,7 +18076,7 @@ var requirementSummarySchema = new Schema23(
     _id: false
   }
 );
-var quizSummarySchema = new Schema23(
+var quizSummarySchema = new Schema27(
   {
     status: {
       type: String,
@@ -16958,16 +18125,16 @@ var quizSummarySchema = new Schema23(
     _id: false
   }
 );
-var moduleProgressSchema = new Schema23(
+var moduleProgressSchema = new Schema27(
   {
     user: {
-      type: Schema23.Types.ObjectId,
+      type: Schema27.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     module: {
-      type: Schema23.Types.ObjectId,
+      type: Schema27.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
@@ -17067,7 +18234,7 @@ moduleProgressSchema.index({
   module: 1,
   isCompleted: 1
 });
-var ModuleProgress = model23(
+var ModuleProgress = model27(
   "ModuleProgress",
   moduleProgressSchema
 );
@@ -17076,19 +18243,19 @@ var ModuleProgress = model23(
 var ACTION_COMPLETION_REQUIREMENT = 80;
 var QUIZ_PASS_SCORE = 70;
 var MAXIMUM_QUIZ_ATTEMPTS = 2;
-var throwServiceError10 = (message, statusCode) => {
+var throwServiceError13 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound10 = (value, message, statusCode) => {
+var assertFound13 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError10(message, statusCode);
+    throwServiceError13(message, statusCode);
   }
 };
-var assertValidObjectId5 = (value, fieldName) => {
-  if (!Types23.ObjectId.isValid(value)) {
-    throwServiceError10(`${fieldName} is invalid`, 400);
+var assertValidObjectId7 = (value, fieldName) => {
+  if (!Types27.ObjectId.isValid(value)) {
+    throwServiceError13(`${fieldName} is invalid`, 400);
   }
 };
 var isDuplicateKeyError5 = (error) => {
@@ -17107,20 +18274,20 @@ var calculateCompletionPercent = (completed, total) => {
   return roundToTwoDecimals(clamp2(completed / total * 100, 0, 100));
 };
 var ensureCourseModuleExists5 = async (moduleId) => {
-  assertValidObjectId5(moduleId, "Course module ID");
+  assertValidObjectId7(moduleId, "Course module ID");
   const courseModule = await CourseModule.findById(moduleId).select(
     "_id pillar title slug moduleNumber status"
   );
-  assertFound10(courseModule, "Course module not found", 404);
+  assertFound13(courseModule, "Course module not found", 404);
   if (courseModule.status === "archived") {
-    throwServiceError10("Archived module progress cannot be managed", 400);
+    throwServiceError13("Archived module progress cannot be managed", 400);
   }
   return courseModule;
 };
 var createDefaultProgressData = (userId, moduleId) => {
   return {
-    user: new Types23.ObjectId(userId),
-    module: new Types23.ObjectId(moduleId),
+    user: new Types27.ObjectId(userId),
+    module: new Types27.ObjectId(moduleId),
     videoSummary: {
       totalRequired: 0,
       completedRequired: 0,
@@ -17155,11 +18322,11 @@ var createDefaultProgressData = (userId, moduleId) => {
   };
 };
 var getOrCreateModuleProgress = async (userId, moduleId) => {
-  assertValidObjectId5(userId, "User ID");
+  assertValidObjectId7(userId, "User ID");
   await ensureCourseModuleExists5(moduleId);
   const filter = {
-    user: new Types23.ObjectId(userId),
-    module: new Types23.ObjectId(moduleId)
+    user: new Types27.ObjectId(userId),
+    module: new Types27.ObjectId(moduleId)
   };
   const existingProgress = await ModuleProgress.findOne(filter);
   if (existingProgress) {
@@ -17174,7 +18341,7 @@ var getOrCreateModuleProgress = async (userId, moduleId) => {
       throw error;
     }
     const progress = await ModuleProgress.findOne(filter);
-    assertFound10(progress, "Module progress could not be created", 500);
+    assertFound13(progress, "Module progress could not be created", 500);
     return progress;
   }
 };
@@ -17218,8 +18385,8 @@ var recalculateDerivedFields = (progress) => {
 };
 var refreshModuleProgress = async (userId, moduleId) => {
   const progress = await getOrCreateModuleProgress(userId, moduleId);
-  const moduleObjectId = new Types23.ObjectId(moduleId);
-  const userObjectId = new Types23.ObjectId(userId);
+  const moduleObjectId = new Types27.ObjectId(moduleId);
+  const userObjectId = new Types27.ObjectId(userId);
   const requiredVideos = await ModuleVideo.find({
     module: moduleObjectId,
     status: "published",
@@ -17369,9 +18536,9 @@ var getMyModuleProgress = async (userId, moduleId) => {
   return refreshModuleProgress(userId, moduleId);
 };
 var getMyAllModuleProgress = async (userId) => {
-  assertValidObjectId5(userId, "User ID");
+  assertValidObjectId7(userId, "User ID");
   const filter = {
-    user: new Types23.ObjectId(userId)
+    user: new Types27.ObjectId(userId)
   };
   return ModuleProgress.find(filter).sort({
     updatedAt: -1
@@ -17391,12 +18558,12 @@ var getUserModuleProgress = async (userId, moduleId) => {
 var getAllModuleProgress = async (query) => {
   const filter = {};
   if (query.userId) {
-    assertValidObjectId5(query.userId, "User ID");
-    filter.user = new Types23.ObjectId(query.userId);
+    assertValidObjectId7(query.userId, "User ID");
+    filter.user = new Types27.ObjectId(query.userId);
   }
   if (query.moduleId) {
-    assertValidObjectId5(query.moduleId, "Course module ID");
-    filter.module = new Types23.ObjectId(query.moduleId);
+    assertValidObjectId7(query.moduleId, "Course module ID");
+    filter.module = new Types27.ObjectId(query.moduleId);
   }
   if (query.isCompleted !== void 0) {
     filter.isCompleted = query.isCompleted;
@@ -17619,14 +18786,14 @@ var moduleProgressRoutes = router25;
 import { Router as Router26 } from "express";
 
 // src/modules/quizAttempts/quiz.attempt.service.ts
-import { Types as Types24 } from "mongoose";
+import { Types as Types28 } from "mongoose";
 
 // src/modules/quizAttempts/quiz.attempt.model.schema.ts
-import { model as model24, Schema as Schema24 } from "mongoose";
-var quizAttemptAnswerSchema = new Schema24(
+import { model as model28, Schema as Schema28 } from "mongoose";
+var quizAttemptAnswerSchema = new Schema28(
   {
     question: {
-      type: Schema24.Types.ObjectId,
+      type: Schema28.Types.ObjectId,
       ref: "QuizQuestion",
       required: true
     },
@@ -17651,16 +18818,16 @@ var quizAttemptAnswerSchema = new Schema24(
     _id: false
   }
 );
-var quizAttemptSchema = new Schema24(
+var quizAttemptSchema = new Schema28(
   {
     user: {
-      type: Schema24.Types.ObjectId,
+      type: Schema28.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     module: {
-      type: Schema24.Types.ObjectId,
+      type: Schema28.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
@@ -17726,7 +18893,7 @@ quizAttemptSchema.index({
   module: 1,
   passed: 1
 });
-var QuizAttempt = model24(
+var QuizAttempt = model28(
   "QuizAttempt",
   quizAttemptSchema
 );
@@ -17734,19 +18901,19 @@ var QuizAttempt = model24(
 // src/modules/quizAttempts/quiz.attempt.service.ts
 var MAXIMUM_ATTEMPTS = 2;
 var PASS_SCORE = 70;
-var throwServiceError11 = (message, statusCode) => {
+var throwServiceError14 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound11 = (value, message, statusCode) => {
+var assertFound14 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError11(message, statusCode);
+    throwServiceError14(message, statusCode);
   }
 };
-var assertValidObjectId6 = (value, fieldName) => {
-  if (!Types24.ObjectId.isValid(value)) {
-    throwServiceError11(`${fieldName} is invalid`, 400);
+var assertValidObjectId8 = (value, fieldName) => {
+  if (!Types28.ObjectId.isValid(value)) {
+    throwServiceError14(`${fieldName} is invalid`, 400);
   }
 };
 var isDuplicateKeyError6 = (error) => {
@@ -17767,11 +18934,11 @@ var arraysAreEqual = (first, second) => {
 var validateSelectedIndexes = (selectedIndexes, optionCount) => {
   const uniqueIndexes = new Set(selectedIndexes);
   if (uniqueIndexes.size !== selectedIndexes?.length) {
-    throwServiceError11("Selected option indexes must be unique", 400);
+    throwServiceError14("Selected option indexes must be unique", 400);
   }
   for (const index of selectedIndexes) {
     if (index < 0 || index >= optionCount) {
-      throwServiceError11(
+      throwServiceError14(
         "Selected option index is outside the available options",
         400
       );
@@ -17779,43 +18946,43 @@ var validateSelectedIndexes = (selectedIndexes, optionCount) => {
   }
 };
 var ensureModuleIsAvailable = async (moduleId) => {
-  assertValidObjectId6(moduleId, "Course module ID");
+  assertValidObjectId8(moduleId, "Course module ID");
   const courseModule = await CourseModule.findById(moduleId).select(
     "_id pillar title slug moduleNumber status"
   );
-  assertFound11(courseModule, "Course module not found", 404);
+  assertFound14(courseModule, "Course module not found", 404);
   if (courseModule.status !== "published") {
-    throwServiceError11("Course module is not published", 403);
+    throwServiceError14("Course module is not published", 403);
   }
   return courseModule;
 };
 var submitQuizAttempt = async (userId, moduleId, payload) => {
-  assertValidObjectId6(userId, "User ID");
+  assertValidObjectId8(userId, "User ID");
   await ensureModuleIsAvailable(moduleId);
   const moduleProgress = await moduleProgressService.refreshModuleProgress(
     userId,
     moduleId
   );
   if (!moduleProgress.quizUnlocked) {
-    throwServiceError11(
+    throwServiceError14(
       "Quiz is locked. Complete the required videos, resources and at least 80% of required actions first",
       403
     );
   }
   const previousAttempts = await QuizAttempt.find({
-    user: new Types24.ObjectId(userId),
-    module: new Types24.ObjectId(moduleId)
+    user: new Types28.ObjectId(userId),
+    module: new Types28.ObjectId(moduleId)
   }).sort({
     attemptNumber: 1
   }).select("attemptNumber score passed submittedAt").lean();
   if (previousAttempts.some((attempt2) => attempt2.passed)) {
-    throwServiceError11("This quiz has already been passed", 409);
+    throwServiceError14("This quiz has already been passed", 409);
   }
   if (previousAttempts.length >= MAXIMUM_ATTEMPTS) {
-    throwServiceError11("Maximum two quiz attempts have already been used", 400);
+    throwServiceError14("Maximum two quiz attempts have already been used", 400);
   }
   const questions = await QuizQuestion.find({
-    module: new Types24.ObjectId(moduleId),
+    module: new Types28.ObjectId(moduleId),
     status: "published"
   }).sort({
     order: 1
@@ -17831,23 +18998,23 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     ].join(" ")
   ).lean();
   if (questions.length === 0) {
-    throwServiceError11("No published quiz questions are available", 400);
+    throwServiceError14("No published quiz questions are available", 400);
   }
   const answerMap = new Map(
     payload.answers.map((answer) => [answer.questionId, answer])
   );
   if (answerMap.size !== payload.answers.length) {
-    throwServiceError11("A question cannot be answered more than once", 400);
+    throwServiceError14("A question cannot be answered more than once", 400);
   }
   if (payload.answers.length !== questions.length) {
-    throwServiceError11("Every published quiz question must be answered", 400);
+    throwServiceError14("Every published quiz question must be answered", 400);
   }
   const validQuestionIds = new Set(
     questions.map((question) => question._id.toString())
   );
   for (const submittedAnswer of payload.answers) {
     if (!validQuestionIds.has(submittedAnswer.questionId)) {
-      throwServiceError11(
+      throwServiceError14(
         "An answer references a question outside this module quiz",
         400
       );
@@ -17858,26 +19025,26 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
   for (const question of questions) {
     const questionId = question._id.toString();
     const submittedAnswer = answerMap.get(questionId);
-    assertFound11(submittedAnswer, "A required quiz answer is missing", 400);
+    assertFound14(submittedAnswer, "A required quiz answer is missing", 400);
     let isCorrect = false;
     const answerData = {
       question: question._id
     };
     if (question.questionType === "true_false") {
       if (typeof submittedAnswer.booleanAnswer !== "boolean") {
-        throwServiceError11(
+        throwServiceError14(
           `Question ${question.order} requires a boolean answer`,
           400
         );
       }
       if (submittedAnswer.selectedOptionIndexes !== void 0) {
-        throwServiceError11(
+        throwServiceError14(
           `Question ${question.order} does not accept option indexes`,
           400
         );
       }
       if (typeof question.correctBooleanAnswer !== "boolean") {
-        throwServiceError11(
+        throwServiceError14(
           `Question ${question.order} has an invalid answer configuration`,
           500
         );
@@ -17887,33 +19054,33 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     } else {
       const selectedIndexes = submittedAnswer.selectedOptionIndexes;
       if (!selectedIndexes || selectedIndexes.length === 0) {
-        throwServiceError11(
+        throwServiceError14(
           `Question ${question.order} requires selected option indexes`,
           400
         );
       }
       if (submittedAnswer.booleanAnswer !== void 0) {
-        throwServiceError11(
+        throwServiceError14(
           `Question ${question.order} does not accept a boolean answer`,
           400
         );
       }
       const options2 = question.options ? [...question.options] : [];
-      assertFound11(
+      assertFound14(
         selectedIndexes,
         `Question ${question.order} requires selected option indexes`,
         400
       );
       validateSelectedIndexes(selectedIndexes, options2.length);
       if (question.questionType === "single_choice" && selectedIndexes?.length !== 1) {
-        throwServiceError11(
+        throwServiceError14(
           `Question ${question.order} requires exactly one selected option`,
           400
         );
       }
       const correctIndexes = question.correctOptionIndexes ? [...question.correctOptionIndexes] : [];
       if (correctIndexes.length === 0) {
-        throwServiceError11(
+        throwServiceError14(
           `Question ${question.order} has no configured correct answer`,
           500
         );
@@ -17942,8 +19109,8 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
   let attempt;
   try {
     attempt = await QuizAttempt.create({
-      user: new Types24.ObjectId(userId),
-      module: new Types24.ObjectId(moduleId),
+      user: new Types28.ObjectId(userId),
+      module: new Types28.ObjectId(moduleId),
       attemptNumber,
       answers: calculatedAnswers,
       totalQuestions,
@@ -17954,7 +19121,7 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     });
   } catch (error) {
     if (isDuplicateKeyError6(error)) {
-      throwServiceError11(
+      throwServiceError14(
         "A quiz attempt is already being processed. Please refresh before trying again",
         409
       );
@@ -17962,8 +19129,8 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     throw error;
   }
   const allAttempts = await QuizAttempt.find({
-    user: new Types24.ObjectId(userId),
-    module: new Types24.ObjectId(moduleId)
+    user: new Types28.ObjectId(userId),
+    module: new Types28.ObjectId(moduleId)
   }).select("score passed submittedAt").lean();
   const bestScore = allAttempts.reduce(
     (highestScore, item) => Math.max(highestScore, item.score),
@@ -18012,11 +19179,11 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
   ]);
 };
 var getMyModuleAttempts = async (userId, moduleId) => {
-  assertValidObjectId6(userId, "User ID");
-  assertValidObjectId6(moduleId, "Course module ID");
+  assertValidObjectId8(userId, "User ID");
+  assertValidObjectId8(moduleId, "Course module ID");
   return QuizAttempt.find({
-    user: new Types24.ObjectId(userId),
-    module: new Types24.ObjectId(moduleId)
+    user: new Types28.ObjectId(userId),
+    module: new Types28.ObjectId(moduleId)
   }).sort({
     attemptNumber: 1
   }).populate(
@@ -18025,11 +19192,11 @@ var getMyModuleAttempts = async (userId, moduleId) => {
   );
 };
 var getMySingleAttempt = async (userId, attemptId) => {
-  assertValidObjectId6(userId, "User ID");
-  assertValidObjectId6(attemptId, "Quiz attempt ID");
+  assertValidObjectId8(userId, "User ID");
+  assertValidObjectId8(attemptId, "Quiz attempt ID");
   const filter = {
-    _id: new Types24.ObjectId(attemptId),
-    user: new Types24.ObjectId(userId)
+    _id: new Types28.ObjectId(attemptId),
+    user: new Types28.ObjectId(userId)
   };
   const attempt = await QuizAttempt.findOne(filter).populate({
     path: "module",
@@ -18043,11 +19210,11 @@ var getMySingleAttempt = async (userId, attemptId) => {
     "answers.question",
     ["question", "questionType", "options", "explanation", "order"].join(" ")
   );
-  assertFound11(attempt, "Quiz attempt not found", 404);
+  assertFound14(attempt, "Quiz attempt not found", 404);
   return attempt;
 };
 var getSingleAttemptAdmin = async (attemptId) => {
-  assertValidObjectId6(attemptId, "Quiz attempt ID");
+  assertValidObjectId8(attemptId, "Quiz attempt ID");
   const attempt = await QuizAttempt.findById(attemptId).populate("user", "fullName email role profileImage").populate({
     path: "module",
     select: "title slug moduleNumber pillar status",
@@ -18068,18 +19235,18 @@ var getSingleAttemptAdmin = async (attemptId) => {
       "order"
     ].join(" ")
   );
-  assertFound11(attempt, "Quiz attempt not found", 404);
+  assertFound14(attempt, "Quiz attempt not found", 404);
   return attempt;
 };
 var getAllQuizAttempts = async (query) => {
   const filter = {};
   if (query.userId) {
-    assertValidObjectId6(query.userId, "User ID");
-    filter.user = new Types24.ObjectId(query.userId);
+    assertValidObjectId8(query.userId, "User ID");
+    filter.user = new Types28.ObjectId(query.userId);
   }
   if (query.moduleId) {
-    assertValidObjectId6(query.moduleId, "Course module ID");
-    filter.module = new Types24.ObjectId(query.moduleId);
+    assertValidObjectId8(query.moduleId, "Course module ID");
+    filter.module = new Types28.ObjectId(query.moduleId);
   }
   if (query.passed !== void 0) {
     filter.passed = query.passed;
@@ -18342,37 +19509,37 @@ var quizAttemptRoutes = router26;
 import { Router as Router27 } from "express";
 
 // src/modules/quizCertificates/quiz.certificate.service.ts
-import { Types as Types25 } from "mongoose";
+import { Types as Types29 } from "mongoose";
 
 // src/modules/quizCertificates/quiz.certificate.model.schema.ts
-import { model as model25, Schema as Schema25 } from "mongoose";
+import { model as model29, Schema as Schema29 } from "mongoose";
 
 // src/modules/quizCertificates/quiz.certificate.interface.ts
 var CERTIFICATE_STATUSES = ["issued", "revoked"];
 
 // src/modules/quizCertificates/quiz.certificate.model.schema.ts
-var quizCertificateSchema = new Schema25(
+var quizCertificateSchema = new Schema29(
   {
     user: {
-      type: Schema25.Types.ObjectId,
+      type: Schema29.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     module: {
-      type: Schema25.Types.ObjectId,
+      type: Schema29.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
     },
     pillar: {
-      type: Schema25.Types.ObjectId,
+      type: Schema29.Types.ObjectId,
       ref: "ChallengePillar",
       required: true,
       index: true
     },
     quizAttempt: {
-      type: Schema25.Types.ObjectId,
+      type: Schema29.Types.ObjectId,
       ref: "QuizAttempt"
     },
     certificateNumber: {
@@ -18412,7 +19579,7 @@ var quizCertificateSchema = new Schema25(
       maxlength: 500
     },
     revokedBy: {
-      type: Schema25.Types.ObjectId,
+      type: Schema29.Types.ObjectId,
       ref: "User"
     }
   },
@@ -18438,25 +19605,25 @@ quizCertificateSchema.index({
   status: 1,
   issuedAt: -1
 });
-var QuizCertificate = model25(
+var QuizCertificate = model29(
   "QuizCertificate",
   quizCertificateSchema
 );
 
 // src/modules/quizCertificates/quiz.certificate.service.ts
-var throwServiceError12 = (message, statusCode) => {
+var throwServiceError15 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound12 = (value, message, statusCode) => {
+var assertFound15 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError12(message, statusCode);
+    throwServiceError15(message, statusCode);
   }
 };
-var assertValidObjectId7 = (value, fieldName) => {
-  if (!Types25.ObjectId.isValid(value)) {
-    throwServiceError12(`${fieldName} is invalid`, 400);
+var assertValidObjectId9 = (value, fieldName) => {
+  if (!Types29.ObjectId.isValid(value)) {
+    throwServiceError15(`${fieldName} is invalid`, 400);
   }
 };
 var isAdminOrManager11 = (role) => {
@@ -18507,26 +19674,26 @@ var buildCertificateNumber = (pillarSlug, moduleNumber) => {
   ].join("-");
 };
 var issueCertificateIfEligible = async (userId, moduleId) => {
-  assertValidObjectId7(userId, "User ID");
-  assertValidObjectId7(moduleId, "Course module ID");
+  assertValidObjectId9(userId, "User ID");
+  assertValidObjectId9(moduleId, "Course module ID");
   const existingCertificate = await QuizCertificate.findOne({
-    user: new Types25.ObjectId(userId),
-    module: new Types25.ObjectId(moduleId)
+    user: new Types29.ObjectId(userId),
+    module: new Types29.ObjectId(moduleId)
   }).populate(CERTIFICATE_POPULATE);
   if (existingCertificate) {
     return existingCertificate;
   }
   const moduleProgress = await ModuleProgress.findOne({
-    user: new Types25.ObjectId(userId),
-    module: new Types25.ObjectId(moduleId)
+    user: new Types29.ObjectId(userId),
+    module: new Types29.ObjectId(moduleId)
   }).lean();
-  assertFound12(
+  assertFound15(
     moduleProgress,
     "Module progress not found. Complete the module requirements first",
     404
   );
   if (!moduleProgress.quizSummary?.passed) {
-    throwServiceError12(
+    throwServiceError15(
       "Quiz must be passed before a certificate can be issued",
       403
     );
@@ -18535,12 +19702,12 @@ var issueCertificateIfEligible = async (userId, moduleId) => {
     "pillar",
     "name slug title status"
   );
-  assertFound12(courseModule, "Course module not found", 404);
+  assertFound15(courseModule, "Course module not found", 404);
   const pillar = courseModule.pillar;
-  assertFound12(pillar, "Parent challenge pillar not found", 404);
+  assertFound15(pillar, "Parent challenge pillar not found", 404);
   const createData = {
-    user: new Types25.ObjectId(userId),
-    module: new Types25.ObjectId(moduleId),
+    user: new Types29.ObjectId(userId),
+    module: new Types29.ObjectId(moduleId),
     pillar: pillar._id,
     certificateNumber: buildCertificateNumber(
       pillar.slug,
@@ -18566,8 +19733,8 @@ var issueCertificateIfEligible = async (userId, moduleId) => {
       lastError = error;
       if (isDuplicateKeyError7(error)) {
         const raceCertificate = await QuizCertificate.findOne({
-          user: new Types25.ObjectId(userId),
-          module: new Types25.ObjectId(moduleId)
+          user: new Types29.ObjectId(userId),
+          module: new Types29.ObjectId(moduleId)
         }).populate(CERTIFICATE_POPULATE);
         if (raceCertificate) {
           return raceCertificate;
@@ -18580,52 +19747,52 @@ var issueCertificateIfEligible = async (userId, moduleId) => {
   throw lastError;
 };
 var getMyCertificates = async (userId) => {
-  assertValidObjectId7(userId, "User ID");
+  assertValidObjectId9(userId, "User ID");
   return QuizCertificate.find({
-    user: new Types25.ObjectId(userId)
+    user: new Types29.ObjectId(userId)
   }).sort({ issuedAt: -1 }).populate(CERTIFICATE_POPULATE);
 };
 var getMySingleCertificate = async (userId, certificateId) => {
-  assertValidObjectId7(userId, "User ID");
-  assertValidObjectId7(certificateId, "Certificate ID");
+  assertValidObjectId9(userId, "User ID");
+  assertValidObjectId9(certificateId, "Certificate ID");
   const certificate = await QuizCertificate.findOne({
     _id: certificateId,
-    user: new Types25.ObjectId(userId)
+    user: new Types29.ObjectId(userId)
   }).populate(CERTIFICATE_POPULATE);
-  assertFound12(certificate, "Certificate not found", 404);
+  assertFound15(certificate, "Certificate not found", 404);
   return certificate;
 };
 var verifyCertificateByNumber = async (certificateNumber) => {
   const certificate = await QuizCertificate.findOne({
     certificateNumber: certificateNumber.trim().toUpperCase()
   }).populate(CERTIFICATE_POPULATE);
-  assertFound12(certificate, "Certificate not found", 404);
+  assertFound15(certificate, "Certificate not found", 404);
   return {
     valid: certificate.status === "issued",
     certificate
   };
 };
 var getSingleCertificateAdmin = async (certificateId) => {
-  assertValidObjectId7(certificateId, "Certificate ID");
+  assertValidObjectId9(certificateId, "Certificate ID");
   const certificate = await QuizCertificate.findById(
     certificateId
   ).populate(CERTIFICATE_POPULATE);
-  assertFound12(certificate, "Certificate not found", 404);
+  assertFound15(certificate, "Certificate not found", 404);
   return certificate;
 };
 var getAllCertificatesAdmin = async (query) => {
   const filter = {};
   if (query.userId) {
-    assertValidObjectId7(query.userId, "User ID");
-    filter.user = new Types25.ObjectId(query.userId);
+    assertValidObjectId9(query.userId, "User ID");
+    filter.user = new Types29.ObjectId(query.userId);
   }
   if (query.moduleId) {
-    assertValidObjectId7(query.moduleId, "Course module ID");
-    filter.module = new Types25.ObjectId(query.moduleId);
+    assertValidObjectId9(query.moduleId, "Course module ID");
+    filter.module = new Types29.ObjectId(query.moduleId);
   }
   if (query.pillarId) {
-    assertValidObjectId7(query.pillarId, "Challenge pillar ID");
-    filter.pillar = new Types25.ObjectId(query.pillarId);
+    assertValidObjectId9(query.pillarId, "Challenge pillar ID");
+    filter.pillar = new Types29.ObjectId(query.pillarId);
   }
   if (query.status) {
     filter.status = query.status;
@@ -18648,24 +19815,24 @@ var getAllCertificatesAdmin = async (query) => {
   };
 };
 var attachCertificateUrl = async (certificateId, payload) => {
-  assertValidObjectId7(certificateId, "Certificate ID");
+  assertValidObjectId9(certificateId, "Certificate ID");
   const certificate = await QuizCertificate.findById(certificateId);
-  assertFound12(certificate, "Certificate not found", 404);
+  assertFound15(certificate, "Certificate not found", 404);
   certificate.certificateUrl = payload.certificateUrl;
   await certificate.save();
   return certificate.populate(CERTIFICATE_POPULATE);
 };
 var revokeCertificate = async (certificateId, actorId, reason) => {
-  assertValidObjectId7(certificateId, "Certificate ID");
-  assertValidObjectId7(actorId, "Actor ID");
+  assertValidObjectId9(certificateId, "Certificate ID");
+  assertValidObjectId9(actorId, "Actor ID");
   const certificate = await QuizCertificate.findById(certificateId);
-  assertFound12(certificate, "Certificate not found", 404);
+  assertFound15(certificate, "Certificate not found", 404);
   if (certificate.status === "revoked") {
-    throwServiceError12("Certificate is already revoked", 400);
+    throwServiceError15("Certificate is already revoked", 400);
   }
   certificate.status = "revoked";
   certificate.revokedAt = /* @__PURE__ */ new Date();
-  certificate.revokedBy = new Types25.ObjectId(actorId);
+  certificate.revokedBy = new Types29.ObjectId(actorId);
   if (reason !== void 0) {
     certificate.revokedReason = reason;
   }
@@ -18966,10 +20133,10 @@ var quizCertificateRoutes = router27;
 import { Router as Router28 } from "express";
 
 // src/modules/mentorshipProfiles/mentorship.profile.service.ts
-import { Types as Types26 } from "mongoose";
+import { Types as Types30 } from "mongoose";
 
 // src/modules/mentorshipProfiles/mentorship.profile.model.schema.ts
-import { model as model26, Schema as Schema26 } from "mongoose";
+import { model as model30, Schema as Schema30 } from "mongoose";
 
 // src/modules/mentorshipProfiles/mentorship.profile.interface.ts
 var MENTORSHIP_PROFILE_STATUSES = [
@@ -18988,7 +20155,7 @@ var AVAILABILITY_DAYS = [
 ];
 
 // src/modules/mentorshipProfiles/mentorship.profile.model.schema.ts
-var availabilitySlotSchema = new Schema26(
+var availabilitySlotSchema = new Schema30(
   {
     day: {
       type: String,
@@ -19017,10 +20184,10 @@ var availabilitySlotSchema = new Schema26(
     _id: false
   }
 );
-var mentorshipProfileSchema = new Schema26(
+var mentorshipProfileSchema = new Schema30(
   {
     mentor: {
-      type: Schema26.Types.ObjectId,
+      type: Schema30.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
@@ -19088,12 +20255,12 @@ var mentorshipProfileSchema = new Schema26(
       type: Date
     },
     createdBy: {
-      type: Schema26.Types.ObjectId,
+      type: Schema30.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema26.Types.ObjectId,
+      type: Schema30.Types.ObjectId,
       ref: "User"
     }
   },
@@ -19111,25 +20278,25 @@ mentorshipProfileSchema.index({
   isPrimaryMentor: 1,
   isActive: 1
 });
-var MentorshipProfile = model26(
+var MentorshipProfile = model30(
   "MentorshipProfile",
   mentorshipProfileSchema
 );
 
 // src/modules/mentorshipProfiles/mentorship.profile.service.ts
-var throwServiceError13 = (message, statusCode) => {
+var throwServiceError16 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound13 = (value, message, statusCode) => {
+var assertFound16 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError13(message, statusCode);
+    throwServiceError16(message, statusCode);
   }
 };
-var assertValidObjectId8 = (value, fieldName) => {
-  if (!Types26.ObjectId.isValid(value)) {
-    throwServiceError13(`${fieldName} is invalid`, 400);
+var assertValidObjectId10 = (value, fieldName) => {
+  if (!Types30.ObjectId.isValid(value)) {
+    throwServiceError16(`${fieldName} is invalid`, 400);
   }
 };
 var isAdminOrManager12 = (role) => {
@@ -19153,9 +20320,9 @@ var PROFILE_POPULATE = [
   }
 ];
 var ensureMentorUserExists = async (mentorId) => {
-  assertValidObjectId8(mentorId, "Mentor user ID");
+  assertValidObjectId10(mentorId, "Mentor user ID");
   const mentorUser = await User.findById(mentorId).select("_id fullName email role");
-  assertFound13(mentorUser, "Mentor user not found", 404);
+  assertFound16(mentorUser, "Mentor user not found", 404);
   return mentorUser;
 };
 var clearOtherPrimaryMentors = async (excludeId) => {
@@ -19175,13 +20342,13 @@ var createMentorshipProfile = async (payload, actorId) => {
     mentor: payload.mentor
   });
   if (existingProfile) {
-    throwServiceError13(
+    throwServiceError16(
       "A mentorship profile already exists for this mentor",
       409
     );
   }
   const createData = {
-    mentor: new Types26.ObjectId(payload.mentor),
+    mentor: new Types30.ObjectId(payload.mentor),
     bio: payload.bio,
     expertise: payload.expertise ?? [],
     availability: payload.availability ?? [],
@@ -19189,7 +20356,7 @@ var createMentorshipProfile = async (payload, actorId) => {
     sessionDurationMinutes: payload.sessionDurationMinutes ?? 60,
     order: payload.order ?? 0,
     status: "draft",
-    createdBy: new Types26.ObjectId(actorId)
+    createdBy: new Types30.ObjectId(actorId)
   };
   if (payload.profileImage !== void 0) {
     createData.profileImage = payload.profileImage;
@@ -19205,7 +20372,7 @@ var createMentorshipProfile = async (payload, actorId) => {
     return profile.populate(PROFILE_POPULATE);
   } catch (error) {
     if (isDuplicateKeyError8(error)) {
-      throwServiceError13(
+      throwServiceError16(
         "A mentorship profile already exists for this mentor",
         409
       );
@@ -19232,11 +20399,11 @@ var getPrimaryMentor = async () => {
     isActive: true,
     status: "published"
   }).populate(PROFILE_POPULATE);
-  assertFound13(profile, "No primary mentor is currently configured", 404);
+  assertFound16(profile, "No primary mentor is currently configured", 404);
   return profile;
 };
 var getSingleMentorshipProfile = async (profileId, actorRole) => {
-  assertValidObjectId8(profileId, "Mentorship profile ID");
+  assertValidObjectId10(profileId, "Mentorship profile ID");
   const filter = {
     _id: profileId
   };
@@ -19247,13 +20414,13 @@ var getSingleMentorshipProfile = async (profileId, actorRole) => {
   const profile = await MentorshipProfile.findOne(filter).populate(
     PROFILE_POPULATE
   );
-  assertFound13(profile, "Mentorship profile not found", 404);
+  assertFound16(profile, "Mentorship profile not found", 404);
   return profile;
 };
 var updateMentorshipProfile = async (profileId, payload, actorId) => {
-  assertValidObjectId8(profileId, "Mentorship profile ID");
+  assertValidObjectId10(profileId, "Mentorship profile ID");
   const profile = await MentorshipProfile.findById(profileId);
-  assertFound13(profile, "Mentorship profile not found", 404);
+  assertFound16(profile, "Mentorship profile not found", 404);
   if (payload.bio !== void 0) {
     profile.bio = payload.bio;
   }
@@ -19283,7 +20450,7 @@ var updateMentorshipProfile = async (profileId, payload, actorId) => {
   if (payload.isPrimaryMentor !== void 0) {
     profile.isPrimaryMentor = payload.isPrimaryMentor;
   }
-  profile.updatedBy = new Types26.ObjectId(actorId);
+  profile.updatedBy = new Types30.ObjectId(actorId);
   await profile.save();
   if (profile.isPrimaryMentor) {
     await clearOtherPrimaryMentors(profile._id);
@@ -19291,45 +20458,45 @@ var updateMentorshipProfile = async (profileId, payload, actorId) => {
   return profile.populate(PROFILE_POPULATE);
 };
 var publishMentorshipProfile = async (profileId, actorId) => {
-  assertValidObjectId8(profileId, "Mentorship profile ID");
+  assertValidObjectId10(profileId, "Mentorship profile ID");
   const profile = await MentorshipProfile.findById(profileId);
-  assertFound13(profile, "Mentorship profile not found", 404);
+  assertFound16(profile, "Mentorship profile not found", 404);
   if (profile.status === "archived") {
-    throwServiceError13("Archived mentorship profile cannot be published", 400);
+    throwServiceError16("Archived mentorship profile cannot be published", 400);
   }
   profile.status = "published";
   profile.publishedAt = /* @__PURE__ */ new Date();
   profile.set("archivedAt", void 0);
-  profile.updatedBy = new Types26.ObjectId(actorId);
+  profile.updatedBy = new Types30.ObjectId(actorId);
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
 };
 var moveMentorshipProfileToDraft = async (profileId, actorId) => {
-  assertValidObjectId8(profileId, "Mentorship profile ID");
+  assertValidObjectId10(profileId, "Mentorship profile ID");
   const profile = await MentorshipProfile.findById(profileId);
-  assertFound13(profile, "Mentorship profile not found", 404);
+  assertFound16(profile, "Mentorship profile not found", 404);
   if (profile.status === "archived") {
-    throwServiceError13(
+    throwServiceError16(
       "Archived mentorship profile cannot be moved to draft",
       400
     );
   }
   profile.status = "draft";
   profile.set("publishedAt", void 0);
-  profile.updatedBy = new Types26.ObjectId(actorId);
+  profile.updatedBy = new Types30.ObjectId(actorId);
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
 };
 var archiveMentorshipProfile = async (profileId, actorId) => {
-  assertValidObjectId8(profileId, "Mentorship profile ID");
+  assertValidObjectId10(profileId, "Mentorship profile ID");
   const profile = await MentorshipProfile.findById(profileId);
-  assertFound13(profile, "Mentorship profile not found", 404);
+  assertFound16(profile, "Mentorship profile not found", 404);
   profile.status = "archived";
   profile.archivedAt = /* @__PURE__ */ new Date();
   profile.isActive = false;
   profile.isPrimaryMentor = false;
   profile.set("publishedAt", void 0);
-  profile.updatedBy = new Types26.ObjectId(actorId);
+  profile.updatedBy = new Types30.ObjectId(actorId);
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
 };
@@ -19590,15 +20757,14 @@ router28.patch(
 );
 var mentorshipProfileRoutes = router28;
 
-<<<<<<< HEAD
 // src/modules/mentorshipReviews/mentorship.review.route.ts
 import { Router as Router29 } from "express";
 
 // src/modules/mentorshipReviews/mentorship.review.service.ts
-import mongoose3, { Types as Types27 } from "mongoose";
+import mongoose3, { Types as Types31 } from "mongoose";
 
 // src/modules/mentorshipReviews/mentorship.review.model.schema.ts
-import { model as model27, Schema as Schema27 } from "mongoose";
+import { model as model31, Schema as Schema31 } from "mongoose";
 
 // src/modules/mentorshipReviews/mentorship.review.interface.ts
 var MENTORSHIP_REVIEW_STATUSES = [
@@ -19608,66 +20774,32 @@ var MENTORSHIP_REVIEW_STATUSES = [
 ];
 
 // src/modules/mentorshipReviews/mentorship.review.model.schema.ts
-var mentorshipReviewSchema = new Schema27(
+var mentorshipReviewSchema = new Schema31(
   {
     booking: {
-      type: Schema27.Types.ObjectId,
+      type: Schema31.Types.ObjectId,
       ref: "MentorBooking",
       required: true,
       unique: true,
       index: true
     },
     user: {
-=======
-// src/modules/mentorBookings/mentor.booking.route.ts
-import { Router as Router29 } from "express";
-
-// src/modules/mentorBookings/mentor.booking.service.ts
-import { Types as Types27 } from "mongoose";
-
-// src/modules/mentorBookings/mentor.booking.model.schema.ts
-import { model as model27, Schema as Schema27 } from "mongoose";
-
-// src/modules/mentorBookings/mentor.booking.interface.ts
-var MENTOR_BOOKING_STATUSES = [
-  "requested",
-  "confirmed",
-  "completed",
-  "cancelled",
-  "no_show"
-];
-var NO_SHOW_PARTIES = ["member", "mentor", "both"];
-
-// src/modules/mentorBookings/mentor.booking.model.schema.ts
-var mentorBookingSchema = new Schema27(
-  {
-    member: {
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
-      type: Schema27.Types.ObjectId,
+      type: Schema31.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
-<<<<<<< HEAD
     mentor: {
-=======
-    leadMentor: {
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
-      type: Schema27.Types.ObjectId,
+      type: Schema31.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
-<<<<<<< HEAD
     mentorshipProfile: {
-=======
-    leadMentorProfile: {
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
-      type: Schema27.Types.ObjectId,
+      type: Schema31.Types.ObjectId,
       ref: "MentorshipProfile",
       index: true
     },
-<<<<<<< HEAD
     rating: {
       type: Number,
       required: true,
@@ -19675,57 +20807,12 @@ var mentorBookingSchema = new Schema27(
       max: 5
     },
     comment: {
-=======
-    coMentor: {
-      type: Schema27.Types.ObjectId,
-      ref: "User",
-      index: true
-    },
-    coMentorProfile: {
-      type: Schema27.Types.ObjectId,
-      ref: "MentorshipProfile",
-      index: true
-    },
-    scheduledStartTime: {
-      type: Date,
-      required: true,
-      index: true
-    },
-    scheduledEndTime: {
-      type: Date,
-      required: true,
-      index: true
-    },
-    durationMinutes: {
-      type: Number,
-      default: 60,
-      min: 15,
-      max: 180,
-      required: true
-    },
-    timezone: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    meetingUrl: {
-      type: String,
-      trim: true
-    },
-    sessionTopic: {
-      type: String,
-      trim: true,
-      maxlength: 500
-    },
-    notes: {
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       type: String,
       trim: true,
       maxlength: 2e3
     },
     status: {
       type: String,
-<<<<<<< HEAD
       enum: MENTORSHIP_REVIEW_STATUSES,
       default: "published",
       index: true
@@ -19740,67 +20827,20 @@ var mentorBookingSchema = new Schema27(
       min: 0
     },
     adminNotes: {
-=======
-      enum: MENTOR_BOOKING_STATUSES,
-      default: "requested",
-      index: true,
-      required: true
-    },
-    cancellationReason: {
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       type: String,
       trim: true,
       maxlength: 1e3
     },
-<<<<<<< HEAD
     moderatedBy: {
-      type: Schema27.Types.ObjectId,
+      type: Schema31.Types.ObjectId,
       ref: "User"
     },
     moderatedAt: {
       type: Date
-=======
-    cancelledBy: {
-      type: Schema27.Types.ObjectId,
-      ref: "User"
-    },
-    cancelledAt: {
-      type: Date
-    },
-    completedAt: {
-      type: Date
-    },
-    noShowAt: {
-      type: Date
-    },
-    noShowBy: {
-      type: String,
-      enum: NO_SHOW_PARTIES
-    },
-    noShowReason: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    mentorFeedback: {
-      type: String,
-      trim: true,
-      maxlength: 3e3
-    },
-    createdBy: {
-      type: Schema27.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema27.Types.ObjectId,
-      ref: "User"
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     }
   },
   {
     timestamps: true,
-<<<<<<< HEAD
     collection: "mentorshipreviews"
   }
 );
@@ -19821,59 +20861,27 @@ mentorshipReviewSchema.index({
   rating: 1,
   status: 1
 });
-var MentorshipReview = model27(
+var MentorshipReview = model31(
   "MentorshipReview",
   mentorshipReviewSchema
 );
 
 // src/modules/mentorshipReviews/mentorship.review.service.ts
-=======
-    collection: "mentorbookings"
-  }
-);
-mentorBookingSchema.index({
-  member: 1,
-  status: 1
-});
-mentorBookingSchema.index({
-  leadMentor: 1,
-  status: 1
-});
-mentorBookingSchema.index({
-  coMentor: 1,
-  status: 1
-});
-mentorBookingSchema.index({
-  scheduledStartTime: 1,
-  scheduledEndTime: 1
-});
-mentorBookingSchema.index({
-  status: 1,
-  scheduledStartTime: 1
-});
-var MentorBooking = model27(
-  "MentorBooking",
-  mentorBookingSchema
-);
-
-// src/modules/mentorBookings/mentor.booking.service.ts
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
-var throwServiceError14 = (message, statusCode) => {
+var throwServiceError17 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound14 = (value, message, statusCode) => {
+var assertFound17 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError14(message, statusCode);
+    throwServiceError17(message, statusCode);
   }
 };
-var assertValidObjectId9 = (value, fieldName) => {
-  if (!Types27.ObjectId.isValid(value)) {
-    throwServiceError14(`${fieldName} is invalid`, 400);
+var assertValidObjectId11 = (value, fieldName) => {
+  if (!Types31.ObjectId.isValid(value)) {
+    throwServiceError17(`${fieldName} is invalid`, 400);
   }
 };
-<<<<<<< HEAD
 var isDuplicateKeyError9 = (error) => {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
 };
@@ -19905,34 +20913,34 @@ var getReviewPopulate = () => {
   return populateList;
 };
 var ensureMentorUserExists2 = async (mentorId) => {
-  assertValidObjectId9(mentorId, "Mentor ID");
+  assertValidObjectId11(mentorId, "Mentor ID");
   const mentor = await User.findById(mentorId).select(
     "_id fullName email role profileImage"
   );
-  assertFound14(mentor, "Mentor user not found", 404);
+  assertFound17(mentor, "Mentor user not found", 404);
   return mentor;
 };
 var verifyBookingForReview = async (bookingId, userId, mentorId) => {
-  assertValidObjectId9(bookingId, "Booking ID");
+  assertValidObjectId11(bookingId, "Booking ID");
   if (mongoose3.models.MentorBooking) {
     const booking = await mongoose3.model("MentorBooking").findById(bookingId).lean();
-    assertFound14(booking, "Mentorship booking not found", 404);
+    assertFound17(booking, "Mentorship booking not found", 404);
     const bookingUserId = (booking.user || booking.mentee || booking.client)?.toString();
     if (bookingUserId && bookingUserId !== userId) {
-      throwServiceError14(
+      throwServiceError17(
         "You can only review mentorship sessions booked by yourself",
         403
       );
     }
     const bookingMentorId = booking.mentor?.toString();
     if (bookingMentorId && bookingMentorId !== mentorId) {
-      throwServiceError14(
+      throwServiceError17(
         "The specified mentor does not match this booking record",
         400
       );
     }
     if (booking.status && booking.status !== "completed") {
-      throwServiceError14(
+      throwServiceError17(
         `Reviews are only permitted for completed sessions. Current status: ${booking.status}`,
         400
       );
@@ -19940,18 +20948,18 @@ var verifyBookingForReview = async (bookingId, userId, mentorId) => {
   }
 };
 var createReview = async (payload, userId) => {
-  assertValidObjectId9(payload.booking, "Booking ID");
-  assertValidObjectId9(payload.mentor, "Mentor ID");
+  assertValidObjectId11(payload.booking, "Booking ID");
+  assertValidObjectId11(payload.mentor, "Mentor ID");
   if (payload.mentor === userId) {
-    throwServiceError14("Mentors cannot submit reviews for themselves", 400);
+    throwServiceError17("Mentors cannot submit reviews for themselves", 400);
   }
   await ensureMentorUserExists2(payload.mentor);
   await verifyBookingForReview(payload.booking, userId, payload.mentor);
   const existingReview = await MentorshipReview.findOne({
-    booking: new Types27.ObjectId(payload.booking)
+    booking: new Types31.ObjectId(payload.booking)
   });
   if (existingReview) {
-    throwServiceError14(
+    throwServiceError17(
       "A review has already been submitted for this mentorship booking",
       409
     );
@@ -19959,24 +20967,24 @@ var createReview = async (payload, userId) => {
   let mentorshipProfileId = payload.mentorshipProfile;
   if (!mentorshipProfileId) {
     const profile = await MentorshipProfile.findOne({
-      mentor: new Types27.ObjectId(payload.mentor)
+      mentor: new Types31.ObjectId(payload.mentor)
     }).select("_id");
     if (profile) {
       mentorshipProfileId = profile._id.toString();
     }
   }
   const createData = {
-    booking: new Types27.ObjectId(payload.booking),
-    user: new Types27.ObjectId(userId),
-    mentor: new Types27.ObjectId(payload.mentor),
+    booking: new Types31.ObjectId(payload.booking),
+    user: new Types31.ObjectId(userId),
+    mentor: new Types31.ObjectId(payload.mentor),
     rating: payload.rating,
     status: "published",
     isAnonymous: payload.isAnonymous ?? false,
     helpfulCount: 0
   };
   if (mentorshipProfileId) {
-    assertValidObjectId9(mentorshipProfileId, "Mentorship profile ID");
-    createData.mentorshipProfile = new Types27.ObjectId(mentorshipProfileId);
+    assertValidObjectId11(mentorshipProfileId, "Mentorship profile ID");
+    createData.mentorshipProfile = new Types31.ObjectId(mentorshipProfileId);
   }
   if (payload.comment) {
     createData.comment = payload.comment.trim();
@@ -19986,7 +20994,7 @@ var createReview = async (payload, userId) => {
     return review.populate(getReviewPopulate());
   } catch (error) {
     if (isDuplicateKeyError9(error)) {
-      throwServiceError14(
+      throwServiceError17(
         "A review has already been submitted for this mentorship booking",
         409
       );
@@ -19995,14 +21003,14 @@ var createReview = async (payload, userId) => {
   }
 };
 var getReviewsForMentor = async (mentorId, options2) => {
-  assertValidObjectId9(mentorId, "Mentor ID");
+  assertValidObjectId11(mentorId, "Mentor ID");
   const page = Math.max(1, options2?.page ?? 1);
   const limit = Math.max(1, Math.min(50, options2?.limit ?? 10));
   const skip = (page - 1) * limit;
   let filter = {
     $or: [
-      { mentor: new Types27.ObjectId(mentorId) },
-      { mentorshipProfile: new Types27.ObjectId(mentorId) }
+      { mentor: new Types31.ObjectId(mentorId) },
+      { mentorshipProfile: new Types31.ObjectId(mentorId) }
     ],
     status: "published"
   };
@@ -20013,8 +21021,8 @@ var getReviewsForMentor = async (mentorId, options2) => {
       {
         $match: {
           $or: [
-            { mentor: new Types27.ObjectId(mentorId) },
-            { mentorshipProfile: new Types27.ObjectId(mentorId) }
+            { mentor: new Types31.ObjectId(mentorId) },
+            { mentorshipProfile: new Types31.ObjectId(mentorId) }
           ],
           status: "published"
         }
@@ -20072,11 +21080,11 @@ var getReviewsForMentor = async (mentorId, options2) => {
   };
 };
 var getMyReviews = async (userId, options2) => {
-  assertValidObjectId9(userId, "User ID");
+  assertValidObjectId11(userId, "User ID");
   const page = Math.max(1, options2?.page ?? 1);
   const limit = Math.max(1, Math.min(50, options2?.limit ?? 10));
   const skip = (page - 1) * limit;
-  const filter = { user: new Types27.ObjectId(userId) };
+  const filter = { user: new Types31.ObjectId(userId) };
   const [reviews, total] = await Promise.all([
     MentorshipReview.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(getReviewPopulate()),
     MentorshipReview.countDocuments(filter)
@@ -20084,245 +21092,23 @@ var getMyReviews = async (userId, options2) => {
   return {
     data: reviews,
     pagination: {
-=======
-var isAdminOrManager13 = (role) => {
-  return role === "admin" || role === "manager" || role === "founder" || role === "super_admin";
-};
-var BOOKING_POPULATE = [
-  {
-    path: "member",
-    select: "fullName email role profileImage phone city country"
-  },
-  {
-    path: "leadMentor",
-    select: "fullName email role profileImage"
-  },
-  {
-    path: "leadMentorProfile",
-    select: "bio expertise profileImage sessionDurationMinutes isPrimaryMentor status"
-  },
-  {
-    path: "coMentor",
-    select: "fullName email role profileImage"
-  },
-  {
-    path: "coMentorProfile",
-    select: "bio expertise profileImage sessionDurationMinutes isPrimaryMentor status"
-  },
-  {
-    path: "cancelledBy",
-    select: "fullName email role"
-  },
-  {
-    path: "createdBy",
-    select: "fullName email role"
-  },
-  {
-    path: "updatedBy",
-    select: "fullName email role"
-  }
-];
-var checkUserExists = async (userId, label) => {
-  assertValidObjectId9(userId, label);
-  const user = await User.findById(userId).select("_id fullName email role");
-  assertFound14(user, `${label} not found`, 404);
-  return user;
-};
-var resolveMentorshipProfileId = async (mentorUserId, explicitProfileId) => {
-  if (explicitProfileId) {
-    assertValidObjectId9(explicitProfileId, "Mentorship profile ID");
-    const profile2 = await MentorshipProfile.findById(explicitProfileId);
-    assertFound14(profile2, "Mentorship profile not found", 404);
-    if (String(profile2.mentor) !== mentorUserId) {
-      throwServiceError14(
-        "Provided mentorship profile does not belong to the selected mentor",
-        400
-      );
-    }
-    return profile2._id;
-  }
-  const profile = await MentorshipProfile.findOne({
-    mentor: new Types27.ObjectId(mentorUserId),
-    isActive: true
-  });
-  return profile ? profile._id : void 0;
-};
-var checkSchedulingConflicts = async ({
-  memberId,
-  leadMentorId,
-  coMentorId,
-  startTime,
-  endTime,
-  excludeBookingId
-}) => {
-  const activeStatuses = ["requested", "confirmed"];
-  const baseOverlapFilter = {
-    status: { $in: activeStatuses },
-    scheduledStartTime: { $lt: endTime },
-    scheduledEndTime: { $gt: startTime }
-  };
-  if (excludeBookingId) {
-    baseOverlapFilter._id = { $ne: new Types27.ObjectId(excludeBookingId) };
-  }
-  const memberConflict = await MentorBooking.findOne({
-    ...baseOverlapFilter,
-    member: new Types27.ObjectId(memberId)
-  });
-  if (memberConflict) {
-    throwServiceError14(
-      "You already have a pending or confirmed booking in this time slot",
-      409
-    );
-  }
-  const leadMentorConflict = await MentorBooking.findOne({
-    ...baseOverlapFilter,
-    $or: [
-      { leadMentor: new Types27.ObjectId(leadMentorId) },
-      { coMentor: new Types27.ObjectId(leadMentorId) },
-      { member: new Types27.ObjectId(leadMentorId) }
-    ]
-  });
-  if (leadMentorConflict) {
-    throwServiceError14(
-      "The lead mentor already has a scheduled session during this time slot",
-      409
-    );
-  }
-  if (coMentorId) {
-    const coMentorConflict = await MentorBooking.findOne({
-      ...baseOverlapFilter,
-      $or: [
-        { leadMentor: new Types27.ObjectId(coMentorId) },
-        { coMentor: new Types27.ObjectId(coMentorId) },
-        { member: new Types27.ObjectId(coMentorId) }
-      ]
-    });
-    if (coMentorConflict) {
-      throwServiceError14(
-        "The co-mentor already has a scheduled session during this time slot",
-        409
-      );
-    }
-  }
-};
-var createBooking = async (payload, memberUserId, actorId) => {
-  assertValidObjectId9(payload.leadMentor, "Lead mentor ID");
-  assertValidObjectId9(memberUserId, "Member user ID");
-  if (memberUserId === payload.leadMentor) {
-    throwServiceError14("A member cannot book a mentorship session with themselves", 400);
-  }
-  if (payload.coMentor) {
-    assertValidObjectId9(payload.coMentor, "Co-mentor ID");
-    if (memberUserId === payload.coMentor) {
-      throwServiceError14("A member cannot add themselves as co-mentor", 400);
-    }
-    if (payload.leadMentor === payload.coMentor) {
-      throwServiceError14("Lead mentor and co-mentor cannot be the same user", 400);
-    }
-    await checkUserExists(payload.coMentor, "Co-mentor user");
-  }
-  await checkUserExists(payload.leadMentor, "Lead mentor user");
-  const startTime = new Date(payload.scheduledStartTime);
-  if (Number.isNaN(startTime.getTime())) {
-    throwServiceError14("Invalid scheduledStartTime format", 400);
-  }
-  const durationMinutes = payload.durationMinutes ?? 60;
-  const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1e3);
-  await checkSchedulingConflicts({
-    memberId: memberUserId,
-    leadMentorId: payload.leadMentor,
-    coMentorId: payload.coMentor,
-    startTime,
-    endTime
-  });
-  const leadMentorProfileId = await resolveMentorshipProfileId(
-    payload.leadMentor,
-    payload.leadMentorProfile
-  );
-  let coMentorProfileId;
-  if (payload.coMentor) {
-    coMentorProfileId = await resolveMentorshipProfileId(
-      payload.coMentor,
-      payload.coMentorProfile
-    );
-  }
-  const createData = {
-    member: new Types27.ObjectId(memberUserId),
-    leadMentor: new Types27.ObjectId(payload.leadMentor),
-    scheduledStartTime: startTime,
-    scheduledEndTime: endTime,
-    durationMinutes,
-    timezone: payload.timezone,
-    status: "requested",
-    createdBy: new Types27.ObjectId(actorId)
-  };
-  if (leadMentorProfileId) {
-    createData.leadMentorProfile = leadMentorProfileId;
-  }
-  if (payload.coMentor) {
-    createData.coMentor = new Types27.ObjectId(payload.coMentor);
-  }
-  if (coMentorProfileId) {
-    createData.coMentorProfile = coMentorProfileId;
-  }
-  if (payload.sessionTopic !== void 0) {
-    createData.sessionTopic = payload.sessionTopic;
-  }
-  if (payload.notes !== void 0) {
-    createData.notes = payload.notes;
-  }
-  if (payload.meetingUrl !== void 0) {
-    createData.meetingUrl = payload.meetingUrl;
-  }
-  const booking = await MentorBooking.create(createData);
-  return booking.populate(BOOKING_POPULATE);
-};
-var getMyMemberBookings = async (memberUserId, query = {}) => {
-  assertValidObjectId9(memberUserId, "Member user ID");
-  const filter = {
-    member: new Types27.ObjectId(memberUserId)
-  };
-  if (query.status) {
-    filter.status = query.status;
-  }
-  if (query.startDate || query.endDate) {
-    const timeFilter = {};
-    if (query.startDate) {
-      timeFilter.$gte = new Date(query.startDate);
-    }
-    if (query.endDate) {
-      timeFilter.$lte = new Date(query.endDate);
-    }
-    filter.scheduledStartTime = timeFilter;
-  }
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
-  const skip = (page - 1) * limit;
-  const [bookings, total] = await Promise.all([
-    MentorBooking.find(filter).sort({ scheduledStartTime: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
-    MentorBooking.countDocuments(filter)
-  ]);
-  return {
-    meta: {
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit)
-<<<<<<< HEAD
     }
   };
 };
 var getSingleReview = async (reviewId, actorUserId, actorRole) => {
-  assertValidObjectId9(reviewId, "Review ID");
+  assertValidObjectId11(reviewId, "Review ID");
   const review = await MentorshipReview.findById(reviewId).populate(
     getReviewPopulate()
   );
-  assertFound14(review, "Mentorship review not found", 404);
+  assertFound17(review, "Mentorship review not found", 404);
   const isOwner = actorUserId && review.user.toString() === actorUserId;
   const isAdmin = actorRole === "founder" || actorRole === "manager" || actorRole === "admin" || actorRole === "super_admin";
   if (review.status !== "published" && !isOwner && !isAdmin) {
-    throwServiceError14("Mentorship review not found", 404);
+    throwServiceError17("Mentorship review not found", 404);
   }
   const doc = review.toObject();
   if (doc.isAnonymous && !isOwner && !isAdmin) {
@@ -20334,11 +21120,11 @@ var getSingleReview = async (reviewId, actorUserId, actorRole) => {
   return doc;
 };
 var updateReview = async (reviewId, payload, userId) => {
-  assertValidObjectId9(reviewId, "Review ID");
+  assertValidObjectId11(reviewId, "Review ID");
   const review = await MentorshipReview.findById(reviewId);
-  assertFound14(review, "Mentorship review not found", 404);
+  assertFound17(review, "Mentorship review not found", 404);
   if (review.user.toString() !== userId) {
-    throwServiceError14(
+    throwServiceError17(
       "You are not authorized to update another user's review",
       403
     );
@@ -20358,11 +21144,11 @@ var updateReview = async (reviewId, payload, userId) => {
   return review.populate(getReviewPopulate());
 };
 var deleteReview = async (reviewId, userId) => {
-  assertValidObjectId9(reviewId, "Review ID");
+  assertValidObjectId11(reviewId, "Review ID");
   const review = await MentorshipReview.findById(reviewId);
-  assertFound14(review, "Mentorship review not found", 404);
+  assertFound17(review, "Mentorship review not found", 404);
   if (review.user.toString() !== userId) {
-    throwServiceError14(
+    throwServiceError17(
       "You are not authorized to delete another user's review",
       403
     );
@@ -20376,106 +21162,24 @@ var getAllReviewsAdmin = async (query) => {
   const skip = (page - 1) * limit;
   const filter = {};
   if (query.mentor) {
-    assertValidObjectId9(query.mentor, "Mentor ID");
-    filter.mentor = new Types27.ObjectId(query.mentor);
+    assertValidObjectId11(query.mentor, "Mentor ID");
+    filter.mentor = new Types31.ObjectId(query.mentor);
   }
   if (query.user) {
-    assertValidObjectId9(query.user, "User ID");
-    filter.user = new Types27.ObjectId(query.user);
+    assertValidObjectId11(query.user, "User ID");
+    filter.user = new Types31.ObjectId(query.user);
   }
   if (query.booking) {
-    assertValidObjectId9(query.booking, "Booking ID");
-    filter.booking = new Types27.ObjectId(query.booking);
+    assertValidObjectId11(query.booking, "Booking ID");
+    filter.booking = new Types31.ObjectId(query.booking);
   }
   if (query.mentorshipProfile) {
-    assertValidObjectId9(query.mentorshipProfile, "Mentorship Profile ID");
-    filter.mentorshipProfile = new Types27.ObjectId(query.mentorshipProfile);
-=======
-    },
-    data: bookings
-  };
-};
-var getMyMemberSingleBooking = async (bookingId, memberUserId) => {
-  assertValidObjectId9(bookingId, "Booking ID");
-  assertValidObjectId9(memberUserId, "Member user ID");
-  const booking = await MentorBooking.findOne({
-    _id: new Types27.ObjectId(bookingId),
-    member: new Types27.ObjectId(memberUserId)
-  }).populate(BOOKING_POPULATE);
-  assertFound14(booking, "Mentor booking not found", 404);
-  return booking;
-};
-var getMyMentorBookings = async (mentorUserId, query = {}) => {
-  assertValidObjectId9(mentorUserId, "Mentor user ID");
-  const mentorObjectId = new Types27.ObjectId(mentorUserId);
-  const filter = {
-    $or: [{ leadMentor: mentorObjectId }, { coMentor: mentorObjectId }]
-  };
-  if (query.status) {
-    filter.status = query.status;
-  }
-  if (query.startDate || query.endDate) {
-    const timeFilter = {};
-    if (query.startDate) {
-      timeFilter.$gte = new Date(query.startDate);
-    }
-    if (query.endDate) {
-      timeFilter.$lte = new Date(query.endDate);
-    }
-    filter.scheduledStartTime = timeFilter;
-  }
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
-  const skip = (page - 1) * limit;
-  const [bookings, total] = await Promise.all([
-    MentorBooking.find(filter).sort({ scheduledStartTime: 1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
-    MentorBooking.countDocuments(filter)
-  ]);
-  return {
-    meta: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit)
-    },
-    data: bookings
-  };
-};
-var getMyMentorSingleBooking = async (bookingId, mentorUserId) => {
-  assertValidObjectId9(bookingId, "Booking ID");
-  assertValidObjectId9(mentorUserId, "Mentor user ID");
-  const mentorObjectId = new Types27.ObjectId(mentorUserId);
-  const booking = await MentorBooking.findOne({
-    _id: new Types27.ObjectId(bookingId),
-    $or: [{ leadMentor: mentorObjectId }, { coMentor: mentorObjectId }]
-  }).populate(BOOKING_POPULATE);
-  assertFound14(booking, "Mentor booking not found", 404);
-  return booking;
-};
-var getAllBookingsAdmin = async (query = {}) => {
-  const filter = {};
-  if (query.memberId) {
-    assertValidObjectId9(query.memberId, "Member ID");
-    filter.member = new Types27.ObjectId(query.memberId);
-  }
-  if (query.leadMentorId) {
-    assertValidObjectId9(query.leadMentorId, "Lead mentor ID");
-    filter.leadMentor = new Types27.ObjectId(query.leadMentorId);
-  }
-  if (query.coMentorId) {
-    assertValidObjectId9(query.coMentorId, "Co-mentor ID");
-    filter.coMentor = new Types27.ObjectId(query.coMentorId);
-  }
-  if (query.mentorId) {
-    assertValidObjectId9(query.mentorId, "Mentor ID");
-    const mentorObjId = new Types27.ObjectId(query.mentorId);
-    filter.$or = [{ leadMentor: mentorObjId }, { coMentor: mentorObjId }];
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
+    assertValidObjectId11(query.mentorshipProfile, "Mentorship Profile ID");
+    filter.mentorshipProfile = new Types31.ObjectId(query.mentorshipProfile);
   }
   if (query.status) {
     filter.status = query.status;
   }
-<<<<<<< HEAD
   if (query.rating) {
     filter.rating = query.rating;
   }
@@ -20488,41 +21192,19 @@ var getAllBookingsAdmin = async (query = {}) => {
   return {
     data: reviews,
     pagination: {
-=======
-  if (query.startDate || query.endDate) {
-    const timeFilter = {};
-    if (query.startDate) {
-      timeFilter.$gte = new Date(query.startDate);
-    }
-    if (query.endDate) {
-      timeFilter.$lte = new Date(query.endDate);
-    }
-    filter.scheduledStartTime = timeFilter;
-  }
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
-  const skip = (page - 1) * limit;
-  const [bookings, total] = await Promise.all([
-    MentorBooking.find(filter).sort({ scheduledStartTime: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
-    MentorBooking.countDocuments(filter)
-  ]);
-  return {
-    meta: {
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit)
-<<<<<<< HEAD
     }
   };
 };
 var moderateReview = async (reviewId, payload, adminId) => {
-  assertValidObjectId9(reviewId, "Review ID");
+  assertValidObjectId11(reviewId, "Review ID");
   const review = await MentorshipReview.findById(reviewId);
-  assertFound14(review, "Mentorship review not found", 404);
+  assertFound17(review, "Mentorship review not found", 404);
   review.status = payload.status;
-  review.moderatedBy = new Types27.ObjectId(adminId);
+  review.moderatedBy = new Types31.ObjectId(adminId);
   review.moderatedAt = /* @__PURE__ */ new Date();
   if (payload.adminNotes !== void 0) {
     review.adminNotes = payload.adminNotes;
@@ -20531,9 +21213,9 @@ var moderateReview = async (reviewId, payload, adminId) => {
   return review.populate(getReviewPopulate());
 };
 var deleteReviewAdmin = async (reviewId) => {
-  assertValidObjectId9(reviewId, "Review ID");
+  assertValidObjectId11(reviewId, "Review ID");
   const review = await MentorshipReview.findByIdAndDelete(reviewId);
-  assertFound14(review, "Mentorship review not found", 404);
+  assertFound17(review, "Mentorship review not found", 404);
   return { id: reviewId, deleted: true };
 };
 var mentorshipReviewService = {
@@ -20549,281 +21231,6 @@ var mentorshipReviewService = {
 };
 
 // src/modules/mentorshipReviews/mentorship.review.controller.ts
-=======
-    },
-    data: bookings
-  };
-};
-var getSingleBookingAdmin = async (bookingId) => {
-  assertValidObjectId9(bookingId, "Booking ID");
-  const booking = await MentorBooking.findById(bookingId).populate(
-    BOOKING_POPULATE
-  );
-  assertFound14(booking, "Mentor booking not found", 404);
-  return booking;
-};
-var updateBooking = async ({
-  bookingId,
-  payload,
-  actorId,
-  actorRole
-}) => {
-  assertValidObjectId9(bookingId, "Booking ID");
-  const booking = await MentorBooking.findById(bookingId);
-  assertFound14(booking, "Mentor booking not found", 404);
-  const isMember = String(booking.member) === actorId;
-  const isLead = String(booking.leadMentor) === actorId;
-  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
-  const isAdmin = isAdminOrManager13(actorRole);
-  if (!isMember && !isLead && !isCo && !isAdmin) {
-    throwServiceError14("You are not authorized to update this booking", 403);
-  }
-  if (booking.status === "completed" || booking.status === "cancelled" || booking.status === "no_show") {
-    throwServiceError14(
-      `Cannot update a booking that is already ${booking.status}`,
-      400
-    );
-  }
-  const newLeadMentorId = payload.leadMentor ?? String(booking.leadMentor);
-  let newCoMentorId = booking.coMentor ? String(booking.coMentor) : void 0;
-  if (payload.coMentor === null) {
-    newCoMentorId = void 0;
-  } else if (payload.coMentor !== void 0) {
-    newCoMentorId = payload.coMentor;
-  }
-  if (String(booking.member) === newLeadMentorId) {
-    throwServiceError14("A member cannot book a mentorship session with themselves", 400);
-  }
-  if (newCoMentorId && String(booking.member) === newCoMentorId) {
-    throwServiceError14("A member cannot add themselves as co-mentor", 400);
-  }
-  if (newCoMentorId && newLeadMentorId === newCoMentorId) {
-    throwServiceError14("Lead mentor and co-mentor cannot be the same user", 400);
-  }
-  if (payload.leadMentor && payload.leadMentor !== String(booking.leadMentor)) {
-    await checkUserExists(payload.leadMentor, "Lead mentor user");
-    booking.leadMentor = new Types27.ObjectId(payload.leadMentor);
-  }
-  if (payload.coMentor !== void 0) {
-    if (payload.coMentor === null) {
-      booking.set("coMentor", void 0);
-      booking.set("coMentorProfile", void 0);
-    } else {
-      await checkUserExists(payload.coMentor, "Co-mentor user");
-      booking.coMentor = new Types27.ObjectId(payload.coMentor);
-    }
-  }
-  if (payload.leadMentorProfile !== void 0) {
-    const profileId = await resolveMentorshipProfileId(
-      newLeadMentorId,
-      payload.leadMentorProfile
-    );
-    if (profileId) {
-      booking.leadMentorProfile = profileId;
-    } else {
-      booking.set("leadMentorProfile", void 0);
-    }
-  }
-  if (payload.coMentorProfile !== void 0 && newCoMentorId) {
-    const profileId = await resolveMentorshipProfileId(
-      newCoMentorId,
-      payload.coMentorProfile ?? void 0
-    );
-    if (profileId) {
-      booking.coMentorProfile = profileId;
-    } else {
-      booking.set("coMentorProfile", void 0);
-    }
-  }
-  const durationMinutes = payload.durationMinutes ?? booking.durationMinutes;
-  let startTime = booking.scheduledStartTime;
-  if (payload.scheduledStartTime) {
-    startTime = new Date(payload.scheduledStartTime);
-    if (Number.isNaN(startTime.getTime())) {
-      throwServiceError14("Invalid scheduledStartTime format", 400);
-    }
-  }
-  const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1e3);
-  await checkSchedulingConflicts({
-    memberId: String(booking.member),
-    leadMentorId: newLeadMentorId,
-    coMentorId: newCoMentorId,
-    startTime,
-    endTime,
-    excludeBookingId: String(booking._id)
-  });
-  booking.scheduledStartTime = startTime;
-  booking.scheduledEndTime = endTime;
-  booking.durationMinutes = durationMinutes;
-  if (payload.timezone !== void 0) {
-    booking.timezone = payload.timezone;
-  }
-  if (payload.sessionTopic !== void 0) {
-    booking.sessionTopic = payload.sessionTopic;
-  }
-  if (payload.notes !== void 0) {
-    booking.notes = payload.notes;
-  }
-  if (payload.meetingUrl === null) {
-    booking.set("meetingUrl", void 0);
-  } else if (payload.meetingUrl !== void 0) {
-    booking.meetingUrl = payload.meetingUrl;
-  }
-  booking.updatedBy = new Types27.ObjectId(actorId);
-  await booking.save();
-  return booking.populate(BOOKING_POPULATE);
-};
-var confirmBooking = async ({
-  bookingId,
-  payload,
-  actorId,
-  actorRole
-}) => {
-  assertValidObjectId9(bookingId, "Booking ID");
-  const booking = await MentorBooking.findById(bookingId);
-  assertFound14(booking, "Mentor booking not found", 404);
-  const isLead = String(booking.leadMentor) === actorId;
-  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
-  const isAdmin = isAdminOrManager13(actorRole);
-  if (!isLead && !isCo && !isAdmin) {
-    throwServiceError14("Only assigned mentors or administrators can confirm bookings", 403);
-  }
-  if (booking.status === "confirmed") {
-    if (payload.meetingUrl) {
-      booking.meetingUrl = payload.meetingUrl;
-      booking.updatedBy = new Types27.ObjectId(actorId);
-      await booking.save();
-      return booking.populate(BOOKING_POPULATE);
-    }
-    return booking.populate(BOOKING_POPULATE);
-  }
-  if (booking.status !== "requested") {
-    throwServiceError14(`Cannot confirm a booking with status "${booking.status}"`, 400);
-  }
-  await checkSchedulingConflicts({
-    memberId: String(booking.member),
-    leadMentorId: String(booking.leadMentor),
-    coMentorId: booking.coMentor ? String(booking.coMentor) : void 0,
-    startTime: booking.scheduledStartTime,
-    endTime: booking.scheduledEndTime,
-    excludeBookingId: String(booking._id)
-  });
-  booking.status = "confirmed";
-  if (payload.meetingUrl !== void 0) {
-    booking.meetingUrl = payload.meetingUrl;
-  }
-  booking.updatedBy = new Types27.ObjectId(actorId);
-  await booking.save();
-  return booking.populate(BOOKING_POPULATE);
-};
-var cancelBooking = async ({
-  bookingId,
-  payload,
-  actorId,
-  actorRole
-}) => {
-  assertValidObjectId9(bookingId, "Booking ID");
-  const booking = await MentorBooking.findById(bookingId);
-  assertFound14(booking, "Mentor booking not found", 404);
-  const isMember = String(booking.member) === actorId;
-  const isLead = String(booking.leadMentor) === actorId;
-  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
-  const isAdmin = isAdminOrManager13(actorRole);
-  if (!isMember && !isLead && !isCo && !isAdmin) {
-    throwServiceError14("You are not authorized to cancel this booking", 403);
-  }
-  if (booking.status === "cancelled") {
-    throwServiceError14("Booking is already cancelled", 400);
-  }
-  if (booking.status === "completed") {
-    throwServiceError14("Completed booking cannot be cancelled", 400);
-  }
-  booking.status = "cancelled";
-  booking.cancellationReason = payload.reason;
-  booking.cancelledBy = new Types27.ObjectId(actorId);
-  booking.cancelledAt = /* @__PURE__ */ new Date();
-  booking.updatedBy = new Types27.ObjectId(actorId);
-  await booking.save();
-  return booking.populate(BOOKING_POPULATE);
-};
-var completeBooking = async ({
-  bookingId,
-  payload,
-  actorId,
-  actorRole
-}) => {
-  assertValidObjectId9(bookingId, "Booking ID");
-  const booking = await MentorBooking.findById(bookingId);
-  assertFound14(booking, "Mentor booking not found", 404);
-  const isLead = String(booking.leadMentor) === actorId;
-  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
-  const isAdmin = isAdminOrManager13(actorRole);
-  if (!isLead && !isCo && !isAdmin) {
-    throwServiceError14("Only assigned mentors or administrators can complete bookings", 403);
-  }
-  if (booking.status === "cancelled") {
-    throwServiceError14("Cancelled booking cannot be marked as completed", 400);
-  }
-  if (booking.status === "no_show") {
-    throwServiceError14("No-show booking cannot be marked as completed", 400);
-  }
-  booking.status = "completed";
-  booking.completedAt = /* @__PURE__ */ new Date();
-  if (payload.mentorFeedback !== void 0) {
-    booking.mentorFeedback = payload.mentorFeedback;
-  }
-  booking.updatedBy = new Types27.ObjectId(actorId);
-  await booking.save();
-  return booking.populate(BOOKING_POPULATE);
-};
-var markNoShowBooking = async ({
-  bookingId,
-  payload,
-  actorId,
-  actorRole
-}) => {
-  assertValidObjectId9(bookingId, "Booking ID");
-  const booking = await MentorBooking.findById(bookingId);
-  assertFound14(booking, "Mentor booking not found", 404);
-  const isLead = String(booking.leadMentor) === actorId;
-  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
-  const isAdmin = isAdminOrManager13(actorRole);
-  if (!isLead && !isCo && !isAdmin) {
-    throwServiceError14("Only assigned mentors or administrators can record no-shows", 403);
-  }
-  if (booking.status === "cancelled") {
-    throwServiceError14("Cancelled booking cannot be marked as no-show", 400);
-  }
-  if (booking.status === "completed") {
-    throwServiceError14("Completed booking cannot be marked as no-show", 400);
-  }
-  booking.status = "no_show";
-  booking.noShowAt = /* @__PURE__ */ new Date();
-  booking.noShowBy = payload.noShowBy;
-  if (payload.reason !== void 0) {
-    booking.noShowReason = payload.reason;
-  }
-  booking.updatedBy = new Types27.ObjectId(actorId);
-  await booking.save();
-  return booking.populate(BOOKING_POPULATE);
-};
-var mentorBookingService = {
-  createBooking,
-  getMyMemberBookings,
-  getMyMemberSingleBooking,
-  getMyMentorBookings,
-  getMyMentorSingleBooking,
-  getAllBookingsAdmin,
-  getSingleBookingAdmin,
-  updateBooking,
-  confirmBooking,
-  cancelBooking,
-  completeBooking,
-  markNoShowBooking
-};
-
-// src/modules/mentorBookings/mentor.booking.controller.ts
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 var getAuthUser16 = (req) => {
   assertFound_default(req.user, "Authentication required", 401);
   return {
@@ -20831,38 +21238,23 @@ var getAuthUser16 = (req) => {
     role: req.user.role
   };
 };
-<<<<<<< HEAD
 var createReview2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser16(req);
     const review = await mentorshipReviewService.createReview(
       req.body,
-=======
-var createBooking2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser16(req);
-    const booking = await mentorBookingService.createBooking(
-      req.body,
-      authUser.id,
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       authUser.id
     );
     sendResponse_default(res, {
       statusCode: 201,
       success: true,
-<<<<<<< HEAD
       message: "Mentorship review submitted successfully",
       data: review
-=======
-      message: "Mentor booking requested successfully",
-      data: booking
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     });
   } catch (error) {
     next(error);
   }
 };
-<<<<<<< HEAD
 var getReviewsForMentor2 = async (req, res, next) => {
   try {
     const mentorId = String(req.params.mentorId);
@@ -20910,31 +21302,17 @@ var getSingleReview2 = async (req, res, next) => {
       reviewId,
       actorUserId,
       actorRole
-=======
-var getMyMemberBookings2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser16(req);
-    const result = await mentorBookingService.getMyMemberBookings(
-      authUser.id,
-      req.query
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-<<<<<<< HEAD
       message: "Mentorship review retrieved successfully",
       data: review
-=======
-      message: "Member bookings retrieved successfully",
-      data: result
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     });
   } catch (error) {
     next(error);
   }
 };
-<<<<<<< HEAD
 var updateReview2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser16(req);
@@ -20942,79 +21320,36 @@ var updateReview2 = async (req, res, next) => {
     const review = await mentorshipReviewService.updateReview(
       reviewId,
       req.body,
-=======
-var getMyMemberSingleBooking2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser16(req);
-    const booking = await mentorBookingService.getMyMemberSingleBooking(
-      String(req.params.id),
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       authUser.id
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-<<<<<<< HEAD
       message: "Mentorship review updated successfully",
       data: review
-=======
-      message: "Member booking retrieved successfully",
-      data: booking
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     });
   } catch (error) {
     next(error);
   }
 };
-<<<<<<< HEAD
 var deleteReview2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser16(req);
     const reviewId = String(req.params.id);
     const result = await mentorshipReviewService.deleteReview(
       reviewId,
-=======
-var getMyMentorBookings2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser16(req);
-    const result = await mentorBookingService.getMyMentorBookings(
-      authUser.id,
-      req.query
-    );
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Mentor schedule retrieved successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getMyMentorSingleBooking2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser16(req);
-    const booking = await mentorBookingService.getMyMentorSingleBooking(
-      String(req.params.id),
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       authUser.id
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-<<<<<<< HEAD
       message: "Mentorship review deleted successfully",
       data: result
-=======
-      message: "Mentor booking retrieved successfully",
-      data: booking
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     });
   } catch (error) {
     next(error);
   }
 };
-<<<<<<< HEAD
 var getAllReviewsAdmin2 = async (req, res, next) => {
   try {
     const query = {
@@ -21048,17 +21383,10 @@ var moderateReview2 = async (req, res, next) => {
       reviewId,
       req.body,
       authUser.id
-=======
-var getAllBookingsAdmin2 = async (req, res, next) => {
-  try {
-    const result = await mentorBookingService.getAllBookingsAdmin(
-      req.query
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-<<<<<<< HEAD
       message: "Mentorship review moderated successfully",
       data: review
     });
@@ -21074,16 +21402,12 @@ var deleteReviewAdmin2 = async (req, res, next) => {
       statusCode: 200,
       success: true,
       message: "Mentorship review deleted by admin successfully",
-=======
-      message: "All mentor bookings retrieved successfully",
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
       data: result
     });
   } catch (error) {
     next(error);
   }
 };
-<<<<<<< HEAD
 var mentorshipReviewController = {
   createReview: createReview2,
   getReviewsForMentor: getReviewsForMentor2,
@@ -21110,7 +21434,3287 @@ var createMentorshipReviewValidation = z21.object({
   }).strict()
 });
 var updateMentorshipReviewValidation = z21.object({
-=======
+  params: z21.object({
+    id: mongoObjectIdSchema13
+  }),
+  body: z21.object({
+    rating: z21.number().int().min(1).max(5).optional(),
+    comment: z21.string().trim().max(2e3).nullable().optional(),
+    isAnonymous: z21.boolean().optional()
+  }).strict()
+});
+var moderateMentorshipReviewValidation = z21.object({
+  params: z21.object({
+    id: mongoObjectIdSchema13
+  }),
+  body: z21.object({
+    status: z21.enum(MENTORSHIP_REVIEW_STATUSES),
+    adminNotes: z21.string().trim().max(1e3).optional()
+  }).strict()
+});
+var mentorshipReviewIdValidation = z21.object({
+  params: z21.object({
+    id: mongoObjectIdSchema13
+  })
+});
+var mentorIdParamValidation = z21.object({
+  params: z21.object({
+    mentorId: mongoObjectIdSchema13
+  })
+});
+
+// src/modules/mentorshipReviews/mentorship.review.route.ts
+var router29 = Router29();
+router29.get(
+  "/mentor/:mentorId",
+  validateRequest_default(mentorIdParamValidation),
+  mentorshipReviewController.getReviewsForMentor
+);
+router29.post(
+  "/",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(createMentorshipReviewValidation),
+  mentorshipReviewController.createReview
+);
+router29.get(
+  "/me",
+  verifyToken,
+  requireInvictusAccess,
+  mentorshipReviewController.getMyReviews
+);
+router29.patch(
+  "/:id",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(updateMentorshipReviewValidation),
+  mentorshipReviewController.updateReview
+);
+router29.delete(
+  "/:id",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(mentorshipReviewIdValidation),
+  mentorshipReviewController.deleteReview
+);
+router29.get(
+  "/",
+  verifyToken,
+  authorizeRoles("founder", "manager", "admin", "super_admin"),
+  mentorshipReviewController.getAllReviewsAdmin
+);
+router29.patch(
+  "/:id/status",
+  verifyToken,
+  authorizeRoles("founder", "manager", "admin", "super_admin"),
+  validateRequest_default(moderateMentorshipReviewValidation),
+  mentorshipReviewController.moderateReview
+);
+router29.delete(
+  "/:id/admin",
+  verifyToken,
+  authorizeRoles("founder", "manager", "admin", "super_admin"),
+  validateRequest_default(mentorshipReviewIdValidation),
+  mentorshipReviewController.deleteReviewAdmin
+);
+router29.get(
+  "/:id",
+  validateRequest_default(mentorshipReviewIdValidation),
+  mentorshipReviewController.getSingleReview
+);
+var mentorshipReviewRoutes = router29;
+
+// src/modules/retreatLocations/retreat.location.route.ts
+import { Router as Router30 } from "express";
+
+// src/modules/retreatLocations/retreat.location.service.ts
+import { Types as Types32 } from "mongoose";
+
+// src/modules/retreatLocations/retreat.location.model.schema.ts
+import { model as model32, Schema as Schema32 } from "mongoose";
+
+// src/modules/retreatLocations/retreat.location.interface.ts
+var RETREAT_LOCATION_STATUSES = [
+  "draft",
+  "published",
+  "archived"
+];
+
+// src/modules/retreatLocations/retreat.location.model.schema.ts
+var retreatLocationSchema = new Schema32(
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200
+    },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      index: true
+    },
+    country: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100
+    },
+    city: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100
+    },
+    tagline: {
+      type: String,
+      trim: true,
+      maxlength: 300
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 5e3
+    },
+    coverImage: {
+      type: String,
+      trim: true
+    },
+    promoVideoUrl: {
+      type: String,
+      trim: true
+    },
+    galleryImages: {
+      type: [{ type: String, trim: true }],
+      default: []
+    },
+    whatsIncluded: {
+      type: [{ type: String, trim: true }],
+      default: []
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
+    status: {
+      type: String,
+      enum: RETREAT_LOCATION_STATUSES,
+      default: "published",
+      index: true
+    },
+    order: {
+      type: Number,
+      default: 0
+    },
+    createdBy: {
+      type: Schema32.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema32.Types.ObjectId,
+      ref: "User"
+    }
+  },
+  {
+    timestamps: true,
+    collection: "retreatlocations"
+  }
+);
+retreatLocationSchema.index({
+  isActive: 1,
+  status: 1,
+  order: 1
+});
+var RetreatLocation = model32(
+  "RetreatLocation",
+  retreatLocationSchema
+);
+
+// src/modules/retreatLocations/retreat.location.service.ts
+var throwServiceError18 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound18 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError18(message, statusCode);
+  }
+};
+var assertValidObjectId12 = (value, fieldName) => {
+  if (!Types32.ObjectId.isValid(value)) {
+    throwServiceError18(`${fieldName} is invalid`, 400);
+  }
+};
+var slugify = (text) => {
+  return text.toString().toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]+/g, "").replace(/--+/g, "-");
+};
+var LOCATION_POPULATE = [
+  {
+    path: "createdBy",
+    select: "fullName email role"
+  },
+  {
+    path: "updatedBy",
+    select: "fullName email role"
+  }
+];
+var createRetreatLocation = async (payload, actorId) => {
+  const slug = payload.slug ? slugify(payload.slug) : slugify(payload.title);
+  const existing = await RetreatLocation.findOne({ slug });
+  if (existing) {
+    throwServiceError18("A retreat location with this slug already exists", 409);
+  }
+  const createData = {
+    title: payload.title,
+    slug,
+    country: payload.country,
+    city: payload.city,
+    description: payload.description,
+    galleryImages: payload.galleryImages ?? [],
+    whatsIncluded: payload.whatsIncluded ?? [],
+    isFeatured: payload.isFeatured ?? false,
+    isActive: payload.isActive ?? true,
+    status: payload.status ?? "published",
+    order: payload.order ?? 0,
+    createdBy: new Types32.ObjectId(actorId)
+  };
+  if (payload.tagline !== void 0) {
+    createData.tagline = payload.tagline;
+  }
+  if (payload.coverImage !== void 0) {
+    createData.coverImage = payload.coverImage;
+  }
+  if (payload.promoVideoUrl !== void 0) {
+    createData.promoVideoUrl = payload.promoVideoUrl;
+  }
+  const location = await RetreatLocation.create(createData);
+  return location.populate(LOCATION_POPULATE);
+};
+var getAllRetreatLocations = async (query = {}, isPublicOnly = false) => {
+  const filter = {};
+  if (isPublicOnly) {
+    filter.status = "published";
+    filter.isActive = true;
+  } else {
+    if (query.status) {
+      filter.status = query.status;
+    }
+    if (query.isActive !== void 0) {
+      filter.isActive = query.isActive;
+    }
+  }
+  if (query.isFeatured !== void 0) {
+    filter.isFeatured = query.isFeatured;
+  }
+  if (query.search) {
+    const regex = new RegExp(query.search, "i");
+    filter.$or = [{ title: regex }, { city: regex }, { country: regex }];
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [locations, total] = await Promise.all([
+    RetreatLocation.find(filter).sort({ isFeatured: -1, order: 1, createdAt: -1 }).skip(skip).limit(limit).populate(LOCATION_POPULATE),
+    RetreatLocation.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data: locations
+  };
+};
+var getSingleRetreatLocation = async (idOrSlug, isPublicOnly = false) => {
+  const filter = {};
+  if (Types32.ObjectId.isValid(idOrSlug)) {
+    filter._id = new Types32.ObjectId(idOrSlug);
+  } else {
+    filter.slug = idOrSlug.toLowerCase();
+  }
+  if (isPublicOnly) {
+    filter.status = "published";
+    filter.isActive = true;
+  }
+  const location = await RetreatLocation.findOne(filter).populate(
+    LOCATION_POPULATE
+  );
+  assertFound18(location, "Retreat location not found", 404);
+  return location;
+};
+var updateRetreatLocation = async (locationId, payload, actorId) => {
+  assertValidObjectId12(locationId, "Retreat location ID");
+  const location = await RetreatLocation.findById(locationId);
+  assertFound18(location, "Retreat location not found", 404);
+  if (payload.title !== void 0) {
+    location.title = payload.title;
+  }
+  if (payload.slug !== void 0) {
+    const slug = slugify(payload.slug);
+    const existing = await RetreatLocation.findOne({
+      slug,
+      _id: { $ne: location._id }
+    });
+    if (existing) {
+      throwServiceError18("A retreat location with this slug already exists", 409);
+    }
+    location.slug = slug;
+  }
+  if (payload.country !== void 0) {
+    location.country = payload.country;
+  }
+  if (payload.city !== void 0) {
+    location.city = payload.city;
+  }
+  if (payload.tagline !== void 0) {
+    location.tagline = payload.tagline;
+  }
+  if (payload.description !== void 0) {
+    location.description = payload.description;
+  }
+  if (payload.coverImage === null) {
+    location.set("coverImage", void 0);
+  } else if (payload.coverImage !== void 0) {
+    location.coverImage = payload.coverImage;
+  }
+  if (payload.promoVideoUrl === null) {
+    location.set("promoVideoUrl", void 0);
+  } else if (payload.promoVideoUrl !== void 0) {
+    location.promoVideoUrl = payload.promoVideoUrl;
+  }
+  if (payload.galleryImages !== void 0) {
+    location.galleryImages = payload.galleryImages;
+  }
+  if (payload.whatsIncluded !== void 0) {
+    location.whatsIncluded = payload.whatsIncluded;
+  }
+  if (payload.isFeatured !== void 0) {
+    location.isFeatured = payload.isFeatured;
+  }
+  if (payload.isActive !== void 0) {
+    location.isActive = payload.isActive;
+  }
+  if (payload.status !== void 0) {
+    location.status = payload.status;
+  }
+  if (payload.order !== void 0) {
+    location.order = payload.order;
+  }
+  location.updatedBy = new Types32.ObjectId(actorId);
+  await location.save();
+  return location.populate(LOCATION_POPULATE);
+};
+var deleteRetreatLocation = async (locationId) => {
+  assertValidObjectId12(locationId, "Retreat location ID");
+  const location = await RetreatLocation.findById(locationId);
+  assertFound18(location, "Retreat location not found", 404);
+  await location.deleteOne();
+  return { success: true, message: "Retreat location deleted successfully" };
+};
+var retreatLocationService = {
+  createRetreatLocation,
+  getAllRetreatLocations,
+  getSingleRetreatLocation,
+  updateRetreatLocation,
+  deleteRetreatLocation
+};
+
+// src/modules/retreatLocations/retreat.location.controller.ts
+var getAuthUser17 = (req) => {
+  assertFound_default(req.user, "Authentication required", 401);
+  return {
+    id: req.user.id,
+    role: req.user.role
+  };
+};
+var createRetreatLocation2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser17(req);
+    const location = await retreatLocationService.createRetreatLocation(
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Retreat location created successfully",
+      data: location
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllRetreatLocations2 = async (req, res, next) => {
+  try {
+    const isPublicOnly = !req.user || req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager";
+    const result = await retreatLocationService.getAllRetreatLocations(
+      req.query,
+      isPublicOnly
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat locations retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleRetreatLocation2 = async (req, res, next) => {
+  try {
+    const isPublicOnly = !req.user || req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager";
+    const location = await retreatLocationService.getSingleRetreatLocation(
+      String(req.params.idOrSlug),
+      isPublicOnly
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat location retrieved successfully",
+      data: location
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateRetreatLocation2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser17(req);
+    const location = await retreatLocationService.updateRetreatLocation(
+      String(req.params.id),
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat location updated successfully",
+      data: location
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var deleteRetreatLocation2 = async (req, res, next) => {
+  try {
+    getAuthUser17(req);
+    const result = await retreatLocationService.deleteRetreatLocation(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: result.message,
+      data: null
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var retreatLocationController = {
+  createRetreatLocation: createRetreatLocation2,
+  getAllRetreatLocations: getAllRetreatLocations2,
+  getSingleRetreatLocation: getSingleRetreatLocation2,
+  updateRetreatLocation: updateRetreatLocation2,
+  deleteRetreatLocation: deleteRetreatLocation2
+};
+
+// src/modules/retreatLocations/retreat.location.validation.ts
+import { z as z22 } from "zod";
+var mongoObjectIdSchema14 = z22.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var createRetreatLocationValidation = z22.object({
+  body: z22.object({
+    title: z22.string().trim().min(2).max(200),
+    slug: z22.string().trim().min(2).max(200).optional(),
+    country: z22.string().trim().min(2).max(100),
+    city: z22.string().trim().min(2).max(100),
+    tagline: z22.string().trim().max(300).optional(),
+    description: z22.string().trim().min(10).max(5e3),
+    coverImage: z22.string().trim().url().optional(),
+    promoVideoUrl: z22.string().trim().url().optional(),
+    galleryImages: z22.array(z22.string().trim().url()).max(20).optional(),
+    whatsIncluded: z22.array(z22.string().trim().min(1).max(300)).max(30).optional(),
+    isFeatured: z22.boolean().optional(),
+    isActive: z22.boolean().optional(),
+    status: z22.enum(RETREAT_LOCATION_STATUSES).optional(),
+    order: z22.number().int().min(0).optional()
+  }).strict()
+});
+var updateRetreatLocationValidation = z22.object({
+  params: z22.object({
+    id: mongoObjectIdSchema14
+  }),
+  body: z22.object({
+    title: z22.string().trim().min(2).max(200).optional(),
+    slug: z22.string().trim().min(2).max(200).optional(),
+    country: z22.string().trim().min(2).max(100).optional(),
+    city: z22.string().trim().min(2).max(100).optional(),
+    tagline: z22.string().trim().max(300).optional(),
+    description: z22.string().trim().min(10).max(5e3).optional(),
+    coverImage: z22.string().trim().url().nullable().optional(),
+    promoVideoUrl: z22.string().trim().url().nullable().optional(),
+    galleryImages: z22.array(z22.string().trim().url()).max(20).optional(),
+    whatsIncluded: z22.array(z22.string().trim().min(1).max(300)).max(30).optional(),
+    isFeatured: z22.boolean().optional(),
+    isActive: z22.boolean().optional(),
+    status: z22.enum(RETREAT_LOCATION_STATUSES).optional(),
+    order: z22.number().int().min(0).optional()
+  }).strict()
+});
+var retreatLocationIdValidation = z22.object({
+  params: z22.object({
+    id: mongoObjectIdSchema14
+  })
+});
+var queryRetreatLocationValidation = z22.object({
+  query: z22.object({
+    status: z22.enum(RETREAT_LOCATION_STATUSES).optional(),
+    isActive: z22.coerce.boolean().optional(),
+    isFeatured: z22.coerce.boolean().optional(),
+    search: z22.string().trim().optional(),
+    page: z22.coerce.number().int().min(1).optional(),
+    limit: z22.coerce.number().int().min(1).max(100).optional()
+  }).optional()
+});
+
+// src/modules/retreatLocations/retreat.location.route.ts
+var router30 = Router30();
+router30.get(
+  "/",
+  validateRequest_default(queryRetreatLocationValidation),
+  retreatLocationController.getAllRetreatLocations
+);
+router30.get(
+  "/:idOrSlug",
+  retreatLocationController.getSingleRetreatLocation
+);
+router30.post(
+  "/",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(createRetreatLocationValidation),
+  retreatLocationController.createRetreatLocation
+);
+router30.patch(
+  "/:id",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(updateRetreatLocationValidation),
+  retreatLocationController.updateRetreatLocation
+);
+router30.delete(
+  "/:id",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(retreatLocationIdValidation),
+  retreatLocationController.deleteRetreatLocation
+);
+var retreatLocationRoutes = router30;
+
+// src/modules/leaderboardEntries/leaderboard.entry.route.ts
+import { Router as Router31 } from "express";
+
+// src/modules/leaderboardEntries/leaderboard.entry.service.ts
+import mongoose5, { Types as Types34 } from "mongoose";
+
+// src/modules/leaderboardEntries/leaderboard.entry.model.schema.ts
+import { model as model33, Schema as Schema33 } from "mongoose";
+var leaderboardEntrySchema = new Schema33(
+  {
+    leaderboard: {
+      type: Schema33.Types.ObjectId,
+      ref: "Leaderboard",
+      required: true,
+      index: true
+    },
+    user: {
+      type: Schema33.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    points: {
+      type: Number,
+      default: 0,
+      min: 0,
+      required: true
+    },
+    rank: {
+      type: Number,
+      default: null
+    },
+    breakdown: {
+      type: Schema33.Types.Mixed,
+      default: {}
+    },
+    lastUpdatedAt: {
+      type: Date,
+      default: Date.now,
+      required: true
+    }
+  },
+  {
+    timestamps: true,
+    collection: "leaderboardentries",
+    optimisticConcurrency: true
+  }
+);
+leaderboardEntrySchema.index(
+  {
+    leaderboard: 1,
+    user: 1
+  },
+  {
+    unique: true
+  }
+);
+leaderboardEntrySchema.index({
+  leaderboard: 1,
+  points: -1
+});
+leaderboardEntrySchema.index({
+  leaderboard: 1,
+  rank: 1
+});
+var LeaderboardEntry = model33(
+  "LeaderboardEntry",
+  leaderboardEntrySchema
+);
+
+// src/modules/leaderboards/leaderboard.model.schema.ts
+import { model as model34, Schema as Schema34 } from "mongoose";
+
+// src/modules/leaderboards/leaderboard.interface.ts
+var LEADERBOARD_TYPES = [
+  "points",
+  "streak",
+  "course_completion",
+  "quiz_score",
+  "custom"
+];
+var LEADERBOARD_PERIODS = [
+  "daily",
+  "weekly",
+  "monthly",
+  "seasonal",
+  "all_time"
+];
+var LEADERBOARD_STATUSES = [
+  "draft",
+  "active",
+  "finalized",
+  "archived"
+];
+
+// src/modules/leaderboards/leaderboard.model.schema.ts
+var leaderboardSchema = new Schema34(
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    type: {
+      type: String,
+      enum: LEADERBOARD_TYPES,
+      required: true,
+      index: true
+    },
+    period: {
+      type: String,
+      enum: LEADERBOARD_PERIODS,
+      required: true,
+      index: true
+    },
+    startAt: {
+      type: Date,
+      required: true
+    },
+    endAt: {
+      type: Date,
+      required: true
+    },
+    status: {
+      type: String,
+      enum: LEADERBOARD_STATUSES,
+      default: "draft",
+      required: true,
+      index: true
+    },
+    description: {
+      type: String,
+      trim: true
+    },
+    createdBy: {
+      type: Schema34.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema34.Types.ObjectId,
+      ref: "User",
+      required: true
+    }
+  },
+  {
+    timestamps: true,
+    collection: "leaderboards",
+    optimisticConcurrency: true
+  }
+);
+leaderboardSchema.index(
+  {
+    type: 1,
+    period: 1,
+    status: 1
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: "active"
+    }
+  }
+);
+leaderboardSchema.index({
+  status: 1,
+  createdAt: -1
+});
+var Leaderboard = model34("Leaderboard", leaderboardSchema);
+
+// src/modules/leaderboards/leaderboard.service.ts
+import mongoose4, { Types as Types33 } from "mongoose";
+var assertValidObjectId13 = (value, fieldName) => {
+  if (!Types33.ObjectId.isValid(value)) {
+    throwServiceError_default(`${fieldName} is invalid`, 400);
+  }
+};
+var isDuplicateKeyError10 = (error) => {
+  return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
+};
+var createLeaderboard = async (payload, createdByUserId) => {
+  assertValidObjectId13(createdByUserId, "User ID");
+  if (new Date(payload.startAt) >= new Date(payload.endAt)) {
+    throwServiceError_default("startAt must be before endAt", 400);
+  }
+  try {
+    const leaderboard = await Leaderboard.create({
+      title: payload.title,
+      type: payload.type,
+      period: payload.period,
+      startAt: payload.startAt,
+      endAt: payload.endAt,
+      description: payload.description,
+      status: "draft",
+      createdBy: new Types33.ObjectId(createdByUserId),
+      updatedBy: new Types33.ObjectId(createdByUserId)
+    });
+    return leaderboard;
+  } catch (error) {
+    if (isDuplicateKeyError10(error)) {
+      throwServiceError_default(
+        "An active leaderboard already exists for this type and period",
+        409
+      );
+    }
+    throw error;
+  }
+};
+var getSingleLeaderboard = async (leaderboardId) => {
+  assertValidObjectId13(leaderboardId, "Leaderboard ID");
+  const leaderboard = await Leaderboard.findById(leaderboardId);
+  assertFound_default(leaderboard, "Leaderboard not found", 404);
+  return leaderboard;
+};
+var getAllLeaderboards = async (query) => {
+  const filter = {};
+  if (query.type) {
+    filter.type = query.type;
+  }
+  if (query.period) {
+    filter.period = query.period;
+  }
+  if (query.status) {
+    filter.status = query.status;
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [records, total] = await Promise.all([
+    Leaderboard.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("createdBy", "fullName email role").populate("updatedBy", "fullName email role"),
+    Leaderboard.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data: records
+  };
+};
+var updateLeaderboard = async (leaderboardId, payload, updatedByUserId) => {
+  assertValidObjectId13(leaderboardId, "Leaderboard ID");
+  assertValidObjectId13(updatedByUserId, "User ID");
+  const leaderboard = await Leaderboard.findById(leaderboardId);
+  assertFound_default(leaderboard, "Leaderboard not found", 404);
+  if (leaderboard.status === "finalized") {
+    throwServiceError_default("Finalized leaderboard cannot be edited", 400);
+  }
+  const nextStartAt = payload.startAt ?? leaderboard.startAt;
+  const nextEndAt = payload.endAt ?? leaderboard.endAt;
+  if (new Date(nextStartAt) >= new Date(nextEndAt)) {
+    throwServiceError_default("startAt must be before endAt", 400);
+  }
+  if (payload.title !== void 0) {
+    leaderboard.title = payload.title;
+  }
+  if (payload.description !== void 0) {
+    leaderboard.description = payload.description;
+  }
+  if (payload.startAt !== void 0) {
+    leaderboard.startAt = payload.startAt;
+  }
+  if (payload.endAt !== void 0) {
+    leaderboard.endAt = payload.endAt;
+  }
+  leaderboard.updatedBy = new Types33.ObjectId(updatedByUserId);
+  await leaderboard.save();
+  return leaderboard;
+};
+var activateLeaderboard = async (leaderboardId, updatedByUserId) => {
+  assertValidObjectId13(leaderboardId, "Leaderboard ID");
+  assertValidObjectId13(updatedByUserId, "User ID");
+  const leaderboard = await Leaderboard.findById(leaderboardId);
+  assertFound_default(leaderboard, "Leaderboard not found", 404);
+  if (leaderboard.status === "finalized") {
+    throwServiceError_default("Finalized leaderboard cannot be reactivated", 400);
+  }
+  if (leaderboard.status === "active") {
+    return leaderboard;
+  }
+  const existingActiveLeaderboard = await Leaderboard.findOne({
+    _id: { $ne: leaderboard._id },
+    type: leaderboard.type,
+    period: leaderboard.period,
+    status: "active"
+  });
+  if (existingActiveLeaderboard) {
+    throwServiceError_default(
+      `An active leaderboard already exists for type "${leaderboard.type}" and period "${leaderboard.period}"`,
+      409
+    );
+  }
+  leaderboard.status = "active";
+  leaderboard.updatedBy = new Types33.ObjectId(updatedByUserId);
+  try {
+    await leaderboard.save();
+  } catch (error) {
+    if (isDuplicateKeyError10(error)) {
+      throwServiceError_default(
+        "An active leaderboard already exists for this type and period",
+        409
+      );
+    }
+    throw error;
+  }
+  return leaderboard;
+};
+var recalculateLeaderboardRanks = async (leaderboardId) => {
+  const session = await mongoose4.startSession();
+  try {
+    session.startTransaction();
+    const entries = await LeaderboardEntry.find({ leaderboard: leaderboardId }).sort({ points: -1, updatedAt: 1 }).session(session);
+    const bulkOperations = entries.map((entry, index) => ({
+      updateOne: {
+        filter: { _id: entry._id },
+        update: { $set: { rank: index + 1 } }
+      }
+    }));
+    if (bulkOperations.length > 0) {
+      await LeaderboardEntry.bulkWrite(bulkOperations, { session });
+    }
+    await session.commitTransaction();
+    return entries.length;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+var finalizeLeaderboard = async (leaderboardId, updatedByUserId) => {
+  assertValidObjectId13(leaderboardId, "Leaderboard ID");
+  assertValidObjectId13(updatedByUserId, "User ID");
+  const leaderboard = await Leaderboard.findById(leaderboardId);
+  assertFound_default(leaderboard, "Leaderboard not found", 404);
+  if (leaderboard.status === "finalized") {
+    return leaderboard;
+  }
+  await recalculateLeaderboardRanks(leaderboardId);
+  leaderboard.status = "finalized";
+  leaderboard.updatedBy = new Types33.ObjectId(updatedByUserId);
+  await leaderboard.save();
+  return leaderboard;
+};
+var leaderboardService = {
+  createLeaderboard,
+  getSingleLeaderboard,
+  getAllLeaderboards,
+  updateLeaderboard,
+  activateLeaderboard,
+  finalizeLeaderboard,
+  recalculateLeaderboardRanks
+};
+
+// src/modules/leaderboardEntries/leaderboard.entry.service.ts
+var assertValidObjectId14 = (value, fieldName) => {
+  if (!Types34.ObjectId.isValid(value)) {
+    throwServiceError_default(`${fieldName} is invalid`, 400);
+  }
+};
+var ensureEditableLeaderboard = async (leaderboardId) => {
+  assertValidObjectId14(leaderboardId, "Leaderboard ID");
+  const leaderboard = await Leaderboard.findById(leaderboardId);
+  assertFound_default(leaderboard, "Leaderboard not found", 404);
+  if (leaderboard.status === "finalized") {
+    throwServiceError_default("Finalized leaderboard cannot be modified", 400);
+  }
+  return leaderboard;
+};
+var upsertPoints = async (leaderboardId, payload) => {
+  await ensureEditableLeaderboard(leaderboardId);
+  assertValidObjectId14(payload.userId, "User ID");
+  const session = await mongoose5.startSession();
+  try {
+    session.startTransaction();
+    const incFields = {
+      points: payload.pointsDelta
+    };
+    if (payload.breakdownKey) {
+      incFields[`breakdown.${payload.breakdownKey}`] = payload.pointsDelta;
+    }
+    const entry = await LeaderboardEntry.findOneAndUpdate(
+      {
+        leaderboard: leaderboardId,
+        user: payload.userId
+      },
+      {
+        $inc: incFields,
+        $set: { lastUpdatedAt: /* @__PURE__ */ new Date() }
+      },
+      {
+        upsert: true,
+        new: true,
+        session,
+        setDefaultsOnInsert: true
+      }
+    );
+    await session.commitTransaction();
+    return entry;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+var getLeaderboardEntries = async (leaderboardId, query) => {
+  assertValidObjectId14(leaderboardId, "Leaderboard ID");
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 50;
+  const skip = (page - 1) * limit;
+  const [records, total] = await Promise.all([
+    LeaderboardEntry.find({ leaderboard: leaderboardId }).sort({ rank: 1, points: -1 }).skip(skip).limit(limit).populate("user", "fullName email role profileImage"),
+    LeaderboardEntry.countDocuments({ leaderboard: leaderboardId })
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data: records
+  };
+};
+var getSingleUserEntry = async (leaderboardId, userId) => {
+  assertValidObjectId14(leaderboardId, "Leaderboard ID");
+  assertValidObjectId14(userId, "User ID");
+  const entry = await LeaderboardEntry.findOne({
+    leaderboard: leaderboardId,
+    user: userId
+  }).populate("user", "fullName email role profileImage");
+  assertFound_default(entry, "Entry not found for this user in this leaderboard", 404);
+  return entry;
+};
+var getMyEntry = async (leaderboardId, userId) => {
+  return getSingleUserEntry(leaderboardId, userId);
+};
+var removeEntry = async (leaderboardId, userId) => {
+  await ensureEditableLeaderboard(leaderboardId);
+  assertValidObjectId14(userId, "User ID");
+  const entry = await LeaderboardEntry.findOneAndDelete({
+    leaderboard: leaderboardId,
+    user: userId
+  });
+  assertFound_default(entry, "Entry not found", 404);
+  return entry;
+};
+var recalculateRanks = async (leaderboardId) => {
+  await ensureEditableLeaderboard(leaderboardId);
+  const updatedEntries = await leaderboardService.recalculateLeaderboardRanks(leaderboardId);
+  return { updatedEntries };
+};
+var leaderboardEntryService = {
+  upsertPoints,
+  getLeaderboardEntries,
+  getSingleUserEntry,
+  getMyEntry,
+  removeEntry,
+  recalculateRanks
+};
+
+// src/modules/leaderboardEntries/leaderboard.entry.controller.ts
+var getAuthUser18 = (req) => {
+  const user = req.user;
+  assertFound_default(user, "Authentication required", 401);
+  return {
+    id: user.id,
+    role: user.role
+  };
+};
+var upsertPoints2 = async (req, res, next) => {
+  try {
+    getAuthUser18(req);
+    const result = await leaderboardEntryService.upsertPoints(
+      String(req.params.leaderboardId),
+      req.body
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboard points updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getLeaderboardEntries2 = async (req, res, next) => {
+  try {
+    getAuthUser18(req);
+    const query = {};
+    if (typeof req.query.page === "string") {
+      query.page = Number(req.query.page);
+    }
+    if (typeof req.query.limit === "string") {
+      query.limit = Number(req.query.limit);
+    }
+    const result = await leaderboardEntryService.getLeaderboardEntries(
+      String(req.params.leaderboardId),
+      query
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboard entries retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyEntry2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser18(req);
+    const result = await leaderboardEntryService.getMyEntry(
+      String(req.params.leaderboardId),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Your leaderboard entry retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleUserEntry2 = async (req, res, next) => {
+  try {
+    getAuthUser18(req);
+    const result = await leaderboardEntryService.getSingleUserEntry(
+      String(req.params.leaderboardId),
+      String(req.params.userId)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "User leaderboard entry retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var removeEntry2 = async (req, res, next) => {
+  try {
+    getAuthUser18(req);
+    const result = await leaderboardEntryService.removeEntry(
+      String(req.params.leaderboardId),
+      String(req.params.userId)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboard entry removed successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var recalculateRanks2 = async (req, res, next) => {
+  try {
+    getAuthUser18(req);
+    const result = await leaderboardEntryService.recalculateRanks(
+      String(req.params.leaderboardId)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboard ranks recalculated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var leaderboardEntryController = {
+  upsertPoints: upsertPoints2,
+  getLeaderboardEntries: getLeaderboardEntries2,
+  getMyEntry: getMyEntry2,
+  getSingleUserEntry: getSingleUserEntry2,
+  removeEntry: removeEntry2,
+  recalculateRanks: recalculateRanks2
+};
+
+// src/modules/leaderboardEntries/leaderboard.entry.validation.ts
+import { z as z23 } from "zod";
+var mongoObjectIdSchema15 = z23.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var leaderboardIdParamValidation = z23.object({
+  params: z23.object({
+    leaderboardId: mongoObjectIdSchema15
+  })
+});
+var leaderboardUserParamValidation = z23.object({
+  params: z23.object({
+    leaderboardId: mongoObjectIdSchema15,
+    userId: mongoObjectIdSchema15
+  })
+});
+var upsertLeaderboardPointsValidation = z23.object({
+  params: z23.object({
+    leaderboardId: mongoObjectIdSchema15
+  }),
+  body: z23.object({
+    userId: mongoObjectIdSchema15,
+    pointsDelta: z23.number().int(),
+    breakdownKey: z23.string().trim().min(1).max(64).optional()
+  })
+});
+var getLeaderboardEntriesValidation = z23.object({
+  params: z23.object({
+    leaderboardId: mongoObjectIdSchema15
+  }),
+  query: z23.object({
+    page: z23.coerce.number().int().min(1).default(1),
+    limit: z23.coerce.number().int().min(1).max(200).default(50)
+  })
+});
+
+// src/modules/leaderboardEntries/leaderboard.entry.route.ts
+var router31 = Router31({ mergeParams: true });
+router31.post(
+  "/:leaderboardId/entries",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest_default(upsertLeaderboardPointsValidation),
+  leaderboardEntryController.upsertPoints
+);
+router31.get(
+  "/:leaderboardId/entries",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(getLeaderboardEntriesValidation),
+  leaderboardEntryController.getLeaderboardEntries
+);
+router31.get(
+  "/:leaderboardId/entries/me",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(leaderboardIdParamValidation),
+  leaderboardEntryController.getMyEntry
+);
+router31.get(
+  "/:leaderboardId/entries/:userId",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest_default(leaderboardUserParamValidation),
+  leaderboardEntryController.getSingleUserEntry
+);
+router31.delete(
+  "/:leaderboardId/entries/:userId",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest_default(leaderboardUserParamValidation),
+  leaderboardEntryController.removeEntry
+);
+router31.post(
+  "/:leaderboardId/recalculate",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest_default(leaderboardIdParamValidation),
+  leaderboardEntryController.recalculateRanks
+);
+var leaderboardEntryRoutes = router31;
+
+// src/modules/leaderboards/leaderboard.route.ts
+import { Router as Router32 } from "express";
+
+// src/modules/leaderboards/leaderboard.controller.ts
+var getAuthUser19 = (req) => {
+  const user = req.user;
+  assertFound_default(user, "Authentication required", 401);
+  return {
+    id: user.id,
+    role: user.role
+  };
+};
+var createLeaderboard2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser19(req);
+    const result = await leaderboardService.createLeaderboard(
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Leaderboard created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllLeaderboards2 = async (req, res, next) => {
+  try {
+    getAuthUser19(req);
+    const query = {};
+    if (typeof req.query.type === "string") {
+      query.type = req.query.type;
+    }
+    if (typeof req.query.period === "string") {
+      query.period = req.query.period;
+    }
+    if (typeof req.query.status === "string") {
+      query.status = req.query.status;
+    }
+    if (typeof req.query.page === "string") {
+      query.page = Number(req.query.page);
+    }
+    if (typeof req.query.limit === "string") {
+      query.limit = Number(req.query.limit);
+    }
+    const result = await leaderboardService.getAllLeaderboards(query);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboards retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleLeaderboard2 = async (req, res, next) => {
+  try {
+    getAuthUser19(req);
+    const result = await leaderboardService.getSingleLeaderboard(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboard retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateLeaderboard2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser19(req);
+    const result = await leaderboardService.updateLeaderboard(
+      String(req.params.id),
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboard updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var activateLeaderboard2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser19(req);
+    const result = await leaderboardService.activateLeaderboard(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboard activated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var finalizeLeaderboard2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser19(req);
+    const result = await leaderboardService.finalizeLeaderboard(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboard finalized successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var leaderboardController = {
+  createLeaderboard: createLeaderboard2,
+  getAllLeaderboards: getAllLeaderboards2,
+  getSingleLeaderboard: getSingleLeaderboard2,
+  updateLeaderboard: updateLeaderboard2,
+  activateLeaderboard: activateLeaderboard2,
+  finalizeLeaderboard: finalizeLeaderboard2
+};
+
+// src/modules/leaderboards/leaderboard.validation.ts
+import { z as z24 } from "zod";
+var mongoObjectIdSchema16 = z24.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var leaderboardIdValidation = z24.object({
+  params: z24.object({
+    id: mongoObjectIdSchema16
+  })
+});
+var createLeaderboardValidation = z24.object({
+  body: z24.object({
+    title: z24.string().trim().min(3).max(150),
+    type: z24.enum(LEADERBOARD_TYPES),
+    period: z24.enum(LEADERBOARD_PERIODS),
+    startAt: z24.coerce.date(),
+    endAt: z24.coerce.date(),
+    description: z24.string().trim().max(1e3).optional()
+  })
+});
+var updateLeaderboardValidation = z24.object({
+  params: z24.object({
+    id: mongoObjectIdSchema16
+  }),
+  body: z24.object({
+    title: z24.string().trim().min(3).max(150).optional(),
+    description: z24.string().trim().max(1e3).optional(),
+    startAt: z24.coerce.date().optional(),
+    endAt: z24.coerce.date().optional()
+  }).refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field is required to update"
+  })
+});
+var getAllLeaderboardsValidation = z24.object({
+  query: z24.object({
+    type: z24.enum(LEADERBOARD_TYPES).optional(),
+    period: z24.enum(LEADERBOARD_PERIODS).optional(),
+    status: z24.enum(LEADERBOARD_STATUSES).optional(),
+    page: z24.coerce.number().int().min(1).default(1),
+    limit: z24.coerce.number().int().min(1).max(100).default(20)
+  })
+});
+
+// src/modules/leaderboards/leaderboard.route.ts
+var router32 = Router32();
+router32.post(
+  "/",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest_default(createLeaderboardValidation),
+  leaderboardController.createLeaderboard
+);
+router32.get(
+  "/",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(getAllLeaderboardsValidation),
+  leaderboardController.getAllLeaderboards
+);
+router32.get(
+  "/:id",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(leaderboardIdValidation),
+  leaderboardController.getSingleLeaderboard
+);
+router32.patch(
+  "/:id",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest_default(updateLeaderboardValidation),
+  leaderboardController.updateLeaderboard
+);
+router32.post(
+  "/:id/activate",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest_default(leaderboardIdValidation),
+  leaderboardController.activateLeaderboard
+);
+router32.post(
+  "/:id/finalize",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest_default(leaderboardIdValidation),
+  leaderboardController.finalizeLeaderboard
+);
+var leaderboardRoutes = router32;
+
+// src/modules/mentorBookings/mentor.booking.route.ts
+import { Router as Router33 } from "express";
+
+// src/modules/mentorBookings/mentor.booking.validation.ts
+import { z as z25 } from "zod";
+
+// src/modules/mentorBookings/mentor.booking.interface.ts
+var MENTOR_BOOKING_STATUSES = [
+  "requested",
+  "confirmed",
+  "completed",
+  "cancelled",
+  "no_show"
+];
+var NO_SHOW_PARTIES = ["member", "mentor", "both"];
+
+// src/modules/mentorBookings/mentor.booking.validation.ts
+var mongoObjectIdSchema17 = z25.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var createMentorBookingValidation = z25.object({
+  body: z25.object({
+    leadMentor: mongoObjectIdSchema17,
+    leadMentorProfile: mongoObjectIdSchema17.optional(),
+    coMentor: mongoObjectIdSchema17.optional(),
+    coMentorProfile: mongoObjectIdSchema17.optional(),
+    scheduledStartTime: z25.string().datetime({ message: "scheduledStartTime must be a valid ISO 8601 datetime" }),
+    durationMinutes: z25.number().int().min(15).max(180).optional(),
+    timezone: z25.string().trim().min(1).max(100),
+    sessionTopic: z25.string().trim().min(2).max(500).optional(),
+    notes: z25.string().trim().max(2e3).optional(),
+    meetingUrl: z25.string().trim().url().optional()
+  }).strict()
+});
+var updateMentorBookingValidation = z25.object({
+  params: z25.object({
+    id: mongoObjectIdSchema17
+  }),
+  body: z25.object({
+    leadMentor: mongoObjectIdSchema17.optional(),
+    leadMentorProfile: mongoObjectIdSchema17.optional(),
+    coMentor: mongoObjectIdSchema17.nullable().optional(),
+    coMentorProfile: mongoObjectIdSchema17.nullable().optional(),
+    scheduledStartTime: z25.string().datetime({ message: "scheduledStartTime must be a valid ISO 8601 datetime" }).optional(),
+    durationMinutes: z25.number().int().min(15).max(180).optional(),
+    timezone: z25.string().trim().min(1).max(100).optional(),
+    sessionTopic: z25.string().trim().min(2).max(500).optional(),
+    notes: z25.string().trim().max(2e3).optional(),
+    meetingUrl: z25.string().trim().url().nullable().optional()
+  }).strict()
+});
+var confirmMentorBookingValidation = z25.object({
+  params: z25.object({
+    id: mongoObjectIdSchema17
+  }),
+  body: z25.object({
+    meetingUrl: z25.string().trim().url().optional()
+  }).strict()
+});
+var cancelMentorBookingValidation = z25.object({
+  params: z25.object({
+    id: mongoObjectIdSchema17
+  }),
+  body: z25.object({
+    reason: z25.string().trim().min(3, "Cancellation reason must be at least 3 characters").max(1e3)
+  }).strict()
+});
+var completeMentorBookingValidation = z25.object({
+  params: z25.object({
+    id: mongoObjectIdSchema17
+  }),
+  body: z25.object({
+    mentorFeedback: z25.string().trim().max(3e3).optional()
+  }).strict()
+});
+var noShowMentorBookingValidation = z25.object({
+  params: z25.object({
+    id: mongoObjectIdSchema17
+  }),
+  body: z25.object({
+    noShowBy: z25.enum(NO_SHOW_PARTIES),
+    reason: z25.string().trim().max(1e3).optional()
+  }).strict()
+});
+var mentorBookingIdValidation = z25.object({
+  params: z25.object({
+    id: mongoObjectIdSchema17
+  })
+});
+var queryMentorBookingValidation = z25.object({
+  query: z25.object({
+    memberId: mongoObjectIdSchema17.optional(),
+    leadMentorId: mongoObjectIdSchema17.optional(),
+    coMentorId: mongoObjectIdSchema17.optional(),
+    mentorId: mongoObjectIdSchema17.optional(),
+    status: z25.enum(MENTOR_BOOKING_STATUSES).optional(),
+    startDate: z25.string().optional(),
+    endDate: z25.string().optional(),
+    page: z25.coerce.number().int().min(1).optional(),
+    limit: z25.coerce.number().int().min(1).max(100).optional()
+  }).optional()
+});
+
+// src/modules/mentorBookings/mentor.booking.service.ts
+import { Types as Types36 } from "mongoose";
+
+// src/modules/notifications/notification.service.ts
+import { Types as Types35 } from "mongoose";
+
+// src/socket/socket.ts
+import { Server } from "socket.io";
+import jwt4 from "jsonwebtoken";
+var io;
+var getUserRoom = (userId) => `user:${userId}`;
+var emitNotificationToUser = (userId, payload) => {
+  if (!io) {
+    return;
+  }
+  io.to(getUserRoom(userId)).emit("notification:new", payload);
+};
+var onlineUsers = /* @__PURE__ */ new Map();
+var initSocket = (httpServer) => {
+  io = new Server(httpServer, {
+    cors: {
+      origin: true,
+      credentials: true
+    }
+  });
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) {
+      return next(new Error("Authentication token is required"));
+    }
+    try {
+      const decoded = jwt4.verify(
+        token,
+        config_default.JWT_ACCESS_SECRET
+      );
+      if (!decoded || !decoded.id) {
+        return next(new Error("Invalid token payload"));
+      }
+      socket.data.user = {
+        id: decoded.id,
+        email: decoded.email,
+        role: decoded.role
+      };
+      return next();
+    } catch (error) {
+      return next(new Error("Invalid or expired token"));
+    }
+  });
+  io.on("connection", async (socket) => {
+    try {
+      const userId = socket.data.user.id;
+      const userDoc = await User.findById(userId).select(
+        "fullName profileImage"
+      );
+      socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
+      socket.data.user.profileImage = userDoc?.profileImage ?? null;
+      const room = await getGeneralRoom(userId);
+      const roomId = room._id.toString();
+      socket.data.roomId = roomId;
+      socket.join(roomId);
+      const isFirstConnectionForUser = !onlineUsers.has(userId);
+      if (isFirstConnectionForUser) {
+        onlineUsers.set(userId, /* @__PURE__ */ new Set());
+      }
+      onlineUsers.get(userId).add(socket.id);
+      if (isFirstConnectionForUser) {
+        socket.to(roomId).emit("presence:update", { userId, online: true });
+      }
+      socket.emit("presence:list", Array.from(onlineUsers.keys()));
+      socket.on(
+        "message:send",
+        async (payload) => {
+          try {
+            const content = payload?.content;
+            if (!content || !content.trim()) return;
+            const message = await createMessage(
+              roomId,
+              userId,
+              content.trim(),
+              payload?.replyTo ?? null
+            );
+            io.to(roomId).emit("message:new", message);
+          } catch (error) {
+            console.error("message:send error:", error);
+            socket.emit("error", error.message || "Failed to send message");
+          }
+        }
+      );
+      socket.on("message:delete", async (messageId) => {
+        try {
+          if (!messageId) return;
+          const deleted = await deleteMessage(messageId, userId);
+          io.to(roomId).emit("message:deleted", {
+            messageId: deleted._id.toString(),
+            content: deleted.content
+            // "This message was deleted"
+          });
+        } catch (error) {
+          console.error("message:delete error:", error);
+          socket.emit("error", error.message || "Failed to delete message");
+        }
+      });
+      socket.on("typing:start", () => {
+        socket.to(roomId).emit("typing:update", {
+          userId,
+          fullName: socket.data.user.fullName,
+          typing: true
+        });
+      });
+      socket.on("typing:stop", () => {
+        socket.to(roomId).emit("typing:update", {
+          userId,
+          fullName: socket.data.user.fullName,
+          typing: false
+        });
+      });
+      socket.on("disconnect", () => {
+        const userSockets = onlineUsers.get(userId);
+        userSockets?.delete(socket.id);
+        if (userSockets && userSockets.size === 0) {
+          onlineUsers.delete(userId);
+          socket.to(roomId).emit("presence:update", { userId, online: false });
+        }
+        console.log(`Socket disconnected: ${socket.id}`);
+      });
+    } catch (error) {
+      console.error("Socket connection error:", error);
+      socket.disconnect();
+    }
+  });
+  return io;
+};
+
+// src/modules/notificationTemplates/notification.template.model.schema.ts
+import { model as model35, Schema as Schema35 } from "mongoose";
+
+// src/modules/notifications/notification.interface.ts
+var NOTIFICATION_CHANNELS = ["in_app", "email", "push"];
+
+// src/modules/notificationTemplates/notification.template.model.schema.ts
+var notificationTemplateSchema = new Schema35(
+  {
+    key: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 120,
+      index: true
+    },
+    titleTemplate: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200
+    },
+    bodyTemplate: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2e3
+    },
+    channels: {
+      type: [String],
+      enum: NOTIFICATION_CHANNELS,
+      default: ["in_app"],
+      required: true
+    },
+    actionUrlTemplate: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    enabled: {
+      type: Boolean,
+      default: true,
+      required: true,
+      index: true
+    },
+    createdBy: {
+      type: Schema35.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema35.Types.ObjectId,
+      ref: "User",
+      required: true
+    }
+  },
+  {
+    timestamps: true,
+    collection: "notificationtemplates"
+  }
+);
+notificationTemplateSchema.index({
+  enabled: 1,
+  createdAt: -1
+});
+var NotificationTemplate = model35(
+  "NotificationTemplate",
+  notificationTemplateSchema
+);
+
+// src/modules/notifications/notification.model.schema.ts
+import { model as model36, Schema as Schema36 } from "mongoose";
+var notificationSchema = new Schema36(
+  {
+    recipient: {
+      type: Schema36.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    actor: {
+      type: Schema36.Types.ObjectId,
+      ref: "User"
+    },
+    template: {
+      type: Schema36.Types.ObjectId,
+      ref: "NotificationTemplate"
+    },
+    type: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+      maxlength: 120
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200
+    },
+    body: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2e3
+    },
+    channels: {
+      type: [String],
+      enum: NOTIFICATION_CHANNELS,
+      default: ["in_app"],
+      required: true
+    },
+    relatedEntityType: {
+      type: String,
+      trim: true,
+      maxlength: 120
+    },
+    relatedEntityId: {
+      type: Schema36.Types.ObjectId
+    },
+    actionUrl: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    metadata: {
+      type: Schema36.Types.Mixed
+    },
+    isRead: {
+      type: Boolean,
+      default: false,
+      required: true,
+      index: true
+    },
+    readAt: {
+      type: Date
+    },
+    dedupeKey: {
+      type: String,
+      trim: true
+    }
+  },
+  {
+    timestamps: true,
+    collection: "notifications"
+  }
+);
+notificationSchema.index({
+  recipient: 1,
+  isRead: 1,
+  createdAt: -1
+});
+notificationSchema.index({
+  recipient: 1,
+  createdAt: -1
+});
+notificationSchema.index({
+  type: 1,
+  createdAt: -1
+});
+notificationSchema.index(
+  { dedupeKey: 1 },
+  {
+    unique: true,
+    sparse: true
+  }
+);
+var Notification = model36(
+  "Notification",
+  notificationSchema
+);
+
+// src/modules/notifications/notification.service.ts
+var NOTIFICATION_POPULATE = [
+  {
+    path: "recipient",
+    select: "fullName email role profileImage accessTo"
+  },
+  {
+    path: "actor",
+    select: "fullName email role profileImage"
+  },
+  {
+    path: "template",
+    select: "key titleTemplate bodyTemplate channels enabled"
+  }
+];
+var assertValidObjectId15 = (value, fieldName) => {
+  if (!Types35.ObjectId.isValid(value)) {
+    throwServiceError_default(`${fieldName} is invalid`, 400);
+  }
+};
+var escapeRegex2 = (value) => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+var renderPlaceholders = (source, variables = {}) => {
+  return source.replace(
+    /{{\s*([a-zA-Z0-9_.-]+)\s*}}/g,
+    (_match, key) => {
+      const value = variables[key];
+      if (value === void 0 || value === null) {
+        return "";
+      }
+      return String(value);
+    }
+  );
+};
+var getExistingByDedupeKey = async (dedupeKey) => {
+  if (!dedupeKey) {
+    return null;
+  }
+  return Notification.findOne({ dedupeKey }).populate(NOTIFICATION_POPULATE);
+};
+var createNotificationRecord = async (payload, templateId) => {
+  assertValidObjectId15(payload.recipient, "Recipient user ID");
+  if (payload.actor) {
+    assertValidObjectId15(payload.actor, "Actor user ID");
+  }
+  if (payload.relatedEntityId) {
+    assertValidObjectId15(payload.relatedEntityId, "Related entity ID");
+  }
+  const existing = await getExistingByDedupeKey(payload.dedupeKey);
+  if (existing) {
+    return existing;
+  }
+  const recipient = await User.findById(payload.recipient).select("_id");
+  assertFound_default(recipient, "Notification recipient user not found", 404);
+  const createData = {
+    recipient: new Types35.ObjectId(payload.recipient),
+    type: payload.type.trim(),
+    title: payload.title.trim(),
+    body: payload.body.trim(),
+    channels: payload.channels ?? ["in_app"],
+    isRead: false
+  };
+  if (payload.actor) {
+    createData.actor = new Types35.ObjectId(payload.actor);
+  }
+  if (templateId) {
+    createData.template = templateId;
+  }
+  if (payload.relatedEntityType) {
+    createData.relatedEntityType = payload.relatedEntityType;
+  }
+  if (payload.relatedEntityId) {
+    createData.relatedEntityId = new Types35.ObjectId(payload.relatedEntityId);
+  }
+  if (payload.actionUrl) {
+    createData.actionUrl = payload.actionUrl;
+  }
+  if (payload.metadata !== void 0) {
+    createData.metadata = payload.metadata;
+  }
+  if (payload.dedupeKey) {
+    createData.dedupeKey = payload.dedupeKey;
+  }
+  try {
+    const notification = await Notification.create(createData);
+    await notification.populate(NOTIFICATION_POPULATE);
+    if (notification.channels.includes("in_app")) {
+      emitNotificationToUser(
+        payload.recipient,
+        notification.toObject()
+      );
+    }
+    return notification;
+  } catch (error) {
+    const maybeMongoError = error;
+    if (maybeMongoError.code === 11e3 && payload.dedupeKey) {
+      const duplicate = await getExistingByDedupeKey(payload.dedupeKey);
+      if (duplicate) {
+        return duplicate;
+      }
+    }
+    throw error;
+  }
+};
+var createNotification = async (payload) => {
+  return createNotificationRecord(payload);
+};
+var createNotificationFromTemplate = async (payload) => {
+  const template = await NotificationTemplate.findOne({
+    key: payload.templateKey.trim().toLowerCase()
+  });
+  assertFound_default(
+    template,
+    `Notification template "${payload.templateKey}" not found`,
+    404
+  );
+  if (!template.enabled) {
+    throwServiceError_default(
+      `Notification template "${template.key}" is disabled`,
+      400
+    );
+  }
+  const variables = payload.variables ?? {};
+  const actionUrl = payload.actionUrl ?? (template.actionUrlTemplate ? renderPlaceholders(template.actionUrlTemplate, variables) : void 0);
+  const notificationPayload = {
+    recipient: payload.recipient,
+    type: template.key,
+    title: renderPlaceholders(template.titleTemplate, variables),
+    body: renderPlaceholders(template.bodyTemplate, variables),
+    channels: payload.channels ?? template.channels,
+    ...payload.actor ? { actor: payload.actor } : {},
+    ...payload.relatedEntityType ? { relatedEntityType: payload.relatedEntityType } : {},
+    ...payload.relatedEntityId ? { relatedEntityId: payload.relatedEntityId } : {},
+    ...actionUrl ? { actionUrl } : {},
+    ...payload.metadata !== void 0 ? { metadata: payload.metadata } : {},
+    ...payload.dedupeKey ? { dedupeKey: payload.dedupeKey } : {}
+  };
+  return createNotificationRecord(
+    notificationPayload,
+    template._id
+  );
+};
+var safeCreateNotification = async (payload) => {
+  try {
+    return await createNotification(payload);
+  } catch (error) {
+    console.error("Notification create failed:", error);
+    return null;
+  }
+};
+var safeCreateFromTemplateOrFallback = async (payload) => {
+  try {
+    const template = await NotificationTemplate.findOne({
+      key: payload.templateKey.trim().toLowerCase()
+    });
+    if (template && !template.enabled) {
+      return null;
+    }
+    if (template) {
+      const fromTemplatePayload = {
+        recipient: payload.recipient,
+        templateKey: template.key,
+        variables: payload.variables ?? {},
+        ...payload.actor ? { actor: payload.actor } : {},
+        ...payload.channels ? { channels: payload.channels } : {},
+        ...payload.relatedEntityType ? { relatedEntityType: payload.relatedEntityType } : {},
+        ...payload.relatedEntityId ? { relatedEntityId: payload.relatedEntityId } : {},
+        ...payload.actionUrl ? { actionUrl: payload.actionUrl } : {},
+        ...payload.metadata !== void 0 ? { metadata: payload.metadata } : {},
+        ...payload.dedupeKey ? { dedupeKey: payload.dedupeKey } : {}
+      };
+      return await createNotificationFromTemplate(fromTemplatePayload);
+    }
+    const fallbackPayload = {
+      recipient: payload.recipient,
+      type: payload.templateKey.trim().toLowerCase(),
+      title: payload.fallbackTitle,
+      body: payload.fallbackBody,
+      channels: payload.channels ?? ["in_app"],
+      ...payload.actor ? { actor: payload.actor } : {},
+      ...payload.relatedEntityType ? { relatedEntityType: payload.relatedEntityType } : {},
+      ...payload.relatedEntityId ? { relatedEntityId: payload.relatedEntityId } : {},
+      ...payload.actionUrl ? { actionUrl: payload.actionUrl } : {},
+      ...payload.metadata !== void 0 ? { metadata: payload.metadata } : {},
+      ...payload.dedupeKey ? { dedupeKey: payload.dedupeKey } : {}
+    };
+    return await createNotification(fallbackPayload);
+  } catch (error) {
+    console.error(
+      `Notification dispatch failed for "${payload.templateKey}":`,
+      error
+    );
+    return null;
+  }
+};
+var buildNotificationFilter = (query, recipientId) => {
+  const filter = {};
+  if (recipientId) {
+    assertValidObjectId15(recipientId, "Recipient user ID");
+    filter.recipient = new Types35.ObjectId(recipientId);
+  }
+  if (query.isRead !== void 0) {
+    filter.isRead = query.isRead;
+  }
+  if (query.type) {
+    filter.type = query.type;
+  }
+  if (query.search) {
+    const regex = new RegExp(escapeRegex2(query.search), "i");
+    filter.$or = [
+      { title: regex },
+      { body: regex },
+      { type: regex }
+    ];
+  }
+  return filter;
+};
+var getMyNotifications = async (userId, query = {}) => {
+  const filter = buildNotificationFilter(query, userId);
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [data, total, unreadCount] = await Promise.all([
+    Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(NOTIFICATION_POPULATE),
+    Notification.countDocuments(filter),
+    Notification.countDocuments({
+      recipient: new Types35.ObjectId(userId),
+      isRead: false
+    })
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      unreadCount
+    },
+    data
+  };
+};
+var getUnreadCount = async (userId) => {
+  assertValidObjectId15(userId, "User ID");
+  const unreadCount = await Notification.countDocuments({
+    recipient: new Types35.ObjectId(userId),
+    isRead: false
+  });
+  return {
+    unreadCount
+  };
+};
+var markOneAsRead = async (notificationId, userId) => {
+  assertValidObjectId15(notificationId, "Notification ID");
+  assertValidObjectId15(userId, "User ID");
+  const notification = await Notification.findOneAndUpdate(
+    {
+      _id: new Types35.ObjectId(notificationId),
+      recipient: new Types35.ObjectId(userId)
+    },
+    {
+      $set: {
+        isRead: true,
+        readAt: /* @__PURE__ */ new Date()
+      }
+    },
+    {
+      new: true
+    }
+  ).populate(NOTIFICATION_POPULATE);
+  assertFound_default(notification, "Notification not found", 404);
+  return notification;
+};
+var markOneAsUnread = async (notificationId, userId) => {
+  assertValidObjectId15(notificationId, "Notification ID");
+  assertValidObjectId15(userId, "User ID");
+  const notification = await Notification.findOneAndUpdate(
+    {
+      _id: new Types35.ObjectId(notificationId),
+      recipient: new Types35.ObjectId(userId)
+    },
+    {
+      $set: {
+        isRead: false
+      },
+      $unset: {
+        readAt: 1
+      }
+    },
+    {
+      new: true
+    }
+  ).populate(NOTIFICATION_POPULATE);
+  assertFound_default(notification, "Notification not found", 404);
+  return notification;
+};
+var markAllAsRead = async (userId) => {
+  assertValidObjectId15(userId, "User ID");
+  const now = /* @__PURE__ */ new Date();
+  const result = await Notification.updateMany(
+    {
+      recipient: new Types35.ObjectId(userId),
+      isRead: false
+    },
+    {
+      $set: {
+        isRead: true,
+        readAt: now
+      }
+    }
+  );
+  return {
+    modifiedCount: result.modifiedCount,
+    readAt: now
+  };
+};
+var getAllNotificationsAdmin = async (query = {}) => {
+  const filter = buildNotificationFilter(query, query.recipientId);
+  if (query.actorId) {
+    assertValidObjectId15(query.actorId, "Actor user ID");
+    filter.actor = new Types35.ObjectId(query.actorId);
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [data, total] = await Promise.all([
+    Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(NOTIFICATION_POPULATE),
+    Notification.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data
+  };
+};
+var notificationService = {
+  createNotification,
+  createNotificationFromTemplate,
+  safeCreateNotification,
+  safeCreateFromTemplateOrFallback,
+  getMyNotifications,
+  getUnreadCount,
+  markOneAsRead,
+  markOneAsUnread,
+  markAllAsRead,
+  getAllNotificationsAdmin
+};
+
+// src/modules/mentorBookings/mentor.booking.model.schema.ts
+import { model as model37, Schema as Schema37 } from "mongoose";
+var mentorBookingSchema = new Schema37(
+  {
+    member: {
+      type: Schema37.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    leadMentor: {
+      type: Schema37.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    leadMentorProfile: {
+      type: Schema37.Types.ObjectId,
+      ref: "MentorshipProfile",
+      index: true
+    },
+    coMentor: {
+      type: Schema37.Types.ObjectId,
+      ref: "User",
+      index: true
+    },
+    coMentorProfile: {
+      type: Schema37.Types.ObjectId,
+      ref: "MentorshipProfile",
+      index: true
+    },
+    scheduledStartTime: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    scheduledEndTime: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    durationMinutes: {
+      type: Number,
+      default: 60,
+      min: 15,
+      max: 180,
+      required: true
+    },
+    timezone: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    meetingUrl: {
+      type: String,
+      trim: true
+    },
+    sessionTopic: {
+      type: String,
+      trim: true,
+      maxlength: 500
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2e3
+    },
+    status: {
+      type: String,
+      enum: MENTOR_BOOKING_STATUSES,
+      default: "requested",
+      index: true,
+      required: true
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    cancelledBy: {
+      type: Schema37.Types.ObjectId,
+      ref: "User"
+    },
+    cancelledAt: {
+      type: Date
+    },
+    completedAt: {
+      type: Date
+    },
+    noShowAt: {
+      type: Date
+    },
+    noShowBy: {
+      type: String,
+      enum: NO_SHOW_PARTIES
+    },
+    noShowReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    mentorFeedback: {
+      type: String,
+      trim: true,
+      maxlength: 3e3
+    },
+    createdBy: {
+      type: Schema37.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema37.Types.ObjectId,
+      ref: "User"
+    }
+  },
+  {
+    timestamps: true,
+    collection: "mentorbookings"
+  }
+);
+mentorBookingSchema.index({
+  member: 1,
+  status: 1
+});
+mentorBookingSchema.index({
+  leadMentor: 1,
+  status: 1
+});
+mentorBookingSchema.index({
+  coMentor: 1,
+  status: 1
+});
+mentorBookingSchema.index({
+  scheduledStartTime: 1,
+  scheduledEndTime: 1
+});
+mentorBookingSchema.index({
+  status: 1,
+  scheduledStartTime: 1
+});
+var MentorBooking = model37(
+  "MentorBooking",
+  mentorBookingSchema
+);
+
+// src/modules/mentorBookings/mentor.booking.service.ts
+var throwServiceError19 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound19 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError19(message, statusCode);
+  }
+};
+var assertValidObjectId16 = (value, fieldName) => {
+  if (!Types36.ObjectId.isValid(value)) {
+    throwServiceError19(`${fieldName} is invalid`, 400);
+  }
+};
+var isAdminOrManager13 = (role) => {
+  return role === "admin" || role === "manager" || role === "founder" || role === "super_admin";
+};
+var BOOKING_POPULATE = [
+  {
+    path: "member",
+    select: "fullName email role profileImage phone city country"
+  },
+  {
+    path: "leadMentor",
+    select: "fullName email role profileImage"
+  },
+  {
+    path: "leadMentorProfile",
+    select: "bio expertise profileImage sessionDurationMinutes isPrimaryMentor status"
+  },
+  {
+    path: "coMentor",
+    select: "fullName email role profileImage"
+  },
+  {
+    path: "coMentorProfile",
+    select: "bio expertise profileImage sessionDurationMinutes isPrimaryMentor status"
+  },
+  {
+    path: "cancelledBy",
+    select: "fullName email role"
+  },
+  {
+    path: "createdBy",
+    select: "fullName email role"
+  },
+  {
+    path: "updatedBy",
+    select: "fullName email role"
+  }
+];
+var checkUserExists = async (userId, label) => {
+  assertValidObjectId16(userId, label);
+  const user = await User.findById(userId).select("_id fullName email role");
+  assertFound19(user, `${label} not found`, 404);
+  return user;
+};
+var resolveMentorshipProfileId = async (mentorUserId, explicitProfileId) => {
+  if (explicitProfileId) {
+    assertValidObjectId16(explicitProfileId, "Mentorship profile ID");
+    const profile2 = await MentorshipProfile.findById(explicitProfileId);
+    assertFound19(profile2, "Mentorship profile not found", 404);
+    if (String(profile2.mentor) !== mentorUserId) {
+      throwServiceError19(
+        "Provided mentorship profile does not belong to the selected mentor",
+        400
+      );
+    }
+    return profile2._id;
+  }
+  const profile = await MentorshipProfile.findOne({
+    mentor: new Types36.ObjectId(mentorUserId),
+    isActive: true
+  });
+  return profile ? profile._id : void 0;
+};
+var checkSchedulingConflicts = async ({
+  memberId,
+  leadMentorId,
+  coMentorId,
+  startTime,
+  endTime,
+  excludeBookingId
+}) => {
+  const activeStatuses = ["requested", "confirmed"];
+  const baseOverlapFilter = {
+    status: { $in: activeStatuses },
+    scheduledStartTime: { $lt: endTime },
+    scheduledEndTime: { $gt: startTime }
+  };
+  if (excludeBookingId) {
+    baseOverlapFilter._id = { $ne: new Types36.ObjectId(excludeBookingId) };
+  }
+  const memberConflict = await MentorBooking.findOne({
+    ...baseOverlapFilter,
+    member: new Types36.ObjectId(memberId)
+  });
+  if (memberConflict) {
+    throwServiceError19(
+      "You already have a pending or confirmed booking in this time slot",
+      409
+    );
+  }
+  const leadMentorConflict = await MentorBooking.findOne({
+    ...baseOverlapFilter,
+    $or: [
+      { leadMentor: new Types36.ObjectId(leadMentorId) },
+      { coMentor: new Types36.ObjectId(leadMentorId) },
+      { member: new Types36.ObjectId(leadMentorId) }
+    ]
+  });
+  if (leadMentorConflict) {
+    throwServiceError19(
+      "The lead mentor already has a scheduled session during this time slot",
+      409
+    );
+  }
+  if (coMentorId) {
+    const coMentorConflict = await MentorBooking.findOne({
+      ...baseOverlapFilter,
+      $or: [
+        { leadMentor: new Types36.ObjectId(coMentorId) },
+        { coMentor: new Types36.ObjectId(coMentorId) },
+        { member: new Types36.ObjectId(coMentorId) }
+      ]
+    });
+    if (coMentorConflict) {
+      throwServiceError19(
+        "The co-mentor already has a scheduled session during this time slot",
+        409
+      );
+    }
+  }
+};
+var createBooking = async (payload, memberUserId, actorId) => {
+  assertValidObjectId16(payload.leadMentor, "Lead mentor ID");
+  assertValidObjectId16(memberUserId, "Member user ID");
+  const memberUser = await checkUserExists(memberUserId, "Member user");
+  if (memberUserId === payload.leadMentor) {
+    throwServiceError19("A member cannot book a mentorship session with themselves", 400);
+  }
+  if (payload.coMentor) {
+    assertValidObjectId16(payload.coMentor, "Co-mentor ID");
+    if (memberUserId === payload.coMentor) {
+      throwServiceError19("A member cannot add themselves as co-mentor", 400);
+    }
+    if (payload.leadMentor === payload.coMentor) {
+      throwServiceError19("Lead mentor and co-mentor cannot be the same user", 400);
+    }
+    await checkUserExists(payload.coMentor, "Co-mentor user");
+  }
+  await checkUserExists(payload.leadMentor, "Lead mentor user");
+  const startTime = new Date(payload.scheduledStartTime);
+  if (Number.isNaN(startTime.getTime())) {
+    throwServiceError19("Invalid scheduledStartTime format", 400);
+  }
+  const durationMinutes = payload.durationMinutes ?? 60;
+  const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1e3);
+  await checkSchedulingConflicts({
+    memberId: memberUserId,
+    leadMentorId: payload.leadMentor,
+    coMentorId: payload.coMentor,
+    startTime,
+    endTime
+  });
+  const leadMentorProfileId = await resolveMentorshipProfileId(
+    payload.leadMentor,
+    payload.leadMentorProfile
+  );
+  let coMentorProfileId;
+  if (payload.coMentor) {
+    coMentorProfileId = await resolveMentorshipProfileId(
+      payload.coMentor,
+      payload.coMentorProfile
+    );
+  }
+  const createData = {
+    member: new Types36.ObjectId(memberUserId),
+    leadMentor: new Types36.ObjectId(payload.leadMentor),
+    scheduledStartTime: startTime,
+    scheduledEndTime: endTime,
+    durationMinutes,
+    timezone: payload.timezone,
+    status: "requested",
+    createdBy: new Types36.ObjectId(actorId)
+  };
+  if (leadMentorProfileId) {
+    createData.leadMentorProfile = leadMentorProfileId;
+  }
+  if (payload.coMentor) {
+    createData.coMentor = new Types36.ObjectId(payload.coMentor);
+  }
+  if (coMentorProfileId) {
+    createData.coMentorProfile = coMentorProfileId;
+  }
+  if (payload.sessionTopic !== void 0) {
+    createData.sessionTopic = payload.sessionTopic;
+  }
+  if (payload.notes !== void 0) {
+    createData.notes = payload.notes;
+  }
+  if (payload.meetingUrl !== void 0) {
+    createData.meetingUrl = payload.meetingUrl;
+  }
+  const booking = await MentorBooking.create(createData);
+  const bookingId = String(booking._id);
+  const mentorRecipients = [
+    String(booking.leadMentor),
+    ...booking.coMentor ? [String(booking.coMentor)] : []
+  ];
+  await Promise.all(
+    mentorRecipients.map(
+      (recipientId) => notificationService.safeCreateFromTemplateOrFallback({
+        templateKey: "mentor_booking_requested",
+        fallbackTitle: "New mentorship booking request",
+        fallbackBody: `${memberUser.fullName} requested a mentorship session.`,
+        recipient: recipientId,
+        actor: memberUserId,
+        variables: {
+          memberName: memberUser.fullName,
+          bookingId,
+          scheduledStartTime: booking.scheduledStartTime.toISOString()
+        },
+        relatedEntityType: "MentorBooking",
+        relatedEntityId: bookingId,
+        metadata: {
+          status: booking.status,
+          timezone: booking.timezone
+        },
+        dedupeKey: `mentor_booking_requested:${bookingId}:${recipientId}`
+      })
+    )
+  );
+  return booking.populate(BOOKING_POPULATE);
+};
+var getMyMemberBookings = async (memberUserId, query = {}) => {
+  assertValidObjectId16(memberUserId, "Member user ID");
+  const filter = {
+    member: new Types36.ObjectId(memberUserId)
+  };
+  if (query.status) {
+    filter.status = query.status;
+  }
+  if (query.startDate || query.endDate) {
+    const timeFilter = {};
+    if (query.startDate) {
+      timeFilter.$gte = new Date(query.startDate);
+    }
+    if (query.endDate) {
+      timeFilter.$lte = new Date(query.endDate);
+    }
+    filter.scheduledStartTime = timeFilter;
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [bookings, total] = await Promise.all([
+    MentorBooking.find(filter).sort({ scheduledStartTime: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
+    MentorBooking.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data: bookings
+  };
+};
+var getMyMemberSingleBooking = async (bookingId, memberUserId) => {
+  assertValidObjectId16(bookingId, "Booking ID");
+  assertValidObjectId16(memberUserId, "Member user ID");
+  const booking = await MentorBooking.findOne({
+    _id: new Types36.ObjectId(bookingId),
+    member: new Types36.ObjectId(memberUserId)
+  }).populate(BOOKING_POPULATE);
+  assertFound19(booking, "Mentor booking not found", 404);
+  return booking;
+};
+var getMyMentorBookings = async (mentorUserId, query = {}) => {
+  assertValidObjectId16(mentorUserId, "Mentor user ID");
+  const mentorObjectId = new Types36.ObjectId(mentorUserId);
+  const filter = {
+    $or: [{ leadMentor: mentorObjectId }, { coMentor: mentorObjectId }]
+  };
+  if (query.status) {
+    filter.status = query.status;
+  }
+  if (query.startDate || query.endDate) {
+    const timeFilter = {};
+    if (query.startDate) {
+      timeFilter.$gte = new Date(query.startDate);
+    }
+    if (query.endDate) {
+      timeFilter.$lte = new Date(query.endDate);
+    }
+    filter.scheduledStartTime = timeFilter;
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [bookings, total] = await Promise.all([
+    MentorBooking.find(filter).sort({ scheduledStartTime: 1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
+    MentorBooking.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data: bookings
+  };
+};
+var getMyMentorSingleBooking = async (bookingId, mentorUserId) => {
+  assertValidObjectId16(bookingId, "Booking ID");
+  assertValidObjectId16(mentorUserId, "Mentor user ID");
+  const mentorObjectId = new Types36.ObjectId(mentorUserId);
+  const booking = await MentorBooking.findOne({
+    _id: new Types36.ObjectId(bookingId),
+    $or: [{ leadMentor: mentorObjectId }, { coMentor: mentorObjectId }]
+  }).populate(BOOKING_POPULATE);
+  assertFound19(booking, "Mentor booking not found", 404);
+  return booking;
+};
+var getAllBookingsAdmin = async (query = {}) => {
+  const filter = {};
+  if (query.memberId) {
+    assertValidObjectId16(query.memberId, "Member ID");
+    filter.member = new Types36.ObjectId(query.memberId);
+  }
+  if (query.leadMentorId) {
+    assertValidObjectId16(query.leadMentorId, "Lead mentor ID");
+    filter.leadMentor = new Types36.ObjectId(query.leadMentorId);
+  }
+  if (query.coMentorId) {
+    assertValidObjectId16(query.coMentorId, "Co-mentor ID");
+    filter.coMentor = new Types36.ObjectId(query.coMentorId);
+  }
+  if (query.mentorId) {
+    assertValidObjectId16(query.mentorId, "Mentor ID");
+    const mentorObjId = new Types36.ObjectId(query.mentorId);
+    filter.$or = [{ leadMentor: mentorObjId }, { coMentor: mentorObjId }];
+  }
+  if (query.status) {
+    filter.status = query.status;
+  }
+  if (query.startDate || query.endDate) {
+    const timeFilter = {};
+    if (query.startDate) {
+      timeFilter.$gte = new Date(query.startDate);
+    }
+    if (query.endDate) {
+      timeFilter.$lte = new Date(query.endDate);
+    }
+    filter.scheduledStartTime = timeFilter;
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [bookings, total] = await Promise.all([
+    MentorBooking.find(filter).sort({ scheduledStartTime: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
+    MentorBooking.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data: bookings
+  };
+};
+var getSingleBookingAdmin = async (bookingId) => {
+  assertValidObjectId16(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId).populate(
+    BOOKING_POPULATE
+  );
+  assertFound19(booking, "Mentor booking not found", 404);
+  return booking;
+};
+var updateBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId16(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId);
+  assertFound19(booking, "Mentor booking not found", 404);
+  const isMember = String(booking.member) === actorId;
+  const isLead = String(booking.leadMentor) === actorId;
+  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
+  const isAdmin = isAdminOrManager13(actorRole);
+  if (!isMember && !isLead && !isCo && !isAdmin) {
+    throwServiceError19("You are not authorized to update this booking", 403);
+  }
+  if (booking.status === "completed" || booking.status === "cancelled" || booking.status === "no_show") {
+    throwServiceError19(
+      `Cannot update a booking that is already ${booking.status}`,
+      400
+    );
+  }
+  const newLeadMentorId = payload.leadMentor ?? String(booking.leadMentor);
+  let newCoMentorId = booking.coMentor ? String(booking.coMentor) : void 0;
+  if (payload.coMentor === null) {
+    newCoMentorId = void 0;
+  } else if (payload.coMentor !== void 0) {
+    newCoMentorId = payload.coMentor;
+  }
+  if (String(booking.member) === newLeadMentorId) {
+    throwServiceError19("A member cannot book a mentorship session with themselves", 400);
+  }
+  if (newCoMentorId && String(booking.member) === newCoMentorId) {
+    throwServiceError19("A member cannot add themselves as co-mentor", 400);
+  }
+  if (newCoMentorId && newLeadMentorId === newCoMentorId) {
+    throwServiceError19("Lead mentor and co-mentor cannot be the same user", 400);
+  }
+  if (payload.leadMentor && payload.leadMentor !== String(booking.leadMentor)) {
+    await checkUserExists(payload.leadMentor, "Lead mentor user");
+    booking.leadMentor = new Types36.ObjectId(payload.leadMentor);
+  }
+  if (payload.coMentor !== void 0) {
+    if (payload.coMentor === null) {
+      booking.set("coMentor", void 0);
+      booking.set("coMentorProfile", void 0);
+    } else {
+      await checkUserExists(payload.coMentor, "Co-mentor user");
+      booking.coMentor = new Types36.ObjectId(payload.coMentor);
+    }
+  }
+  if (payload.leadMentorProfile !== void 0) {
+    const profileId = await resolveMentorshipProfileId(
+      newLeadMentorId,
+      payload.leadMentorProfile
+    );
+    if (profileId) {
+      booking.leadMentorProfile = profileId;
+    } else {
+      booking.set("leadMentorProfile", void 0);
+    }
+  }
+  if (payload.coMentorProfile !== void 0 && newCoMentorId) {
+    const profileId = await resolveMentorshipProfileId(
+      newCoMentorId,
+      payload.coMentorProfile ?? void 0
+    );
+    if (profileId) {
+      booking.coMentorProfile = profileId;
+    } else {
+      booking.set("coMentorProfile", void 0);
+    }
+  }
+  const durationMinutes = payload.durationMinutes ?? booking.durationMinutes;
+  let startTime = booking.scheduledStartTime;
+  if (payload.scheduledStartTime) {
+    startTime = new Date(payload.scheduledStartTime);
+    if (Number.isNaN(startTime.getTime())) {
+      throwServiceError19("Invalid scheduledStartTime format", 400);
+    }
+  }
+  const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1e3);
+  await checkSchedulingConflicts({
+    memberId: String(booking.member),
+    leadMentorId: newLeadMentorId,
+    coMentorId: newCoMentorId,
+    startTime,
+    endTime,
+    excludeBookingId: String(booking._id)
+  });
+  booking.scheduledStartTime = startTime;
+  booking.scheduledEndTime = endTime;
+  booking.durationMinutes = durationMinutes;
+  if (payload.timezone !== void 0) {
+    booking.timezone = payload.timezone;
+  }
+  if (payload.sessionTopic !== void 0) {
+    booking.sessionTopic = payload.sessionTopic;
+  }
+  if (payload.notes !== void 0) {
+    booking.notes = payload.notes;
+  }
+  if (payload.meetingUrl === null) {
+    booking.set("meetingUrl", void 0);
+  } else if (payload.meetingUrl !== void 0) {
+    booking.meetingUrl = payload.meetingUrl;
+  }
+  booking.updatedBy = new Types36.ObjectId(actorId);
+  await booking.save();
+  const updatedBookingId = String(booking._id);
+  const updateRecipients = [
+    String(booking.member),
+    String(booking.leadMentor),
+    ...booking.coMentor ? [String(booking.coMentor)] : []
+  ].filter(
+    (recipientId, index, all) => recipientId !== actorId && all.indexOf(recipientId) === index
+  );
+  await Promise.all(
+    updateRecipients.map(
+      (recipientId) => notificationService.safeCreateFromTemplateOrFallback({
+        templateKey: "mentor_booking_updated",
+        fallbackTitle: "Mentorship booking updated",
+        fallbackBody: "A mentorship booking you are part of has been updated.",
+        recipient: recipientId,
+        actor: actorId,
+        variables: {
+          bookingId: updatedBookingId,
+          scheduledStartTime: booking.scheduledStartTime.toISOString()
+        },
+        relatedEntityType: "MentorBooking",
+        relatedEntityId: updatedBookingId,
+        metadata: {
+          status: booking.status,
+          timezone: booking.timezone
+        },
+        dedupeKey: `mentor_booking_updated:${updatedBookingId}:${booking.updatedAt?.getTime() ?? Date.now()}:${recipientId}`
+      })
+    )
+  );
+  return booking.populate(BOOKING_POPULATE);
+};
+var confirmBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId16(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId);
+  assertFound19(booking, "Mentor booking not found", 404);
+  const isLead = String(booking.leadMentor) === actorId;
+  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
+  const isAdmin = isAdminOrManager13(actorRole);
+  if (!isLead && !isCo && !isAdmin) {
+    throwServiceError19("Only assigned mentors or administrators can confirm bookings", 403);
+  }
+  if (booking.status === "confirmed") {
+    if (payload.meetingUrl) {
+      booking.meetingUrl = payload.meetingUrl;
+      booking.updatedBy = new Types36.ObjectId(actorId);
+      await booking.save();
+      return booking.populate(BOOKING_POPULATE);
+    }
+    return booking.populate(BOOKING_POPULATE);
+  }
+  if (booking.status !== "requested") {
+    throwServiceError19(`Cannot confirm a booking with status "${booking.status}"`, 400);
+  }
+  await checkSchedulingConflicts({
+    memberId: String(booking.member),
+    leadMentorId: String(booking.leadMentor),
+    coMentorId: booking.coMentor ? String(booking.coMentor) : void 0,
+    startTime: booking.scheduledStartTime,
+    endTime: booking.scheduledEndTime,
+    excludeBookingId: String(booking._id)
+  });
+  booking.status = "confirmed";
+  if (payload.meetingUrl !== void 0) {
+    booking.meetingUrl = payload.meetingUrl;
+  }
+  booking.updatedBy = new Types36.ObjectId(actorId);
+  await booking.save();
+  const confirmedBookingId = String(booking._id);
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "mentor_booking_confirmed",
+    fallbackTitle: "Mentorship booking confirmed",
+    fallbackBody: "Your mentorship session has been confirmed.",
+    recipient: String(booking.member),
+    actor: actorId,
+    variables: {
+      bookingId: confirmedBookingId,
+      scheduledStartTime: booking.scheduledStartTime.toISOString(),
+      meetingUrl: booking.meetingUrl ?? ""
+    },
+    relatedEntityType: "MentorBooking",
+    relatedEntityId: confirmedBookingId,
+    metadata: {
+      status: booking.status,
+      meetingUrl: booking.meetingUrl ?? null
+    },
+    dedupeKey: `mentor_booking_confirmed:${confirmedBookingId}`
+  });
+  return booking.populate(BOOKING_POPULATE);
+};
+var cancelBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId16(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId);
+  assertFound19(booking, "Mentor booking not found", 404);
+  const isMember = String(booking.member) === actorId;
+  const isLead = String(booking.leadMentor) === actorId;
+  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
+  const isAdmin = isAdminOrManager13(actorRole);
+  if (!isMember && !isLead && !isCo && !isAdmin) {
+    throwServiceError19("You are not authorized to cancel this booking", 403);
+  }
+  if (booking.status === "cancelled") {
+    throwServiceError19("Booking is already cancelled", 400);
+  }
+  if (booking.status === "completed") {
+    throwServiceError19("Completed booking cannot be cancelled", 400);
+  }
+  booking.status = "cancelled";
+  booking.cancellationReason = payload.reason;
+  booking.cancelledBy = new Types36.ObjectId(actorId);
+  booking.cancelledAt = /* @__PURE__ */ new Date();
+  booking.updatedBy = new Types36.ObjectId(actorId);
+  await booking.save();
+  const cancelledBookingId = String(booking._id);
+  const cancellationRecipients = [
+    String(booking.member),
+    String(booking.leadMentor),
+    ...booking.coMentor ? [String(booking.coMentor)] : []
+  ].filter(
+    (recipientId, index, all) => recipientId !== actorId && all.indexOf(recipientId) === index
+  );
+  await Promise.all(
+    cancellationRecipients.map(
+      (recipientId) => notificationService.safeCreateFromTemplateOrFallback({
+        templateKey: "mentor_booking_cancelled",
+        fallbackTitle: "Mentorship booking cancelled",
+        fallbackBody: `A mentorship booking has been cancelled. Reason: ${payload.reason}`,
+        recipient: recipientId,
+        actor: actorId,
+        variables: {
+          bookingId: cancelledBookingId,
+          reason: payload.reason
+        },
+        relatedEntityType: "MentorBooking",
+        relatedEntityId: cancelledBookingId,
+        metadata: {
+          status: booking.status,
+          reason: payload.reason
+        },
+        dedupeKey: `mentor_booking_cancelled:${cancelledBookingId}:${recipientId}`
+      })
+    )
+  );
+  return booking.populate(BOOKING_POPULATE);
+};
+var completeBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId16(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId);
+  assertFound19(booking, "Mentor booking not found", 404);
+  const isLead = String(booking.leadMentor) === actorId;
+  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
+  const isAdmin = isAdminOrManager13(actorRole);
+  if (!isLead && !isCo && !isAdmin) {
+    throwServiceError19("Only assigned mentors or administrators can complete bookings", 403);
+  }
+  if (booking.status === "cancelled") {
+    throwServiceError19("Cancelled booking cannot be marked as completed", 400);
+  }
+  if (booking.status === "no_show") {
+    throwServiceError19("No-show booking cannot be marked as completed", 400);
+  }
+  booking.status = "completed";
+  booking.completedAt = /* @__PURE__ */ new Date();
+  if (payload.mentorFeedback !== void 0) {
+    booking.mentorFeedback = payload.mentorFeedback;
+  }
+  booking.updatedBy = new Types36.ObjectId(actorId);
+  await booking.save();
+  const completedBookingId = String(booking._id);
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "mentor_booking_completed",
+    fallbackTitle: "Mentorship session completed",
+    fallbackBody: "Your mentorship session has been marked as completed.",
+    recipient: String(booking.member),
+    actor: actorId,
+    variables: {
+      bookingId: completedBookingId
+    },
+    relatedEntityType: "MentorBooking",
+    relatedEntityId: completedBookingId,
+    metadata: {
+      status: booking.status
+    },
+    dedupeKey: `mentor_booking_completed:${completedBookingId}`
+  });
+  return booking.populate(BOOKING_POPULATE);
+};
+var markNoShowBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId16(bookingId, "Booking ID");
+  const booking = await MentorBooking.findById(bookingId);
+  assertFound19(booking, "Mentor booking not found", 404);
+  const isLead = String(booking.leadMentor) === actorId;
+  const isCo = booking.coMentor ? String(booking.coMentor) === actorId : false;
+  const isAdmin = isAdminOrManager13(actorRole);
+  if (!isLead && !isCo && !isAdmin) {
+    throwServiceError19("Only assigned mentors or administrators can record no-shows", 403);
+  }
+  if (booking.status === "cancelled") {
+    throwServiceError19("Cancelled booking cannot be marked as no-show", 400);
+  }
+  if (booking.status === "completed") {
+    throwServiceError19("Completed booking cannot be marked as no-show", 400);
+  }
+  booking.status = "no_show";
+  booking.noShowAt = /* @__PURE__ */ new Date();
+  booking.noShowBy = payload.noShowBy;
+  if (payload.reason !== void 0) {
+    booking.noShowReason = payload.reason;
+  }
+  booking.updatedBy = new Types36.ObjectId(actorId);
+  await booking.save();
+  const noShowBookingId = String(booking._id);
+  const noShowRecipients = [
+    String(booking.member),
+    String(booking.leadMentor),
+    ...booking.coMentor ? [String(booking.coMentor)] : []
+  ].filter(
+    (recipientId, index, all) => recipientId !== actorId && all.indexOf(recipientId) === index
+  );
+  await Promise.all(
+    noShowRecipients.map(
+      (recipientId) => notificationService.safeCreateFromTemplateOrFallback({
+        templateKey: "mentor_booking_no_show",
+        fallbackTitle: "Mentorship no-show recorded",
+        fallbackBody: "A no-show has been recorded for a mentorship booking.",
+        recipient: recipientId,
+        actor: actorId,
+        variables: {
+          bookingId: noShowBookingId,
+          noShowBy: payload.noShowBy,
+          reason: payload.reason ?? ""
+        },
+        relatedEntityType: "MentorBooking",
+        relatedEntityId: noShowBookingId,
+        metadata: {
+          status: booking.status,
+          noShowBy: payload.noShowBy,
+          reason: payload.reason ?? null
+        },
+        dedupeKey: `mentor_booking_no_show:${noShowBookingId}:${recipientId}`
+      })
+    )
+  );
+  return booking.populate(BOOKING_POPULATE);
+};
+var mentorBookingService = {
+  createBooking,
+  getMyMemberBookings,
+  getMyMemberSingleBooking,
+  getMyMentorBookings,
+  getMyMentorSingleBooking,
+  getAllBookingsAdmin,
+  getSingleBookingAdmin,
+  updateBooking,
+  confirmBooking,
+  cancelBooking,
+  completeBooking,
+  markNoShowBooking
+};
+
+// src/modules/mentorBookings/mentor.booking.controller.ts
+var getAuthUser20 = (req) => {
+  assertFound_default(req.user, "Authentication required", 401);
+  return {
+    id: req.user.id,
+    role: req.user.role
+  };
+};
+var createBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser20(req);
+    const booking = await mentorBookingService.createBooking(
+      req.body,
+      authUser.id,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Mentor booking requested successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyMemberBookings2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser20(req);
+    const result = await mentorBookingService.getMyMemberBookings(
+      authUser.id,
+      req.query
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Member bookings retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyMemberSingleBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser20(req);
+    const booking = await mentorBookingService.getMyMemberSingleBooking(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Member booking retrieved successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyMentorBookings2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser20(req);
+    const result = await mentorBookingService.getMyMentorBookings(
+      authUser.id,
+      req.query
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Mentor schedule retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyMentorSingleBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser20(req);
+    const booking = await mentorBookingService.getMyMentorSingleBooking(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Mentor booking retrieved successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllBookingsAdmin2 = async (req, res, next) => {
+  try {
+    const result = await mentorBookingService.getAllBookingsAdmin(
+      req.query
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "All mentor bookings retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var getSingleBookingAdmin2 = async (req, res, next) => {
   try {
     const booking = await mentorBookingService.getSingleBookingAdmin(
@@ -21128,7 +24732,7 @@ var getSingleBookingAdmin2 = async (req, res, next) => {
 };
 var updateBooking2 = async (req, res, next) => {
   try {
-    const authUser = getAuthUser16(req);
+    const authUser = getAuthUser20(req);
     const booking = await mentorBookingService.updateBooking({
       bookingId: String(req.params.id),
       payload: req.body,
@@ -21147,7 +24751,7 @@ var updateBooking2 = async (req, res, next) => {
 };
 var confirmBooking2 = async (req, res, next) => {
   try {
-    const authUser = getAuthUser16(req);
+    const authUser = getAuthUser20(req);
     const booking = await mentorBookingService.confirmBooking({
       bookingId: String(req.params.id),
       payload: req.body,
@@ -21166,7 +24770,7 @@ var confirmBooking2 = async (req, res, next) => {
 };
 var cancelBooking2 = async (req, res, next) => {
   try {
-    const authUser = getAuthUser16(req);
+    const authUser = getAuthUser20(req);
     const booking = await mentorBookingService.cancelBooking({
       bookingId: String(req.params.id),
       payload: req.body,
@@ -21185,7 +24789,7 @@ var cancelBooking2 = async (req, res, next) => {
 };
 var completeBooking2 = async (req, res, next) => {
   try {
-    const authUser = getAuthUser16(req);
+    const authUser = getAuthUser20(req);
     const booking = await mentorBookingService.completeBooking({
       bookingId: String(req.params.id),
       payload: req.body,
@@ -21204,7 +24808,7 @@ var completeBooking2 = async (req, res, next) => {
 };
 var markNoShowBooking2 = async (req, res, next) => {
   try {
-    const authUser = getAuthUser16(req);
+    const authUser = getAuthUser20(req);
     const booking = await mentorBookingService.markNoShowBooking({
       bookingId: String(req.params.id),
       payload: req.body,
@@ -21236,569 +24840,195 @@ var mentorBookingController = {
   markNoShowBooking: markNoShowBooking2
 };
 
-// src/modules/mentorBookings/mentor.booking.validation.ts
-import { z as z21 } from "zod";
-var mongoObjectIdSchema13 = z21.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var createMentorBookingValidation = z21.object({
-  body: z21.object({
-    leadMentor: mongoObjectIdSchema13,
-    leadMentorProfile: mongoObjectIdSchema13.optional(),
-    coMentor: mongoObjectIdSchema13.optional(),
-    coMentorProfile: mongoObjectIdSchema13.optional(),
-    scheduledStartTime: z21.string().datetime({ message: "scheduledStartTime must be a valid ISO 8601 datetime" }),
-    durationMinutes: z21.number().int().min(15).max(180).optional(),
-    timezone: z21.string().trim().min(1).max(100),
-    sessionTopic: z21.string().trim().min(2).max(500).optional(),
-    notes: z21.string().trim().max(2e3).optional(),
-    meetingUrl: z21.string().trim().url().optional()
-  }).strict()
-});
-var updateMentorBookingValidation = z21.object({
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
-  params: z21.object({
-    id: mongoObjectIdSchema13
-  }),
-  body: z21.object({
-<<<<<<< HEAD
-    rating: z21.number().int().min(1).max(5).optional(),
-    comment: z21.string().trim().max(2e3).nullable().optional(),
-    isAnonymous: z21.boolean().optional()
-  }).strict()
-});
-var moderateMentorshipReviewValidation = z21.object({
-=======
-    leadMentor: mongoObjectIdSchema13.optional(),
-    leadMentorProfile: mongoObjectIdSchema13.optional(),
-    coMentor: mongoObjectIdSchema13.nullable().optional(),
-    coMentorProfile: mongoObjectIdSchema13.nullable().optional(),
-    scheduledStartTime: z21.string().datetime({ message: "scheduledStartTime must be a valid ISO 8601 datetime" }).optional(),
-    durationMinutes: z21.number().int().min(15).max(180).optional(),
-    timezone: z21.string().trim().min(1).max(100).optional(),
-    sessionTopic: z21.string().trim().min(2).max(500).optional(),
-    notes: z21.string().trim().max(2e3).optional(),
-    meetingUrl: z21.string().trim().url().nullable().optional()
-  }).strict()
-});
-var confirmMentorBookingValidation = z21.object({
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
-  params: z21.object({
-    id: mongoObjectIdSchema13
-  }),
-  body: z21.object({
-<<<<<<< HEAD
-    status: z21.enum(MENTORSHIP_REVIEW_STATUSES),
-    adminNotes: z21.string().trim().max(1e3).optional()
-  }).strict()
-});
-var mentorshipReviewIdValidation = z21.object({
-=======
-    meetingUrl: z21.string().trim().url().optional()
-  }).strict()
-});
-var cancelMentorBookingValidation = z21.object({
-  params: z21.object({
-    id: mongoObjectIdSchema13
-  }),
-  body: z21.object({
-    reason: z21.string().trim().min(3, "Cancellation reason must be at least 3 characters").max(1e3)
-  }).strict()
-});
-var completeMentorBookingValidation = z21.object({
-  params: z21.object({
-    id: mongoObjectIdSchema13
-  }),
-  body: z21.object({
-    mentorFeedback: z21.string().trim().max(3e3).optional()
-  }).strict()
-});
-var noShowMentorBookingValidation = z21.object({
-  params: z21.object({
-    id: mongoObjectIdSchema13
-  }),
-  body: z21.object({
-    noShowBy: z21.enum(NO_SHOW_PARTIES),
-    reason: z21.string().trim().max(1e3).optional()
-  }).strict()
-});
-var mentorBookingIdValidation = z21.object({
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
-  params: z21.object({
-    id: mongoObjectIdSchema13
-  })
-});
-<<<<<<< HEAD
-var mentorIdParamValidation = z21.object({
-  params: z21.object({
-    mentorId: mongoObjectIdSchema13
-  })
-});
-
-// src/modules/mentorshipReviews/mentorship.review.route.ts
-var router29 = Router29();
-router29.get(
-  "/mentor/:mentorId",
-  validateRequest_default(mentorIdParamValidation),
-  mentorshipReviewController.getReviewsForMentor
-);
-router29.post(
-  "/",
-  verifyToken,
-  requireInvictusAccess,
-  validateRequest_default(createMentorshipReviewValidation),
-  mentorshipReviewController.createReview
-=======
-var queryMentorBookingValidation = z21.object({
-  query: z21.object({
-    memberId: mongoObjectIdSchema13.optional(),
-    leadMentorId: mongoObjectIdSchema13.optional(),
-    coMentorId: mongoObjectIdSchema13.optional(),
-    mentorId: mongoObjectIdSchema13.optional(),
-    status: z21.enum(MENTOR_BOOKING_STATUSES).optional(),
-    startDate: z21.string().optional(),
-    endDate: z21.string().optional(),
-    page: z21.coerce.number().int().min(1).optional(),
-    limit: z21.coerce.number().int().min(1).max(100).optional()
-  }).optional()
-});
-
 // src/modules/mentorBookings/mentor.booking.route.ts
-var router29 = Router29();
-router29.post(
+var router33 = Router33();
+router33.post(
   "/me",
   verifyToken,
   requireInvictusAccess,
   validateRequest_default(createMentorBookingValidation),
   mentorBookingController.createBooking
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 );
-router29.get(
+router33.get(
   "/me",
   verifyToken,
   requireInvictusAccess,
-<<<<<<< HEAD
-  mentorshipReviewController.getMyReviews
-);
-router29.patch(
-  "/:id",
-  verifyToken,
-  requireInvictusAccess,
-  validateRequest_default(updateMentorshipReviewValidation),
-  mentorshipReviewController.updateReview
-);
-router29.delete(
-  "/:id",
-  verifyToken,
-  requireInvictusAccess,
-  validateRequest_default(mentorshipReviewIdValidation),
-  mentorshipReviewController.deleteReview
-=======
   validateRequest_default(queryMentorBookingValidation),
   mentorBookingController.getMyMemberBookings
 );
-router29.get(
+router33.get(
   "/me/:id",
   verifyToken,
   requireInvictusAccess,
   validateRequest_default(mentorBookingIdValidation),
   mentorBookingController.getMyMemberSingleBooking
 );
-router29.patch(
+router33.patch(
   "/me/:id",
   verifyToken,
   requireInvictusAccess,
   validateRequest_default(updateMentorBookingValidation),
   mentorBookingController.updateBooking
 );
-router29.patch(
+router33.patch(
   "/me/:id/cancel",
   verifyToken,
   requireInvictusAccess,
   validateRequest_default(cancelMentorBookingValidation),
   mentorBookingController.cancelBooking
 );
-router29.get(
+router33.get(
   "/mentor/me",
   verifyToken,
   validateRequest_default(queryMentorBookingValidation),
   mentorBookingController.getMyMentorBookings
 );
-router29.get(
+router33.get(
   "/mentor/me/:id",
   verifyToken,
   validateRequest_default(mentorBookingIdValidation),
   mentorBookingController.getMyMentorSingleBooking
 );
-router29.patch(
+router33.patch(
   "/:id/confirm",
   verifyToken,
   validateRequest_default(confirmMentorBookingValidation),
   mentorBookingController.confirmBooking
 );
-router29.patch(
+router33.patch(
   "/:id/complete",
   verifyToken,
   validateRequest_default(completeMentorBookingValidation),
   mentorBookingController.completeBooking
 );
-router29.patch(
+router33.patch(
   "/:id/no-show",
   verifyToken,
   validateRequest_default(noShowMentorBookingValidation),
   mentorBookingController.markNoShowBooking
 );
-router29.patch(
+router33.patch(
   "/:id/cancel",
   verifyToken,
   validateRequest_default(cancelMentorBookingValidation),
   mentorBookingController.cancelBooking
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
 );
-router29.get(
+router33.get(
   "/",
   verifyToken,
-<<<<<<< HEAD
-  authorizeRoles("founder", "manager", "admin", "super_admin"),
-  mentorshipReviewController.getAllReviewsAdmin
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(queryMentorBookingValidation),
+  mentorBookingController.getAllBookingsAdmin
 );
-router29.patch(
-  "/:id/status",
-  verifyToken,
-  authorizeRoles("founder", "manager", "admin", "super_admin"),
-  validateRequest_default(moderateMentorshipReviewValidation),
-  mentorshipReviewController.moderateReview
-);
-router29.delete(
-  "/:id/admin",
-  verifyToken,
-  authorizeRoles("founder", "manager", "admin", "super_admin"),
-  validateRequest_default(mentorshipReviewIdValidation),
-  mentorshipReviewController.deleteReviewAdmin
-);
-router29.get(
+router33.get(
   "/:id",
-  validateRequest_default(mentorshipReviewIdValidation),
-  mentorshipReviewController.getSingleReview
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(mentorBookingIdValidation),
+  mentorBookingController.getSingleBookingAdmin
 );
-var mentorshipReviewRoutes = router29;
-
-// src/modules/retreatLocations/retreat.location.route.ts
-import { Router as Router30 } from "express";
-
-// src/modules/retreatLocations/retreat.location.service.ts
-import { Types as Types28 } from "mongoose";
-
-// src/modules/retreatLocations/retreat.location.model.schema.ts
-import { model as model28, Schema as Schema28 } from "mongoose";
-
-// src/modules/retreatLocations/retreat.location.interface.ts
-var RETREAT_LOCATION_STATUSES = [
-  "draft",
-  "published",
-  "archived"
-];
-
-// src/modules/retreatLocations/retreat.location.model.schema.ts
-var venueDetailsSchema = new Schema28(
-  {
-    venueName: {
-      type: String,
-      trim: true,
-      maxlength: 200
-    },
-    capacity: {
-      type: Number,
-      min: 1
-    },
-    accommodationType: {
-      type: String,
-      trim: true,
-      maxlength: 100
-    },
-    features: {
-      type: [
-        {
-          type: String,
-          trim: true,
-          maxlength: 100
-        }
-      ],
-      default: []
-    }
-  },
-  {
-    _id: false
-  }
+router33.patch(
+  "/:id",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(updateMentorBookingValidation),
+  mentorBookingController.updateBooking
 );
-var locationCoordinatesSchema = new Schema28(
-  {
-    latitude: {
-      type: Number,
-      min: -90,
-      max: 90
-    },
-    longitude: {
-      type: Number,
-      min: -180,
-      max: 180
-    }
-  },
-  {
-    _id: false
-  }
-);
-var retreatLocationSchema = new Schema28(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 200
-    },
-    slug: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-      index: true
-    },
-    country: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-      index: true
-    },
-    city: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-      index: true
-    },
-    stateOrProvince: {
-      type: String,
-      trim: true,
-      maxlength: 100
-    },
-    address: {
-      type: String,
-      trim: true,
-      maxlength: 300
-    },
-    coordinates: {
-      type: locationCoordinatesSchema
-    },
-    description: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 5e3
-    },
-    shortDescription: {
-      type: String,
-      trim: true,
-      maxlength: 500
-    },
-    venueDetails: {
-      type: venueDetailsSchema
-    },
-    amenities: {
-      type: [
-        {
-          type: String,
-          trim: true,
-          maxlength: 100
-        }
-      ],
-      default: []
-    },
-    coverImage: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    gallery: {
-      type: [
-        {
-          type: String,
-          trim: true
-        }
-      ],
-      default: []
-    },
-    featured: {
-      type: Boolean,
-      default: false,
-      index: true
-    },
-    status: {
-      type: String,
-      enum: RETREAT_LOCATION_STATUSES,
-      default: "draft",
-      index: true
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-      index: true
-    },
-    order: {
-      type: Number,
-      default: 0
-    },
-    publishedAt: {
-      type: Date
-    },
-    archivedAt: {
-      type: Date
-    },
-    createdBy: {
-      type: Schema28.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema28.Types.ObjectId,
-      ref: "User"
-    }
-  },
-  {
-    timestamps: true,
-    collection: "retreatlocations"
-  }
-);
-retreatLocationSchema.index({
-  status: 1,
-  isActive: 1,
-  order: 1
-});
-retreatLocationSchema.index({
-  country: 1,
-  city: 1,
-  status: 1
-});
-retreatLocationSchema.index({
-  featured: 1,
-  status: 1,
-  isActive: 1
-});
-retreatLocationSchema.index({
-  name: "text",
-  description: "text",
-  country: "text",
-  city: "text"
-});
-var RetreatLocation = model28(
-  "RetreatLocation",
-  retreatLocationSchema
-);
+var mentorBookingRoutes = router33;
 
-// src/modules/retreatLocations/retreat.location.service.ts
-var throwServiceError15 = (message, statusCode) => {
+// src/modules/retreatBatches/retreat.batch.route.ts
+import { Router as Router34 } from "express";
+
+// src/modules/retreatBatches/retreat.batch.service.ts
+import { Types as Types37 } from "mongoose";
+var throwServiceError20 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound15 = (value, message, statusCode) => {
+var assertFound20 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError15(message, statusCode);
+    throwServiceError20(message, statusCode);
   }
 };
-var assertValidObjectId10 = (value, fieldName) => {
-  if (!Types28.ObjectId.isValid(value)) {
-    throwServiceError15(`${fieldName} is invalid`, 400);
+var assertValidObjectId17 = (value, fieldName) => {
+  if (!Types37.ObjectId.isValid(value)) {
+    throwServiceError20(`${fieldName} is invalid`, 400);
   }
 };
-var isAdminOrManager13 = (role) => {
-  return role === "admin" || role === "manager" || role === "founder" || role === "super_admin";
+var slugify2 = (text) => {
+  return text.toString().toLowerCase().trim().replace(/\s+/g, "-").replace(/[^\w-]+/g, "").replace(/--+/g, "-");
 };
-var isDuplicateKeyError10 = (error) => {
-  return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
-};
-var slugify = (text) => {
-  return text.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
-};
-var generateUniqueSlug = async (name, excludeId) => {
-  const baseSlug = slugify(name) || "retreat-location";
-  let slug = baseSlug;
-  let counter = 1;
-  while (true) {
-    const existing = await RetreatLocation.findOne({
-      slug,
-      ...excludeId ? { _id: { $ne: new Types28.ObjectId(excludeId) } } : {}
-    });
-    if (!existing) {
-      return slug;
-    }
-    slug = `${baseSlug}-${counter}`;
-    counter += 1;
-  }
-};
-var LOCATION_POPULATE = [
+var BATCH_POPULATE = [
+  {
+    path: "retreatLocation",
+    select: "title slug country city coverImage tagline promoVideoUrl whatsIncluded status"
+  },
   {
     path: "createdBy",
-    select: "fullName email role profileImage"
+    select: "fullName email role"
   },
   {
     path: "updatedBy",
-    select: "fullName email role profileImage"
+    select: "fullName email role"
   }
 ];
-var createRetreatLocation = async (payload, actorId) => {
-  assertValidObjectId10(actorId, "Actor ID");
-  const slug = payload.slug ? slugify(payload.slug) : await generateUniqueSlug(payload.name);
-  const existingWithSlug = await RetreatLocation.findOne({ slug });
-  if (existingWithSlug) {
-    throwServiceError15(`Retreat location with slug '${slug}' already exists`, 409);
+var createRetreatBatch = async (payload, actorId) => {
+  assertValidObjectId17(payload.retreatLocation, "Retreat location ID");
+  const location = await RetreatLocation.findById(payload.retreatLocation);
+  assertFound20(location, "Parent retreat location not found", 404);
+  const startDate = new Date(payload.startDate);
+  const endDate = new Date(payload.endDate);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    throwServiceError20("Invalid startDate or endDate format", 400);
+  }
+  if (endDate <= startDate) {
+    throwServiceError20("endDate must be strictly after startDate", 400);
+  }
+  const slug = payload.slug ? slugify2(payload.slug) : slugify2(`${location.slug}-${payload.batchName}`);
+  const existing = await RetreatBatch.findOne({ slug });
+  if (existing) {
+    throwServiceError20("A retreat batch with this slug already exists", 409);
   }
   const createData = {
-    name: payload.name.trim(),
+    retreatLocation: location._id,
+    batchName: payload.batchName,
     slug,
-    country: payload.country.trim(),
-    city: payload.city.trim(),
-    description: payload.description.trim(),
-    coverImage: payload.coverImage.trim(),
-    gallery: payload.gallery ?? [],
-    amenities: payload.amenities ?? [],
-    featured: payload.featured ?? false,
+    startDate,
+    endDate,
+    capacity: payload.capacity,
+    confirmedBookingsCount: 0,
+    waitlistCount: 0,
+    price: payload.price,
+    currency: (payload.currency ?? "usd").toLowerCase(),
+    status: payload.status ?? "upcoming",
+    isFeatured: payload.isFeatured ?? false,
     isActive: payload.isActive ?? true,
-    order: payload.order ?? 0,
-    status: "draft",
-    createdBy: new Types28.ObjectId(actorId)
+    createdBy: new Types37.ObjectId(actorId)
   };
-  if (payload.stateOrProvince) {
-    createData.stateOrProvince = payload.stateOrProvince.trim();
+  if (payload.depositAmount !== void 0) {
+    createData.depositAmount = payload.depositAmount;
   }
-  if (payload.address) {
-    createData.address = payload.address.trim();
+  if (payload.bookingDeadline !== void 0) {
+    createData.bookingDeadline = new Date(payload.bookingDeadline);
   }
-  if (payload.shortDescription) {
-    createData.shortDescription = payload.shortDescription.trim();
+  if (payload.description !== void 0) {
+    createData.description = payload.description;
   }
-  if (payload.coordinates) {
-    createData.coordinates = payload.coordinates;
+  if (payload.notes !== void 0) {
+    createData.notes = payload.notes;
   }
-  if (payload.venueDetails) {
-    createData.venueDetails = payload.venueDetails;
-  }
-  try {
-    const location = await RetreatLocation.create(createData);
-    return location.populate(LOCATION_POPULATE);
-  } catch (error) {
-    if (isDuplicateKeyError10(error)) {
-      throwServiceError15("A retreat location with this slug already exists", 409);
-    }
-    throw error;
-  }
+  const batch = await RetreatBatch.create(createData);
+  return batch.populate(BATCH_POPULATE);
 };
-var getAllRetreatLocations = async (query, actorRole) => {
-  const page = Math.max(1, query.page ?? 1);
-  const limit = Math.max(1, Math.min(100, query.limit ?? 20));
-  const skip = (page - 1) * limit;
+var getAllRetreatBatches = async (query = {}, isPublicOnly = false) => {
   const filter = {};
-  if (!isAdminOrManager13(actorRole)) {
-    filter.status = "published";
+  if (query.locationId) {
+    assertValidObjectId17(query.locationId, "Retreat location ID");
+    filter.retreatLocation = new Types37.ObjectId(query.locationId);
+  }
+  if (isPublicOnly) {
+    filter.status = { $in: ["upcoming", "open", "sold_out"] };
     filter.isActive = true;
   } else {
     if (query.status) {
@@ -21808,697 +25038,3385 @@ var getAllRetreatLocations = async (query, actorRole) => {
       filter.isActive = query.isActive;
     }
   }
-  if (query.country) {
-    filter.country = { $regex: new RegExp(`^${query.country.trim()}$`, "i") };
+  if (query.isFeatured !== void 0) {
+    filter.isFeatured = query.isFeatured;
   }
-  if (query.city) {
-    filter.city = { $regex: new RegExp(`^${query.city.trim()}$`, "i") };
-  }
-  if (query.featured !== void 0) {
-    filter.featured = query.featured;
+  if (query.startDateFrom || query.startDateTo) {
+    const timeFilter = {};
+    if (query.startDateFrom) {
+      timeFilter.$gte = new Date(query.startDateFrom);
+    }
+    if (query.startDateTo) {
+      timeFilter.$lte = new Date(query.startDateTo);
+    }
+    filter.startDate = timeFilter;
   }
   if (query.search) {
-    const searchRegex = new RegExp(query.search.trim(), "i");
-    filter.$or = [
-      { name: searchRegex },
-      { country: searchRegex },
-      { city: searchRegex },
-      { description: searchRegex }
-    ];
+    const regex = new RegExp(query.search, "i");
+    filter.$or = [{ batchName: regex }, { description: regex }];
   }
-  const sortOrder = query.sortOrder === "asc" ? 1 : -1;
-  const sortOption = query.sortBy ? { [query.sortBy]: sortOrder } : { featured: -1, order: 1, createdAt: -1 };
-  const [data, total] = await Promise.all([
-    RetreatLocation.find(filter).sort(sortOption).skip(skip).limit(limit).populate(LOCATION_POPULATE),
-    RetreatLocation.countDocuments(filter)
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [batches, total] = await Promise.all([
+    RetreatBatch.find(filter).sort({ startDate: 1 }).skip(skip).limit(limit).populate(BATCH_POPULATE),
+    RetreatBatch.countDocuments(filter)
   ]);
   return {
-    data,
-    pagination: {
+    meta: {
       page,
       limit,
       total,
       totalPages: Math.ceil(total / limit)
-    }
+    },
+    data: batches
   };
 };
-var getFeaturedRetreatLocations = async () => {
-  return RetreatLocation.find({
-    featured: true,
-    status: "published",
-    isActive: true
-  }).sort({ order: 1, createdAt: -1 }).populate(LOCATION_POPULATE);
-};
-var getSingleRetreatLocationById = async (id, actorRole) => {
-  assertValidObjectId10(id, "Retreat location ID");
-  const filter = { _id: id };
-  if (!isAdminOrManager13(actorRole)) {
-    filter.status = "published";
+var getSingleRetreatBatch = async (idOrSlug, isPublicOnly = false) => {
+  const filter = {};
+  if (Types37.ObjectId.isValid(idOrSlug)) {
+    filter._id = new Types37.ObjectId(idOrSlug);
+  } else {
+    filter.slug = idOrSlug.toLowerCase();
+  }
+  if (isPublicOnly) {
     filter.isActive = true;
   }
-  const location = await RetreatLocation.findOne(filter).populate(
-    LOCATION_POPULATE
-  );
-  assertFound15(location, "Retreat location not found", 404);
-  return location;
+  const batch = await RetreatBatch.findOne(filter).populate(BATCH_POPULATE);
+  assertFound20(batch, "Retreat batch not found", 404);
+  return batch;
 };
-var getSingleRetreatLocationBySlug = async (slug, actorRole) => {
-  const filter = { slug: slug.toLowerCase().trim() };
-  if (!isAdminOrManager13(actorRole)) {
-    filter.status = "published";
-    filter.isActive = true;
+var updateRetreatBatch = async (batchId, payload, actorId) => {
+  assertValidObjectId17(batchId, "Retreat batch ID");
+  const batch = await RetreatBatch.findById(batchId);
+  assertFound20(batch, "Retreat batch not found", 404);
+  if (payload.retreatLocation) {
+    assertValidObjectId17(payload.retreatLocation, "Retreat location ID");
+    const location = await RetreatLocation.findById(payload.retreatLocation);
+    assertFound20(location, "Parent retreat location not found", 404);
+    batch.retreatLocation = location._id;
   }
-  const location = await RetreatLocation.findOne(filter).populate(
-    LOCATION_POPULATE
-  );
-  assertFound15(location, "Retreat location not found", 404);
-  return location;
-};
-var updateRetreatLocation = async (id, payload, actorId) => {
-  assertValidObjectId10(id, "Retreat location ID");
-  assertValidObjectId10(actorId, "Actor ID");
-  const location = await RetreatLocation.findById(id);
-  assertFound15(location, "Retreat location not found", 404);
-  if (payload.name !== void 0) {
-    location.name = payload.name.trim();
+  if (payload.batchName !== void 0) {
+    batch.batchName = payload.batchName;
   }
   if (payload.slug !== void 0) {
-    const customSlug = slugify(payload.slug);
-    const existingWithSlug = await RetreatLocation.findOne({
-      slug: customSlug,
-      _id: { $ne: new Types28.ObjectId(id) }
+    const slug = slugify2(payload.slug);
+    const existing = await RetreatBatch.findOne({
+      slug,
+      _id: { $ne: batch._id }
     });
-    if (existingWithSlug) {
-      throwServiceError15(
-        `Retreat location with slug '${customSlug}' already exists`,
-        409
+    if (existing) {
+      throwServiceError20("A retreat batch with this slug already exists", 409);
+    }
+    batch.slug = slug;
+  }
+  if (payload.startDate !== void 0) {
+    batch.startDate = new Date(payload.startDate);
+  }
+  if (payload.endDate !== void 0) {
+    batch.endDate = new Date(payload.endDate);
+  }
+  if (batch.endDate <= batch.startDate) {
+    throwServiceError20("endDate must be strictly after startDate", 400);
+  }
+  if (payload.capacity !== void 0) {
+    if (payload.capacity < batch.confirmedBookingsCount) {
+      throwServiceError20(
+        `Capacity cannot be reduced below the current confirmed bookings count (${batch.confirmedBookingsCount})`,
+        400
       );
     }
-    location.slug = customSlug;
-  } else if (payload.name !== void 0 && payload.name !== location.name) {
-    location.slug = await generateUniqueSlug(payload.name, id);
+    batch.capacity = payload.capacity;
+    if (batch.confirmedBookingsCount >= batch.capacity && batch.status === "open") {
+      batch.status = "sold_out";
+    }
   }
-  if (payload.country !== void 0) {
-    location.country = payload.country.trim();
+  if (payload.price !== void 0) {
+    batch.price = payload.price;
   }
-  if (payload.city !== void 0) {
-    location.city = payload.city.trim();
+  if (payload.depositAmount === null) {
+    batch.set("depositAmount", void 0);
+  } else if (payload.depositAmount !== void 0) {
+    batch.depositAmount = payload.depositAmount;
   }
-  if (payload.stateOrProvince !== void 0) {
-    location.stateOrProvince = payload.stateOrProvince ? payload.stateOrProvince.trim() : void 0;
+  if (payload.currency !== void 0) {
+    batch.currency = payload.currency.toLowerCase();
   }
-  if (payload.address !== void 0) {
-    location.address = payload.address ? payload.address.trim() : void 0;
+  if (payload.status !== void 0) {
+    batch.status = payload.status;
   }
-  if (payload.description !== void 0) {
-    location.description = payload.description.trim();
-  }
-  if (payload.shortDescription !== void 0) {
-    location.shortDescription = payload.shortDescription ? payload.shortDescription.trim() : void 0;
-  }
-  if (payload.coverImage !== void 0) {
-    location.coverImage = payload.coverImage.trim();
-  }
-  if (payload.gallery !== void 0) {
-    location.gallery = payload.gallery;
-  }
-  if (payload.amenities !== void 0) {
-    location.amenities = payload.amenities;
-  }
-  if (payload.coordinates !== void 0) {
-    location.coordinates = payload.coordinates || void 0;
-  }
-  if (payload.venueDetails !== void 0) {
-    location.venueDetails = payload.venueDetails || void 0;
-  }
-  if (payload.featured !== void 0) {
-    location.featured = payload.featured;
+  if (payload.isFeatured !== void 0) {
+    batch.isFeatured = payload.isFeatured;
   }
   if (payload.isActive !== void 0) {
-    location.isActive = payload.isActive;
+    batch.isActive = payload.isActive;
   }
-  if (payload.order !== void 0) {
-    location.order = payload.order;
+  if (payload.bookingDeadline === null) {
+    batch.set("bookingDeadline", void 0);
+  } else if (payload.bookingDeadline !== void 0) {
+    batch.bookingDeadline = new Date(payload.bookingDeadline);
   }
-  location.updatedBy = new Types28.ObjectId(actorId);
-  await location.save();
-  return location.populate(LOCATION_POPULATE);
-};
-var publishRetreatLocation = async (id, actorId) => {
-  assertValidObjectId10(id, "Retreat location ID");
-  assertValidObjectId10(actorId, "Actor ID");
-  const location = await RetreatLocation.findById(id);
-  assertFound15(location, "Retreat location not found", 404);
-  if (location.status === "archived") {
-    throwServiceError15("Archived retreat location cannot be directly published", 400);
+  if (payload.description !== void 0) {
+    batch.description = payload.description;
   }
-  location.status = "published";
-  location.isActive = true;
-  location.publishedAt = /* @__PURE__ */ new Date();
-  location.set("archivedAt", void 0);
-  location.updatedBy = new Types28.ObjectId(actorId);
-  await location.save();
-  return location.populate(LOCATION_POPULATE);
-};
-var moveRetreatLocationToDraft = async (id, actorId) => {
-  assertValidObjectId10(id, "Retreat location ID");
-  assertValidObjectId10(actorId, "Actor ID");
-  const location = await RetreatLocation.findById(id);
-  assertFound15(location, "Retreat location not found", 404);
-  if (location.status === "archived") {
-    throwServiceError15("Archived retreat location cannot be moved to draft", 400);
+  if (payload.notes !== void 0) {
+    batch.notes = payload.notes;
   }
-  location.status = "draft";
-  location.set("publishedAt", void 0);
-  location.updatedBy = new Types28.ObjectId(actorId);
-  await location.save();
-  return location.populate(LOCATION_POPULATE);
+  batch.updatedBy = new Types37.ObjectId(actorId);
+  await batch.save();
+  return batch.populate(BATCH_POPULATE);
 };
-var archiveRetreatLocation = async (id, actorId) => {
-  assertValidObjectId10(id, "Retreat location ID");
-  assertValidObjectId10(actorId, "Actor ID");
-  const location = await RetreatLocation.findById(id);
-  assertFound15(location, "Retreat location not found", 404);
-  location.status = "archived";
-  location.isActive = false;
-  location.archivedAt = /* @__PURE__ */ new Date();
-  location.set("publishedAt", void 0);
-  location.updatedBy = new Types28.ObjectId(actorId);
-  await location.save();
-  return location.populate(LOCATION_POPULATE);
+var deleteRetreatBatch = async (batchId) => {
+  assertValidObjectId17(batchId, "Retreat batch ID");
+  const batch = await RetreatBatch.findById(batchId);
+  assertFound20(batch, "Retreat batch not found", 404);
+  if (batch.confirmedBookingsCount > 0) {
+    throwServiceError20(
+      "Cannot delete a retreat batch with active confirmed bookings. Please cancel or refund bookings first.",
+      400
+    );
+  }
+  await batch.deleteOne();
+  return { success: true, message: "Retreat batch deleted successfully" };
 };
-var deleteRetreatLocation = async (id) => {
-  assertValidObjectId10(id, "Retreat location ID");
-  const location = await RetreatLocation.findByIdAndDelete(id);
-  assertFound15(location, "Retreat location not found", 404);
-  return { id, deleted: true };
-};
-var retreatLocationService = {
-  createRetreatLocation,
-  getAllRetreatLocations,
-  getFeaturedRetreatLocations,
-  getSingleRetreatLocationById,
-  getSingleRetreatLocationBySlug,
-  updateRetreatLocation,
-  publishRetreatLocation,
-  moveRetreatLocationToDraft,
-  archiveRetreatLocation,
-  deleteRetreatLocation
+var retreatBatchService = {
+  createRetreatBatch,
+  getAllRetreatBatches,
+  getSingleRetreatBatch,
+  updateRetreatBatch,
+  deleteRetreatBatch
 };
 
-// src/modules/retreatLocations/retreat.location.controller.ts
-var getAuthUser17 = (req) => {
+// src/modules/retreatBatches/retreat.batch.controller.ts
+var getAuthUser21 = (req) => {
   assertFound_default(req.user, "Authentication required", 401);
   return {
     id: req.user.id,
     role: req.user.role
   };
 };
-var createRetreatLocation2 = async (req, res, next) => {
+var createRetreatBatch2 = async (req, res, next) => {
   try {
-    const authUser = getAuthUser17(req);
-    const files = req.files;
-    let coverImage = typeof req.body.coverImage === "string" && req.body.coverImage.trim() !== "" ? req.body.coverImage.trim() : void 0;
-    let gallery = Array.isArray(req.body.gallery) ? req.body.gallery : typeof req.body.gallery === "string" ? parseIfString(req.body.gallery) : [];
-    if (!Array.isArray(gallery)) {
-      gallery = [];
-    }
-    const coverFile = files?.coverImage?.[0];
-    const galleryFiles = files?.gallery ?? [];
-    if (coverFile || galleryFiles.length > 0) {
-      const [uploadedCover, ...uploadedGallery] = await Promise.all([
-        coverFile ? uploadImageToCloudinary(coverFile, "retreats/covers") : Promise.resolve(void 0),
-        ...galleryFiles.map(
-          (file) => uploadImageToCloudinary(file, "retreats/gallery")
-        )
-      ]);
-      if (uploadedCover) {
-        coverImage = uploadedCover;
-      }
-      if (uploadedGallery.length > 0) {
-        const validGalleryUrls = uploadedGallery.filter(Boolean);
-        gallery = [...gallery, ...validGalleryUrls];
-      }
-    }
-    assertFound_default(
-      coverImage,
-      "coverImage is required (either as an uploaded file or valid URL)",
-      400
-    );
-    const payload = {
-      name: req.body.name,
-      slug: req.body.slug,
-      country: req.body.country,
-      city: req.body.city,
-      stateOrProvince: req.body.stateOrProvince,
-      address: req.body.address,
-      description: req.body.description,
-      shortDescription: req.body.shortDescription,
-      coverImage,
-      gallery,
-      venueDetails: parseIfString(req.body.venueDetails),
-      coordinates: parseIfString(req.body.coordinates),
-      amenities: parseIfString(req.body.amenities),
-      featured: req.body.featured === "true" ? true : req.body.featured === "false" ? false : req.body.featured,
-      isActive: req.body.isActive === "true" ? true : req.body.isActive === "false" ? false : req.body.isActive,
-      order: req.body.order !== void 0 ? Number(req.body.order) : void 0
-    };
-    const location = await retreatLocationService.createRetreatLocation(
-      payload,
+    const authUser = getAuthUser21(req);
+    const batch = await retreatBatchService.createRetreatBatch(
+      req.body,
       authUser.id
     );
     sendResponse_default(res, {
       statusCode: 201,
       success: true,
-      message: "Retreat location created successfully",
-      data: location
+      message: "Retreat batch created successfully",
+      data: batch
     });
   } catch (error) {
     next(error);
   }
 };
-var getAllRetreatLocations2 = async (req, res, next) => {
+var getAllRetreatBatches2 = async (req, res, next) => {
   try {
-    const actorRole = req.user?.role;
-    const query = {
-      country: req.query.country,
-      city: req.query.city,
-      featured: req.query.featured === "true" ? true : req.query.featured === "false" ? false : void 0,
-      status: req.query.status,
-      isActive: req.query.isActive === "true" ? true : req.query.isActive === "false" ? false : void 0,
-      search: req.query.search,
-      page: req.query.page ? Number(req.query.page) : void 0,
-      limit: req.query.limit ? Number(req.query.limit) : void 0,
-      sortBy: req.query.sortBy,
-      sortOrder: req.query.sortOrder
-    };
-    const result = await retreatLocationService.getAllRetreatLocations(
-      query,
-      actorRole
+    const isPublicOnly = !req.user || req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager";
+    const result = await retreatBatchService.getAllRetreatBatches(
+      req.query,
+      isPublicOnly
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-      message: "Retreat locations retrieved successfully",
+      message: "Retreat batches retrieved successfully",
       data: result
     });
   } catch (error) {
     next(error);
   }
 };
-var getFeaturedRetreatLocations2 = async (_req, res, next) => {
+var getSingleRetreatBatch2 = async (req, res, next) => {
   try {
-    const locations = await retreatLocationService.getFeaturedRetreatLocations();
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Featured retreat locations retrieved successfully",
-      data: locations
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getSingleRetreatLocationById2 = async (req, res, next) => {
-  try {
-    const actorRole = req.user?.role;
-    const locationId = String(req.params.id);
-    const location = await retreatLocationService.getSingleRetreatLocationById(
-      locationId,
-      actorRole
+    const isPublicOnly = !req.user || req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager";
+    const batch = await retreatBatchService.getSingleRetreatBatch(
+      String(req.params.idOrSlug),
+      isPublicOnly
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-      message: "Retreat location retrieved successfully",
-      data: location
+      message: "Retreat batch retrieved successfully",
+      data: batch
     });
   } catch (error) {
     next(error);
   }
 };
-var getSingleRetreatLocationBySlug2 = async (req, res, next) => {
+var updateRetreatBatch2 = async (req, res, next) => {
   try {
-    const actorRole = req.user?.role;
-    const slug = String(req.params.slug);
-    const location = await retreatLocationService.getSingleRetreatLocationBySlug(
-      slug,
-      actorRole
-    );
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Retreat location retrieved successfully",
-      data: location
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var updateRetreatLocation2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser17(req);
-    const locationId = String(req.params.id);
-    const files = req.files;
-    let coverImage = typeof req.body.coverImage === "string" && req.body.coverImage.trim() !== "" ? req.body.coverImage.trim() : void 0;
-    let gallery = Array.isArray(req.body.gallery) ? req.body.gallery : typeof req.body.gallery === "string" ? parseIfString(req.body.gallery) : void 0;
-    const coverFile = files?.coverImage?.[0];
-    const galleryFiles = files?.gallery ?? [];
-    if (coverFile || galleryFiles.length > 0) {
-      const [uploadedCover, ...uploadedGallery] = await Promise.all([
-        coverFile ? uploadImageToCloudinary(coverFile, "retreats/covers") : Promise.resolve(void 0),
-        ...galleryFiles.map(
-          (file) => uploadImageToCloudinary(file, "retreats/gallery")
-        )
-      ]);
-      if (uploadedCover) {
-        coverImage = uploadedCover;
-      }
-      if (uploadedGallery.length > 0) {
-        const validGalleryUrls = uploadedGallery.filter(Boolean);
-        gallery = [...gallery ?? [], ...validGalleryUrls];
-      }
-    }
-    const payload = {
-      ...req.body.name !== void 0 && { name: req.body.name },
-      ...req.body.slug !== void 0 && { slug: req.body.slug },
-      ...req.body.country !== void 0 && { country: req.body.country },
-      ...req.body.city !== void 0 && { city: req.body.city },
-      ...req.body.stateOrProvince !== void 0 && {
-        stateOrProvince: req.body.stateOrProvince
-      },
-      ...req.body.address !== void 0 && { address: req.body.address },
-      ...req.body.description !== void 0 && {
-        description: req.body.description
-      },
-      ...req.body.shortDescription !== void 0 && {
-        shortDescription: req.body.shortDescription
-      },
-      ...coverImage && { coverImage },
-      ...gallery && { gallery },
-      ...req.body.venueDetails !== void 0 && {
-        venueDetails: parseIfString(req.body.venueDetails)
-      },
-      ...req.body.coordinates !== void 0 && {
-        coordinates: parseIfString(req.body.coordinates)
-      },
-      ...req.body.amenities !== void 0 && {
-        amenities: parseIfString(req.body.amenities)
-      },
-      ...req.body.featured !== void 0 && {
-        featured: req.body.featured === "true" ? true : req.body.featured === "false" ? false : req.body.featured
-      },
-      ...req.body.isActive !== void 0 && {
-        isActive: req.body.isActive === "true" ? true : req.body.isActive === "false" ? false : req.body.isActive
-      },
-      ...req.body.order !== void 0 && {
-        order: Number(req.body.order)
-      }
-    };
-    const location = await retreatLocationService.updateRetreatLocation(
-      locationId,
-      payload,
+    const authUser = getAuthUser21(req);
+    const batch = await retreatBatchService.updateRetreatBatch(
+      String(req.params.id),
+      req.body,
       authUser.id
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-      message: "Retreat location updated successfully",
-      data: location
+      message: "Retreat batch updated successfully",
+      data: batch
     });
   } catch (error) {
     next(error);
   }
 };
-var publishRetreatLocation2 = async (req, res, next) => {
+var deleteRetreatBatch2 = async (req, res, next) => {
   try {
-    const authUser = getAuthUser17(req);
-    const locationId = String(req.params.id);
-    const location = await retreatLocationService.publishRetreatLocation(
-      locationId,
-      authUser.id
+    getAuthUser21(req);
+    const result = await retreatBatchService.deleteRetreatBatch(
+      String(req.params.id)
     );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-      message: "Retreat location published successfully",
-      data: location
+      message: result.message,
+      data: null
     });
   } catch (error) {
     next(error);
   }
 };
-var moveRetreatLocationToDraft2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser17(req);
-    const locationId = String(req.params.id);
-    const location = await retreatLocationService.moveRetreatLocationToDraft(
-      locationId,
-      authUser.id
-    );
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Retreat location moved to draft successfully",
-      data: location
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var archiveRetreatLocation2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser17(req);
-    const locationId = String(req.params.id);
-    const location = await retreatLocationService.archiveRetreatLocation(
-      locationId,
-      authUser.id
-    );
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Retreat location archived successfully",
-      data: location
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var deleteRetreatLocation2 = async (req, res, next) => {
-  try {
-    const locationId = String(req.params.id);
-    const result = await retreatLocationService.deleteRetreatLocation(locationId);
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Retreat location deleted successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var retreatLocationController = {
-  createRetreatLocation: createRetreatLocation2,
-  getAllRetreatLocations: getAllRetreatLocations2,
-  getFeaturedRetreatLocations: getFeaturedRetreatLocations2,
-  getSingleRetreatLocationById: getSingleRetreatLocationById2,
-  getSingleRetreatLocationBySlug: getSingleRetreatLocationBySlug2,
-  updateRetreatLocation: updateRetreatLocation2,
-  publishRetreatLocation: publishRetreatLocation2,
-  moveRetreatLocationToDraft: moveRetreatLocationToDraft2,
-  archiveRetreatLocation: archiveRetreatLocation2,
-  deleteRetreatLocation: deleteRetreatLocation2
+var retreatBatchController = {
+  createRetreatBatch: createRetreatBatch2,
+  getAllRetreatBatches: getAllRetreatBatches2,
+  getSingleRetreatBatch: getSingleRetreatBatch2,
+  updateRetreatBatch: updateRetreatBatch2,
+  deleteRetreatBatch: deleteRetreatBatch2
 };
 
-// src/modules/retreatLocations/retreat.location.validation.ts
-import { z as z22 } from "zod";
-var mongoObjectIdSchema14 = z22.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var parseJsonString = (val) => {
-  if (typeof val === "string") {
-    try {
-      return JSON.parse(val);
-    } catch {
-      return val;
-    }
-  }
-  return val;
-};
-var parseBooleanString = (val) => {
-  if (val === "true") return true;
-  if (val === "false") return false;
-  return val;
-};
-var parseNumberString = (val) => {
-  if (typeof val === "string" && val.trim() !== "" && !isNaN(Number(val))) {
-    return Number(val);
-  }
-  return val;
-};
-var venueDetailsValidation = z22.object({
-  venueName: z22.string().trim().max(200).optional(),
-  capacity: z22.preprocess(parseNumberString, z22.number().int().min(1).optional()),
-  accommodationType: z22.string().trim().max(100).optional(),
-  venueType: z22.string().trim().max(100).optional(),
-  contactEmail: z22.string().trim().email().optional(),
-  features: z22.array(z22.string().trim().max(100)).optional()
+// src/modules/retreatBatches/retreat.batch.validation.ts
+import { z as z26 } from "zod";
+var mongoObjectIdSchema18 = z26.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var createRetreatBatchValidation = z26.object({
+  body: z26.object({
+    retreatLocation: mongoObjectIdSchema18,
+    batchName: z26.string().trim().min(2).max(200),
+    slug: z26.string().trim().min(2).max(200).optional(),
+    startDate: z26.string().datetime({ message: "startDate must be a valid ISO 8601 datetime" }),
+    endDate: z26.string().datetime({ message: "endDate must be a valid ISO 8601 datetime" }),
+    capacity: z26.number().int().min(1),
+    price: z26.number().min(0),
+    depositAmount: z26.number().min(0).optional(),
+    currency: z26.string().trim().min(2).max(10).optional(),
+    status: z26.enum(RETREAT_BATCH_STATUSES).optional(),
+    isFeatured: z26.boolean().optional(),
+    isActive: z26.boolean().optional(),
+    bookingDeadline: z26.string().datetime({ message: "bookingDeadline must be a valid ISO 8601 datetime" }).optional(),
+    description: z26.string().trim().max(3e3).optional(),
+    notes: z26.string().trim().max(2e3).optional()
+  }).strict()
 });
-var coordinatesValidation = z22.object({
-  lat: z22.preprocess(parseNumberString, z22.number().min(-90).max(90)),
-  lng: z22.preprocess(parseNumberString, z22.number().min(-180).max(180))
-});
-var createRetreatLocationValidation = z22.object({
-  body: z22.object({
-    name: z22.string().trim().min(2, "Name must be at least 2 characters").max(200),
-    slug: z22.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase alphanumeric with hyphens").optional(),
-    country: z22.string().trim().min(2).max(100),
-    city: z22.string().trim().min(2).max(100),
-    stateOrProvince: z22.string().trim().max(100).optional(),
-    address: z22.string().trim().max(300).optional(),
-    description: z22.string().trim().min(10).max(5e3),
-    shortDescription: z22.string().trim().max(500).optional(),
-    venueDetails: z22.preprocess(parseJsonString, venueDetailsValidation.optional()),
-    coordinates: z22.preprocess(parseJsonString, coordinatesValidation.optional()),
-    amenities: z22.preprocess(
-      parseJsonString,
-      z22.array(z22.string().trim().max(100)).max(50).optional()
-    ),
-    coverImage: z22.string().trim().url("coverImage must be a valid URL").optional(),
-    gallery: z22.preprocess(
-      parseJsonString,
-      z22.array(z22.string().trim()).max(30).optional()
-    ),
-    featured: z22.preprocess(parseBooleanString, z22.boolean().optional()),
-    isActive: z22.preprocess(parseBooleanString, z22.boolean().optional()),
-    order: z22.preprocess(parseNumberString, z22.number().int().min(0).optional())
-  })
-});
-var updateRetreatLocationValidation = z22.object({
-  params: z22.object({
-    id: mongoObjectIdSchema14
+var updateRetreatBatchValidation = z26.object({
+  params: z26.object({
+    id: mongoObjectIdSchema18
   }),
-  body: z22.object({
-    name: z22.string().trim().min(2).max(200).optional(),
-    slug: z22.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase alphanumeric with hyphens").optional(),
-    country: z22.string().trim().min(2).max(100).optional(),
-    city: z22.string().trim().min(2).max(100).optional(),
-    stateOrProvince: z22.string().trim().max(100).optional(),
-    address: z22.string().trim().max(300).optional(),
-    description: z22.string().trim().min(10).max(5e3).optional(),
-    shortDescription: z22.string().trim().max(500).optional(),
-    venueDetails: z22.preprocess(parseJsonString, venueDetailsValidation.nullable().optional()),
-    coordinates: z22.preprocess(parseJsonString, coordinatesValidation.nullable().optional()),
-    amenities: z22.preprocess(
-      parseJsonString,
-      z22.array(z22.string().trim().max(100)).max(50).optional()
-    ),
-    coverImage: z22.string().trim().url().optional(),
-    gallery: z22.preprocess(
-      parseJsonString,
-      z22.array(z22.string().trim()).max(30).optional()
-    ),
-    featured: z22.preprocess(parseBooleanString, z22.boolean().optional()),
-    isActive: z22.preprocess(parseBooleanString, z22.boolean().optional()),
-    order: z22.preprocess(parseNumberString, z22.number().int().min(0).optional())
+  body: z26.object({
+    retreatLocation: mongoObjectIdSchema18.optional(),
+    batchName: z26.string().trim().min(2).max(200).optional(),
+    slug: z26.string().trim().min(2).max(200).optional(),
+    startDate: z26.string().datetime({ message: "startDate must be a valid ISO 8601 datetime" }).optional(),
+    endDate: z26.string().datetime({ message: "endDate must be a valid ISO 8601 datetime" }).optional(),
+    capacity: z26.number().int().min(1).optional(),
+    price: z26.number().min(0).optional(),
+    depositAmount: z26.number().min(0).nullable().optional(),
+    currency: z26.string().trim().min(2).max(10).optional(),
+    status: z26.enum(RETREAT_BATCH_STATUSES).optional(),
+    isFeatured: z26.boolean().optional(),
+    isActive: z26.boolean().optional(),
+    bookingDeadline: z26.string().datetime({ message: "bookingDeadline must be a valid ISO 8601 datetime" }).nullable().optional(),
+    description: z26.string().trim().max(3e3).optional(),
+    notes: z26.string().trim().max(2e3).optional()
+  }).strict()
+});
+var retreatBatchIdValidation = z26.object({
+  params: z26.object({
+    id: mongoObjectIdSchema18
   })
 });
-var retreatLocationIdValidation = z22.object({
-  params: z22.object({
-    id: mongoObjectIdSchema14
-  })
-});
-var retreatLocationSlugValidation = z22.object({
-  params: z22.object({
-    slug: z22.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Invalid slug format")
-  })
+var queryRetreatBatchValidation = z26.object({
+  query: z26.object({
+    locationId: mongoObjectIdSchema18.optional(),
+    status: z26.enum(RETREAT_BATCH_STATUSES).optional(),
+    isActive: z26.coerce.boolean().optional(),
+    isFeatured: z26.coerce.boolean().optional(),
+    startDateFrom: z26.string().optional(),
+    startDateTo: z26.string().optional(),
+    search: z26.string().trim().optional(),
+    page: z26.coerce.number().int().min(1).optional(),
+    limit: z26.coerce.number().int().min(1).max(100).optional()
+  }).optional()
 });
 
-// src/modules/retreatLocations/retreat.location.route.ts
-var router30 = Router30();
-router30.get("/", retreatLocationController.getAllRetreatLocations);
-router30.get("/featured", retreatLocationController.getFeaturedRetreatLocations);
-router30.get(
-  "/slug/:slug",
-  validateRequest_default(retreatLocationSlugValidation),
-  retreatLocationController.getSingleRetreatLocationBySlug
+// src/modules/retreatBatches/retreat.batch.route.ts
+var router34 = Router34();
+router34.get(
+  "/",
+  validateRequest_default(queryRetreatBatchValidation),
+  retreatBatchController.getAllRetreatBatches
 );
-router30.post(
+router34.get(
+  "/:idOrSlug",
+  retreatBatchController.getSingleRetreatBatch
+);
+router34.post(
   "/",
   verifyToken,
-  authorizeRoles("founder", "manager", "admin", "super_admin"),
-  uploadRetreatImages,
-  validateRequest_default(createRetreatLocationValidation),
-  retreatLocationController.createRetreatLocation
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(createRetreatBatchValidation),
+  retreatBatchController.createRetreatBatch
 );
-router30.patch(
+router34.patch(
   "/:id",
   verifyToken,
-  authorizeRoles("founder", "manager", "admin", "super_admin"),
-  uploadRetreatImages,
-  validateRequest_default(updateRetreatLocationValidation),
-  retreatLocationController.updateRetreatLocation
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(updateRetreatBatchValidation),
+  retreatBatchController.updateRetreatBatch
 );
-router30.patch(
-  "/:id/publish",
+router34.delete(
+  "/:id",
   verifyToken,
-  authorizeRoles("founder", "manager", "admin", "super_admin"),
-  validateRequest_default(retreatLocationIdValidation),
-  retreatLocationController.publishRetreatLocation
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(retreatBatchIdValidation),
+  retreatBatchController.deleteRetreatBatch
 );
-router30.patch(
+var retreatBatchRoutes = router34;
+
+// src/modules/retreatBookings/retreat.booking.route.ts
+import { Router as Router35 } from "express";
+
+// src/modules/retreatBookings/retreat.booking.service.ts
+import { Types as Types38 } from "mongoose";
+import Stripe3 from "stripe";
+
+// src/modules/retreatBookings/retreat.booking.model.schema.ts
+import { model as model38, Schema as Schema38 } from "mongoose";
+
+// src/modules/retreatBookings/retreat.booking.interface.ts
+var RETREAT_BOOKING_STATUSES = [
+  "waitlisted",
+  "invited",
+  "payment_pending",
+  "confirmed",
+  "cancelled",
+  "refunded"
+];
+
+// src/modules/retreatBookings/retreat.booking.model.schema.ts
+var emergencyContactSchema = new Schema38(
+  {
+    name: { type: String, trim: true, maxlength: 100 },
+    phone: { type: String, trim: true, maxlength: 50 },
+    relationship: { type: String, trim: true, maxlength: 50 }
+  },
+  { _id: false }
+);
+var retreatBookingSchema = new Schema38(
+  {
+    user: {
+      type: Schema38.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    retreatBatch: {
+      type: Schema38.Types.ObjectId,
+      ref: "RetreatBatch",
+      required: true,
+      index: true
+    },
+    retreatLocation: {
+      type: Schema38.Types.ObjectId,
+      ref: "RetreatLocation",
+      required: true,
+      index: true
+    },
+    paymentSession: {
+      type: Schema38.Types.ObjectId,
+      ref: "PaymentSession"
+    },
+    status: {
+      type: String,
+      enum: RETREAT_BOOKING_STATUSES,
+      default: "waitlisted",
+      index: true
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    amountPaid: {
+      type: Number,
+      min: 0
+    },
+    currency: {
+      type: String,
+      default: "usd",
+      lowercase: true,
+      trim: true
+    },
+    stripeCheckoutSessionId: {
+      type: String,
+      trim: true,
+      index: true
+    },
+    stripePaymentIntentId: {
+      type: String,
+      trim: true
+    },
+    checkoutUrl: {
+      type: String,
+      trim: true
+    },
+    invitationExpiresAt: {
+      type: Date
+    },
+    paidAt: {
+      type: Date
+    },
+    confirmedAt: {
+      type: Date
+    },
+    cancelledAt: {
+      type: Date
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    refundedAt: {
+      type: Date
+    },
+    refundAmount: {
+      type: Number,
+      min: 0
+    },
+    refundReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2e3
+    },
+    specialRequests: {
+      type: String,
+      trim: true,
+      maxlength: 2e3
+    },
+    dietaryRequirements: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    emergencyContact: {
+      type: emergencyContactSchema
+    },
+    createdBy: {
+      type: Schema38.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema38.Types.ObjectId,
+      ref: "User"
+    }
+  },
+  {
+    timestamps: true,
+    collection: "retreatbookings"
+  }
+);
+retreatBookingSchema.index({
+  user: 1,
+  retreatBatch: 1
+});
+retreatBookingSchema.index({
+  retreatBatch: 1,
+  status: 1
+});
+retreatBookingSchema.index({
+  user: 1,
+  status: 1
+});
+var RetreatBooking = model38(
+  "RetreatBooking",
+  retreatBookingSchema
+);
+
+// src/modules/retreatBookings/retreat.booking.service.ts
+var stripeSecretKey3 = config_default.STRIPE_SECRET_KEY;
+var stripe3 = stripeSecretKey3 ? new Stripe3(stripeSecretKey3) : null;
+var getStripeClient3 = () => {
+  if (!stripe3) {
+    throwServiceError21("Stripe is not configured. Please set STRIPE_SECRET_KEY.", 500);
+  }
+  return stripe3;
+};
+var throwServiceError21 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound21 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError21(message, statusCode);
+  }
+};
+var assertValidObjectId18 = (value, fieldName) => {
+  if (!Types38.ObjectId.isValid(value)) {
+    throwServiceError21(`${fieldName} is invalid`, 400);
+  }
+};
+var BOOKING_POPULATE2 = [
+  {
+    path: "user",
+    select: "fullName email role profileImage phone city country"
+  },
+  {
+    path: "retreatBatch",
+    select: "batchName slug startDate endDate capacity confirmedBookingsCount waitlistCount price depositAmount currency status isFeatured",
+    populate: {
+      path: "retreatLocation",
+      model: "RetreatLocation",
+      select: "title slug country city coverImage tagline"
+    }
+  },
+  {
+    path: "retreatLocation",
+    select: "title slug country city coverImage tagline whatsIncluded"
+  },
+  {
+    path: "createdBy",
+    select: "fullName email role"
+  },
+  {
+    path: "updatedBy",
+    select: "fullName email role"
+  }
+];
+var createRetreatBooking = async (payload, userId, actorId) => {
+  assertValidObjectId18(payload.retreatBatch, "Retreat batch ID");
+  assertValidObjectId18(userId, "User ID");
+  const user = await User.findById(userId).select("_id fullName email role");
+  assertFound21(user, "User account not found", 404);
+  const batch = await RetreatBatch.findById(payload.retreatBatch).populate({
+    path: "retreatLocation",
+    select: "_id title slug country city"
+  });
+  assertFound21(batch, "Retreat batch not found", 404);
+  if (batch.status === "cancelled" || batch.status === "completed") {
+    throwServiceError21(`Cannot join a retreat batch that is ${batch.status}`, 400);
+  }
+  const activeExistingBooking = await RetreatBooking.findOne({
+    user: new Types38.ObjectId(userId),
+    retreatBatch: batch._id,
+    status: { $in: ["waitlisted", "invited", "payment_pending", "confirmed"] }
+  });
+  if (activeExistingBooking) {
+    throwServiceError21(
+      `You already have an active booking (${activeExistingBooking.status}) for this retreat batch`,
+      409
+    );
+  }
+  const locationId = batch.retreatLocation._id;
+  const createData = {
+    user: user._id,
+    retreatBatch: batch._id,
+    retreatLocation: locationId,
+    status: "waitlisted",
+    amount: batch.price,
+    currency: batch.currency,
+    createdBy: new Types38.ObjectId(actorId)
+  };
+  if (payload.notes !== void 0) {
+    createData.notes = payload.notes;
+  }
+  if (payload.specialRequests !== void 0) {
+    createData.specialRequests = payload.specialRequests;
+  }
+  if (payload.dietaryRequirements !== void 0) {
+    createData.dietaryRequirements = payload.dietaryRequirements;
+  }
+  if (payload.emergencyContact !== void 0) {
+    createData.emergencyContact = payload.emergencyContact;
+  }
+  const booking = await RetreatBooking.create(createData);
+  await RetreatBatch.findByIdAndUpdate(batch._id, {
+    $inc: { waitlistCount: 1 }
+  });
+  const createdBookingId = String(booking._id);
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "retreat_booking_waitlisted",
+    fallbackTitle: "Retreat request received",
+    fallbackBody: "Your retreat reservation request has been added to the waitlist.",
+    recipient: userId,
+    actor: actorId,
+    variables: {
+      bookingId: createdBookingId,
+      batchName: batch.batchName
+    },
+    relatedEntityType: "RetreatBooking",
+    relatedEntityId: createdBookingId,
+    metadata: {
+      status: booking.status,
+      batchId: String(batch._id)
+    },
+    dedupeKey: `retreat_booking_waitlisted:${createdBookingId}`
+  });
+  return booking.populate(BOOKING_POPULATE2);
+};
+var createRetreatBookingCheckoutSession = async ({
+  bookingId,
+  userId,
+  successUrl,
+  cancelUrl
+}) => {
+  assertValidObjectId18(bookingId, "Retreat booking ID");
+  assertValidObjectId18(userId, "User ID");
+  const booking = await RetreatBooking.findById(bookingId).populate([
+    {
+      path: "user",
+      select: "_id fullName email"
+    },
+    {
+      path: "retreatBatch",
+      select: "_id batchName price currency capacity confirmedBookingsCount status",
+      populate: {
+        path: "retreatLocation",
+        model: "RetreatLocation",
+        select: "title city country"
+      }
+    }
+  ]);
+  assertFound21(booking, "Retreat booking not found", 404);
+  if (String(booking.user._id) !== userId) {
+    throwServiceError21("You are not authorized to pay for this booking", 403);
+  }
+  if (booking.status === "confirmed") {
+    throwServiceError21("This retreat booking is already confirmed and paid", 400);
+  }
+  if (booking.status === "cancelled" || booking.status === "refunded") {
+    throwServiceError21(`Cannot pay for a ${booking.status} retreat booking`, 400);
+  }
+  const batch = booking.retreatBatch;
+  if (batch.confirmedBookingsCount >= batch.capacity) {
+    throwServiceError21(
+      "All confirmed seats for this retreat batch are currently sold out",
+      409
+    );
+  }
+  const stripeClient = getStripeClient3();
+  const user = booking.user;
+  const defaultSuccessUrl = `${config_default.FRONTEND_URL || "http://localhost:5173"}/retreats/payment-success?session_id={CHECKOUT_SESSION_ID}&booking_id=${booking._id}`;
+  const defaultCancelUrl = `${config_default.FRONTEND_URL || "http://localhost:5173"}/retreats/payment-cancelled?booking_id=${booking._id}`;
+  const session = await stripeClient.checkout.sessions.create({
+    payment_method_types: ["card"],
+    mode: "payment",
+    customer_email: user.email,
+    client_reference_id: booking._id.toString(),
+    metadata: {
+      purpose: "retreat_booking",
+      bookingId: booking._id.toString(),
+      batchId: batch._id.toString(),
+      userId: user._id.toString()
+    },
+    line_items: [
+      {
+        price_data: {
+          currency: batch.currency || "usd",
+          product_data: {
+            name: `INVICTUS Retreat: ${batch.batchName}`,
+            description: batch.retreatLocation ? `Private Luxury Retreat in ${batch.retreatLocation.city}, ${batch.retreatLocation.country}` : "INVICTUS Private Retreat Experience"
+          },
+          unit_amount: Math.round(batch.price * 100)
+        },
+        quantity: 1
+      }
+    ],
+    success_url: successUrl || defaultSuccessUrl,
+    cancel_url: cancelUrl || defaultCancelUrl
+  });
+  booking.stripeCheckoutSessionId = session.id;
+  booking.checkoutUrl = session.url ?? void 0;
+  booking.status = "payment_pending";
+  booking.updatedBy = new Types38.ObjectId(userId);
+  await booking.save();
+  return {
+    bookingId: booking._id,
+    stripeCheckoutSessionId: session.id,
+    checkoutUrl: session.url
+  };
+};
+var verifyRetreatBookingPayment = async (sessionId) => {
+  if (!sessionId || !sessionId.trim()) {
+    throwServiceError21("Stripe checkout session ID is required", 400);
+  }
+  const stripeClient = getStripeClient3();
+  const session = await stripeClient.checkout.sessions.retrieve(sessionId);
+  if (session.payment_status !== "paid") {
+    return {
+      paid: false,
+      message: "Payment has not been completed on Stripe"
+    };
+  }
+  const bookingId = session.metadata?.bookingId || session.client_reference_id;
+  if (!bookingId) {
+    throwServiceError21("Booking ID missing from Stripe checkout metadata", 400);
+  }
+  const booking = await RetreatBooking.findById(bookingId);
+  assertFound21(booking, "Retreat booking not found", 404);
+  if (booking.status === "confirmed") {
+    return {
+      paid: true,
+      message: "Retreat booking is already confirmed",
+      booking: await booking.populate(BOOKING_POPULATE2)
+    };
+  }
+  const previousStatus = booking.status;
+  const existingBatch = await RetreatBatch.findById(booking.retreatBatch);
+  assertFound21(existingBatch, "Retreat batch not found", 404);
+  if (existingBatch.confirmedBookingsCount >= existingBatch.capacity) {
+    throwServiceError21("Capacity exceeded. This retreat batch is completely full.", 409);
+  }
+  const batch = await RetreatBatch.findOneAndUpdate(
+    {
+      _id: existingBatch._id,
+      confirmedBookingsCount: { $lt: existingBatch.capacity }
+    },
+    {
+      $inc: {
+        confirmedBookingsCount: 1,
+        ...previousStatus === "waitlisted" ? { waitlistCount: -1 } : {}
+      }
+    },
+    { new: true }
+  );
+  if (!batch) {
+    throwServiceError21(
+      "Capacity exceeded. This retreat batch is completely full.",
+      409
+    );
+    throw new Error("Unreachable");
+  }
+  if (batch.confirmedBookingsCount >= batch.capacity && batch.status === "open") {
+    batch.status = "sold_out";
+    await batch.save();
+  }
+  const paidAmount = session.amount_total ? session.amount_total / 100 : booking.amount;
+  booking.status = "confirmed";
+  booking.amountPaid = paidAmount;
+  booking.paidAt = /* @__PURE__ */ new Date();
+  booking.confirmedAt = /* @__PURE__ */ new Date();
+  booking.stripeCheckoutSessionId = session.id;
+  if (typeof session.payment_intent === "string") {
+    booking.stripePaymentIntentId = session.payment_intent;
+  }
+  await booking.save();
+  const paidBookingId = String(booking._id);
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "retreat_booking_confirmed",
+    fallbackTitle: "Retreat booking confirmed",
+    fallbackBody: "Your retreat booking payment was verified and your seat is confirmed.",
+    recipient: String(booking.user),
+    variables: {
+      bookingId: paidBookingId,
+      amountPaid: paidAmount,
+      currency: booking.currency
+    },
+    relatedEntityType: "RetreatBooking",
+    relatedEntityId: paidBookingId,
+    metadata: {
+      status: booking.status,
+      paymentStatus: "paid",
+      amountPaid: paidAmount
+    },
+    dedupeKey: `retreat_booking_confirmed:${paidBookingId}`
+  });
+  return {
+    paid: true,
+    message: "Retreat booking confirmed and payment verified successfully",
+    booking: await booking.populate(BOOKING_POPULATE2)
+  };
+};
+var inviteRetreatBooking = async (bookingId, payload, actorId) => {
+  assertValidObjectId18(bookingId, "Retreat booking ID");
+  const booking = await RetreatBooking.findById(bookingId);
+  assertFound21(booking, "Retreat booking not found", 404);
+  if (booking.status === "confirmed") {
+    throwServiceError21("Cannot invite a member whose booking is already confirmed", 400);
+  }
+  const hours = payload.invitationExpiresInHours ?? 72;
+  const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1e3);
+  const previousStatus = booking.status;
+  booking.status = "invited";
+  booking.invitationExpiresAt = expiresAt;
+  if (payload.notes !== void 0) {
+    booking.notes = payload.notes;
+  }
+  booking.updatedBy = new Types38.ObjectId(actorId);
+  await booking.save();
+  if (previousStatus === "waitlisted") {
+    await RetreatBatch.findByIdAndUpdate(booking.retreatBatch, {
+      $inc: { waitlistCount: -1 }
+    });
+  }
+  const invitedBookingId = String(booking._id);
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "retreat_booking_invited",
+    fallbackTitle: "You have been invited to the retreat",
+    fallbackBody: "Your retreat waitlist request has been invited. Please complete the next required step before the invitation expires.",
+    recipient: String(booking.user),
+    actor: actorId,
+    variables: {
+      bookingId: invitedBookingId,
+      invitationExpiresAt: expiresAt.toISOString()
+    },
+    relatedEntityType: "RetreatBooking",
+    relatedEntityId: invitedBookingId,
+    metadata: {
+      status: booking.status,
+      invitationExpiresAt: expiresAt.toISOString()
+    },
+    dedupeKey: `retreat_booking_invited:${invitedBookingId}:${expiresAt.getTime()}`
+  });
+  return booking.populate(BOOKING_POPULATE2);
+};
+var confirmRetreatBookingAdmin = async (bookingId, payload, actorId) => {
+  const test = assertValidObjectId18(bookingId, "Retreat booking ID");
+  const booking = await RetreatBooking.findById(bookingId);
+  assertFound21(booking, "Retreat booking not found", 404);
+  if (booking.status === "confirmed") {
+    throwServiceError21("Booking is already confirmed", 400);
+  }
+  const previousStatus = booking.status;
+  const batch = await RetreatBatch.findById(booking.retreatBatch);
+  assertFound21(batch, "Retreat batch not found", 404);
+  if (batch.confirmedBookingsCount >= batch.capacity) {
+    throwServiceError21(
+      `Cannot confirm booking: Batch capacity (${batch.capacity}) is already reached.`,
+      409
+    );
+  }
+  batch.confirmedBookingsCount += 1;
+  if (previousStatus === "waitlisted" && batch.waitlistCount > 0) {
+    batch.waitlistCount -= 1;
+  }
+  if (batch.confirmedBookingsCount >= batch.capacity && batch.status === "open") {
+    batch.status = "sold_out";
+  }
+  await batch.save();
+  booking.status = "confirmed";
+  booking.amountPaid = payload.amountPaid ?? booking.amount;
+  booking.confirmedAt = /* @__PURE__ */ new Date();
+  booking.paidAt = /* @__PURE__ */ new Date();
+  if (payload.notes !== void 0) {
+    booking.notes = payload.notes;
+  }
+  booking.updatedBy = new Types38.ObjectId(actorId);
+  await booking.save();
+  const confirmedBookingId = String(booking._id);
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "retreat_booking_confirmed",
+    fallbackTitle: "Retreat booking confirmed",
+    fallbackBody: "Your retreat booking has been confirmed.",
+    recipient: String(booking.user),
+    actor: actorId,
+    variables: {
+      bookingId: confirmedBookingId,
+      amountPaid: booking.amountPaid ?? booking.amount,
+      currency: booking.currency
+    },
+    relatedEntityType: "RetreatBooking",
+    relatedEntityId: confirmedBookingId,
+    metadata: {
+      status: booking.status,
+      amountPaid: booking.amountPaid ?? booking.amount
+    },
+    dedupeKey: `retreat_booking_confirmed:${confirmedBookingId}`
+  });
+  return booking.populate(BOOKING_POPULATE2);
+};
+var cancelRetreatBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId18(bookingId, "Retreat booking ID");
+  const booking = await RetreatBooking.findById(bookingId);
+  assertFound21(booking, "Retreat booking not found", 404);
+  const isOwner = String(booking.user) === actorId;
+  const isAdmin = actorRole === "admin" || actorRole === "manager" || actorRole === "founder" || actorRole === "super_admin";
+  if (!isOwner && !isAdmin) {
+    throwServiceError21("You are not authorized to cancel this retreat booking", 403);
+  }
+  if (booking.status === "cancelled") {
+    throwServiceError21("Retreat booking is already cancelled", 400);
+  }
+  if (booking.status === "refunded") {
+    throwServiceError21("Refunded retreat booking cannot be cancelled", 400);
+  }
+  const previousStatus = booking.status;
+  booking.status = "cancelled";
+  booking.cancellationReason = payload.reason;
+  booking.cancelledAt = /* @__PURE__ */ new Date();
+  booking.updatedBy = new Types38.ObjectId(actorId);
+  await booking.save();
+  const batch = await RetreatBatch.findById(booking.retreatBatch);
+  if (batch) {
+    if (previousStatus === "confirmed" && batch.confirmedBookingsCount > 0) {
+      batch.confirmedBookingsCount -= 1;
+      if (batch.status === "sold_out") {
+        batch.status = "open";
+      }
+    } else if (previousStatus === "waitlisted" && batch.waitlistCount > 0) {
+      batch.waitlistCount -= 1;
+    }
+    await batch.save();
+  }
+  const cancelledBookingId = String(booking._id);
+  if (String(booking.user) !== actorId) {
+    await notificationService.safeCreateFromTemplateOrFallback({
+      templateKey: "retreat_booking_cancelled",
+      fallbackTitle: "Retreat booking cancelled",
+      fallbackBody: `Your retreat booking has been cancelled. Reason: ${payload.reason}`,
+      recipient: String(booking.user),
+      actor: actorId,
+      variables: {
+        bookingId: cancelledBookingId,
+        reason: payload.reason
+      },
+      relatedEntityType: "RetreatBooking",
+      relatedEntityId: cancelledBookingId,
+      metadata: {
+        status: booking.status,
+        reason: payload.reason
+      },
+      dedupeKey: `retreat_booking_cancelled:${cancelledBookingId}`
+    });
+  }
+  return booking.populate(BOOKING_POPULATE2);
+};
+var refundRetreatBooking = async (bookingId, payload, actorId) => {
+  assertValidObjectId18(bookingId, "Retreat booking ID");
+  const booking = await RetreatBooking.findById(bookingId);
+  assertFound21(booking, "Retreat booking not found", 404);
+  if (booking.status !== "confirmed") {
+    throwServiceError21("Only confirmed retreat bookings can be refunded", 400);
+  }
+  booking.status = "refunded";
+  booking.refundedAt = /* @__PURE__ */ new Date();
+  booking.refundAmount = payload.refundAmount ?? booking.amountPaid ?? booking.amount;
+  if (payload.reason !== void 0) {
+    booking.refundReason = payload.reason;
+  }
+  booking.updatedBy = new Types38.ObjectId(actorId);
+  await booking.save();
+  const batch = await RetreatBatch.findById(booking.retreatBatch);
+  if (batch && batch.confirmedBookingsCount > 0) {
+    batch.confirmedBookingsCount -= 1;
+    if (batch.status === "sold_out") {
+      batch.status = "open";
+    }
+    await batch.save();
+  }
+  const refundedBookingId = String(booking._id);
+  await notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "retreat_booking_refunded",
+    fallbackTitle: "Retreat booking refunded",
+    fallbackBody: "Your retreat booking has been marked as refunded.",
+    recipient: String(booking.user),
+    actor: actorId,
+    variables: {
+      bookingId: refundedBookingId,
+      refundAmount: booking.refundAmount ?? 0,
+      currency: booking.currency,
+      reason: booking.refundReason ?? ""
+    },
+    relatedEntityType: "RetreatBooking",
+    relatedEntityId: refundedBookingId,
+    metadata: {
+      status: booking.status,
+      refundAmount: booking.refundAmount ?? null,
+      reason: booking.refundReason ?? null
+    },
+    dedupeKey: `retreat_booking_refunded:${refundedBookingId}`
+  });
+  return booking.populate(BOOKING_POPULATE2);
+};
+var updateRetreatBooking = async ({
+  bookingId,
+  payload,
+  actorId,
+  actorRole
+}) => {
+  assertValidObjectId18(bookingId, "Retreat booking ID");
+  const booking = await RetreatBooking.findById(bookingId);
+  assertFound21(booking, "Retreat booking not found", 404);
+  const isOwner = String(booking.user) === actorId;
+  const isAdmin = actorRole === "admin" || actorRole === "manager" || actorRole === "founder" || actorRole === "super_admin";
+  if (!isOwner && !isAdmin) {
+    throwServiceError21("You are not authorized to update this retreat booking", 403);
+  }
+  if (payload.notes !== void 0) {
+    booking.notes = payload.notes;
+  }
+  if (payload.specialRequests !== void 0) {
+    booking.specialRequests = payload.specialRequests;
+  }
+  if (payload.dietaryRequirements !== void 0) {
+    booking.dietaryRequirements = payload.dietaryRequirements;
+  }
+  if (payload.emergencyContact !== void 0) {
+    booking.emergencyContact = payload.emergencyContact;
+  }
+  booking.updatedBy = new Types38.ObjectId(actorId);
+  await booking.save();
+  return booking.populate(BOOKING_POPULATE2);
+};
+var getMyRetreatBookings = async (userId, query = {}) => {
+  assertValidObjectId18(userId, "User ID");
+  const filter = {
+    user: new Types38.ObjectId(userId)
+  };
+  if (query.status) {
+    filter.status = query.status;
+  }
+  if (query.batchId) {
+    assertValidObjectId18(query.batchId, "Retreat batch ID");
+    filter.retreatBatch = new Types38.ObjectId(query.batchId);
+  }
+  if (query.locationId) {
+    assertValidObjectId18(query.locationId, "Retreat location ID");
+    filter.retreatLocation = new Types38.ObjectId(query.locationId);
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [bookings, total] = await Promise.all([
+    RetreatBooking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE2),
+    RetreatBooking.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data: bookings
+  };
+};
+var getMySingleRetreatBooking = async (bookingId, userId) => {
+  assertValidObjectId18(bookingId, "Retreat booking ID");
+  assertValidObjectId18(userId, "User ID");
+  const booking = await RetreatBooking.findOne({
+    _id: new Types38.ObjectId(bookingId),
+    user: new Types38.ObjectId(userId)
+  }).populate(BOOKING_POPULATE2);
+  assertFound21(booking, "Retreat booking not found", 404);
+  return booking;
+};
+var getAllRetreatBookingsAdmin = async (query = {}) => {
+  const filter = {};
+  if (query.userId) {
+    assertValidObjectId18(query.userId, "User ID");
+    filter.user = new Types38.ObjectId(query.userId);
+  }
+  if (query.batchId) {
+    assertValidObjectId18(query.batchId, "Retreat batch ID");
+    filter.retreatBatch = new Types38.ObjectId(query.batchId);
+  }
+  if (query.locationId) {
+    assertValidObjectId18(query.locationId, "Retreat location ID");
+    filter.retreatLocation = new Types38.ObjectId(query.locationId);
+  }
+  if (query.status) {
+    filter.status = query.status;
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [bookings, total] = await Promise.all([
+    RetreatBooking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE2),
+    RetreatBooking.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data: bookings
+  };
+};
+var getSingleRetreatBookingAdmin = async (bookingId) => {
+  assertValidObjectId18(bookingId, "Retreat booking ID");
+  const booking = await RetreatBooking.findById(bookingId).populate(
+    BOOKING_POPULATE2
+  );
+  assertFound21(booking, "Retreat booking not found", 404);
+  return booking;
+};
+var retreatBookingService = {
+  createRetreatBooking,
+  createRetreatBookingCheckoutSession,
+  verifyRetreatBookingPayment,
+  inviteRetreatBooking,
+  confirmRetreatBookingAdmin,
+  cancelRetreatBooking,
+  refundRetreatBooking,
+  updateRetreatBooking,
+  getMyRetreatBookings,
+  getMySingleRetreatBooking,
+  getAllRetreatBookingsAdmin,
+  getSingleRetreatBookingAdmin
+};
+
+// src/modules/retreatBookings/retreat.booking.controller.ts
+var getAuthUser22 = (req) => {
+  assertFound_default(req.user, "Authentication required", 401);
+  return {
+    id: req.user.id,
+    role: req.user.role
+  };
+};
+var createRetreatBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser22(req);
+    const booking = await retreatBookingService.createRetreatBooking(
+      req.body,
+      authUser.id,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Retreat reservation / waitlist request submitted successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var createCheckoutSession2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser22(req);
+    const result = await retreatBookingService.createRetreatBookingCheckoutSession({
+      bookingId: String(req.params.id),
+      userId: authUser.id,
+      successUrl: req.body?.successUrl,
+      cancelUrl: req.body?.cancelUrl
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Stripe checkout session created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var verifyPayment = async (req, res, next) => {
+  try {
+    const sessionId = req.body?.sessionId || req.query.sessionId;
+    const result = await retreatBookingService.verifyRetreatBookingPayment(sessionId);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: result.paid,
+      message: result.message,
+      data: result.booking ?? null
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyRetreatBookings2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser22(req);
+    const result = await retreatBookingService.getMyRetreatBookings(
+      authUser.id,
+      req.query
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "My retreat bookings retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMySingleRetreatBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser22(req);
+    const booking = await retreatBookingService.getMySingleRetreatBooking(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat booking retrieved successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateRetreatBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser22(req);
+    const booking = await retreatBookingService.updateRetreatBooking({
+      bookingId: String(req.params.id),
+      payload: req.body,
+      actorId: authUser.id,
+      actorRole: authUser.role
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat booking details updated successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var cancelRetreatBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser22(req);
+    const booking = await retreatBookingService.cancelRetreatBooking({
+      bookingId: String(req.params.id),
+      payload: req.body,
+      actorId: authUser.id,
+      actorRole: authUser.role
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat booking cancelled successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var inviteRetreatBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser22(req);
+    const booking = await retreatBookingService.inviteRetreatBooking(
+      req.params.id,
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Member invited to retreat batch successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var confirmRetreatBookingAdmin2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser22(req);
+    const booking = await retreatBookingService.confirmRetreatBookingAdmin(
+      req.params.id,
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat booking confirmed by administrator",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var refundRetreatBooking2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser22(req);
+    const booking = await retreatBookingService.refundRetreatBooking(
+      req.params.id,
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat booking marked as refunded",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllRetreatBookingsAdmin2 = async (req, res, next) => {
+  try {
+    getAuthUser22(req);
+    const result = await retreatBookingService.getAllRetreatBookingsAdmin(
+      req.query
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "All retreat bookings retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleRetreatBookingAdmin2 = async (req, res, next) => {
+  try {
+    getAuthUser22(req);
+    const booking = await retreatBookingService.getSingleRetreatBookingAdmin(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat booking retrieved successfully",
+      data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var retreatBookingController = {
+  createRetreatBooking: createRetreatBooking2,
+  createCheckoutSession: createCheckoutSession2,
+  verifyPayment,
+  getMyRetreatBookings: getMyRetreatBookings2,
+  getMySingleRetreatBooking: getMySingleRetreatBooking2,
+  updateRetreatBooking: updateRetreatBooking2,
+  cancelRetreatBooking: cancelRetreatBooking2,
+  inviteRetreatBooking: inviteRetreatBooking2,
+  confirmRetreatBookingAdmin: confirmRetreatBookingAdmin2,
+  refundRetreatBooking: refundRetreatBooking2,
+  getAllRetreatBookingsAdmin: getAllRetreatBookingsAdmin2,
+  getSingleRetreatBookingAdmin: getSingleRetreatBookingAdmin2
+};
+
+// src/modules/retreatBookings/retreat.booking.validation.ts
+import { z as z27 } from "zod";
+var mongoObjectIdSchema19 = z27.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var emergencyContactSchema2 = z27.object({
+  name: z27.string().trim().max(100).optional(),
+  phone: z27.string().trim().max(50).optional(),
+  relationship: z27.string().trim().max(50).optional()
+}).optional();
+var createRetreatBookingValidation = z27.object({
+  body: z27.object({
+    retreatBatch: mongoObjectIdSchema19,
+    notes: z27.string().trim().max(2e3).optional(),
+    specialRequests: z27.string().trim().max(2e3).optional(),
+    dietaryRequirements: z27.string().trim().max(1e3).optional(),
+    emergencyContact: emergencyContactSchema2
+  }).strict()
+});
+var updateRetreatBookingValidation = z27.object({
+  params: z27.object({
+    id: mongoObjectIdSchema19
+  }),
+  body: z27.object({
+    notes: z27.string().trim().max(2e3).optional(),
+    specialRequests: z27.string().trim().max(2e3).optional(),
+    dietaryRequirements: z27.string().trim().max(1e3).optional(),
+    emergencyContact: emergencyContactSchema2
+  }).strict()
+});
+var inviteRetreatBookingValidation = z27.object({
+  params: z27.object({
+    id: mongoObjectIdSchema19
+  }),
+  body: z27.object({
+    invitationExpiresInHours: z27.number().int().min(1).max(720).optional(),
+    notes: z27.string().trim().max(2e3).optional()
+  }).strict()
+});
+var cancelRetreatBookingValidation = z27.object({
+  params: z27.object({
+    id: mongoObjectIdSchema19
+  }),
+  body: z27.object({
+    reason: z27.string().trim().min(3, "Cancellation reason must be at least 3 characters").max(1e3)
+  }).strict()
+});
+var refundRetreatBookingValidation = z27.object({
+  params: z27.object({
+    id: mongoObjectIdSchema19
+  }),
+  body: z27.object({
+    refundAmount: z27.number().min(0).optional(),
+    reason: z27.string().trim().max(1e3).optional()
+  }).strict()
+});
+var confirmRetreatBookingAdminValidation = z27.object({
+  params: z27.object({
+    id: mongoObjectIdSchema19
+  }),
+  body: z27.object({
+    amountPaid: z27.number().min(0).optional(),
+    notes: z27.string().trim().max(2e3).optional()
+  }).strict()
+});
+var retreatBookingIdValidation = z27.object({
+  params: z27.object({
+    id: mongoObjectIdSchema19
+  })
+});
+var queryRetreatBookingValidation = z27.object({
+  query: z27.object({
+    userId: mongoObjectIdSchema19.optional(),
+    batchId: mongoObjectIdSchema19.optional(),
+    locationId: mongoObjectIdSchema19.optional(),
+    status: z27.enum(RETREAT_BOOKING_STATUSES).optional(),
+    search: z27.string().trim().optional(),
+    page: z27.coerce.number().int().min(1).optional(),
+    limit: z27.coerce.number().int().min(1).max(100).optional()
+  }).optional()
+});
+
+// src/modules/retreatBookings/retreat.booking.route.ts
+var router35 = Router35();
+router35.post(
+  "/me",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(createRetreatBookingValidation),
+  retreatBookingController.createRetreatBooking
+);
+router35.get(
+  "/me",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(queryRetreatBookingValidation),
+  retreatBookingController.getMyRetreatBookings
+);
+router35.get(
+  "/me/:id",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(retreatBookingIdValidation),
+  retreatBookingController.getMySingleRetreatBooking
+);
+router35.patch(
+  "/me/:id",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(updateRetreatBookingValidation),
+  retreatBookingController.updateRetreatBooking
+);
+router35.patch(
+  "/me/:id/cancel",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(cancelRetreatBookingValidation),
+  retreatBookingController.cancelRetreatBooking
+);
+router35.post(
+  "/me/:id/checkout",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(retreatBookingIdValidation),
+  retreatBookingController.createCheckoutSession
+);
+router35.post(
+  "/verify-payment",
+  verifyToken,
+  retreatBookingController.verifyPayment
+);
+router35.patch(
+  "/:id/invite",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(inviteRetreatBookingValidation),
+  retreatBookingController.inviteRetreatBooking
+);
+router35.patch(
+  "/:id/confirm",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(confirmRetreatBookingAdminValidation),
+  retreatBookingController.confirmRetreatBookingAdmin
+);
+router35.patch(
+  "/:id/cancel",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(cancelRetreatBookingValidation),
+  retreatBookingController.cancelRetreatBooking
+);
+router35.patch(
+  "/:id/refund",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(refundRetreatBookingValidation),
+  retreatBookingController.refundRetreatBooking
+);
+router35.get(
+  "/",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(queryRetreatBookingValidation),
+  retreatBookingController.getAllRetreatBookingsAdmin
+);
+router35.get(
+  "/:id",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(retreatBookingIdValidation),
+  retreatBookingController.getSingleRetreatBookingAdmin
+);
+var retreatBookingRoutes = router35;
+
+// src/modules/paymentPlans/payment.plan.route.ts
+import { Router as Router36 } from "express";
+
+// src/modules/paymentPlans/payment.plan.service.ts
+import {
+  Types as Types39
+} from "mongoose";
+var throwServiceError22 = (message, statusCode) => {
+  const error = new Error(
+    message
+  );
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound22 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError22(
+      message,
+      statusCode
+    );
+  }
+};
+var assertValidObjectId19 = (value, fieldName) => {
+  if (!Types39.ObjectId.isValid(value)) {
+    throwServiceError22(
+      `${fieldName} is invalid`,
+      400
+    );
+  }
+};
+var isDuplicateKeyError11 = (error) => {
+  return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
+};
+var productModelMap = {
+  ChallengePillar: {
+    findById: (id3) => ChallengePillar.findById(id3)
+  },
+  RetreatBatch: {
+    findById: (id3) => RetreatBatch.findById(id3)
+  }
+};
+var ensureProductReferenceIsValid = async ({
+  productType,
+  product,
+  productRefModel
+}) => {
+  if (productType === "membership" || productType === "other") {
+    return;
+  }
+  if (!product || !productRefModel) {
+    throwServiceError22(
+      "product and productRefModel are required for this productType",
+      400
+    );
+  }
+  assertValidObjectId19(
+    product,
+    "Product ID"
+  );
+  const expectedRefModel = productType === "pillar" ? "ChallengePillar" : productType === "retreat" ? "RetreatBatch" : void 0;
+  if (expectedRefModel && productRefModel !== expectedRefModel) {
+    throwServiceError22(
+      `productRefModel must be ${expectedRefModel} for productType "${productType}"`,
+      400
+    );
+  }
+  const lookup = productModelMap[productRefModel];
+  if (!lookup) {
+    throwServiceError22(
+      "Unsupported productRefModel",
+      400
+    );
+  }
+  const referencedProduct = await lookup.findById(
+    product
+  );
+  assertFound22(
+    referencedProduct,
+    "Referenced product not found",
+    404
+  );
+};
+var createPaymentPlan = async (payload, actorId) => {
+  await ensureProductReferenceIsValid(
+    {
+      productType: payload.productType,
+      product: payload.product,
+      productRefModel: payload.productRefModel
+    }
+  );
+  if (payload.mode === "subscription" && !payload.interval) {
+    throwServiceError22(
+      "interval is required when mode is subscription",
+      400
+    );
+  }
+  const createData = {
+    name: payload.name,
+    slug: payload.slug.trim().toLowerCase(),
+    productType: payload.productType,
+    mode: payload.mode,
+    amountCents: payload.amountCents,
+    currency: payload.currency ?? "usd",
+    order: payload.order ?? 1,
+    status: "draft",
+    isActive: true,
+    createdBy: new Types39.ObjectId(actorId)
+  };
+  if (payload.description !== void 0) {
+    createData.description = payload.description;
+  }
+  if (payload.product !== void 0) {
+    createData.product = new Types39.ObjectId(
+      payload.product
+    );
+    createData.productRefModel = payload.productRefModel;
+  }
+  if (payload.interval !== void 0) {
+    createData.interval = payload.interval;
+    createData.intervalCount = payload.intervalCount ?? 1;
+  }
+  if (payload.stripeProductId !== void 0) {
+    createData.stripeProductId = payload.stripeProductId;
+  }
+  if (payload.stripePriceId !== void 0) {
+    createData.stripePriceId = payload.stripePriceId;
+  }
+  try {
+    const plan = await PaymentPlan.create(
+      createData
+    );
+    return plan.populate(
+      "createdBy",
+      "fullName email role profileImage"
+    );
+  } catch (error) {
+    if (isDuplicateKeyError11(error)) {
+      throwServiceError22(
+        "A payment plan with this slug or product/mode combination already exists",
+        409
+      );
+    }
+    throw error;
+  }
+};
+var getAllPaymentPlans = async ({
+  productType,
+  mode,
+  status,
+  includeArchived = false
+}) => {
+  const filter = {};
+  if (productType) {
+    filter.productType = productType;
+  }
+  if (mode) {
+    filter.mode = mode;
+  }
+  if (status) {
+    filter.status = status;
+  } else if (!includeArchived) {
+    filter.status = {
+      $ne: "archived"
+    };
+  }
+  return PaymentPlan.find(filter).sort({
+    productType: 1,
+    order: 1
+  }).populate(
+    "createdBy",
+    "fullName email role profileImage"
+  ).populate(
+    "updatedBy",
+    "fullName email role profileImage"
+  );
+};
+var getSinglePaymentPlan = async (planId) => {
+  assertValidObjectId19(
+    planId,
+    "Payment plan ID"
+  );
+  const plan = await PaymentPlan.findById(
+    planId
+  ).populate(
+    "createdBy",
+    "fullName email role profileImage"
+  ).populate(
+    "updatedBy",
+    "fullName email role profileImage"
+  );
+  assertFound22(
+    plan,
+    "Payment plan not found",
+    404
+  );
+  return plan;
+};
+var getPaymentPlanBySlug = async (slug) => {
+  const plan = await PaymentPlan.findOne({
+    slug: slug.trim().toLowerCase(),
+    status: { $ne: "archived" }
+  });
+  assertFound22(
+    plan,
+    "Payment plan not found",
+    404
+  );
+  return plan;
+};
+var updatePaymentPlan = async (planId, payload, actorId) => {
+  assertValidObjectId19(
+    planId,
+    "Payment plan ID"
+  );
+  const plan = await PaymentPlan.findById(
+    planId
+  );
+  assertFound22(
+    plan,
+    "Payment plan not found",
+    404
+  );
+  if (plan.status === "archived") {
+    throwServiceError22(
+      "Archived payment plan cannot be updated",
+      400
+    );
+  }
+  const nextProductType = payload.productType ?? plan.productType;
+  const nextProduct = payload.product === null ? void 0 : payload.product ?? plan.product?.toString();
+  const nextProductRefModel = payload.productRefModel === null ? void 0 : payload.productRefModel ?? plan.productRefModel;
+  if (payload.productType !== void 0 || payload.product !== void 0 || payload.productRefModel !== void 0) {
+    await ensureProductReferenceIsValid(
+      {
+        productType: nextProductType,
+        product: nextProduct,
+        productRefModel: nextProductRefModel
+      }
+    );
+  }
+  if (payload.name !== void 0) {
+    plan.name = payload.name;
+  }
+  if (payload.slug !== void 0) {
+    plan.slug = payload.slug.trim().toLowerCase();
+  }
+  if (payload.description === null) {
+    plan.set(
+      "description",
+      void 0
+    );
+  } else if (payload.description !== void 0) {
+    plan.description = payload.description;
+  }
+  if (payload.productType !== void 0) {
+    plan.productType = payload.productType;
+  }
+  if (payload.product === null) {
+    plan.set("product", void 0);
+    plan.set(
+      "productRefModel",
+      void 0
+    );
+  } else if (payload.product !== void 0) {
+    plan.product = new Types39.ObjectId(
+      payload.product
+    );
+  }
+  if (payload.productRefModel === null) {
+    plan.set(
+      "productRefModel",
+      void 0
+    );
+  } else if (payload.productRefModel !== void 0) {
+    plan.productRefModel = payload.productRefModel;
+  }
+  if (payload.mode !== void 0) {
+    plan.mode = payload.mode;
+  }
+  if (plan.mode === "subscription" && !plan.interval && payload.interval === void 0) {
+    throwServiceError22(
+      "interval is required when mode is subscription",
+      400
+    );
+  }
+  if (payload.amountCents !== void 0) {
+    plan.amountCents = payload.amountCents;
+  }
+  if (payload.currency !== void 0) {
+    plan.currency = payload.currency;
+  }
+  if (payload.interval === null) {
+    plan.set("interval", void 0);
+  } else if (payload.interval !== void 0) {
+    plan.interval = payload.interval;
+  }
+  if (payload.intervalCount === null) {
+    plan.set(
+      "intervalCount",
+      void 0
+    );
+  } else if (payload.intervalCount !== void 0) {
+    plan.intervalCount = payload.intervalCount;
+  }
+  if (payload.stripeProductId === null) {
+    plan.set(
+      "stripeProductId",
+      void 0
+    );
+  } else if (payload.stripeProductId !== void 0) {
+    plan.stripeProductId = payload.stripeProductId;
+  }
+  if (payload.stripePriceId === null) {
+    plan.set(
+      "stripePriceId",
+      void 0
+    );
+  } else if (payload.stripePriceId !== void 0) {
+    plan.stripePriceId = payload.stripePriceId;
+  }
+  if (payload.order !== void 0) {
+    plan.order = payload.order;
+  }
+  plan.updatedBy = new Types39.ObjectId(actorId);
+  try {
+    await plan.save();
+  } catch (error) {
+    if (isDuplicateKeyError11(error)) {
+      throwServiceError22(
+        "A payment plan with this slug or product/mode combination already exists",
+        409
+      );
+    }
+    throw error;
+  }
+  return plan.populate(
+    "updatedBy",
+    "fullName email role profileImage"
+  );
+};
+var activatePaymentPlan = async (planId, actorId) => {
+  assertValidObjectId19(
+    planId,
+    "Payment plan ID"
+  );
+  const plan = await PaymentPlan.findById(
+    planId
+  );
+  assertFound22(
+    plan,
+    "Payment plan not found",
+    404
+  );
+  if (plan.status === "archived") {
+    throwServiceError22(
+      "Archived payment plan cannot be activated",
+      400
+    );
+  }
+  plan.status = "active";
+  plan.isActive = true;
+  plan.publishedAt = /* @__PURE__ */ new Date();
+  plan.set("archivedAt", void 0);
+  plan.updatedBy = new Types39.ObjectId(actorId);
+  await plan.save();
+  return plan;
+};
+var deactivatePaymentPlan = async (planId, actorId) => {
+  assertValidObjectId19(
+    planId,
+    "Payment plan ID"
+  );
+  const plan = await PaymentPlan.findById(
+    planId
+  );
+  assertFound22(
+    plan,
+    "Payment plan not found",
+    404
+  );
+  if (plan.status === "archived") {
+    throwServiceError22(
+      "Archived payment plan cannot be moved to draft",
+      400
+    );
+  }
+  plan.status = "draft";
+  plan.isActive = false;
+  plan.set("publishedAt", void 0);
+  plan.updatedBy = new Types39.ObjectId(actorId);
+  await plan.save();
+  return plan;
+};
+var archivePaymentPlan = async (planId, actorId) => {
+  assertValidObjectId19(
+    planId,
+    "Payment plan ID"
+  );
+  const plan = await PaymentPlan.findById(
+    planId
+  );
+  assertFound22(
+    plan,
+    "Payment plan not found",
+    404
+  );
+  plan.status = "archived";
+  plan.isActive = false;
+  plan.archivedAt = /* @__PURE__ */ new Date();
+  plan.set("publishedAt", void 0);
+  plan.updatedBy = new Types39.ObjectId(actorId);
+  await plan.save();
+  return plan;
+};
+var paymentPlanService = {
+  createPaymentPlan,
+  getAllPaymentPlans,
+  getSinglePaymentPlan,
+  getPaymentPlanBySlug,
+  updatePaymentPlan,
+  activatePaymentPlan,
+  deactivatePaymentPlan,
+  archivePaymentPlan
+};
+
+// src/modules/paymentPlans/payment.plan.controller.ts
+var throwControllerError7 = (message, status) => {
+  const error = new Error(message);
+  error.status = status;
+  throw error;
+};
+var getAuthUser23 = (req) => {
+  const user = req.user;
+  if (!user) {
+    return throwControllerError7("Authentication required", 401);
+  }
+  return {
+    id: user.id,
+    role: user.role
+  };
+};
+var createPaymentPlan2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser23(req);
+    const result = await paymentPlanService.createPaymentPlan(
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Payment plan created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllPaymentPlans2 = async (req, res, next) => {
+  try {
+    const productType = typeof req.query.productType === "string" ? req.query.productType : void 0;
+    const mode = typeof req.query.mode === "string" ? req.query.mode : void 0;
+    const status = typeof req.query.status === "string" ? req.query.status : void 0;
+    const result = await paymentPlanService.getAllPaymentPlans({
+      productType,
+      mode,
+      status,
+      includeArchived: req.query.includeArchived === "true"
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Payment plans retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSinglePaymentPlan2 = async (req, res, next) => {
+  try {
+    const result = await paymentPlanService.getSinglePaymentPlan(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Payment plan retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getPaymentPlanBySlug2 = async (req, res, next) => {
+  try {
+    const result = await paymentPlanService.getPaymentPlanBySlug(
+      String(req.params.slug)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Payment plan retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updatePaymentPlan2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser23(req);
+    const result = await paymentPlanService.updatePaymentPlan(
+      String(req.params.id),
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Payment plan updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var activatePaymentPlan2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser23(req);
+    const result = await paymentPlanService.activatePaymentPlan(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Payment plan activated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var deactivatePaymentPlan2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser23(req);
+    const result = await paymentPlanService.deactivatePaymentPlan(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Payment plan moved to draft successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var archivePaymentPlan2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser23(req);
+    const result = await paymentPlanService.archivePaymentPlan(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Payment plan archived successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var paymentPlanController = {
+  createPaymentPlan: createPaymentPlan2,
+  getAllPaymentPlans: getAllPaymentPlans2,
+  getSinglePaymentPlan: getSinglePaymentPlan2,
+  getPaymentPlanBySlug: getPaymentPlanBySlug2,
+  updatePaymentPlan: updatePaymentPlan2,
+  activatePaymentPlan: activatePaymentPlan2,
+  deactivatePaymentPlan: deactivatePaymentPlan2,
+  archivePaymentPlan: archivePaymentPlan2
+};
+
+// src/modules/paymentPlans/payment.plan.validation.ts
+import { z as z28 } from "zod";
+var mongoObjectIdSchema20 = z28.string().regex(
+  /^[0-9a-fA-F]{24}$/,
+  "Invalid MongoDB ObjectId"
+);
+var slugSchema3 = z28.string().trim().min(2).max(200).regex(
+  /^[a-z0-9]+(-[a-z0-9]+)*$/,
+  "Slug must be lowercase, alphanumeric, and hyphen-separated"
+);
+var createPaymentPlanBodySchema = z28.object({
+  name: z28.string().trim().min(2).max(200),
+  slug: slugSchema3,
+  description: z28.string().trim().max(2e3).optional(),
+  productType: z28.enum(
+    PAYMENT_PLAN_PRODUCT_TYPES
+  ),
+  product: mongoObjectIdSchema20.optional(),
+  productRefModel: z28.enum(
+    PAYMENT_PLAN_PRODUCT_REF_MODELS
+  ).optional(),
+  mode: z28.enum(
+    PAYMENT_PLAN_MODES
+  ),
+  amountCents: z28.number().int().min(0),
+  currency: z28.string().trim().length(3).optional(),
+  interval: z28.enum(
+    PAYMENT_PLAN_INTERVALS
+  ).optional(),
+  intervalCount: z28.number().int().min(1).optional(),
+  stripeProductId: z28.string().trim().max(200).optional(),
+  stripePriceId: z28.string().trim().max(200).optional(),
+  order: z28.number().int().min(1).optional()
+}).refine(
+  (body) => body.product === void 0 && body.productRefModel === void 0 || body.product !== void 0 && body.productRefModel !== void 0,
+  {
+    message: "product and productRefModel must be provided together"
+  }
+);
+var updatePaymentPlanBodySchema = z28.object({
+  name: z28.string().trim().min(2).max(200).optional(),
+  slug: slugSchema3.optional(),
+  description: z28.string().trim().max(2e3).nullable().optional(),
+  productType: z28.enum(
+    PAYMENT_PLAN_PRODUCT_TYPES
+  ).optional(),
+  product: mongoObjectIdSchema20.nullable().optional(),
+  productRefModel: z28.enum(
+    PAYMENT_PLAN_PRODUCT_REF_MODELS
+  ).nullable().optional(),
+  mode: z28.enum(PAYMENT_PLAN_MODES).optional(),
+  amountCents: z28.number().int().min(0).optional(),
+  currency: z28.string().trim().length(3).optional(),
+  interval: z28.enum(
+    PAYMENT_PLAN_INTERVALS
+  ).nullable().optional(),
+  intervalCount: z28.number().int().min(1).nullable().optional(),
+  stripeProductId: z28.string().trim().max(200).nullable().optional(),
+  stripePriceId: z28.string().trim().max(200).nullable().optional(),
+  order: z28.number().int().min(1).optional()
+}).refine(
+  (body) => Object.keys(body).length > 0,
+  {
+    message: "At least one field is required"
+  }
+);
+var createPaymentPlanValidation = z28.object({
+  body: createPaymentPlanBodySchema
+});
+var updatePaymentPlanValidation = z28.object({
+  params: z28.object({
+    id: mongoObjectIdSchema20
+  }),
+  body: updatePaymentPlanBodySchema
+});
+var paymentPlanIdValidation = z28.object({
+  params: z28.object({
+    id: mongoObjectIdSchema20
+  })
+});
+var paymentPlanSlugValidation = z28.object({
+  params: z28.object({
+    slug: z28.string().trim().min(2).max(200)
+  })
+});
+
+// src/modules/paymentPlans/payment.plan.route.ts
+var router36 = Router36();
+router36.post(
+  "/",
+  verifyToken,
+  authorizeRoles(
+    "admin",
+    "manager"
+  ),
+  validateRequest_default(
+    createPaymentPlanValidation
+  ),
+  paymentPlanController.createPaymentPlan
+);
+router36.get(
+  "/",
+  verifyToken,
+  requireInvictusAccess,
+  paymentPlanController.getAllPaymentPlans
+);
+router36.get(
+  "/slug/:slug",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(
+    paymentPlanSlugValidation
+  ),
+  paymentPlanController.getPaymentPlanBySlug
+);
+router36.get(
+  "/:id",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(
+    paymentPlanIdValidation
+  ),
+  paymentPlanController.getSinglePaymentPlan
+);
+router36.patch(
+  "/:id",
+  verifyToken,
+  authorizeRoles(
+    "admin",
+    "manager"
+  ),
+  validateRequest_default(
+    updatePaymentPlanValidation
+  ),
+  paymentPlanController.updatePaymentPlan
+);
+router36.patch(
+  "/:id/activate",
+  verifyToken,
+  authorizeRoles(
+    "admin",
+    "manager"
+  ),
+  validateRequest_default(
+    paymentPlanIdValidation
+  ),
+  paymentPlanController.activatePaymentPlan
+);
+router36.patch(
   "/:id/draft",
   verifyToken,
-  authorizeRoles("founder", "manager", "admin", "super_admin"),
-  validateRequest_default(retreatLocationIdValidation),
-  retreatLocationController.moveRetreatLocationToDraft
+  authorizeRoles(
+    "admin",
+    "manager"
+  ),
+  validateRequest_default(
+    paymentPlanIdValidation
+  ),
+  paymentPlanController.deactivatePaymentPlan
 );
-router30.patch(
+router36.patch(
   "/:id/archive",
   verifyToken,
-  authorizeRoles("founder", "manager", "admin", "super_admin"),
-  validateRequest_default(retreatLocationIdValidation),
-  retreatLocationController.archiveRetreatLocation
+  authorizeRoles(
+    "admin",
+    "manager"
+  ),
+  validateRequest_default(
+    paymentPlanIdValidation
+  ),
+  paymentPlanController.archivePaymentPlan
 );
-router30.delete(
+var paymentPlanRoutes = router36;
+
+// src/modules/invictus-payments/invictus.payment.route.ts
+import { Router as Router37 } from "express";
+
+// src/modules/invictus-payments/invictus.payment.controller.ts
+var throwControllerError8 = (message, status) => {
+  const error = new Error(
+    message
+  );
+  error.status = status;
+  throw error;
+};
+var getAuthUser24 = (req) => {
+  const user = req.user;
+  if (!user) {
+    return throwControllerError8(
+      "Authentication required",
+      401
+    );
+  }
+  return {
+    id: user.id,
+    fullName: user.fullName ?? "",
+    email: user.email
+  };
+};
+var createInvictusCheckoutSession2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser24(req);
+    const result = await invictusPaymentService.createInvictusCheckoutSession(
+      {
+        userId: authUser.id,
+        fullName: authUser.fullName,
+        email: authUser.email,
+        input: req.body
+      }
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Checkout session created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyInvictusPurchases2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser24(req);
+    const result = await invictusPaymentService.getMyInvictusPurchases(
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Your INVICTUS purchases retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var invictusPaymentController = {
+  createInvictusCheckoutSession: createInvictusCheckoutSession2,
+  getMyInvictusPurchases: getMyInvictusPurchases2
+};
+
+// src/modules/invictus-payments/invictus.payment.validation.ts
+import { z as z29 } from "zod";
+var mongoObjectIdSchema21 = z29.string().regex(
+  /^[0-9a-fA-F]{24}$/,
+  "Invalid MongoDB ObjectId"
+);
+var createInvictusCheckoutValidation = z29.object({
+  body: z29.object({
+    paymentPlanId: mongoObjectIdSchema21,
+    discountCode: z29.string().trim().optional()
+  })
+});
+
+// src/modules/invictus-payments/invictus.payment.route.ts
+var router37 = Router37();
+router37.post(
+  "/checkout",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(
+    createInvictusCheckoutValidation
+  ),
+  invictusPaymentController.createInvictusCheckoutSession
+);
+router37.get(
+  "/my-purchases",
+  verifyToken,
+  requireInvictusAccess,
+  invictusPaymentController.getMyInvictusPurchases
+);
+var invictusPaymentRoutes = router37;
+
+// src/modules/notifications/notification.route.ts
+import { Router as Router38 } from "express";
+
+// src/modules/notifications/notification.controller.ts
+var getAuthUser25 = (req) => {
+  assertFound_default(req.user, "Authentication required", 401);
+  return {
+    id: req.user.id,
+    role: req.user.role
+  };
+};
+var parseBoolean2 = (value) => {
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  return void 0;
+};
+var parsePositiveNumber = (value) => {
+  if (typeof value !== "string") {
+    return void 0;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : void 0;
+};
+var buildMyQuery = (req) => {
+  const query = {};
+  const isRead = parseBoolean2(req.query.isRead);
+  if (isRead !== void 0) {
+    query.isRead = isRead;
+  }
+  if (typeof req.query.type === "string") {
+    query.type = req.query.type;
+  }
+  if (typeof req.query.search === "string") {
+    query.search = req.query.search;
+  }
+  const page = parsePositiveNumber(req.query.page);
+  if (page !== void 0) {
+    query.page = page;
+  }
+  const limit = parsePositiveNumber(req.query.limit);
+  if (limit !== void 0) {
+    query.limit = limit;
+  }
+  return query;
+};
+var getMyNotifications2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser25(req);
+    const result = await notificationService.getMyNotifications(
+      authUser.id,
+      buildMyQuery(req)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Notifications retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyUnreadCount = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser25(req);
+    const result = await notificationService.getUnreadCount(authUser.id);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Unread notification count retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var markOneAsRead2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser25(req);
+    const result = await notificationService.markOneAsRead(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Notification marked as read",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var markOneAsUnread2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser25(req);
+    const result = await notificationService.markOneAsUnread(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Notification marked as unread",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var markAllAsRead2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser25(req);
+    const result = await notificationService.markAllAsRead(authUser.id);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "All notifications marked as read",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var createManualNotification = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser25(req);
+    const payload = req.body;
+    const result = await notificationService.createNotification({
+      ...payload,
+      actor: authUser.id
+    });
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Notification created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var createFromTemplate = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser25(req);
+    const payload = req.body;
+    const result = await notificationService.createNotificationFromTemplate({
+      ...payload,
+      actor: authUser.id
+    });
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Notification created from template successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllNotificationsAdmin2 = async (req, res, next) => {
+  try {
+    getAuthUser25(req);
+    const query = buildMyQuery(req);
+    if (typeof req.query.recipientId === "string") {
+      query.recipientId = req.query.recipientId;
+    }
+    if (typeof req.query.actorId === "string") {
+      query.actorId = req.query.actorId;
+    }
+    const result = await notificationService.getAllNotificationsAdmin(query);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "All notifications retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var notificationController = {
+  getMyNotifications: getMyNotifications2,
+  getMyUnreadCount,
+  markOneAsRead: markOneAsRead2,
+  markOneAsUnread: markOneAsUnread2,
+  markAllAsRead: markAllAsRead2,
+  createManualNotification,
+  createFromTemplate,
+  getAllNotificationsAdmin: getAllNotificationsAdmin2
+};
+
+// src/modules/notifications/notification.validation.ts
+import { z as z30 } from "zod";
+var mongoObjectIdSchema22 = z30.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var notificationTypeSchema = z30.string().trim().min(2).max(120).regex(
+  /^[a-z0-9_.:-]+$/i,
+  "Notification type may contain only letters, numbers, _, ., :, and -"
+);
+var metadataSchema = z30.record(z30.string(), z30.unknown());
+var notificationIdValidation = z30.object({
+  params: z30.object({
+    id: mongoObjectIdSchema22
+  })
+});
+var createNotificationValidation = z30.object({
+  body: z30.object({
+    recipient: mongoObjectIdSchema22,
+    type: notificationTypeSchema,
+    title: z30.string().trim().min(1).max(200),
+    body: z30.string().trim().min(1).max(2e3),
+    channels: z30.array(z30.enum(NOTIFICATION_CHANNELS)).min(1).optional(),
+    relatedEntityType: z30.string().trim().min(1).max(120).optional(),
+    relatedEntityId: mongoObjectIdSchema22.optional(),
+    actionUrl: z30.string().trim().max(1e3).optional(),
+    metadata: metadataSchema.optional(),
+    dedupeKey: z30.string().trim().min(1).max(250).optional()
+  })
+});
+var createNotificationFromTemplateValidation = z30.object({
+  body: z30.object({
+    recipient: mongoObjectIdSchema22,
+    templateKey: z30.string().trim().min(2).max(120).regex(/^[a-z0-9_.:-]+$/i),
+    variables: z30.record(
+      z30.string(),
+      z30.union([
+        z30.string(),
+        z30.number(),
+        z30.boolean(),
+        z30.null()
+      ])
+    ).optional(),
+    channels: z30.array(z30.enum(NOTIFICATION_CHANNELS)).min(1).optional(),
+    relatedEntityType: z30.string().trim().min(1).max(120).optional(),
+    relatedEntityId: mongoObjectIdSchema22.optional(),
+    actionUrl: z30.string().trim().max(1e3).optional(),
+    metadata: metadataSchema.optional(),
+    dedupeKey: z30.string().trim().min(1).max(250).optional()
+  })
+});
+var getMyNotificationsValidation = z30.object({
+  query: z30.object({
+    isRead: z30.enum(["true", "false"]).optional(),
+    type: notificationTypeSchema.optional(),
+    search: z30.string().trim().max(200).optional(),
+    page: z30.coerce.number().int().min(1).optional(),
+    limit: z30.coerce.number().int().min(1).max(100).optional()
+  })
+});
+var getAllNotificationsValidation = z30.object({
+  query: z30.object({
+    recipientId: mongoObjectIdSchema22.optional(),
+    actorId: mongoObjectIdSchema22.optional(),
+    isRead: z30.enum(["true", "false"]).optional(),
+    type: notificationTypeSchema.optional(),
+    search: z30.string().trim().max(200).optional(),
+    page: z30.coerce.number().int().min(1).optional(),
+    limit: z30.coerce.number().int().min(1).max(100).optional()
+  })
+});
+
+// src/modules/notifications/notification.route.ts
+var router38 = Router38();
+var ADMIN_ROLES = [
+  "founder",
+  "super_admin",
+  "admin",
+  "manager"
+];
+router38.get(
+  "/me",
+  verifyToken,
+  validateRequest_default(getMyNotificationsValidation),
+  notificationController.getMyNotifications
+);
+router38.get(
+  "/me/unread-count",
+  verifyToken,
+  notificationController.getMyUnreadCount
+);
+router38.patch(
+  "/me/read-all",
+  verifyToken,
+  notificationController.markAllAsRead
+);
+router38.patch(
+  "/me/:id/read",
+  verifyToken,
+  validateRequest_default(notificationIdValidation),
+  notificationController.markOneAsRead
+);
+router38.patch(
+  "/me/:id/unread",
+  verifyToken,
+  validateRequest_default(notificationIdValidation),
+  notificationController.markOneAsUnread
+);
+router38.post(
+  "/",
+  verifyToken,
+  authorizeRoles(...ADMIN_ROLES),
+  validateRequest_default(createNotificationValidation),
+  notificationController.createManualNotification
+);
+router38.post(
+  "/from-template",
+  verifyToken,
+  authorizeRoles(...ADMIN_ROLES),
+  validateRequest_default(createNotificationFromTemplateValidation),
+  notificationController.createFromTemplate
+);
+router38.get(
+  "/admin",
+  verifyToken,
+  authorizeRoles(...ADMIN_ROLES),
+  validateRequest_default(getAllNotificationsValidation),
+  notificationController.getAllNotificationsAdmin
+);
+var notificationRoutes = router38;
+
+// src/modules/notificationTemplates/notification.template.route.ts
+import { Router as Router39 } from "express";
+
+// src/modules/notificationTemplates/notification.template.service.ts
+import { Types as Types40 } from "mongoose";
+var assertValidObjectId20 = (value, fieldName) => {
+  if (!Types40.ObjectId.isValid(value)) {
+    throwServiceError_default(`${fieldName} is invalid`, 400);
+  }
+};
+var TEMPLATE_POPULATE = [
+  {
+    path: "createdBy",
+    select: "fullName email role profileImage"
+  },
+  {
+    path: "updatedBy",
+    select: "fullName email role profileImage"
+  }
+];
+var createTemplate = async (payload, actorId) => {
+  assertValidObjectId20(actorId, "Authenticated user ID");
+  const key = payload.key.trim().toLowerCase();
+  const existing = await NotificationTemplate.findOne({ key });
+  if (existing) {
+    throwServiceError_default(`Notification template key "${key}" already exists`, 409);
+  }
+  const template = await NotificationTemplate.create({
+    key,
+    titleTemplate: payload.titleTemplate,
+    bodyTemplate: payload.bodyTemplate,
+    channels: payload.channels ?? ["in_app"],
+    ...payload.actionUrlTemplate !== void 0 ? { actionUrlTemplate: payload.actionUrlTemplate } : {},
+    ...payload.description !== void 0 ? { description: payload.description } : {},
+    enabled: payload.enabled ?? true,
+    createdBy: new Types40.ObjectId(actorId),
+    updatedBy: new Types40.ObjectId(actorId)
+  });
+  return template.populate(TEMPLATE_POPULATE);
+};
+var getTemplates = async (query = {}) => {
+  const filter = {};
+  if (query.enabled !== void 0) {
+    filter.enabled = query.enabled;
+  }
+  if (query.channel) {
+    filter.channels = query.channel;
+  }
+  if (query.search) {
+    const regex = new RegExp(
+      query.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+      "i"
+    );
+    filter.$or = [
+      { key: regex },
+      { titleTemplate: regex },
+      { bodyTemplate: regex },
+      { description: regex }
+    ];
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [data, total] = await Promise.all([
+    NotificationTemplate.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(TEMPLATE_POPULATE),
+    NotificationTemplate.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data
+  };
+};
+var getSingleTemplate = async (templateId) => {
+  assertValidObjectId20(templateId, "Notification template ID");
+  const template = await NotificationTemplate.findById(templateId).populate(
+    TEMPLATE_POPULATE
+  );
+  assertFound_default(template, "Notification template not found", 404);
+  return template;
+};
+var updateTemplate = async (templateId, payload, actorId) => {
+  assertValidObjectId20(templateId, "Notification template ID");
+  assertValidObjectId20(actorId, "Authenticated user ID");
+  const template = await NotificationTemplate.findById(templateId);
+  assertFound_default(template, "Notification template not found", 404);
+  if (payload.titleTemplate !== void 0) {
+    template.titleTemplate = payload.titleTemplate;
+  }
+  if (payload.bodyTemplate !== void 0) {
+    template.bodyTemplate = payload.bodyTemplate;
+  }
+  if (payload.channels !== void 0) {
+    template.channels = payload.channels;
+  }
+  if (payload.actionUrlTemplate !== void 0) {
+    if (payload.actionUrlTemplate === null) {
+      template.actionUrlTemplate = void 0;
+    } else {
+      template.actionUrlTemplate = payload.actionUrlTemplate;
+    }
+  }
+  if (payload.description !== void 0) {
+    if (payload.description === null) {
+      template.description = void 0;
+    } else {
+      template.description = payload.description;
+    }
+  }
+  if (payload.enabled !== void 0) {
+    template.enabled = payload.enabled;
+  }
+  template.updatedBy = new Types40.ObjectId(actorId);
+  await template.save();
+  return template.populate(TEMPLATE_POPULATE);
+};
+var getTemplateByKey = async (key) => {
+  return NotificationTemplate.findOne({
+    key: key.trim().toLowerCase()
+  });
+};
+var notificationTemplateService = {
+  createTemplate,
+  getTemplates,
+  getSingleTemplate,
+  updateTemplate,
+  getTemplateByKey
+};
+
+// src/modules/notificationTemplates/notification.template.controller.ts
+var getAuthUser26 = (req) => {
+  assertFound_default(req.user, "Authentication required", 401);
+  return {
+    id: req.user.id,
+    role: req.user.role
+  };
+};
+var getTemplates2 = async (req, res, next) => {
+  try {
+    getAuthUser26(req);
+    const query = {};
+    if (req.query.enabled === "true") {
+      query.enabled = true;
+    }
+    if (req.query.enabled === "false") {
+      query.enabled = false;
+    }
+    if (typeof req.query.channel === "string") {
+      query.channel = req.query.channel;
+    }
+    if (typeof req.query.search === "string") {
+      query.search = req.query.search;
+    }
+    if (typeof req.query.page === "string") {
+      query.page = Number(req.query.page);
+    }
+    if (typeof req.query.limit === "string") {
+      query.limit = Number(req.query.limit);
+    }
+    const result = await notificationTemplateService.getTemplates(query);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Notification templates retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleTemplate2 = async (req, res, next) => {
+  try {
+    getAuthUser26(req);
+    const result = await notificationTemplateService.getSingleTemplate(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Notification template retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var createTemplate2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser26(req);
+    const result = await notificationTemplateService.createTemplate(
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Notification template created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateTemplate2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser26(req);
+    const result = await notificationTemplateService.updateTemplate(
+      String(req.params.id),
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Notification template updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var notificationTemplateController = {
+  getTemplates: getTemplates2,
+  getSingleTemplate: getSingleTemplate2,
+  createTemplate: createTemplate2,
+  updateTemplate: updateTemplate2
+};
+
+// src/modules/notificationTemplates/notification.template.validation.ts
+import { z as z31 } from "zod";
+var mongoObjectIdSchema23 = z31.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var templateKeySchema = z31.string().trim().min(2).max(120).regex(
+  /^[a-z0-9_.:-]+$/,
+  "Template key must use lowercase letters, numbers, _, ., :, or -"
+);
+var notificationTemplateIdValidation = z31.object({
+  params: z31.object({
+    id: mongoObjectIdSchema23
+  })
+});
+var createNotificationTemplateValidation = z31.object({
+  body: z31.object({
+    key: templateKeySchema,
+    titleTemplate: z31.string().trim().min(1).max(200),
+    bodyTemplate: z31.string().trim().min(1).max(2e3),
+    channels: z31.array(z31.enum(NOTIFICATION_CHANNELS)).min(1).optional(),
+    actionUrlTemplate: z31.string().trim().max(1e3).optional(),
+    description: z31.string().trim().max(1e3).optional(),
+    enabled: z31.boolean().optional()
+  })
+});
+var updateNotificationTemplateValidation = z31.object({
+  params: z31.object({
+    id: mongoObjectIdSchema23
+  }),
+  body: z31.object({
+    titleTemplate: z31.string().trim().min(1).max(200).optional(),
+    bodyTemplate: z31.string().trim().min(1).max(2e3).optional(),
+    channels: z31.array(z31.enum(NOTIFICATION_CHANNELS)).min(1).optional(),
+    actionUrlTemplate: z31.union([z31.string().trim().max(1e3), z31.null()]).optional(),
+    description: z31.union([z31.string().trim().max(1e3), z31.null()]).optional(),
+    enabled: z31.boolean().optional()
+  }).refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field is required to update"
+  })
+});
+var getNotificationTemplatesValidation = z31.object({
+  query: z31.object({
+    enabled: z31.enum(["true", "false"]).optional(),
+    channel: z31.enum(NOTIFICATION_CHANNELS).optional(),
+    search: z31.string().trim().max(200).optional(),
+    page: z31.coerce.number().int().min(1).optional(),
+    limit: z31.coerce.number().int().min(1).max(100).optional()
+  })
+});
+
+// src/modules/notificationTemplates/notification.template.route.ts
+var router39 = Router39();
+var ADMIN_ROLES2 = [
+  "founder",
+  "super_admin",
+  "admin",
+  "manager"
+];
+router39.get(
+  "/",
+  verifyToken,
+  authorizeRoles(...ADMIN_ROLES2),
+  validateRequest_default(getNotificationTemplatesValidation),
+  notificationTemplateController.getTemplates
+);
+router39.get(
   "/:id",
   verifyToken,
-  authorizeRoles("founder", "manager", "admin", "super_admin"),
-  validateRequest_default(retreatLocationIdValidation),
-  retreatLocationController.deleteRetreatLocation
+  authorizeRoles(...ADMIN_ROLES2),
+  validateRequest_default(notificationTemplateIdValidation),
+  notificationTemplateController.getSingleTemplate
 );
-router30.get(
+router39.post(
+  "/",
+  verifyToken,
+  authorizeRoles(...ADMIN_ROLES2),
+  validateRequest_default(createNotificationTemplateValidation),
+  notificationTemplateController.createTemplate
+);
+router39.patch(
   "/:id",
-  validateRequest_default(retreatLocationIdValidation),
-  retreatLocationController.getSingleRetreatLocationById
+  verifyToken,
+  authorizeRoles(...ADMIN_ROLES2),
+  validateRequest_default(updateNotificationTemplateValidation),
+  notificationTemplateController.updateTemplate
 );
-var retreatLocationRoutes = router30;
+var notificationTemplateRoutes = router39;
+
+// src/modules/supportTickets/support.ticket.route.ts
+import { Router as Router40 } from "express";
+
+// src/modules/supportTickets/support.ticket.service.ts
+import { Types as Types41 } from "mongoose";
+
+// src/modules/supportTickets/support.ticket.model.schema.ts
+import { model as model39, Schema as Schema39 } from "mongoose";
+
+// src/modules/supportTickets/support.ticket.interface.ts
+var SUPPORT_TICKET_CATEGORIES = [
+  "general",
+  "technical",
+  "billing",
+  "membership",
+  "account"
+];
+var SUPPORT_TICKET_PRIORITIES = ["low", "medium", "high", "urgent"];
+var SUPPORT_TICKET_STATUSES = ["open", "in_progress", "resolved", "closed"];
+
+// src/modules/supportTickets/support.ticket.model.schema.ts
+var supportTicketSchema = new Schema39(
+  {
+    ticketNumber: { type: String, required: true, unique: true, index: true, trim: true },
+    requester: { type: Schema39.Types.ObjectId, ref: "User", required: true, index: true },
+    assignedTo: { type: Schema39.Types.ObjectId, ref: "User", index: true },
+    subject: { type: String, required: true, trim: true, maxlength: 200 },
+    message: { type: String, required: true, trim: true, maxlength: 5e3 },
+    category: { type: String, enum: SUPPORT_TICKET_CATEGORIES, default: "general", required: true, index: true },
+    priority: { type: String, enum: SUPPORT_TICKET_PRIORITIES, default: "medium", required: true, index: true },
+    status: { type: String, enum: SUPPORT_TICKET_STATUSES, default: "open", required: true, index: true },
+    adminResponse: { type: String, trim: true, maxlength: 5e3 },
+    respondedAt: Date,
+    resolvedAt: Date
+  },
+  { timestamps: true, collection: "supporttickets" }
+);
+supportTicketSchema.index({ requester: 1, createdAt: -1 });
+supportTicketSchema.index({ status: 1, priority: 1, createdAt: -1 });
+var SupportTicket = model39("SupportTicket", supportTicketSchema);
+
+// src/modules/supportTickets/support.ticket.service.ts
+var populate = [
+  { path: "requester", select: "fullName email role" },
+  { path: "assignedTo", select: "fullName email role" }
+];
+var ticketNumber = () => `TKT-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10).replace(/-/g, "")}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+var list = async (filter, query) => {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const [data, total] = await Promise.all([
+    SupportTicket.find(filter).populate(populate).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+    SupportTicket.countDocuments(filter)
+  ]);
+  return { data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+};
+var supportTicketService = {
+  async create(requester, payload) {
+    const user = await User.findById(requester).select("_id");
+    assertFound_default(user, "Requester user not found", 404);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await SupportTicket.create({ ...payload, requester: new Types41.ObjectId(requester), ticketNumber: ticketNumber() });
+      } catch (error) {
+        if (error.code !== 11e3) throw error;
+      }
+    }
+    throw new BadRequestError("Could not generate a unique ticket number");
+  },
+  myTickets(requester, query) {
+    return list({ requester: new Types41.ObjectId(requester), ...queryFilters(query) }, query);
+  },
+  adminList(query) {
+    return list(queryFilters(query), query);
+  },
+  async getById(id3, requester, isAdmin) {
+    const filter = isAdmin ? { _id: id3 } : { _id: id3, requester };
+    const ticket = await SupportTicket.findOne(filter).populate(populate);
+    assertFound_default(ticket, "Support ticket not found", 404);
+    return ticket;
+  },
+  async update(id3, adminId, payload) {
+    if (payload.assignedTo) {
+      const assignee = await User.findById(payload.assignedTo).select("_id");
+      assertFound_default(assignee, "Assigned user not found", 404);
+    }
+    const update = { status: payload.status };
+    if (payload.adminResponse !== void 0) {
+      update.adminResponse = payload.adminResponse;
+      update.respondedAt = /* @__PURE__ */ new Date();
+    }
+    if (payload.assignedTo) update.assignedTo = new Types41.ObjectId(payload.assignedTo);
+    if (payload.status === "resolved" || payload.status === "closed") update.resolvedAt = /* @__PURE__ */ new Date();
+    const ticket = await SupportTicket.findByIdAndUpdate(id3, update, { new: true, runValidators: true }).populate(populate);
+    assertFound_default(ticket, "Support ticket not found", 404);
+    return ticket;
+  }
+};
+var queryFilters = (query) => {
+  const { page: _page, limit: _limit, ...filters } = query;
+  return filters;
+};
+
+// src/modules/supportTickets/support.ticket.controller.ts
+var auth = (req) => {
+  assertFound_default(req.user, "Authentication required", 401);
+  return req.user;
+};
+var admins = ["founder", "super_admin", "admin", "manager"];
+var supportTicketController = {
+  async create(req, res, next) {
+    try {
+      const user = auth(req);
+      const data = await supportTicketService.create(user.id, req.body);
+      sendResponse_default(res, { statusCode: 201, success: true, message: "Support ticket created successfully", data });
+    } catch (error) {
+      next(error);
+    }
+  },
+  async mine(req, res, next) {
+    try {
+      const user = auth(req);
+      const data = await supportTicketService.myTickets(user.id, req.query);
+      sendResponse_default(res, { statusCode: 200, success: true, message: "Support tickets retrieved successfully", data });
+    } catch (error) {
+      next(error);
+    }
+  },
+  async adminList(req, res, next) {
+    try {
+      auth(req);
+      const data = await supportTicketService.adminList(req.query);
+      sendResponse_default(res, { statusCode: 200, success: true, message: "Support tickets retrieved successfully", data });
+    } catch (error) {
+      next(error);
+    }
+  },
+  async getById(req, res, next) {
+    try {
+      const user = auth(req);
+      const data = await supportTicketService.getById(String(req.params.id), user.id, admins.includes(user.role));
+      sendResponse_default(res, { statusCode: 200, success: true, message: "Support ticket retrieved successfully", data });
+    } catch (error) {
+      next(error);
+    }
+  },
+  async update(req, res, next) {
+    try {
+      const user = auth(req);
+      const data = await supportTicketService.update(String(req.params.id), user.id, req.body);
+      sendResponse_default(res, { statusCode: 200, success: true, message: "Support ticket updated successfully", data });
+    } catch (error) {
+      next(error);
+    }
+  }
+};
+
+// src/modules/supportTickets/support.ticket.validation.ts
+import { z as z32 } from "zod";
+var id = z32.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var createSupportTicketValidation = z32.object({
+  body: z32.object({
+    subject: z32.string().trim().min(3).max(200),
+    message: z32.string().trim().min(5).max(5e3),
+    category: z32.enum(SUPPORT_TICKET_CATEGORIES).default("general"),
+    priority: z32.enum(SUPPORT_TICKET_PRIORITIES).default("medium")
+  })
+});
+var supportTicketIdValidation = z32.object({ params: z32.object({ id }) });
+var supportTicketListValidation = z32.object({
+  query: z32.object({
+    status: z32.enum(SUPPORT_TICKET_STATUSES).optional(),
+    priority: z32.enum(SUPPORT_TICKET_PRIORITIES).optional(),
+    category: z32.enum(SUPPORT_TICKET_CATEGORIES).optional(),
+    page: z32.coerce.number().int().min(1).optional(),
+    limit: z32.coerce.number().int().min(1).max(100).optional()
+  })
+});
+var updateSupportTicketValidation = z32.object({
+  params: z32.object({ id }),
+  body: z32.object({
+    status: z32.enum(SUPPORT_TICKET_STATUSES),
+    adminResponse: z32.string().trim().max(5e3).optional(),
+    assignedTo: id.optional()
+  })
+});
+
+// src/modules/supportTickets/support.ticket.route.ts
+var router40 = Router40();
+var ADMIN_ROLES3 = ["founder", "super_admin", "admin", "manager"];
+router40.post("/", verifyToken, validateRequest_default(createSupportTicketValidation), supportTicketController.create);
+router40.get("/me", verifyToken, validateRequest_default(supportTicketListValidation), supportTicketController.mine);
+router40.get("/admin", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(supportTicketListValidation), supportTicketController.adminList);
+router40.get("/:id", verifyToken, validateRequest_default(supportTicketIdValidation), supportTicketController.getById);
+router40.patch("/:id", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(updateSupportTicketValidation), supportTicketController.update);
+var supportTicketRoutes = router40;
+
+// src/modules/userDevices/user.device.route.ts
+import { Router as Router41 } from "express";
+
+// src/modules/userDevices/user.device.service.ts
+import { Types as Types42 } from "mongoose";
+
+// src/modules/userDevices/user.device.model.schema.ts
+import { model as model40, Schema as Schema40 } from "mongoose";
+
+// src/modules/userDevices/user.device.interface.ts
+var DEVICE_PLATFORMS = ["ios", "android", "web", "windows", "macos", "linux"];
+
+// src/modules/userDevices/user.device.model.schema.ts
+var pushSubscriptionSchema = new Schema40(
+  {
+    endpoint: { type: String, trim: true, maxlength: 2e3 },
+    p256dh: { type: String, select: false },
+    auth: { type: String, select: false }
+  },
+  { _id: false }
+);
+var userDeviceSchema = new Schema40(
+  {
+    user: { type: Schema40.Types.ObjectId, ref: "User", required: true, index: true },
+    deviceIdentifier: { type: String, required: true, trim: true, maxlength: 200, index: true },
+    platform: { type: String, enum: DEVICE_PLATFORMS, required: true },
+    deviceName: { type: String, trim: true, maxlength: 120 },
+    appVersion: { type: String, trim: true, maxlength: 40 },
+    pushSubscription: { type: pushSubscriptionSchema },
+    isActive: { type: Boolean, default: true, required: true, index: true },
+    lastActiveAt: { type: Date, default: Date.now, required: true },
+    revokedAt: Date
+  },
+  { timestamps: true, collection: "userdevices" }
+);
+userDeviceSchema.index({ user: 1, deviceIdentifier: 1 }, { unique: true });
+userDeviceSchema.index(
+  { "pushSubscription.endpoint": 1 },
+  { unique: true, sparse: true, partialFilterExpression: { isActive: true } }
+);
+var UserDevice = model40("UserDevice", userDeviceSchema);
+
+// src/modules/userDevices/user.device.service.ts
+var safeSelect = "_id deviceIdentifier platform deviceName appVersion isActive lastActiveAt revokedAt createdAt updatedAt";
+var userDeviceService = {
+  async register(userId, payload) {
+    const device = await UserDevice.findOneAndUpdate(
+      { user: new Types42.ObjectId(userId), deviceIdentifier: payload.deviceIdentifier },
+      { ...payload, user: new Types42.ObjectId(userId), isActive: true, revokedAt: void 0, lastActiveAt: /* @__PURE__ */ new Date() },
+      { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
+    ).select(safeSelect);
+    return device;
+  },
+  list(userId) {
+    return UserDevice.find({ user: userId }).select(safeSelect).sort({ lastActiveAt: -1 });
+  },
+  async revoke(userId, id3) {
+    const device = await UserDevice.findOneAndUpdate(
+      { _id: id3, user: userId },
+      { isActive: false, revokedAt: /* @__PURE__ */ new Date() },
+      { new: true }
+    ).select(safeSelect);
+    assertFound_default(device, "Device not found", 404);
+    return device;
+  }
+};
+
+// src/modules/userDevices/user.device.controller.ts
+var auth2 = (req) => {
+  assertFound_default(req.user, "Authentication required", 401);
+  return req.user;
+};
+var userDeviceController = {
+  async register(req, res, next) {
+    try {
+      const user = auth2(req);
+      const data = await userDeviceService.register(user.id, req.body);
+      sendResponse_default(res, { statusCode: 200, success: true, message: "Device registered successfully", data });
+    } catch (error) {
+      next(error);
+    }
+  },
+  async list(req, res, next) {
+    try {
+      const user = auth2(req);
+      const data = await userDeviceService.list(user.id);
+      sendResponse_default(res, { statusCode: 200, success: true, message: "Devices retrieved successfully", data });
+    } catch (error) {
+      next(error);
+    }
+  },
+  async revoke(req, res, next) {
+    try {
+      const user = auth2(req);
+      const data = await userDeviceService.revoke(user.id, String(req.params.id));
+      sendResponse_default(res, { statusCode: 200, success: true, message: "Device revoked successfully", data });
+    } catch (error) {
+      next(error);
+    }
+  }
+};
+
+// src/modules/userDevices/user.device.validation.ts
+import { z as z33 } from "zod";
+var id2 = z33.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var registerUserDeviceValidation = z33.object({
+  body: z33.object({
+    deviceIdentifier: z33.string().trim().min(1).max(200),
+    platform: z33.enum(DEVICE_PLATFORMS),
+    deviceName: z33.string().trim().max(120).optional(),
+    appVersion: z33.string().trim().max(40).optional(),
+    pushSubscription: z33.object({
+      endpoint: z33.string().url().max(2e3),
+      p256dh: z33.string().min(1).max(500).optional(),
+      auth: z33.string().min(1).max(500).optional()
+    }).optional()
+  })
+});
+var userDeviceIdValidation = z33.object({ params: z33.object({ id: id2 }) });
+
+// src/modules/userDevices/user.device.route.ts
+var router41 = Router41();
+router41.post("/me", verifyToken, validateRequest_default(registerUserDeviceValidation), userDeviceController.register);
+router41.get("/me", verifyToken, userDeviceController.list);
+router41.patch("/me/:id/revoke", verifyToken, validateRequest_default(userDeviceIdValidation), userDeviceController.revoke);
+var userDeviceRoutes = router41;
 
 // src/routes/index.ts
-var router31 = Router31();
-=======
-  authorizeRoles("founder", "super_admin", "admin", "manager"),
-  validateRequest_default(queryMentorBookingValidation),
-  mentorBookingController.getAllBookingsAdmin
-);
-router29.get(
-  "/:id",
-  verifyToken,
-  authorizeRoles("founder", "super_admin", "admin", "manager"),
-  validateRequest_default(mentorBookingIdValidation),
-  mentorBookingController.getSingleBookingAdmin
-);
-router29.patch(
-  "/:id",
-  verifyToken,
-  authorizeRoles("founder", "super_admin", "admin", "manager"),
-  validateRequest_default(updateMentorBookingValidation),
-  mentorBookingController.updateBooking
-);
-var mentorBookingRoutes = router29;
-
-// src/routes/index.ts
-var router30 = Router30();
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
+var router42 = Router42();
 var moduleRoutes = [
   {
     path: "/admin",
@@ -22613,29 +28531,218 @@ var moduleRoutes = [
     route: mentorshipProfileRoutes
   },
   {
-<<<<<<< HEAD
     path: "/invictus/mentorship-reviews",
     route: mentorshipReviewRoutes
   },
   {
-    path: "/invictus/retreat-locations",
-    route: retreatLocationRoutes
-  }
-];
-moduleRoutes.forEach((route) => {
-  router31.use(route.path, route.route);
-});
-var routes_default = router31;
-=======
+    path: "/invictus",
+    route: leaderboardEntryRoutes
+  },
+  {
+    path: "/invictus/leaderboards",
+    route: leaderboardRoutes
+  },
+  {
+    path: "/invictus/course-modules",
+    route: courseModuleRoutes
+  },
+  {
+    path: "/invictus/module-videos",
+    route: moduleVideoRoutes
+  },
+  {
+    path: "/invictus/module-resources",
+    route: moduleResourceRoutes
+  },
+  {
+    path: "/invictus/quiz-questions",
+    route: quizQuestionRoutes
+  },
+  {
+    path: "/invictus/module-actions",
+    route: moduleActionRoutes
+  },
+  {
+    path: "/rooms",
+    route: room_route_default
+  },
+  {
+    path: "/messages",
+    route: message_route_default
+  },
+  {
+    path: "/logo",
+    route: LogoRoutes
+  },
+  {
+    path: "/invictus/academy-profile",
+    route: academyProfileRoutes
+  },
+  {
+    path: "/invictus/user-entitlements",
+    route: userEntitlementRoutes
+  },
+  {
+    path: "/invictus/video-progress",
+    route: videoProgressRoutes
+  },
+  {
+    path: "/invictus/module-progress",
+    route: moduleProgressRoutes
+  },
+  {
+    path: "/invictus/quiz-attempts",
+    route: quizAttemptRoutes
+  },
+  {
+    path: "/invictus/quiz-certificates",
+    route: quizCertificateRoutes
+  },
+  {
+    path: "/invictus/mentorship-profiles",
+    route: mentorshipProfileRoutes
+  },
+  {
     path: "/invictus/mentor-bookings",
     route: mentorBookingRoutes
+  },
+  {
+    path: "/invictus/retreat-locations",
+    route: retreatLocationRoutes
+  },
+  {
+    path: "/invictus/retreat-batches",
+    route: retreatBatchRoutes
+  },
+  {
+    path: "/invictus/retreat-bookings",
+    route: retreatBookingRoutes
+  },
+  {
+    path: "/invictus/payment-plans",
+    route: paymentPlanRoutes
+  },
+  {
+    path: "/invictus/payments",
+    route: invictusPaymentRoutes
+  },
+  {
+    path: "/invictus/leaderboards",
+    route: leaderboardEntryRoutes
+  },
+  {
+    path: "/invictus/leaderboards",
+    route: leaderboardRoutes
+  },
+  {
+    path: "/invictus/course-modules",
+    route: courseModuleRoutes
+  },
+  {
+    path: "/invictus/module-videos",
+    route: moduleVideoRoutes
+  },
+  {
+    path: "/invictus/module-resources",
+    route: moduleResourceRoutes
+  },
+  {
+    path: "/invictus/quiz-questions",
+    route: quizQuestionRoutes
+  },
+  {
+    path: "/invictus/module-actions",
+    route: moduleActionRoutes
+  },
+  {
+    path: "/rooms",
+    route: room_route_default
+  },
+  {
+    path: "/messages",
+    route: message_route_default
+  },
+  {
+    path: "/logo",
+    route: LogoRoutes
+  },
+  {
+    path: "/invictus/academy-profile",
+    route: academyProfileRoutes
+  },
+  {
+    path: "/invictus/user-entitlements",
+    route: userEntitlementRoutes
+  },
+  {
+    path: "/invictus/video-progress",
+    route: videoProgressRoutes
+  },
+  {
+    path: "/invictus/module-progress",
+    route: moduleProgressRoutes
+  },
+  {
+    path: "/invictus/quiz-attempts",
+    route: quizAttemptRoutes
+  },
+  {
+    path: "/invictus/quiz-certificates",
+    route: quizCertificateRoutes
+  },
+  {
+    path: "/invictus/mentorship-profiles",
+    route: mentorshipProfileRoutes
+  },
+  {
+    path: "/invictus/mentor-bookings",
+    route: mentorBookingRoutes
+  },
+  {
+    path: "/invictus/retreat-locations",
+    route: retreatLocationRoutes
+  },
+  {
+    path: "/invictus/retreat-batches",
+    route: retreatBatchRoutes
+  },
+  {
+    path: "/invictus/retreat-bookings",
+    route: retreatBookingRoutes
+  },
+  {
+    path: "/invictus/leaderboards",
+    route: leaderboardEntryRoutes
+  },
+  {
+    path: "/invictus/leaderboards",
+    route: leaderboardRoutes
+  },
+  {
+    path: "/invictus/leaderboards",
+    route: leaderboardRoutes
+  },
+  {
+    path: "/invictus/notifications",
+    route: notificationRoutes
+  },
+  {
+    path: "/invictus/notification-templates",
+    route: notificationTemplateRoutes
+  },
+  {
+    path: "/support-tickets",
+    route: supportTicketRoutes
+  },
+  {
+    path: "/user-devices",
+    route: userDeviceRoutes
   }
 ];
 moduleRoutes.forEach((route) => {
-  router30.use(route.path, route.route);
+  router42.use(route.path, route.route);
 });
-var routes_default = router30;
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
+var routes_default = router42;
 
 // src/swagger/swagger.ts
 import swaggerJSDoc from "swagger-jsdoc";
@@ -23122,113 +29229,12 @@ app.use(routeNotFoundHandler_default);
 app.use(globalErrorHandler_default);
 var app_default = app;
 
-// src/socket/socket.ts
-import { Server } from "socket.io";
-import jwt4 from "jsonwebtoken";
-var io;
-var onlineUsers = /* @__PURE__ */ new Map();
-var initSocket = (httpServer) => {
-  io = new Server(httpServer, {
-    cors: {
-      origin: true,
-      credentials: true
-    }
-  });
-  io.use((socket, next) => {
-    const token = socket.handshake.auth?.token;
-    if (!token) {
-      return next(new Error("Authentication token is required"));
-    }
-    try {
-      const decoded = jwt4.verify(
-        token,
-        config_default.JWT_ACCESS_SECRET
-      );
-      if (!decoded || !decoded.id) {
-        return next(new Error("Invalid token payload"));
-      }
-      socket.data.user = {
-        id: decoded.id,
-        email: decoded.email,
-        role: decoded.role
-      };
-      return next();
-    } catch (error) {
-      return next(new Error("Invalid or expired token"));
-    }
-  });
-  io.on("connection", async (socket) => {
-    try {
-      const userId = socket.data.user.id;
-      const userDoc = await User.findById(userId).select(
-        "fullName profileImage"
-      );
-      socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
-      socket.data.user.profileImage = userDoc?.profileImage ?? null;
-      const room = await getGeneralRoom(userId);
-      const roomId = room._id.toString();
-      socket.data.roomId = roomId;
-      socket.join(roomId);
-      const isFirstConnectionForUser = !onlineUsers.has(userId);
-      if (isFirstConnectionForUser) {
-        onlineUsers.set(userId, /* @__PURE__ */ new Set());
-      }
-      onlineUsers.get(userId).add(socket.id);
-      if (isFirstConnectionForUser) {
-        socket.to(roomId).emit("presence:update", { userId, online: true });
-      }
-      socket.emit("presence:list", Array.from(onlineUsers.keys()));
-      socket.on("message:send", async (content) => {
-        try {
-          if (!content || !content.trim()) return;
-          const message = await createMessage(roomId, userId, content.trim());
-          io.to(roomId).emit("message:new", message);
-        } catch (error) {
-          console.error("message:send error:", error);
-          socket.emit("error", "Failed to send message");
-        }
-      });
-      socket.on("typing:start", () => {
-        socket.to(roomId).emit("typing:update", {
-          userId,
-          fullName: socket.data.user.fullName,
-          typing: true
-        });
-      });
-      socket.on("typing:stop", () => {
-        socket.to(roomId).emit("typing:update", {
-          userId,
-          fullName: socket.data.user.fullName,
-          typing: false
-        });
-      });
-      socket.on("disconnect", () => {
-        const userSockets = onlineUsers.get(userId);
-        userSockets?.delete(socket.id);
-        if (userSockets && userSockets.size === 0) {
-          onlineUsers.delete(userId);
-          socket.to(roomId).emit("presence:update", { userId, online: false });
-        }
-        console.log(`Socket disconnected: ${socket.id}`);
-      });
-    } catch (error) {
-      console.error("Socket connection error:", error);
-      socket.disconnect();
-    }
-  });
-  return io;
-};
-
 // src/server.ts
 import http from "http";
 var port = process.env.PORT || 3e3;
 var main = async () => {
   try {
-<<<<<<< HEAD
-    await mongoose4.connect(config_default.MONGO_URI);
-=======
-    await mongoose3.connect(config_default.MONGO_URI);
->>>>>>> c551f495a2dbd31ddd9f3aff09e83b737a7b7d3d
+    await mongoose6.connect(config_default.MONGO_URI);
     const httpServer = http.createServer(app_default);
     initSocket(httpServer);
     httpServer.listen(port, () => {
