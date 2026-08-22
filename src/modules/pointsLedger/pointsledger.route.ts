@@ -37,4 +37,4 @@ router.get(
   pointsLedgerController.getSinglePointsLedger,
 );
 
-export const pointsLedgerRoutes = router;
+export const pointsLedgerRoutes = router;  
