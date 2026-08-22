@@ -41,6 +41,8 @@ import { notificationRoutes } from "../modules/notifications/notification.route"
 import { notificationTemplateRoutes } from "../modules/notificationTemplates/notification.template.route";
 import { entitlementLogRoutes } from "../modules/entitlementLogs/entitlementlog.route";
 import { activityLogRoutes } from "../modules/activitylogs/activitylog.route";
+import { sessionScheduleRoutes } from "../modules/sessionSchedules/sessionschedules.route";
+import { sessionAttendanceRoutes } from "../modules/sessionattendances/sessionattendances.route";
 
 
 const router = Router();
@@ -363,6 +365,22 @@ const moduleRoutes: TModuleRoute[] = [
   {
     path: "/invictus/notification-templates",
     route: notificationTemplateRoutes,
+  },
+   {
+    path: "/invictus/entitlement-logs",
+    route: entitlementLogRoutes,
+  },
+  {
+    path: "/invictus/activity-logs",
+    route: activityLogRoutes,
+  },
+  {
+    path: "/invictus/session-schedules",
+    route: sessionScheduleRoutes,
+  },
+  {
+    path: "/invictus/session-attendances",
+    route: sessionAttendanceRoutes,
   }
 ];
 
