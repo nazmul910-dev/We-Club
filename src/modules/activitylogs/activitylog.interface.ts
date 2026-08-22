@@ -11,11 +11,7 @@ export const ACTIVITY_LOG_ACTIONS = [
   "other",
 ] as const;
 
-/**
- * Master prompt-এর model list অনুযায়ী allowed entity type গুলো।
- * নতুন module যোগ হলে এখানে নতুন value যোগ করলেই হবে,
- * schema/service touch করার দরকার নেই।
- */
+
 export const ACTIVITY_LOG_ENTITY_TYPES = [
   "User",
   "ChallengePillar",
@@ -45,6 +41,8 @@ export const ACTIVITY_LOG_ENTITY_TYPES = [
   "PaymentPlan",
   "PaymentSession",
   "EntitlementLog",
+  "SessionSchedule",
+  "SessionAttendance",
   "SupportTicket",
   "FAQ",
   "TermsAndPolicy",
@@ -69,15 +67,8 @@ export interface IActivityLog {
   targetEntityType: ActivityLogEntityType;
 
   targetEntityId?: Types.ObjectId | undefined;
-
-  /**
-   * Human-readable summary, e.g. "Revoked pillar access for user X".
-   */
   changeSummary?: string | undefined;
 
-  /**
-   * Field-level before/after snapshot — passwords/tokens/secrets কখনো এখানে রাখা হবে না।
-   */
   changes?: Record<string, unknown> | undefined;
 
   ipAddress?: string | undefined;
