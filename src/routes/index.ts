@@ -41,9 +41,16 @@ import { notificationRoutes } from "../modules/notifications/notification.route"
 import { notificationTemplateRoutes } from "../modules/notificationTemplates/notification.template.route";
 import { entitlementLogRoutes } from "../modules/entitlementLogs/entitlementlog.route";
 import { activityLogRoutes } from "../modules/activitylogs/activitylog.route";
+<<<<<<< HEAD
 import { sessionScheduleRoutes } from "../modules/sessionSchedules/sessionschedules.route";
 import { sessionAttendanceRoutes } from "../modules/sessionattendances/sessionattendances.route";
 
+=======
+import { supportTicketRoutes } from "../modules/supportTickets/support.ticket.route";
+import { userDeviceRoutes } from "../modules/userDevices/user.device.route";
+import { streakLogRoutes } from "../modules/streakLogs/streaklog.route";
+import { pointsLedgerRoutes } from "../modules/pointsLedger/pointsledger.route";
+>>>>>>> c1ac771c786e272e4f7812a19d8b83322d77d7df
 
 const router = Router();
 
@@ -366,7 +373,11 @@ const moduleRoutes: TModuleRoute[] = [
     path: "/invictus/notification-templates",
     route: notificationTemplateRoutes,
   },
+<<<<<<< HEAD
    {
+=======
+  {
+>>>>>>> c1ac771c786e272e4f7812a19d8b83322d77d7df
     path: "/invictus/entitlement-logs",
     route: entitlementLogRoutes,
   },
@@ -374,6 +385,7 @@ const moduleRoutes: TModuleRoute[] = [
     path: "/invictus/activity-logs",
     route: activityLogRoutes,
   },
+<<<<<<< HEAD
   {
     path: "/invictus/session-schedules",
     route: sessionScheduleRoutes,
@@ -382,6 +394,37 @@ const moduleRoutes: TModuleRoute[] = [
     path: "/invictus/session-attendances",
     route: sessionAttendanceRoutes,
   }
+=======
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  {
+    path: "/support-tickets",
+    route: supportTicketRoutes,
+  },
+  {
+    path: "/user-devices",
+    route: userDeviceRoutes,
+  },
+  {
+    path: "/invictus/streak-logs",
+    route: streakLogRoutes,
+  },
+  {
+    path: "/invictus/points-ledger",
+    route: pointsLedgerRoutes,
+  },
+>>>>>>> c1ac771c786e272e4f7812a19d8b83322d77d7df
 ];
 
 moduleRoutes.forEach((route) => {

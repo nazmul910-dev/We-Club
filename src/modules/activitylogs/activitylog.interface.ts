@@ -49,6 +49,8 @@ export const ACTIVITY_LOG_ENTITY_TYPES = [
   "EmailTemplate",
   "SessionSchedule",
   "SessionAttendance",
+  "StreakLog",
+  "PointsLedger",
   "AdminSettings",
   "Other",
 ] as const;
