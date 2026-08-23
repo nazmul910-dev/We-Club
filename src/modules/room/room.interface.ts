@@ -5,4 +5,7 @@ export interface IRoom {
   description?: string;
   members: Types.ObjectId[];
   createdBy: Types.ObjectId;
+  type: "general" | "country";
+  countryName?: string;
+  countryCode?: string;
 }

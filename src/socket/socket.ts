@@ -4,8 +4,9 @@ import jwt from "jsonwebtoken";
 
 import config from "../config";
 import { User } from "../modules/users/users.model.schema";
-import { getGeneralRoom } from "../modules/room/room.service";
+import { getOrCreateCountryRoom } from "../modules/room/room.service";
 import { createMessage, deleteMessage } from "../modules/message/message.services";
+import { resolveCountry } from "../utility/country";
 
 interface DecodedToken {
   id: string;
@@ -76,17 +77,86 @@ export const initSocket = (httpServer: HttpServer) => {
 
       // fetch display info once per connection so events don't need extra queries
       const userDoc = await User.findById(userId).select(
-        "fullName profileImage",
+        "fullName profileImage country",
       );
 
+     
 
       socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
       socket.data.user.profileImage = userDoc?.profileImage ?? null;
-      // auto-join the single General room for now (explicit joinRoom comes later)
-      const room = await getGeneralRoom(userId);
-      const roomId = room._id.toString();
+      const countryName = userDoc?.country?.trim();
+
+      if (!countryName) {
+        socket.emit("error", "No country set on your profile");
+        return socket.disconnect();
+      }
+
+      const country = resolveCountry(countryName);
+
+      if (!country) {
+        socket.emit("error", "Invalid country on your profile");
+        return socket.disconnect();
+      }
+
+      const room = await getOrCreateCountryRoom(country.name, userId);
+      let roomId = room._id.toString();
       socket.data.roomId = roomId;
       socket.join(roomId);
+
+      socket.emit("room:joined", {
+        roomId,
+        countryCode: room.countryCode,
+        countryName: room.countryName,
+      });
+
+      socket.on("room:join", async (requestedCountryName: string) => {
+        try {
+          const canSwitchRooms =
+            socket.data.user.role === "founder" ||
+            socket.data.user.role === "admin" ||
+            socket.data.user.role === "manager";
+
+          if (!canSwitchRooms) {
+            socket.emit(
+              "error",
+              "Only founders, admins, and managers can change community rooms",
+            );
+            return;
+          }
+
+          const requestedCountry = resolveCountry(requestedCountryName);
+          if (!requestedCountry) {
+            socket.emit("error", "Invalid country name");
+            return;
+          }
+
+          const nextRoom = await getOrCreateCountryRoom(
+            requestedCountry.name,
+            userId,
+          );
+          const nextRoomId = nextRoom._id.toString();
+
+          if (roomId !== nextRoomId) {
+            socket.leave(roomId);
+            socket.to(roomId).emit("presence:update", {
+              userId,
+              online: false,
+            });
+            socket.join(nextRoomId);
+            roomId = nextRoomId;
+            socket.data.roomId = nextRoomId;
+          }
+
+          socket.emit("room:joined", {
+            roomId: nextRoomId,
+            countryCode: nextRoom.countryCode,
+            countryName: nextRoom.countryName,
+          });
+        } catch (error: any) {
+          console.error("room:join error:", error);
+          socket.emit("error", error.message || "Failed to join room");
+        }
+      });
 
       // track presence
       const isFirstConnectionForUser = !onlineUsers.has(userId);
