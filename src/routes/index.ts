@@ -43,14 +43,10 @@ import { entitlementLogRoutes } from "../modules/entitlementLogs/entitlementlog.
 import { activityLogRoutes } from "../modules/activitylogs/activitylog.route";
 import { sessionScheduleRoutes } from "../modules/sessionSchedules/sessionschedules.route";
 import { sessionAttendanceRoutes } from "../modules/sessionattendances/sessionattendances.route";
-<<<<<<< HEAD
 import { supportTicketRoutes } from "../modules/supportTickets/support.ticket.route";
 import { userDeviceRoutes } from "../modules/userDevices/user.device.route";
 import { streakLogRoutes } from "../modules/streakLogs/streaklog.route";
 import { pointsLedgerRoutes } from "../modules/pointsLedger/pointsledger.route";
-=======
-
->>>>>>> 629ea9156b74395668e070da4a4ab1ad1f7666d5
 
 const router = Router();
 

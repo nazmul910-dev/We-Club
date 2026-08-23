@@ -86,15 +86,33 @@ export const initSocket = (httpServer: HttpServer) => {
       socket.data.user.profileImage = userDoc?.profileImage ?? null;
       const countryName = userDoc?.country?.trim();
 
-      if (!countryName) {
-        socket.emit("error", "No country set on your profile");
+      // founders/admins/managers aren't tied to a single country room, so they
+      // shouldn't be booted for lacking one — fall back to a default room and
+      // let them switch via room:join instead.
+      const isPrivilegedRole =
+        socket.data.user.role === "founder" ||
+        socket.data.user.role === "admin" ||
+        socket.data.user.role === "manager";
+
+      let country = countryName ? resolveCountry(countryName) : null;
+
+      if (!country && !isPrivilegedRole) {
+        socket.emit(
+          "error",
+          countryName ? "Invalid country on your profile" : "No country set on your profile",
+        );
         return socket.disconnect();
       }
 
-      const country = resolveCountry(countryName);
+      if (!country) {
+        // privileged role with no/invalid country on file — default them
+        // into a fallback room so the connection still succeeds.
+        // (swap "United States" for whatever your default/global room should be)
+        country = resolveCountry("United States");
+      }
 
       if (!country) {
-        socket.emit("error", "Invalid country on your profile");
+        socket.emit("error", "No default community room is configured");
         return socket.disconnect();
       }
 
