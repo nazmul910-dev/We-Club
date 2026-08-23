@@ -31,7 +31,7 @@ var routeNotFoundHandler = (req, res, next) => {
 var routeNotFoundHandler_default = routeNotFoundHandler;
 
 // src/routes/index.ts
-import { Router as Router46 } from "express";
+import { Router as Router48 } from "express";
 
 // src/modules/users/user.route.ts
 import { Router } from "express";
@@ -5171,6 +5171,8 @@ var ACTIVITY_LOG_ENTITY_TYPES = [
   "PaymentPlan",
   "PaymentSession",
   "EntitlementLog",
+  "SessionSchedule",
+  "SessionAttendance",
   "SupportTicket",
   "FAQ",
   "TermsAndPolicy",
@@ -28394,34 +28396,1239 @@ var router41 = Router41();
 router41.post(
   "/",
   verifyToken,
-  authorizeRoles("admin", "manager", "founder", "super_admin"),
+  authorizeRoles("founder", "super_admin"),
   validateRequest_default(createActivityLogValidation),
   activityLogController.createActivityLog
 );
 router41.get(
   "/",
   verifyToken,
-  authorizeRoles("admin", "manager", "founder", "super_admin"),
+  authorizeRoles("manager", "founder", "super_admin"),
   validateRequest_default(getAllActivityLogsValidation),
   activityLogController.getAllActivityLogs
 );
 router41.get(
   "/:id",
   verifyToken,
-  authorizeRoles("admin", "manager", "founder", "super_admin"),
+  authorizeRoles("manager", "founder", "super_admin"),
   validateRequest_default(activityLogIdValidation),
   activityLogController.getSingleActivityLog
 );
 var activityLogRoutes = router41;
 
-// src/modules/supportTickets/support.ticket.route.ts
+// src/modules/sessionSchedules/sessionschedules.route.ts
 import { Router as Router42 } from "express";
 
-// src/modules/supportTickets/support.ticket.service.ts
+// src/modules/sessionSchedules/sessionschedules.service.ts
 import { Types as Types41 } from "mongoose";
 
-// src/modules/supportTickets/support.ticket.model.schema.ts
+// src/modules/sessionSchedules/sessionschedules.model.schema.ts
 import { model as model39, Schema as Schema39 } from "mongoose";
+
+// src/modules/sessionSchedules/sessionschedules.interface.ts
+var SESSION_TYPES = [
+  "academy_live",
+  "mentorship_group",
+  "retreat_prep",
+  "community_call",
+  "other"
+];
+var SESSION_STATUSES = [
+  "scheduled",
+  "ongoing",
+  "completed",
+  "cancelled",
+  "postponed"
+];
+
+// src/modules/sessionSchedules/sessionschedules.model.schema.ts
+var sessionScheduleSchema = new Schema39(
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 2e3
+    },
+    sessionType: {
+      type: String,
+      enum: SESSION_TYPES,
+      required: true,
+      index: true
+    },
+    host: {
+      type: Schema39.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    pillar: {
+      type: Schema39.Types.ObjectId,
+      ref: "ChallengePillar",
+      index: true
+    },
+    courseModule: {
+      type: Schema39.Types.ObjectId,
+      ref: "CourseModule",
+      index: true
+    },
+    startTime: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    endTime: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    timezone: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    meetingUrl: {
+      type: String,
+      trim: true
+    },
+    capacity: {
+      type: Number,
+      min: 1
+    },
+    status: {
+      type: String,
+      enum: SESSION_STATUSES,
+      default: "scheduled",
+      index: true
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    cancelledBy: {
+      type: Schema39.Types.ObjectId,
+      ref: "User"
+    },
+    cancelledAt: {
+      type: Date
+    },
+    createdBy: {
+      type: Schema39.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema39.Types.ObjectId,
+      ref: "User"
+    }
+  },
+  {
+    timestamps: true,
+    collection: "sessionschedule"
+  }
+);
+sessionScheduleSchema.pre("validate", function() {
+  if (this.startTime && this.endTime && this.endTime.getTime() <= this.startTime.getTime()) {
+    this.invalidate("endTime", "End time must be after start time");
+  }
+});
+sessionScheduleSchema.index({
+  host: 1,
+  startTime: 1
+});
+sessionScheduleSchema.index({
+  pillar: 1,
+  startTime: 1
+});
+sessionScheduleSchema.index({
+  status: 1,
+  startTime: 1
+});
+var SessionSchedule = model39(
+  "SessionSchedule",
+  sessionScheduleSchema
+);
+
+// src/modules/sessionSchedules/sessionschedules.service.ts
+var throwServiceError23 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound25 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError23(message, statusCode);
+  }
+};
+var assertValidObjectId21 = (value, fieldName) => {
+  if (!Types41.ObjectId.isValid(value)) {
+    throwServiceError23(`${fieldName} is invalid`, 400);
+  }
+};
+var safeLogActivityEvent2 = async (params) => {
+  try {
+    await activityLogService.createActivityLog({
+      actor: params.actorId,
+      action: params.action,
+      targetEntityType: "SessionSchedule",
+      targetEntityId: params.targetEntityId,
+      ...params.changeSummary !== void 0 ? { changeSummary: params.changeSummary } : {}
+    });
+  } catch (error) {
+    console.error("Failed to write activity log:", error);
+  }
+};
+var ensureHostExists = async (hostId) => {
+  assertValidObjectId21(hostId, "Host ID");
+  const host = await User.findById(hostId).select("_id fullName email role");
+  assertFound25(host, "Host user not found", 404);
+  return host;
+};
+var ensurePillarExists2 = async (pillarId) => {
+  assertValidObjectId21(pillarId, "Pillar ID");
+  const pillar = await ChallengePillar.findById(pillarId);
+  assertFound25(pillar, "Challenge pillar not found", 404);
+  return pillar;
+};
+var ensureCourseModuleExists6 = async (courseModuleId) => {
+  assertValidObjectId21(courseModuleId, "Course module ID");
+  const courseModule = await CourseModule.findById(courseModuleId);
+  assertFound25(courseModule, "Course module not found", 404);
+  return courseModule;
+};
+var assertNoHostConflict = async (params) => {
+  const filter = {
+    host: new Types41.ObjectId(params.hostId),
+    status: { $nin: ["cancelled"] },
+    startTime: { $lt: params.endTime },
+    endTime: { $gt: params.startTime }
+  };
+  if (params.excludeSessionId) {
+    filter._id = { $ne: new Types41.ObjectId(params.excludeSessionId) };
+  }
+  const conflictingSession = await SessionSchedule.findOne(filter);
+  if (conflictingSession) {
+    throwServiceError23(
+      "This host already has a session scheduled during this time range",
+      409
+    );
+  }
+};
+var populateSessionSchedule = (id3) => SessionSchedule.findById(id3).populate("host", "fullName email role").populate("pillar", "name slug title").populate("courseModule", "title slug").populate("createdBy", "fullName email role").populate("updatedBy", "fullName email role").populate("cancelledBy", "fullName email role");
+var createSessionSchedule = async (payload, actorId) => {
+  await ensureHostExists(payload.host);
+  if (payload.pillar) {
+    await ensurePillarExists2(payload.pillar);
+  }
+  if (payload.courseModule) {
+    await ensureCourseModuleExists6(payload.courseModule);
+  }
+  const startTime = new Date(payload.startTime);
+  const endTime = new Date(payload.endTime);
+  if (endTime.getTime() <= startTime.getTime()) {
+    throwServiceError23("End time must be after start time", 400);
+  }
+  await assertNoHostConflict({
+    hostId: payload.host,
+    startTime,
+    endTime
+  });
+  const createData = {
+    title: payload.title,
+    sessionType: payload.sessionType,
+    host: new Types41.ObjectId(payload.host),
+    startTime,
+    endTime,
+    timezone: payload.timezone,
+    createdBy: new Types41.ObjectId(actorId)
+  };
+  if (payload.description !== void 0) {
+    createData.description = payload.description;
+  }
+  if (payload.pillar) {
+    createData.pillar = new Types41.ObjectId(payload.pillar);
+  }
+  if (payload.courseModule) {
+    createData.courseModule = new Types41.ObjectId(payload.courseModule);
+  }
+  if (payload.meetingUrl !== void 0) {
+    createData.meetingUrl = payload.meetingUrl;
+  }
+  if (payload.capacity !== void 0) {
+    createData.capacity = payload.capacity;
+  }
+  const session = await SessionSchedule.create(createData);
+  await safeLogActivityEvent2({
+    actorId,
+    action: "create",
+    targetEntityId: session._id.toString(),
+    changeSummary: `Session "${payload.title}" scheduled`
+  });
+  const populated = await populateSessionSchedule(session._id);
+  assertFound25(populated, "Session schedule not found after creation", 500);
+  return populated;
+};
+var getAllSessionSchedules = async (options2) => {
+  const page = options2.page ?? 1;
+  const limit = options2.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const filter = {};
+  if (options2.hostId) {
+    assertValidObjectId21(options2.hostId, "Host ID");
+    filter.host = new Types41.ObjectId(options2.hostId);
+  }
+  if (options2.pillarId) {
+    assertValidObjectId21(options2.pillarId, "Pillar ID");
+    filter.pillar = new Types41.ObjectId(options2.pillarId);
+  }
+  if (options2.courseModuleId) {
+    assertValidObjectId21(options2.courseModuleId, "Course module ID");
+    filter.courseModule = new Types41.ObjectId(options2.courseModuleId);
+  }
+  if (options2.sessionType) {
+    filter.sessionType = options2.sessionType;
+  }
+  if (options2.status) {
+    filter.status = options2.status;
+  }
+  if (options2.startDate || options2.endDate) {
+    filter.startTime = {};
+    if (options2.startDate) {
+      filter.startTime.$gte = new Date(
+        options2.startDate
+      );
+    }
+    if (options2.endDate) {
+      filter.startTime.$lte = new Date(
+        options2.endDate
+      );
+    }
+  }
+  const [data, total] = await Promise.all([
+    SessionSchedule.find(filter).sort({
+      startTime: 1
+    }).skip(skip).limit(limit).populate("host", "fullName email role").populate("pillar", "name slug title").populate("courseModule", "title slug"),
+    SessionSchedule.countDocuments(filter)
+  ]);
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+};
+var getSingleSessionSchedule = async (sessionId) => {
+  assertValidObjectId21(sessionId, "Session schedule ID");
+  const session = await populateSessionSchedule(
+    new Types41.ObjectId(sessionId)
+  );
+  assertFound25(session, "Session schedule not found", 404);
+  return session;
+};
+var updateSessionSchedule = async (sessionId, payload, actorId) => {
+  assertValidObjectId21(sessionId, "Session schedule ID");
+  const session = await SessionSchedule.findById(sessionId);
+  assertFound25(session, "Session schedule not found", 404);
+  if (session.status === "cancelled") {
+    throwServiceError23("Cannot update a cancelled session", 400);
+  }
+  if (payload.host) {
+    await ensureHostExists(payload.host);
+    session.host = new Types41.ObjectId(payload.host);
+  }
+  if (payload.pillar !== void 0) {
+    if (payload.pillar === null) {
+      session.set("pillar", void 0);
+    } else {
+      await ensurePillarExists2(payload.pillar);
+      session.pillar = new Types41.ObjectId(payload.pillar);
+    }
+  }
+  if (payload.courseModule !== void 0) {
+    if (payload.courseModule === null) {
+      session.set("courseModule", void 0);
+    } else {
+      await ensureCourseModuleExists6(payload.courseModule);
+      session.courseModule = new Types41.ObjectId(payload.courseModule);
+    }
+  }
+  const nextStartTime = payload.startTime ? new Date(payload.startTime) : session.startTime;
+  const nextEndTime = payload.endTime ? new Date(payload.endTime) : session.endTime;
+  if (nextEndTime.getTime() <= nextStartTime.getTime()) {
+    throwServiceError23("End time must be after start time", 400);
+  }
+  if (payload.startTime || payload.endTime || payload.host) {
+    await assertNoHostConflict({
+      hostId: payload.host ?? session.host.toString(),
+      startTime: nextStartTime,
+      endTime: nextEndTime,
+      excludeSessionId: sessionId
+    });
+  }
+  session.startTime = nextStartTime;
+  session.endTime = nextEndTime;
+  if (payload.title !== void 0) {
+    session.title = payload.title;
+  }
+  if (payload.description !== void 0) {
+    session.description = payload.description;
+  }
+  if (payload.sessionType !== void 0) {
+    session.sessionType = payload.sessionType;
+  }
+  if (payload.timezone !== void 0) {
+    session.timezone = payload.timezone;
+  }
+  if (payload.meetingUrl !== void 0) {
+    session.set(
+      "meetingUrl",
+      payload.meetingUrl === null ? void 0 : payload.meetingUrl
+    );
+  }
+  if (payload.capacity !== void 0) {
+    session.set(
+      "capacity",
+      payload.capacity === null ? void 0 : payload.capacity
+    );
+  }
+  if (payload.status !== void 0) {
+    session.status = payload.status;
+  }
+  session.updatedBy = new Types41.ObjectId(actorId);
+  await session.save();
+  await safeLogActivityEvent2({
+    actorId,
+    action: "update",
+    targetEntityId: session._id.toString(),
+    changeSummary: `Session "${session.title}" updated`
+  });
+  const populated = await populateSessionSchedule(session._id);
+  assertFound25(populated, "Session schedule not found after update", 500);
+  return populated;
+};
+var cancelSessionSchedule = async (sessionId, payload, actorId) => {
+  assertValidObjectId21(sessionId, "Session schedule ID");
+  const session = await SessionSchedule.findById(sessionId);
+  assertFound25(session, "Session schedule not found", 404);
+  if (session.status === "cancelled") {
+    throwServiceError23("Session is already cancelled", 400);
+  }
+  if (session.status === "completed") {
+    throwServiceError23("Cannot cancel a completed session", 400);
+  }
+  session.status = "cancelled";
+  session.cancellationReason = payload.reason;
+  session.cancelledBy = new Types41.ObjectId(actorId);
+  session.cancelledAt = /* @__PURE__ */ new Date();
+  session.updatedBy = new Types41.ObjectId(actorId);
+  await session.save();
+  await safeLogActivityEvent2({
+    actorId,
+    action: "update",
+    targetEntityId: session._id.toString(),
+    changeSummary: `Session "${session.title}" cancelled \u2014 ${payload.reason}`
+  });
+  const populated = await populateSessionSchedule(session._id);
+  assertFound25(populated, "Session schedule not found after cancellation", 500);
+  return populated;
+};
+var deleteSessionSchedule = async (sessionId, actorId) => {
+  assertValidObjectId21(sessionId, "Session schedule ID");
+  const session = await SessionSchedule.findById(sessionId);
+  assertFound25(session, "Session schedule not found", 404);
+  await SessionSchedule.findByIdAndDelete(sessionId);
+  await safeLogActivityEvent2({
+    actorId,
+    action: "delete",
+    targetEntityId: sessionId,
+    changeSummary: `Session "${session.title}" deleted`
+  });
+  return {
+    message: "Session schedule deleted successfully"
+  };
+};
+var sessionScheduleService = {
+  createSessionSchedule,
+  getAllSessionSchedules,
+  getSingleSessionSchedule,
+  updateSessionSchedule,
+  cancelSessionSchedule,
+  deleteSessionSchedule
+};
+
+// src/modules/sessionSchedules/sessionschedules.controller.ts
+var throwControllerError11 = (message, status) => {
+  const error = new Error(message);
+  error.status = status;
+  throw error;
+};
+var assertFound26 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwControllerError11(message, statusCode);
+  }
+};
+var getAuthUserId3 = (req) => {
+  const user = req.user;
+  assertFound26(user, "Authentication required", 401);
+  const id3 = user.id;
+  assertFound26(id3, "Authentication required", 401);
+  return id3;
+};
+var createSessionSchedule2 = async (req, res, next) => {
+  try {
+    const actorId = getAuthUserId3(req);
+    const result = await sessionScheduleService.createSessionSchedule(
+      req.body,
+      actorId
+    );
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Session scheduled successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllSessionSchedules2 = async (req, res, next) => {
+  try {
+    const options2 = {
+      page: Number(req.query.page ?? 1),
+      limit: Number(req.query.limit ?? 20)
+    };
+    if (typeof req.query.hostId === "string") {
+      options2.hostId = req.query.hostId;
+    }
+    if (typeof req.query.pillarId === "string") {
+      options2.pillarId = req.query.pillarId;
+    }
+    if (typeof req.query.courseModuleId === "string") {
+      options2.courseModuleId = req.query.courseModuleId;
+    }
+    if (typeof req.query.sessionType === "string") {
+      options2.sessionType = req.query.sessionType;
+    }
+    if (typeof req.query.status === "string") {
+      options2.status = req.query.status;
+    }
+    if (typeof req.query.startDate === "string") {
+      options2.startDate = req.query.startDate;
+    }
+    if (typeof req.query.endDate === "string") {
+      options2.endDate = req.query.endDate;
+    }
+    const result = await sessionScheduleService.getAllSessionSchedules(options2);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session schedules retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleSessionSchedule2 = async (req, res, next) => {
+  try {
+    const result = await sessionScheduleService.getSingleSessionSchedule(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session schedule retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateSessionSchedule2 = async (req, res, next) => {
+  try {
+    const actorId = getAuthUserId3(req);
+    const result = await sessionScheduleService.updateSessionSchedule(
+      String(req.params.id),
+      req.body,
+      actorId
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session schedule updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var cancelSessionSchedule2 = async (req, res, next) => {
+  try {
+    const actorId = getAuthUserId3(req);
+    const result = await sessionScheduleService.cancelSessionSchedule(
+      String(req.params.id),
+      req.body,
+      actorId
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session schedule cancelled successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var deleteSessionSchedule2 = async (req, res, next) => {
+  try {
+    const actorId = getAuthUserId3(req);
+    const result = await sessionScheduleService.deleteSessionSchedule(
+      String(req.params.id),
+      actorId
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session schedule deleted successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var sessionScheduleController = {
+  createSessionSchedule: createSessionSchedule2,
+  getAllSessionSchedules: getAllSessionSchedules2,
+  getSingleSessionSchedule: getSingleSessionSchedule2,
+  updateSessionSchedule: updateSessionSchedule2,
+  cancelSessionSchedule: cancelSessionSchedule2,
+  deleteSessionSchedule: deleteSessionSchedule2
+};
+
+// src/modules/sessionSchedules/sessionschedules.validation.ts
+import { z as z34 } from "zod";
+var mongoObjectIdSchema26 = z34.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var isoDateTimeSchema = z34.string().refine((value) => !Number.isNaN(Date.parse(value)), {
+  message: "Invalid date/time"
+});
+var createSessionScheduleBodySchema = z34.object({
+  title: z34.string().trim().min(1).max(200),
+  description: z34.string().trim().max(2e3).optional(),
+  sessionType: z34.enum(SESSION_TYPES),
+  host: mongoObjectIdSchema26,
+  pillar: mongoObjectIdSchema26.optional(),
+  courseModule: mongoObjectIdSchema26.optional(),
+  startTime: isoDateTimeSchema,
+  endTime: isoDateTimeSchema,
+  timezone: z34.string().trim().min(1),
+  meetingUrl: z34.string().trim().url().optional(),
+  capacity: z34.coerce.number().int().min(1).optional()
+}).refine((data) => new Date(data.endTime) > new Date(data.startTime), {
+  message: "End time must be after start time",
+  path: ["endTime"]
+});
+var createSessionScheduleValidation = z34.object({
+  body: createSessionScheduleBodySchema
+});
+var updateSessionScheduleBodySchema = z34.object({
+  title: z34.string().trim().min(1).max(200).optional(),
+  description: z34.string().trim().max(2e3).optional(),
+  sessionType: z34.enum(SESSION_TYPES).optional(),
+  host: mongoObjectIdSchema26.optional(),
+  pillar: mongoObjectIdSchema26.nullable().optional(),
+  courseModule: mongoObjectIdSchema26.nullable().optional(),
+  startTime: isoDateTimeSchema.optional(),
+  endTime: isoDateTimeSchema.optional(),
+  timezone: z34.string().trim().min(1).optional(),
+  meetingUrl: z34.string().trim().url().nullable().optional(),
+  capacity: z34.coerce.number().int().min(1).nullable().optional(),
+  status: z34.enum(SESSION_STATUSES).optional()
+}).refine(
+  (data) => !(data.startTime && data.endTime) || new Date(data.endTime) > new Date(data.startTime),
+  {
+    message: "End time must be after start time",
+    path: ["endTime"]
+  }
+);
+var updateSessionScheduleValidation = z34.object({
+  params: z34.object({
+    id: mongoObjectIdSchema26
+  }),
+  body: updateSessionScheduleBodySchema
+});
+var sessionScheduleIdValidation = z34.object({
+  params: z34.object({
+    id: mongoObjectIdSchema26
+  })
+});
+var cancelSessionScheduleValidation = z34.object({
+  params: z34.object({
+    id: mongoObjectIdSchema26
+  }),
+  body: z34.object({
+    reason: z34.string().trim().min(1).max(1e3)
+  })
+});
+var getAllSessionSchedulesValidation = z34.object({
+  query: z34.object({
+    hostId: mongoObjectIdSchema26.optional(),
+    pillarId: mongoObjectIdSchema26.optional(),
+    courseModuleId: mongoObjectIdSchema26.optional(),
+    sessionType: z34.enum(SESSION_TYPES).optional(),
+    status: z34.enum(SESSION_STATUSES).optional(),
+    startDate: isoDateTimeSchema.optional(),
+    endDate: isoDateTimeSchema.optional(),
+    page: z34.coerce.number().int().min(1).optional(),
+    limit: z34.coerce.number().int().min(1).max(100).optional()
+  })
+});
+
+// src/modules/sessionSchedules/sessionschedules.route.ts
+var router42 = Router42();
+router42.post(
+  "/",
+  verifyToken,
+  authorizeRoles("manager", "founder"),
+  validateRequest_default(createSessionScheduleValidation),
+  sessionScheduleController.createSessionSchedule
+);
+router42.get(
+  "/",
+  verifyToken,
+  validateRequest_default(getAllSessionSchedulesValidation),
+  sessionScheduleController.getAllSessionSchedules
+);
+router42.get(
+  "/:id",
+  verifyToken,
+  validateRequest_default(sessionScheduleIdValidation),
+  sessionScheduleController.getSingleSessionSchedule
+);
+router42.patch(
+  "/:id",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  validateRequest_default(updateSessionScheduleValidation),
+  sessionScheduleController.updateSessionSchedule
+);
+router42.patch(
+  "/:id/cancel",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  validateRequest_default(cancelSessionScheduleValidation),
+  sessionScheduleController.cancelSessionSchedule
+);
+router42.delete(
+  "/:id",
+  verifyToken,
+  authorizeRoles("admin", "founder"),
+  validateRequest_default(sessionScheduleIdValidation),
+  sessionScheduleController.deleteSessionSchedule
+);
+var sessionScheduleRoutes = router42;
+
+// src/modules/sessionattendances/sessionattendances.route.ts
+import { Router as Router43 } from "express";
+
+// src/modules/sessionattendances/sessionattendances.service.ts
+import { Types as Types42 } from "mongoose";
+
+// src/modules/sessionattendances/sessionattendances.model.schema.ts
+import { model as model40, Schema as Schema40 } from "mongoose";
+
+// src/modules/sessionattendances/sessionattendances.interface.ts
+var SESSION_ATTENDANCE_STATUSES = [
+  "registered",
+  "attended",
+  "late",
+  "no_show",
+  "cancelled"
+];
+
+// src/modules/sessionattendances/sessionattendances.model.schema.ts
+var sessionAttendanceSchema = new Schema40(
+  {
+    session: {
+      type: Schema40.Types.ObjectId,
+      ref: "SessionSchedule",
+      required: true,
+      index: true
+    },
+    user: {
+      type: Schema40.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    status: {
+      type: String,
+      enum: SESSION_ATTENDANCE_STATUSES,
+      default: "registered",
+      index: true
+    },
+    registeredAt: {
+      type: Date,
+      default: () => /* @__PURE__ */ new Date()
+    },
+    joinedAt: {
+      type: Date
+    },
+    leftAt: {
+      type: Date
+    },
+    markedBy: {
+      type: Schema40.Types.ObjectId,
+      ref: "User"
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    cancelledAt: {
+      type: Date
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    }
+  },
+  {
+    timestamps: true,
+    collection: "sessionattendance"
+  }
+);
+sessionAttendanceSchema.index(
+  {
+    session: 1,
+    user: 1
+  },
+  {
+    unique: true
+  }
+);
+sessionAttendanceSchema.index({
+  session: 1,
+  status: 1
+});
+sessionAttendanceSchema.index({
+  user: 1,
+  status: 1
+});
+var SessionAttendance = model40(
+  "SessionAttendance",
+  sessionAttendanceSchema
+);
+
+// src/modules/sessionattendances/sessionattendances.service.ts
+var throwServiceError24 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound27 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError24(message, statusCode);
+  }
+};
+var assertValidObjectId22 = (value, fieldName) => {
+  if (!Types42.ObjectId.isValid(value)) {
+    throwServiceError24(`${fieldName} is invalid`, 400);
+  }
+};
+var ensureSessionExists = async (sessionId) => {
+  assertValidObjectId22(sessionId, "Session ID");
+  const session = await SessionSchedule.findById(sessionId);
+  assertFound27(session, "Session schedule not found", 404);
+  return session;
+};
+var ensureUserExists4 = async (userId) => {
+  assertValidObjectId22(userId, "User ID");
+  const user = await User.findById(userId).select("_id fullName email role");
+  assertFound27(user, "User not found", 404);
+  return user;
+};
+var populateAttendance = (id3) => SessionAttendance.findById(id3).populate("session", "title sessionType startTime endTime status").populate("user", "fullName email role").populate("markedBy", "fullName email role");
+var registerSessionAttendance = async (payload) => {
+  await ensureSessionExists(payload.session);
+  await ensureUserExists4(payload.user);
+  const sessionObjectId = new Types42.ObjectId(payload.session);
+  const userObjectId = new Types42.ObjectId(payload.user);
+  const attendance = await SessionAttendance.findOneAndUpdate(
+    {
+      session: sessionObjectId,
+      user: userObjectId
+    },
+    {
+      $setOnInsert: {
+        session: sessionObjectId,
+        user: userObjectId,
+        status: "registered",
+        registeredAt: /* @__PURE__ */ new Date()
+      }
+    },
+    {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true
+    }
+  );
+  const populated = await populateAttendance(attendance._id);
+  assertFound27(populated, "Session attendance not found after registration", 500);
+  return populated;
+};
+var markSessionAttendance = async (payload) => {
+  await ensureSessionExists(payload.session);
+  await ensureUserExists4(payload.user);
+  const sessionObjectId = new Types42.ObjectId(payload.session);
+  const userObjectId = new Types42.ObjectId(payload.user);
+  const setData = {
+    status: payload.status
+  };
+  if (payload.status === "attended" || payload.status === "late") {
+    setData.joinedAt = /* @__PURE__ */ new Date();
+  }
+  if (payload.markedBy) {
+    assertValidObjectId22(payload.markedBy, "Marked by ID");
+    setData.markedBy = new Types42.ObjectId(payload.markedBy);
+  }
+  if (payload.notes !== void 0) {
+    setData.notes = payload.notes;
+  }
+  const attendance = await SessionAttendance.findOneAndUpdate(
+    {
+      session: sessionObjectId,
+      user: userObjectId
+    },
+    {
+      $set: setData,
+      $setOnInsert: {
+        session: sessionObjectId,
+        user: userObjectId,
+        registeredAt: /* @__PURE__ */ new Date()
+      }
+    },
+    {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true
+    }
+  );
+  const populated = await populateAttendance(attendance._id);
+  assertFound27(populated, "Session attendance not found after marking", 500);
+  return populated;
+};
+var cancelSessionAttendance = async (payload) => {
+  assertValidObjectId22(payload.session, "Session ID");
+  assertValidObjectId22(payload.user, "User ID");
+  const attendance = await SessionAttendance.findOne({
+    session: new Types42.ObjectId(payload.session),
+    user: new Types42.ObjectId(payload.user)
+  });
+  assertFound27(attendance, "Session attendance record not found", 404);
+  if (attendance.status === "cancelled") {
+    const populated2 = await populateAttendance(attendance._id);
+    assertFound27(populated2, "Session attendance not found", 404);
+    return populated2;
+  }
+  attendance.status = "cancelled";
+  attendance.cancellationReason = payload.reason;
+  attendance.cancelledAt = /* @__PURE__ */ new Date();
+  await attendance.save();
+  const populated = await populateAttendance(attendance._id);
+  assertFound27(populated, "Session attendance not found after cancellation", 500);
+  return populated;
+};
+var getAllSessionAttendances = async (options2) => {
+  const page = options2.page ?? 1;
+  const limit = options2.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const filter = {};
+  if (options2.sessionId) {
+    assertValidObjectId22(options2.sessionId, "Session ID");
+    filter.session = new Types42.ObjectId(options2.sessionId);
+  }
+  if (options2.userId) {
+    assertValidObjectId22(options2.userId, "User ID");
+    filter.user = new Types42.ObjectId(options2.userId);
+  }
+  if (options2.status) {
+    filter.status = options2.status;
+  }
+  const [data, total] = await Promise.all([
+    SessionAttendance.find(filter).sort({
+      createdAt: -1
+    }).skip(skip).limit(limit).populate("session", "title sessionType startTime endTime status").populate("user", "fullName email role").populate("markedBy", "fullName email role"),
+    SessionAttendance.countDocuments(filter)
+  ]);
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+};
+var getMySessionAttendances = async (userId) => {
+  assertValidObjectId22(userId, "User ID");
+  const attendances = await SessionAttendance.find({
+    user: new Types42.ObjectId(userId)
+  }).sort({
+    createdAt: -1
+  }).populate("session", "title sessionType startTime endTime status");
+  return attendances;
+};
+var getSingleSessionAttendance = async (attendanceId) => {
+  assertValidObjectId22(attendanceId, "Session attendance ID");
+  const attendance = await populateAttendance(
+    new Types42.ObjectId(attendanceId)
+  );
+  assertFound27(attendance, "Session attendance not found", 404);
+  return attendance;
+};
+var sessionAttendanceService = {
+  registerSessionAttendance,
+  markSessionAttendance,
+  cancelSessionAttendance,
+  getAllSessionAttendances,
+  getMySessionAttendances,
+  getSingleSessionAttendance
+};
+
+// src/modules/sessionattendances/sessionattendances.controller.ts
+var throwControllerError12 = (message, status) => {
+  const error = new Error(message);
+  error.status = status;
+  throw error;
+};
+var assertFound28 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwControllerError12(message, statusCode);
+  }
+};
+var getAuthUserId4 = (req) => {
+  const user = req.user;
+  assertFound28(user, "Authentication required", 401);
+  const id3 = user.id;
+  assertFound28(id3, "Authentication required", 401);
+  return id3;
+};
+var registerSessionAttendance2 = async (req, res, next) => {
+  try {
+    const authUserId = getAuthUserId4(req);
+    const result = await sessionAttendanceService.registerSessionAttendance({
+      session: req.body.session,
+      user: req.body.user ?? authUserId
+    });
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Registered for session successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var markSessionAttendance2 = async (req, res, next) => {
+  try {
+    const actorId = getAuthUserId4(req);
+    const result = await sessionAttendanceService.markSessionAttendance({
+      ...req.body,
+      markedBy: req.body.markedBy ?? actorId
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Attendance marked successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var cancelSessionAttendance2 = async (req, res, next) => {
+  try {
+    const result = await sessionAttendanceService.cancelSessionAttendance(
+      req.body
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session attendance cancelled successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllSessionAttendances2 = async (req, res, next) => {
+  try {
+    const options2 = {
+      page: Number(req.query.page ?? 1),
+      limit: Number(req.query.limit ?? 20)
+    };
+    if (typeof req.query.sessionId === "string") {
+      options2.sessionId = req.query.sessionId;
+    }
+    if (typeof req.query.userId === "string") {
+      options2.userId = req.query.userId;
+    }
+    if (typeof req.query.status === "string") {
+      options2.status = req.query.status;
+    }
+    const result = await sessionAttendanceService.getAllSessionAttendances(options2);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session attendances retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMySessionAttendances2 = async (req, res, next) => {
+  try {
+    const authUserId = getAuthUserId4(req);
+    const result = await sessionAttendanceService.getMySessionAttendances(authUserId);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Your session attendances retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleSessionAttendance2 = async (req, res, next) => {
+  try {
+    const result = await sessionAttendanceService.getSingleSessionAttendance(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session attendance retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var sessionAttendanceController = {
+  registerSessionAttendance: registerSessionAttendance2,
+  markSessionAttendance: markSessionAttendance2,
+  cancelSessionAttendance: cancelSessionAttendance2,
+  getAllSessionAttendances: getAllSessionAttendances2,
+  getMySessionAttendances: getMySessionAttendances2,
+  getSingleSessionAttendance: getSingleSessionAttendance2
+};
+
+// src/modules/sessionattendances/sessionattendances.validation.ts
+import { z as z35 } from "zod";
+var mongoObjectIdSchema27 = z35.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var registerSessionAttendanceValidation = z35.object({
+  body: z35.object({
+    session: mongoObjectIdSchema27,
+    user: mongoObjectIdSchema27.optional()
+  })
+});
+var markSessionAttendanceValidation = z35.object({
+  body: z35.object({
+    session: mongoObjectIdSchema27,
+    user: mongoObjectIdSchema27,
+    status: z35.enum(SESSION_ATTENDANCE_STATUSES),
+    notes: z35.string().trim().max(1e3).optional()
+  })
+});
+var cancelSessionAttendanceValidation = z35.object({
+  body: z35.object({
+    session: mongoObjectIdSchema27,
+    user: mongoObjectIdSchema27,
+    reason: z35.string().trim().min(1).max(1e3)
+  })
+});
+var sessionAttendanceIdValidation = z35.object({
+  params: z35.object({
+    id: mongoObjectIdSchema27
+  })
+});
+var getAllSessionAttendancesValidation = z35.object({
+  query: z35.object({
+    sessionId: mongoObjectIdSchema27.optional(),
+    userId: mongoObjectIdSchema27.optional(),
+    status: z35.enum(SESSION_ATTENDANCE_STATUSES).optional(),
+    page: z35.coerce.number().int().min(1).optional(),
+    limit: z35.coerce.number().int().min(1).max(100).optional()
+  })
+});
+
+// src/modules/sessionattendances/sessionattendances.route.ts
+var router43 = Router43();
+router43.post(
+  "/register",
+  verifyToken,
+  validateRequest_default(registerSessionAttendanceValidation),
+  sessionAttendanceController.registerSessionAttendance
+);
+router43.post(
+  "/mark",
+  verifyToken,
+  authorizeRoles("manager", "founder"),
+  validateRequest_default(markSessionAttendanceValidation),
+  sessionAttendanceController.markSessionAttendance
+);
+router43.post(
+  "/cancel",
+  verifyToken,
+  authorizeRoles("manager", "founder"),
+  validateRequest_default(cancelSessionAttendanceValidation),
+  sessionAttendanceController.cancelSessionAttendance
+);
+router43.get(
+  "/me",
+  verifyToken,
+  sessionAttendanceController.getMySessionAttendances
+);
+router43.get(
+  "/",
+  verifyToken,
+  authorizeRoles("manager", "founder"),
+  validateRequest_default(getAllSessionAttendancesValidation),
+  sessionAttendanceController.getAllSessionAttendances
+);
+router43.get(
+  "/:id",
+  verifyToken,
+  authorizeRoles("manager", "founder"),
+  validateRequest_default(sessionAttendanceIdValidation),
+  sessionAttendanceController.getSingleSessionAttendance
+);
+var sessionAttendanceRoutes = router43;
+
+// src/modules/supportTickets/support.ticket.route.ts
+import { Router as Router44 } from "express";
+
+// src/modules/supportTickets/support.ticket.service.ts
+import { Types as Types43 } from "mongoose";
+
+// src/modules/supportTickets/support.ticket.model.schema.ts
+import { model as model41, Schema as Schema41 } from "mongoose";
 
 // src/modules/supportTickets/support.ticket.interface.ts
 var SUPPORT_TICKET_CATEGORIES = [
@@ -28435,11 +29642,11 @@ var SUPPORT_TICKET_PRIORITIES = ["low", "medium", "high", "urgent"];
 var SUPPORT_TICKET_STATUSES = ["open", "in_progress", "resolved", "closed"];
 
 // src/modules/supportTickets/support.ticket.model.schema.ts
-var supportTicketSchema = new Schema39(
+var supportTicketSchema = new Schema41(
   {
     ticketNumber: { type: String, required: true, unique: true, index: true, trim: true },
-    requester: { type: Schema39.Types.ObjectId, ref: "User", required: true, index: true },
-    assignedTo: { type: Schema39.Types.ObjectId, ref: "User", index: true },
+    requester: { type: Schema41.Types.ObjectId, ref: "User", required: true, index: true },
+    assignedTo: { type: Schema41.Types.ObjectId, ref: "User", index: true },
     subject: { type: String, required: true, trim: true, maxlength: 200 },
     message: { type: String, required: true, trim: true, maxlength: 5e3 },
     category: { type: String, enum: SUPPORT_TICKET_CATEGORIES, default: "general", required: true, index: true },
@@ -28453,7 +29660,7 @@ var supportTicketSchema = new Schema39(
 );
 supportTicketSchema.index({ requester: 1, createdAt: -1 });
 supportTicketSchema.index({ status: 1, priority: 1, createdAt: -1 });
-var SupportTicket = model39("SupportTicket", supportTicketSchema);
+var SupportTicket = model41("SupportTicket", supportTicketSchema);
 
 // src/modules/supportTickets/support.ticket.service.ts
 var populate = [
@@ -28476,7 +29683,7 @@ var supportTicketService = {
     assertFound_default(user, "Requester user not found", 404);
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        return await SupportTicket.create({ ...payload, requester: new Types41.ObjectId(requester), ticketNumber: ticketNumber() });
+        return await SupportTicket.create({ ...payload, requester: new Types43.ObjectId(requester), ticketNumber: ticketNumber() });
       } catch (error) {
         if (error.code !== 11e3) throw error;
       }
@@ -28484,7 +29691,7 @@ var supportTicketService = {
     throw new BadRequestError("Could not generate a unique ticket number");
   },
   myTickets(requester, query) {
-    return list({ requester: new Types41.ObjectId(requester), ...queryFilters(query) }, query);
+    return list({ requester: new Types43.ObjectId(requester), ...queryFilters(query) }, query);
   },
   adminList(query) {
     return list(queryFilters(query), query);
@@ -28505,7 +29712,7 @@ var supportTicketService = {
       update2.adminResponse = payload.adminResponse;
       update2.respondedAt = /* @__PURE__ */ new Date();
     }
-    if (payload.assignedTo) update2.assignedTo = new Types41.ObjectId(payload.assignedTo);
+    if (payload.assignedTo) update2.assignedTo = new Types43.ObjectId(payload.assignedTo);
     if (payload.status === "resolved" || payload.status === "closed") update2.resolvedAt = /* @__PURE__ */ new Date();
     const ticket = await SupportTicket.findByIdAndUpdate(id3, update2, { new: true, runValidators: true }).populate(populate);
     assertFound_default(ticket, "Support ticket not found", 404);
@@ -28605,62 +29812,62 @@ var supportTicketController = {
 };
 
 // src/modules/supportTickets/support.ticket.validation.ts
-import { z as z34 } from "zod";
-var id = z34.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var createSupportTicketValidation = z34.object({
-  body: z34.object({
-    subject: z34.string().trim().min(3).max(200),
-    message: z34.string().trim().min(5).max(5e3),
-    category: z34.enum(SUPPORT_TICKET_CATEGORIES).default("general"),
-    priority: z34.enum(SUPPORT_TICKET_PRIORITIES).default("medium")
+import { z as z36 } from "zod";
+var id = z36.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var createSupportTicketValidation = z36.object({
+  body: z36.object({
+    subject: z36.string().trim().min(3).max(200),
+    message: z36.string().trim().min(5).max(5e3),
+    category: z36.enum(SUPPORT_TICKET_CATEGORIES).default("general"),
+    priority: z36.enum(SUPPORT_TICKET_PRIORITIES).default("medium")
   })
 });
-var supportTicketIdValidation = z34.object({ params: z34.object({ id }) });
-var supportTicketListValidation = z34.object({
-  query: z34.object({
-    status: z34.enum(SUPPORT_TICKET_STATUSES).optional(),
-    priority: z34.enum(SUPPORT_TICKET_PRIORITIES).optional(),
-    category: z34.enum(SUPPORT_TICKET_CATEGORIES).optional(),
-    page: z34.coerce.number().int().min(1).optional(),
-    limit: z34.coerce.number().int().min(1).max(100).optional()
+var supportTicketIdValidation = z36.object({ params: z36.object({ id }) });
+var supportTicketListValidation = z36.object({
+  query: z36.object({
+    status: z36.enum(SUPPORT_TICKET_STATUSES).optional(),
+    priority: z36.enum(SUPPORT_TICKET_PRIORITIES).optional(),
+    category: z36.enum(SUPPORT_TICKET_CATEGORIES).optional(),
+    page: z36.coerce.number().int().min(1).optional(),
+    limit: z36.coerce.number().int().min(1).max(100).optional()
   })
 });
-var updateSupportTicketValidation = z34.object({
-  params: z34.object({ id }),
-  body: z34.object({
-    status: z34.enum(SUPPORT_TICKET_STATUSES),
-    adminResponse: z34.string().trim().max(5e3).optional(),
+var updateSupportTicketValidation = z36.object({
+  params: z36.object({ id }),
+  body: z36.object({
+    status: z36.enum(SUPPORT_TICKET_STATUSES),
+    adminResponse: z36.string().trim().max(5e3).optional(),
     assignedTo: id.optional()
   })
 });
 
 // src/modules/supportTickets/support.ticket.route.ts
-var router42 = Router42();
+var router44 = Router44();
 var ADMIN_ROLES3 = ["founder", "super_admin", "admin", "manager"];
-router42.get("/", (req, res, next) => {
+router44.get("/", (req, res, next) => {
   res.status(200).json({ message: "Support ticket creation endpoint" });
 });
-router42.post("/", verifyToken, validateRequest_default(createSupportTicketValidation), supportTicketController.create);
-router42.get("/me", verifyToken, validateRequest_default(supportTicketListValidation), supportTicketController.mine);
-router42.get("/admin", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(supportTicketListValidation), supportTicketController.adminList);
-router42.get("/:id", verifyToken, validateRequest_default(supportTicketIdValidation), supportTicketController.getById);
-router42.patch("/:id", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(updateSupportTicketValidation), supportTicketController.update);
-var supportTicketRoutes = router42;
+router44.post("/", verifyToken, validateRequest_default(createSupportTicketValidation), supportTicketController.create);
+router44.get("/me", verifyToken, validateRequest_default(supportTicketListValidation), supportTicketController.mine);
+router44.get("/admin", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(supportTicketListValidation), supportTicketController.adminList);
+router44.get("/:id", verifyToken, validateRequest_default(supportTicketIdValidation), supportTicketController.getById);
+router44.patch("/:id", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(updateSupportTicketValidation), supportTicketController.update);
+var supportTicketRoutes = router44;
 
 // src/modules/userDevices/user.device.route.ts
-import { Router as Router43 } from "express";
+import { Router as Router45 } from "express";
 
 // src/modules/userDevices/user.device.service.ts
-import { Types as Types42 } from "mongoose";
+import { Types as Types44 } from "mongoose";
 
 // src/modules/userDevices/user.device.model.schema.ts
-import { model as model40, Schema as Schema40 } from "mongoose";
+import { model as model42, Schema as Schema42 } from "mongoose";
 
 // src/modules/userDevices/user.device.interface.ts
 var DEVICE_PLATFORMS = ["ios", "android", "web", "windows", "macos", "linux"];
 
 // src/modules/userDevices/user.device.model.schema.ts
-var pushSubscriptionSchema = new Schema40(
+var pushSubscriptionSchema = new Schema42(
   {
     endpoint: { type: String, trim: true, maxlength: 2e3 },
     p256dh: { type: String, select: false },
@@ -28668,9 +29875,9 @@ var pushSubscriptionSchema = new Schema40(
   },
   { _id: false }
 );
-var userDeviceSchema = new Schema40(
+var userDeviceSchema = new Schema42(
   {
-    user: { type: Schema40.Types.ObjectId, ref: "User", required: true, index: true },
+    user: { type: Schema42.Types.ObjectId, ref: "User", required: true, index: true },
     deviceIdentifier: { type: String, required: true, trim: true, maxlength: 200, index: true },
     platform: { type: String, enum: DEVICE_PLATFORMS, required: true },
     deviceName: { type: String, trim: true, maxlength: 120 },
@@ -28687,15 +29894,15 @@ userDeviceSchema.index(
   { "pushSubscription.endpoint": 1 },
   { unique: true, sparse: true, partialFilterExpression: { isActive: true } }
 );
-var UserDevice = model40("UserDevice", userDeviceSchema);
+var UserDevice = model42("UserDevice", userDeviceSchema);
 
 // src/modules/userDevices/user.device.service.ts
 var safeSelect = "_id deviceIdentifier platform deviceName appVersion isActive lastActiveAt revokedAt createdAt updatedAt";
 var userDeviceService = {
   async register(userId, payload) {
     const device = await UserDevice.findOneAndUpdate(
-      { user: new Types42.ObjectId(userId), deviceIdentifier: payload.deviceIdentifier },
-      { ...payload, user: new Types42.ObjectId(userId), isActive: true, revokedAt: void 0, lastActiveAt: /* @__PURE__ */ new Date() },
+      { user: new Types44.ObjectId(userId), deviceIdentifier: payload.deviceIdentifier },
+      { ...payload, user: new Types44.ObjectId(userId), isActive: true, revokedAt: void 0, lastActiveAt: /* @__PURE__ */ new Date() },
       { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
     ).select(safeSelect);
     return device;
@@ -28771,38 +29978,38 @@ var userDeviceController = {
 };
 
 // src/modules/userDevices/user.device.validation.ts
-import { z as z35 } from "zod";
-var id2 = z35.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var registerUserDeviceValidation = z35.object({
-  body: z35.object({
-    deviceIdentifier: z35.string().trim().min(1).max(200),
-    platform: z35.enum(DEVICE_PLATFORMS),
-    deviceName: z35.string().trim().max(120).optional(),
-    appVersion: z35.string().trim().max(40).optional(),
-    pushSubscription: z35.object({
-      endpoint: z35.string().url().max(2e3),
-      p256dh: z35.string().min(1).max(500).optional(),
-      auth: z35.string().min(1).max(500).optional()
+import { z as z37 } from "zod";
+var id2 = z37.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var registerUserDeviceValidation = z37.object({
+  body: z37.object({
+    deviceIdentifier: z37.string().trim().min(1).max(200),
+    platform: z37.enum(DEVICE_PLATFORMS),
+    deviceName: z37.string().trim().max(120).optional(),
+    appVersion: z37.string().trim().max(40).optional(),
+    pushSubscription: z37.object({
+      endpoint: z37.string().url().max(2e3),
+      p256dh: z37.string().min(1).max(500).optional(),
+      auth: z37.string().min(1).max(500).optional()
     }).optional()
   })
 });
-var userDeviceIdValidation = z35.object({ params: z35.object({ id: id2 }) });
+var userDeviceIdValidation = z37.object({ params: z37.object({ id: id2 }) });
 
 // src/modules/userDevices/user.device.route.ts
-var router43 = Router43();
-router43.post("/me", verifyToken, validateRequest_default(registerUserDeviceValidation), userDeviceController.register);
-router43.get("/me", verifyToken, userDeviceController.list);
-router43.patch("/me/:id/revoke", verifyToken, validateRequest_default(userDeviceIdValidation), userDeviceController.revoke);
-var userDeviceRoutes = router43;
+var router45 = Router45();
+router45.post("/me", verifyToken, validateRequest_default(registerUserDeviceValidation), userDeviceController.register);
+router45.get("/me", verifyToken, userDeviceController.list);
+router45.patch("/me/:id/revoke", verifyToken, validateRequest_default(userDeviceIdValidation), userDeviceController.revoke);
+var userDeviceRoutes = router45;
 
 // src/modules/streakLogs/streaklog.route.ts
-import { Router as Router44 } from "express";
+import { Router as Router46 } from "express";
 
 // src/modules/streakLogs/streaklog.service.ts
-import { Types as Types43 } from "mongoose";
+import { Types as Types45 } from "mongoose";
 
 // src/modules/streakLogs/streaklog.model.schema.ts
-import { model as model41, Schema as Schema41 } from "mongoose";
+import { model as model43, Schema as Schema43 } from "mongoose";
 
 // src/modules/streakLogs/streaklog.interface.ts
 var STREAK_TIMEZONES = ["UTC", "Asia/Dhaka"];
@@ -28816,16 +30023,16 @@ var STREAK_ACTIVITY_TYPES = [
 ];
 
 // src/modules/streakLogs/streaklog.model.schema.ts
-var streakLogSchema = new Schema41(
+var streakLogSchema = new Schema43(
   {
     user: {
-      type: Schema41.Types.ObjectId,
+      type: Schema43.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     academyProfile: {
-      type: Schema41.Types.ObjectId,
+      type: Schema43.Types.ObjectId,
       ref: "AcademyProfile",
       index: true
     },
@@ -28887,7 +30094,7 @@ var streakLogSchema = new Schema41(
 streakLogSchema.index({ user: 1, activityDate: 1 }, { unique: true });
 streakLogSchema.index({ user: 1, normalizedDate: 1 });
 streakLogSchema.index({ academyProfile: 1, normalizedDate: 1 });
-var StreakLog = model41("StreakLog", streakLogSchema);
+var StreakLog = model43("StreakLog", streakLogSchema);
 
 // src/modules/streakLogs/streaklog.service.ts
 var normalizeDateString = (input, timezone = "UTC") => {
@@ -28907,7 +30114,7 @@ var normalizeDateString = (input, timezone = "UTC") => {
 };
 var getDateFromNormalized = (normalizedDate) => /* @__PURE__ */ new Date(`${normalizedDate}T00:00:00.000Z`);
 var syncStreaksForUser = async (userId) => {
-  const entries = await StreakLog.find({ user: new Types43.ObjectId(userId) }).sort({ normalizedDate: 1 }).lean();
+  const entries = await StreakLog.find({ user: new Types45.ObjectId(userId) }).sort({ normalizedDate: 1 }).lean();
   if (entries.length === 0) {
     return;
   }
@@ -28934,7 +30141,7 @@ var syncStreaksForUser = async (userId) => {
     );
   }
   await StreakLog.updateMany(
-    { user: new Types43.ObjectId(userId) },
+    { user: new Types45.ObjectId(userId) },
     {
       currentStreakDays,
       longestStreakDays,
@@ -28954,15 +30161,15 @@ var createStreakLog = async (payload) => {
   const normalizedDate = normalizeDateString(payload.activityDate, timezone);
   const activityDateValue = getDateFromNormalized(normalizedDate);
   const existing = await StreakLog.findOne({
-    user: new Types43.ObjectId(payload.user),
+    user: new Types45.ObjectId(payload.user),
     normalizedDate
   }).select("_id");
   if (existing) {
     throw new Error("A streak log already exists for this user and date");
   }
   const log = await StreakLog.create({
-    user: new Types43.ObjectId(payload.user),
-    academyProfile: payload.academyProfile ? new Types43.ObjectId(payload.academyProfile) : void 0,
+    user: new Types45.ObjectId(payload.user),
+    academyProfile: payload.academyProfile ? new Types45.ObjectId(payload.academyProfile) : void 0,
     activityDate: activityDateValue,
     normalizedDate,
     timezone,
@@ -28981,10 +30188,10 @@ var getStreakLogs = async (query) => {
   const skip = (page - 1) * limit;
   const filter = {};
   if (query.userId) {
-    filter.user = new Types43.ObjectId(query.userId);
+    filter.user = new Types45.ObjectId(query.userId);
   }
   if (query.academyProfileId) {
-    filter.academyProfile = new Types43.ObjectId(query.academyProfileId);
+    filter.academyProfile = new Types45.ObjectId(query.academyProfileId);
   }
   if (query.timezone) {
     filter.timezone = query.timezone;
@@ -29133,76 +30340,76 @@ var streakLogController = {
 };
 
 // src/modules/streakLogs/streaklog.validation.ts
-import { z as z36 } from "zod";
-var mongoObjectIdSchema26 = z36.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var dateStringSchema = z36.union([
-  z36.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
-  z36.string().datetime({ offset: true })
-]).or(z36.date());
-var streakLogIdValidation = z36.object({
-  params: z36.object({
-    id: mongoObjectIdSchema26
+import { z as z38 } from "zod";
+var mongoObjectIdSchema28 = z38.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var dateStringSchema = z38.union([
+  z38.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  z38.string().datetime({ offset: true })
+]).or(z38.date());
+var streakLogIdValidation = z38.object({
+  params: z38.object({
+    id: mongoObjectIdSchema28
   })
 });
-var createStreakLogValidation = z36.object({
-  body: z36.object({
-    user: mongoObjectIdSchema26,
-    academyProfile: mongoObjectIdSchema26.optional(),
+var createStreakLogValidation = z38.object({
+  body: z38.object({
+    user: mongoObjectIdSchema28,
+    academyProfile: mongoObjectIdSchema28.optional(),
     activityDate: dateStringSchema,
-    timezone: z36.enum(STREAK_TIMEZONES).optional(),
-    activityType: z36.enum(STREAK_ACTIVITY_TYPES).optional(),
-    activityCount: z36.number().int().min(1).max(100).optional()
+    timezone: z38.enum(STREAK_TIMEZONES).optional(),
+    activityType: z38.enum(STREAK_ACTIVITY_TYPES).optional(),
+    activityCount: z38.number().int().min(1).max(100).optional()
   })
 });
-var getStreakLogsValidation = z36.object({
-  query: z36.object({
-    userId: mongoObjectIdSchema26.optional(),
-    academyProfileId: mongoObjectIdSchema26.optional(),
-    timezone: z36.enum(STREAK_TIMEZONES).optional(),
-    fromDate: z36.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    toDate: z36.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    page: z36.coerce.number().int().min(1).optional(),
-    limit: z36.coerce.number().int().min(1).max(100).optional()
+var getStreakLogsValidation = z38.object({
+  query: z38.object({
+    userId: mongoObjectIdSchema28.optional(),
+    academyProfileId: mongoObjectIdSchema28.optional(),
+    timezone: z38.enum(STREAK_TIMEZONES).optional(),
+    fromDate: z38.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    toDate: z38.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    page: z38.coerce.number().int().min(1).optional(),
+    limit: z38.coerce.number().int().min(1).max(100).optional()
   })
 });
 
 // src/modules/streakLogs/streaklog.route.ts
 var ADMIN_ROLES4 = ["founder", "super_admin", "admin", "manager"];
-var router44 = Router44();
-router44.post(
+var router46 = Router46();
+router46.post(
   "/",
   verifyToken,
   validateRequest_default(createStreakLogValidation),
   streakLogController.createStreakLog
 );
-router44.get(
+router46.get(
   "/me",
   verifyToken,
   streakLogController.getMyStreakLogs
 );
-router44.get(
+router46.get(
   "/",
   verifyToken,
   authorizeRoles(...ADMIN_ROLES4),
   validateRequest_default(getStreakLogsValidation),
   streakLogController.getStreakLogs
 );
-router44.get(
+router46.get(
   "/:id",
   verifyToken,
   validateRequest_default(streakLogIdValidation),
   streakLogController.getSingleStreakLog
 );
-var streakLogRoutes = router44;
+var streakLogRoutes = router46;
 
 // src/modules/pointsLedger/pointsledger.route.ts
-import { Router as Router45 } from "express";
+import { Router as Router47 } from "express";
 
 // src/modules/pointsLedger/pointsledger.service.ts
-import { Types as Types44 } from "mongoose";
+import { Types as Types46 } from "mongoose";
 
 // src/modules/pointsLedger/pointsledger.model.schema.ts
-import { model as model42, Schema as Schema42 } from "mongoose";
+import { model as model44, Schema as Schema44 } from "mongoose";
 
 // src/modules/pointsLedger/pointsledger.interface.ts
 var POINTS_LEDGER_TYPES = [
@@ -29235,10 +30442,10 @@ var POINTS_LEDGER_REASONS = [
 ];
 
 // src/modules/pointsLedger/pointsledger.model.schema.ts
-var pointsLedgerSchema = new Schema42(
+var pointsLedgerSchema = new Schema44(
   {
     user: {
-      type: Schema42.Types.ObjectId,
+      type: Schema44.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
@@ -29249,7 +30456,7 @@ var pointsLedgerSchema = new Schema42(
       index: true
     },
     sourceId: {
-      type: Schema42.Types.ObjectId,
+      type: Schema44.Types.ObjectId,
       index: true
     },
     sourceEntity: {
@@ -29292,32 +30499,32 @@ var pointsLedgerSchema = new Schema42(
       max: 1e6
     },
     module: {
-      type: Schema42.Types.ObjectId,
+      type: Schema44.Types.ObjectId,
       ref: "CourseModule",
       index: true
     },
     video: {
-      type: Schema42.Types.ObjectId,
+      type: Schema44.Types.ObjectId,
       ref: "ModuleVideo",
       index: true
     },
     action: {
-      type: Schema42.Types.ObjectId,
+      type: Schema44.Types.ObjectId,
       ref: "ModuleAction",
       index: true
     },
     quiz: {
-      type: Schema42.Types.ObjectId,
+      type: Schema44.Types.ObjectId,
       ref: "QuizQuestion",
       index: true
     },
     session: {
-      type: Schema42.Types.ObjectId,
+      type: Schema44.Types.ObjectId,
       ref: "SessionSchedule",
       index: true
     },
     metadata: {
-      type: Schema42.Types.Mixed,
+      type: Schema44.Types.Mixed,
       default: {}
     }
   },
@@ -29332,16 +30539,16 @@ pointsLedgerSchema.index(
 );
 pointsLedgerSchema.index({ user: 1, createdAt: -1 });
 pointsLedgerSchema.index({ sourceType: 1, sourceId: 1 });
-var PointsLedger = model42("PointsLedger", pointsLedgerSchema);
+var PointsLedger = model44("PointsLedger", pointsLedgerSchema);
 
 // src/modules/pointsLedger/pointsledger.service.ts
 var createPointsLedger = async (payload) => {
   const user = await User.findById(payload.user).select("_id");
   assertFound_default(user, "User not found", 404);
   const sourceFilter = payload.sourceType && payload.sourceId ? {
-    user: new Types44.ObjectId(payload.user),
+    user: new Types46.ObjectId(payload.user),
     sourceType: payload.sourceType,
-    sourceId: new Types44.ObjectId(payload.sourceId),
+    sourceId: new Types46.ObjectId(payload.sourceId),
     reason: payload.reason
   } : null;
   if (sourceFilter) {
@@ -29351,9 +30558,9 @@ var createPointsLedger = async (payload) => {
     }
   }
   const entry = await PointsLedger.create({
-    user: new Types44.ObjectId(payload.user),
+    user: new Types46.ObjectId(payload.user),
     sourceType: payload.sourceType,
-    sourceId: payload.sourceId ? new Types44.ObjectId(payload.sourceId) : void 0,
+    sourceId: payload.sourceId ? new Types46.ObjectId(payload.sourceId) : void 0,
     sourceEntity: payload.sourceEntity,
     points: payload.points,
     transactionType: payload.transactionType,
@@ -29361,11 +30568,11 @@ var createPointsLedger = async (payload) => {
     description: payload.description,
     balanceAfter: payload.balanceAfter,
     balanceBefore: payload.balanceBefore,
-    module: payload.module ? new Types44.ObjectId(payload.module) : void 0,
-    video: payload.video ? new Types44.ObjectId(payload.video) : void 0,
-    action: payload.action ? new Types44.ObjectId(payload.action) : void 0,
-    quiz: payload.quiz ? new Types44.ObjectId(payload.quiz) : void 0,
-    session: payload.session ? new Types44.ObjectId(payload.session) : void 0,
+    module: payload.module ? new Types46.ObjectId(payload.module) : void 0,
+    video: payload.video ? new Types46.ObjectId(payload.video) : void 0,
+    action: payload.action ? new Types46.ObjectId(payload.action) : void 0,
+    quiz: payload.quiz ? new Types46.ObjectId(payload.quiz) : void 0,
+    session: payload.session ? new Types46.ObjectId(payload.session) : void 0,
     metadata: payload.metadata ?? {}
   });
   return entry;
@@ -29376,7 +30583,7 @@ var getPointsLedger = async (query) => {
   const skip = (page - 1) * limit;
   const filter = {};
   if (query.userId) {
-    filter.user = new Types44.ObjectId(query.userId);
+    filter.user = new Types46.ObjectId(query.userId);
   }
   if (query.sourceType) {
     filter.sourceType = query.sourceType;
@@ -29481,72 +30688,72 @@ var pointsLedgerController = {
 };
 
 // src/modules/pointsLedger/pointsledger.validation.ts
-import { z as z37 } from "zod";
-var mongoObjectIdSchema27 = z37.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var pointsLedgerIdValidation = z37.object({
-  params: z37.object({
-    id: mongoObjectIdSchema27
+import { z as z39 } from "zod";
+var mongoObjectIdSchema29 = z39.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var pointsLedgerIdValidation = z39.object({
+  params: z39.object({
+    id: mongoObjectIdSchema29
   })
 });
-var createPointsLedgerValidation = z37.object({
-  body: z37.object({
-    user: mongoObjectIdSchema27,
-    sourceType: z37.enum(POINTS_LEDGER_SOURCE_TYPES).optional(),
-    sourceId: mongoObjectIdSchema27.optional(),
-    sourceEntity: z37.string().trim().max(120).optional(),
-    points: z37.number().int().min(-1e6).max(1e6),
-    transactionType: z37.enum(POINTS_LEDGER_TYPES),
-    reason: z37.enum(POINTS_LEDGER_REASONS),
-    description: z37.string().trim().max(500).optional(),
-    balanceAfter: z37.number().int().min(-1e6).max(1e6).optional(),
-    balanceBefore: z37.number().int().min(-1e6).max(1e6).optional(),
-    module: mongoObjectIdSchema27.optional(),
-    video: mongoObjectIdSchema27.optional(),
-    action: mongoObjectIdSchema27.optional(),
-    quiz: mongoObjectIdSchema27.optional(),
-    session: mongoObjectIdSchema27.optional(),
-    metadata: z37.record(z37.unknown()).optional()
+var createPointsLedgerValidation = z39.object({
+  body: z39.object({
+    user: mongoObjectIdSchema29,
+    sourceType: z39.enum(POINTS_LEDGER_SOURCE_TYPES).optional(),
+    sourceId: mongoObjectIdSchema29.optional(),
+    sourceEntity: z39.string().trim().max(120).optional(),
+    points: z39.number().int().min(-1e6).max(1e6),
+    transactionType: z39.enum(POINTS_LEDGER_TYPES),
+    reason: z39.enum(POINTS_LEDGER_REASONS),
+    description: z39.string().trim().max(500).optional(),
+    balanceAfter: z39.number().int().min(-1e6).max(1e6).optional(),
+    balanceBefore: z39.number().int().min(-1e6).max(1e6).optional(),
+    module: mongoObjectIdSchema29.optional(),
+    video: mongoObjectIdSchema29.optional(),
+    action: mongoObjectIdSchema29.optional(),
+    quiz: mongoObjectIdSchema29.optional(),
+    session: mongoObjectIdSchema29.optional(),
+    metadata: z39.record(z39.unknown()).optional()
   })
 });
-var getPointsLedgerValidation = z37.object({
-  query: z37.object({
-    userId: mongoObjectIdSchema27.optional(),
-    sourceType: z37.enum(POINTS_LEDGER_SOURCE_TYPES).optional(),
-    sourceEntity: z37.string().trim().max(120).optional(),
-    reason: z37.enum(POINTS_LEDGER_REASONS).optional(),
-    transactionType: z37.enum(POINTS_LEDGER_TYPES).optional(),
-    page: z37.coerce.number().int().min(1).optional(),
-    limit: z37.coerce.number().int().min(1).max(100).optional()
+var getPointsLedgerValidation = z39.object({
+  query: z39.object({
+    userId: mongoObjectIdSchema29.optional(),
+    sourceType: z39.enum(POINTS_LEDGER_SOURCE_TYPES).optional(),
+    sourceEntity: z39.string().trim().max(120).optional(),
+    reason: z39.enum(POINTS_LEDGER_REASONS).optional(),
+    transactionType: z39.enum(POINTS_LEDGER_TYPES).optional(),
+    page: z39.coerce.number().int().min(1).optional(),
+    limit: z39.coerce.number().int().min(1).max(100).optional()
   })
 });
 
 // src/modules/pointsLedger/pointsledger.route.ts
 var ADMIN_ROLES5 = ["founder", "super_admin", "admin", "manager"];
-var router45 = Router45();
-router45.post(
+var router47 = Router47();
+router47.post(
   "/",
   verifyToken,
   authorizeRoles(...ADMIN_ROLES5),
   validateRequest_default(createPointsLedgerValidation),
   pointsLedgerController.createPointsLedger
 );
-router45.get(
+router47.get(
   "/",
   verifyToken,
   authorizeRoles(...ADMIN_ROLES5),
   validateRequest_default(getPointsLedgerValidation),
   pointsLedgerController.getPointsLedger
 );
-router45.get(
+router47.get(
   "/:id",
   verifyToken,
   validateRequest_default(pointsLedgerIdValidation),
   pointsLedgerController.getSinglePointsLedger
 );
-var pointsLedgerRoutes = router45;
+var pointsLedgerRoutes = router47;
 
 // src/routes/index.ts
-var router46 = Router46();
+var router48 = Router48();
 var moduleRoutes = [
   {
     path: "/admin",
@@ -29869,6 +31076,14 @@ var moduleRoutes = [
     route: activityLogRoutes
   },
   {
+    path: "/invictus/session-schedules",
+    route: sessionScheduleRoutes
+  },
+  {
+    path: "/invictus/session-attendances",
+    route: sessionAttendanceRoutes
+  },
+  {
     path: "/support-tickets",
     route: supportTicketRoutes
   },
@@ -29886,9 +31101,9 @@ var moduleRoutes = [
   }
 ];
 moduleRoutes.forEach((route) => {
-  router46.use(route.path, route.route);
+  router48.use(route.path, route.route);
 });
-var routes_default = router46;
+var routes_default = router48;
 
 // src/swagger/swagger.ts
 import swaggerJSDoc from "swagger-jsdoc";
