@@ -16265,8 +16265,10 @@ var moduleActionRoutes = router18;
 import { Router as Router19 } from "express";
 
 // src/utility/country.ts
+import { createRequire as createNodeRequire } from "module";
 import countries from "i18n-iso-countries";
-import enLocale from "i18n-iso-countries/langs/en.json";
+var requireCountryJson = createNodeRequire(import.meta.url);
+var enLocale = requireCountryJson("i18n-iso-countries/langs/en.json");
 countries.registerLocale(enLocale);
 var resolveCountry = (rawName) => {
   if (!rawName) return null;
@@ -23126,18 +23128,6 @@ var emitNotificationToUser = (userId, payload) => {
   io.to(getUserRoom(userId)).emit("notification:new", payload);
 };
 var onlineUsers = /* @__PURE__ */ new Map();
-var getRoomOnlineUserIds = (roomId) => {
-  const userIds = /* @__PURE__ */ new Set();
-  const socketIds = io.sockets.adapter.rooms.get(roomId) ?? /* @__PURE__ */ new Set();
-  for (const socketId of socketIds) {
-    const roomSocket = io.sockets.sockets.get(socketId);
-    const userId = roomSocket?.data.user?.id;
-    if (userId) {
-      userIds.add(userId);
-    }
-  }
-  return Array.from(userIds);
-};
 var initSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
@@ -23177,13 +23167,20 @@ var initSocket = (httpServer) => {
       socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
       socket.data.user.profileImage = userDoc?.profileImage ?? null;
       const countryName = userDoc?.country?.trim();
-      if (!countryName) {
-        socket.emit("error", "No country set on your profile");
+      const isPrivilegedRole = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager";
+      let country = countryName ? resolveCountry(countryName) : null;
+      if (!country && !isPrivilegedRole) {
+        socket.emit(
+          "error",
+          countryName ? "Invalid country on your profile" : "No country set on your profile"
+        );
         return socket.disconnect();
       }
-      const country = resolveCountry(countryName);
       if (!country) {
-        socket.emit("error", "Invalid country on your profile");
+        country = resolveCountry("United States");
+      }
+      if (!country) {
+        socket.emit("error", "No default community room is configured");
         return socket.disconnect();
       }
       const room = await getOrCreateCountryRoom(country.name, userId);
@@ -23217,28 +23214,19 @@ var initSocket = (httpServer) => {
           const nextRoomId = nextRoom._id.toString();
           if (roomId !== nextRoomId) {
             socket.leave(roomId);
-            if (!getRoomOnlineUserIds(roomId).includes(userId)) {
-              socket.to(roomId).emit("presence:update", { userId, online: false });
-            }
-            const wasOnlineInNextRoom = getRoomOnlineUserIds(nextRoomId).includes(
-              userId
-            );
+            socket.to(roomId).emit("presence:update", {
+              userId,
+              online: false
+            });
             socket.join(nextRoomId);
             roomId = nextRoomId;
             socket.data.roomId = nextRoomId;
-            if (!wasOnlineInNextRoom) {
-              socket.to(nextRoomId).emit("presence:update", {
-                userId,
-                online: true
-              });
-            }
           }
           socket.emit("room:joined", {
             roomId: nextRoomId,
             countryCode: nextRoom.countryCode,
             countryName: nextRoom.countryName
           });
-          socket.emit("presence:list", getRoomOnlineUserIds(nextRoomId));
         } catch (error) {
           console.error("room:join error:", error);
           socket.emit("error", error.message || "Failed to join room");
@@ -23252,7 +23240,7 @@ var initSocket = (httpServer) => {
       if (isFirstConnectionForUser) {
         socket.to(roomId).emit("presence:update", { userId, online: true });
       }
-      socket.emit("presence:list", getRoomOnlineUserIds(roomId));
+      socket.emit("presence:list", Array.from(onlineUsers.keys()));
       socket.on(
         "message:send",
         async (payload) => {
@@ -23305,8 +23293,6 @@ var initSocket = (httpServer) => {
         userSockets?.delete(socket.id);
         if (userSockets && userSockets.size === 0) {
           onlineUsers.delete(userId);
-        }
-        if (!getRoomOnlineUserIds(roomId).includes(userId)) {
           socket.to(roomId).emit("presence:update", { userId, online: false });
         }
         console.log(`Socket disconnected: ${socket.id}`);
