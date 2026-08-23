@@ -29,6 +29,13 @@ const roomSchema = new Schema<IRoom>(
       ref: 'User',
       required: true,
     },
+    type: {
+      type: String,
+      enum: ["general", "country"], default: "general"
+    },
+    countryName: String,
+    countryCode: { type: String, unique: true, sparse: true }
+
   },
   {
     timestamps: true,

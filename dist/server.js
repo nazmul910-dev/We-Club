@@ -31,7 +31,7 @@ var routeNotFoundHandler = (req, res, next) => {
 var routeNotFoundHandler_default = routeNotFoundHandler;
 
 // src/routes/index.ts
-import { Router as Router46 } from "express";
+import { Router as Router44 } from "express";
 
 // src/modules/users/user.route.ts
 import { Router } from "express";
@@ -560,8 +560,8 @@ var getAllUsersFromDB = async (query) => {
     meta
   };
 };
-var getSingleUserFromDB = async (id3) => {
-  const user = await User.findById(id3);
+var getSingleUserFromDB = async (id) => {
+  const user = await User.findById(id);
   return user;
 };
 var createAdminAccount = async (payload, requesterId, requesterRole) => {
@@ -597,8 +597,8 @@ var createAdminAccount = async (payload, requesterId, requesterRole) => {
   const { password, ...safeUser } = userObject;
   return safeUser;
 };
-var activateManagerByAdmin = async (id3) => {
-  const user = await User.findById(id3);
+var activateManagerByAdmin = async (id) => {
+  const user = await User.findById(id);
   if (!user) {
     throw new Error("User not found.");
   }
@@ -618,8 +618,8 @@ var activateManagerByAdmin = async (id3) => {
   const { password, ...safeUser } = userObject;
   return safeUser;
 };
-var suspendManagerByAdmin = async (id3) => {
-  const user = await User.findById(id3);
+var suspendManagerByAdmin = async (id) => {
+  const user = await User.findById(id);
   if (!user) {
     throw new Error("User not found.");
   }
@@ -635,15 +635,15 @@ var suspendManagerByAdmin = async (id3) => {
   const { password, ...safeUser } = userObject;
   return safeUser;
 };
-var deleteManagerByAdmin = async (id3) => {
-  const user = await User.findById(id3);
+var deleteManagerByAdmin = async (id) => {
+  const user = await User.findById(id);
   if (!user) {
     throw new Error("User not found.");
   }
   if (user.role === "founder") {
     throw new Error("The Founder account cannot be deleted.");
   }
-  await User.findByIdAndDelete(id3);
+  await User.findByIdAndDelete(id);
   return null;
 };
 var userService = {
@@ -690,8 +690,8 @@ var getAllUsers = async (req, res, next) => {
 };
 var getSingleUser = async (req, res, next) => {
   try {
-    const id3 = getSingleParamId(req.params.id);
-    if (!id3) {
+    const id = getSingleParamId(req.params.id);
+    if (!id) {
       return sendResponse_default(res, {
         statusCode: 400,
         success: false,
@@ -699,7 +699,7 @@ var getSingleUser = async (req, res, next) => {
         data: null
       });
     }
-    const result = await userService.getSingleUserFromDB(id3);
+    const result = await userService.getSingleUserFromDB(id);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -731,8 +731,8 @@ var createManagerByAdmin = async (req, res, next) => {
 };
 var deleteManagerByAdmin2 = async (req, res, next) => {
   try {
-    const id3 = getSingleParamId(req.params.id);
-    if (!id3) {
+    const id = getSingleParamId(req.params.id);
+    if (!id) {
       return sendResponse_default(res, {
         statusCode: 400,
         success: false,
@@ -740,7 +740,7 @@ var deleteManagerByAdmin2 = async (req, res, next) => {
         data: null
       });
     }
-    await userService.deleteManagerByAdmin(id3);
+    await userService.deleteManagerByAdmin(id);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -753,8 +753,8 @@ var deleteManagerByAdmin2 = async (req, res, next) => {
 };
 var activateManagerByAdmin2 = async (req, res, next) => {
   try {
-    const id3 = getSingleParamId(req.params.id);
-    if (!id3) {
+    const id = getSingleParamId(req.params.id);
+    if (!id) {
       return sendResponse_default(res, {
         statusCode: 400,
         success: false,
@@ -762,7 +762,7 @@ var activateManagerByAdmin2 = async (req, res, next) => {
         data: null
       });
     }
-    const result = await userService.activateManagerByAdmin(id3);
+    const result = await userService.activateManagerByAdmin(id);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -775,8 +775,8 @@ var activateManagerByAdmin2 = async (req, res, next) => {
 };
 var suspendManagerByAdmin2 = async (req, res, next) => {
   try {
-    const id3 = getSingleParamId(req.params.id);
-    if (!id3) {
+    const id = getSingleParamId(req.params.id);
+    if (!id) {
       return sendResponse_default(res, {
         statusCode: 400,
         success: false,
@@ -784,7 +784,7 @@ var suspendManagerByAdmin2 = async (req, res, next) => {
         data: null
       });
     }
-    const result = await userService.suspendManagerByAdmin(id3);
+    const result = await userService.suspendManagerByAdmin(id);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -2069,8 +2069,8 @@ var getMyListingFromDB = async (associateId, query = {}) => {
   };
   return result;
 };
-var getListingByIdFromDB = async (id3) => {
-  return await Listing.findById(id3).populate("associate_id", "name email");
+var getListingByIdFromDB = async (id) => {
+  return await Listing.findById(id).populate("associate_id", "name email");
 };
 var getMyPromotersFromDB = async (associateId) => {
   const result = await Listing.aggregate([
@@ -2121,8 +2121,8 @@ var getMyPromotersFromDB = async (associateId) => {
   ]);
   return result;
 };
-var updateListingInDB = async (id3, associateId, payload) => {
-  const listing = await Listing.findById(id3);
+var updateListingInDB = async (id, associateId, payload) => {
+  const listing = await Listing.findById(id);
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
@@ -2133,13 +2133,13 @@ var updateListingInDB = async (id3, associateId, payload) => {
     );
   }
   const { promoters, associate_id, ...safePayload } = payload;
-  return await Listing.findByIdAndUpdate(id3, safePayload, {
+  return await Listing.findByIdAndUpdate(id, safePayload, {
     new: true,
     runValidators: true
   });
 };
-var deleteListingFromDB = async (id3, userId, role) => {
-  const listing = await Listing.findById(id3);
+var deleteListingFromDB = async (id, userId, role) => {
+  const listing = await Listing.findById(id);
   if (!listing) {
     throw new Error("Listing not found");
   }
@@ -2157,7 +2157,7 @@ var deleteListingFromDB = async (id3, userId, role) => {
     listing.deleted_at = /* @__PURE__ */ new Date();
     await listing.save({ session });
     await PromoteRequest.updateMany(
-      { listing_id: id3, is_deleted: false },
+      { listing_id: id, is_deleted: false },
       { is_deleted: true, deleted_at: /* @__PURE__ */ new Date() },
       { session }
     );
@@ -2170,8 +2170,8 @@ var deleteListingFromDB = async (id3, userId, role) => {
     session.endSession();
   }
 };
-var cancelPendingListingInDB = async (id3, userId) => {
-  const listing = await Listing.findById(id3);
+var cancelPendingListingInDB = async (id, userId) => {
+  const listing = await Listing.findById(id);
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
@@ -2184,8 +2184,8 @@ var cancelPendingListingInDB = async (id3, userId) => {
   listing.status = "draft";
   return await listing.save();
 };
-var deletePendingListingInDB = async (id3, userId) => {
-  const listing = await Listing.findById(id3);
+var deletePendingListingInDB = async (id, userId) => {
+  const listing = await Listing.findById(id);
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
@@ -2199,21 +2199,21 @@ var deletePendingListingInDB = async (id3, userId) => {
   listing.deleted_at = /* @__PURE__ */ new Date();
   return await listing.save();
 };
-var manageListings = async (id3, status) => {
-  const listing = await Listing.findById(id3);
+var manageListings = async (id, status) => {
+  const listing = await Listing.findById(id);
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
   listing.status = status;
   return await listing.save();
 };
-var incrementListingViewCountInDB = async (id3) => {
+var incrementListingViewCountInDB = async (id) => {
   const listing = await Listing.findByIdAndUpdate(
-    id3,
+    id,
     { $inc: { listings_view: 1 } },
     { new: true, select: "listings_view" }
   );
-  await trackListingView(id3);
+  await trackListingView(id);
   if (!listing) {
     throw new NotFoundError("Listing not found");
   }
@@ -2380,8 +2380,8 @@ var getMyListings = async (req, res, next) => {
 };
 var getListingById = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
-    const result = await listingsService.getListingByIdFromDB(id3);
+    const { id } = req.params;
+    const result = await listingsService.getListingByIdFromDB(id);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -2408,7 +2408,7 @@ var getMyPromoters = async (req, res, next) => {
 };
 var updateListing = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const associateId = req.user?.id;
     const files = req.files;
     let cover_image;
@@ -2446,7 +2446,7 @@ var updateListing = async (req, res, next) => {
       ...images && { images }
     };
     const results = await listingsService.updateListingInDB(
-      id3,
+      id,
       associateId,
       updatePayload
     );
@@ -2461,11 +2461,11 @@ var updateListing = async (req, res, next) => {
 };
 var deleteListing = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const userId = req.user?.id;
     const role = req.user?.role;
     const results = await listingsService.deleteListingFromDB(
-      id3,
+      id,
       userId,
       role
     );
@@ -2480,10 +2480,10 @@ var deleteListing = async (req, res, next) => {
 };
 var cancelPendingListing = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const userId = req.user?.id;
     const results = await listingsService.cancelPendingListingInDB(
-      id3,
+      id,
       userId
     );
     sendResponse_default(res, {
@@ -2498,10 +2498,10 @@ var cancelPendingListing = async (req, res, next) => {
 };
 var deletePendingListing = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const userId = req.user?.id;
     const results = await listingsService.deletePendingListingInDB(
-      id3,
+      id,
       userId
     );
     sendResponse_default(res, {
@@ -2516,9 +2516,9 @@ var deletePendingListing = async (req, res, next) => {
 };
 var manageListings2 = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const { status } = req.body;
-    const results = await listingsService.manageListings(id3, status);
+    const results = await listingsService.manageListings(id, status);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -2531,9 +2531,9 @@ var manageListings2 = async (req, res, next) => {
 };
 var incrementListingView = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const result = await listingsService.incrementListingViewCountInDB(
-      id3
+      id
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -2907,11 +2907,11 @@ var throwError = (message, statusCode) => {
   error.statusCode = statusCode;
   throw error;
 };
-var toObjectId = (id3) => {
-  if (!Types4.ObjectId.isValid(id3)) {
+var toObjectId = (id) => {
+  if (!Types4.ObjectId.isValid(id)) {
     throwError("Invalid id", 400);
   }
-  return new Types4.ObjectId(id3);
+  return new Types4.ObjectId(id);
 };
 var isAdminOrManager = (role) => {
   return role === "founder" || role === "manager";
@@ -3296,8 +3296,8 @@ var resolveCommissionDisputeIntoDB = async (commissionId, authUser, payload) => 
   );
   return ensureCommissionExists(updatedCommission);
 };
-var sendCommissionPaymentIntoDB = async (id3, authUser, payload) => {
-  const commission = await CommissionLedger.findById(id3);
+var sendCommissionPaymentIntoDB = async (id, authUser, payload) => {
+  const commission = await CommissionLedger.findById(id);
   if (!commission) {
     throwError("Commission not found", 404);
   }
@@ -3859,11 +3859,11 @@ var getMyPromoteRequestsFromDB = async (requesterId, query) => {
     meta
   };
 };
-var deletePromoteRequest = async (id3, role) => {
+var deletePromoteRequest = async (id, role) => {
   if (role !== "admin") {
     throw new UnauthorizedError("Only admins can perform this action");
   }
-  const promoteRequest = await PromoteRequest.findById(id3);
+  const promoteRequest = await PromoteRequest.findById(id);
   if (!promoteRequest) {
     throw new NotFoundError("Promote request not found");
   }
@@ -3936,8 +3936,8 @@ var cancelPromoteRequestInDB = async (requestId, requesterId) => {
   promoteRequest.status = "cancelled";
   return await promoteRequest.save();
 };
-var getPublicPromoteRequestDetailsFromDB = async (id3) => {
-  const promoteRequest = await PromoteRequest.findById(id3).populate({
+var getPublicPromoteRequestDetailsFromDB = async (id) => {
+  const promoteRequest = await PromoteRequest.findById(id).populate({
     path: "listing_id",
     select: "title ref_code cover_image images price location bedrooms bathrooms area_sqm referral_commission status",
     populate: {
@@ -4301,10 +4301,10 @@ var getMyPromoteRequests = async (req, res, next) => {
 };
 var cencelPromoteRequest = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const requesterId = req.user?.id;
     const result = await listingPromoteRequestService.cancelPromoteRequestInDB(
-      id3,
+      id,
       requesterId
     );
     sendResponse_default(res, {
@@ -4319,7 +4319,7 @@ var cencelPromoteRequest = async (req, res, next) => {
 };
 var manageListingPromoteRequest = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const payload = req.body;
     const userId = req.user?.id;
     const role = req.user?.role;
@@ -4333,7 +4333,7 @@ var manageListingPromoteRequest = async (req, res, next) => {
       });
     }
     const result = await listingPromoteRequestService.managePromoteRequestInDB(
-      id3,
+      id,
       {
         id: userId,
         role
@@ -4351,10 +4351,10 @@ var manageListingPromoteRequest = async (req, res, next) => {
 };
 var deletePromoteRequest2 = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const role = req.user?.role;
     const result = await listingPromoteRequestService.deletePromoteRequest(
-      id3,
+      id,
       role
     );
     sendResponse_default(res, {
@@ -4369,9 +4369,9 @@ var deletePromoteRequest2 = async (req, res, next) => {
 };
 var getPublicPromoteRequestDetails = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const result = await listingPromoteRequestService.getPublicPromoteRequestDetailsFromDB(
-      id3
+      id
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -4385,14 +4385,14 @@ var getPublicPromoteRequestDetails = async (req, res, next) => {
 };
 var respondToOwnerTerms = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const requesterId = typeof req.user?.id === "string" ? req.user.id : void 0;
     if (!requesterId) {
       throw new UnauthorizedError(
         "You must be logged in to respond to the terms"
       );
     }
-    const promoteRequestId = Array.isArray(id3) ? id3[0] : id3;
+    const promoteRequestId = Array.isArray(id) ? id[0] : id;
     if (!promoteRequestId) {
       throw new UnauthorizedError("Promote request id is required");
     }
@@ -4451,7 +4451,7 @@ import { Router as Router5 } from "express";
 // src/modules/commissionLedger/commission.ledger.validation.ts
 import { z as z3 } from "zod";
 import { Types as Types7 } from "mongoose";
-var mongoIdValidation = z3.string().refine((id3) => Types7.ObjectId.isValid(id3), {
+var mongoIdValidation = z3.string().refine((id) => Types7.ObjectId.isValid(id), {
   message: "Invalid id"
 });
 var commissionIdValidation = z3.object({
@@ -5171,6 +5171,8 @@ var ACTIVITY_LOG_ENTITY_TYPES = [
   "PaymentPlan",
   "PaymentSession",
   "EntitlementLog",
+  "SessionSchedule",
+  "SessionAttendance",
   "SupportTicket",
   "FAQ",
   "TermsAndPolicy",
@@ -5559,7 +5561,7 @@ var adminService = {
 // src/modules/admin/admin.validation.ts
 import { z as z4 } from "zod";
 import { Types as Types10 } from "mongoose";
-var mongoIdValidation2 = z4.string().refine((id3) => Types10.ObjectId.isValid(id3), {
+var mongoIdValidation2 = z4.string().refine((id) => Types10.ObjectId.isValid(id), {
   message: "Invalid user id"
 });
 var updateApprovalStatusValidation = z4.object({
@@ -5950,11 +5952,11 @@ var throwError3 = (message, statusCode) => {
   error.statusCode = statusCode;
   throw error;
 };
-var toObjectId2 = (id3) => {
-  if (!Types11.ObjectId.isValid(id3)) {
+var toObjectId2 = (id) => {
+  if (!Types11.ObjectId.isValid(id)) {
     throwError3("Invalid id", 400);
   }
-  return new Types11.ObjectId(id3);
+  return new Types11.ObjectId(id);
 };
 var isAdminOrManager3 = (role) => {
   return role === "admin" || role === "manager";
@@ -6095,7 +6097,7 @@ var listingAssetsService = {
 // src/modules/listingAssets/listing.assets.validation.ts
 import { z as z5 } from "zod";
 import { Types as Types12 } from "mongoose";
-var mongoIdValidation3 = z5.string().refine((id3) => Types12.ObjectId.isValid(id3), {
+var mongoIdValidation3 = z5.string().refine((id) => Types12.ObjectId.isValid(id), {
   message: "Invalid listing id"
 });
 var downloadListingAssetsValidation = z5.object({
@@ -6755,12 +6757,12 @@ var sendDiscountCodeByEmail = async (email, code) => {
     message: "Discount code email sent successfully"
   };
 };
-var deleteDiscountCodeFromDB = async (id3) => {
-  const discount = await DiscountCode.findById(id3);
+var deleteDiscountCodeFromDB = async (id) => {
+  const discount = await DiscountCode.findById(id);
   if (!discount) {
     throwError4("Discount code not found", 404);
   }
-  await DiscountCode.findByIdAndDelete(id3);
+  await DiscountCode.findByIdAndDelete(id);
   return { deleted: true };
 };
 var discountService = {
@@ -8388,10 +8390,10 @@ var getStripeClient = () => {
 };
 var productLookup = {
   ChallengePillar: {
-    findById: (id3) => ChallengePillar.findById(id3)
+    findById: (id) => ChallengePillar.findById(id)
   },
   RetreatBatch: {
-    findById: (id3) => RetreatBatch.findById(id3)
+    findById: (id) => RetreatBatch.findById(id)
   }
 };
 var entitlementTypeForProductType = {
@@ -10216,11 +10218,11 @@ var sendDiscountCodeEmail = async (req, res, next) => {
 };
 var deleteDiscountCode = async (req, res, next) => {
   try {
-    const id3 = req.params.id;
-    if (!id3) {
+    const id = req.params.id;
+    if (!id) {
       throw new Error("Discount code ID is required");
     }
-    const result = await discountService.deleteDiscountCodeFromDB(id3);
+    const result = await discountService.deleteDiscountCodeFromDB(id);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -10281,9 +10283,9 @@ var getPromotersFromDB = async (query) => {
   };
   return result;
 };
-var incrementPromoterViewCountInDB = async (id3) => {
+var incrementPromoterViewCountInDB = async (id) => {
   const profile = await Promoter.findByIdAndUpdate(
-    id3,
+    id,
     { $inc: { profile_views: 1 } },
     { new: true, select: "profile_views" }
   );
@@ -10314,9 +10316,9 @@ var getPromoters = async (req, res, next) => {
 };
 var incrementPromoterView = async (req, res, next) => {
   try {
-    const { id: id3 } = req.params;
+    const { id } = req.params;
     const result = await promotersServices.incrementPromoterViewCountInDB(
-      id3
+      id
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -16262,6 +16264,22 @@ var moduleActionRoutes = router18;
 // src/modules/room/room.route.ts
 import { Router as Router19 } from "express";
 
+// src/utility/country.ts
+import countries from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+countries.registerLocale(enLocale);
+var resolveCountry = (rawName) => {
+  if (!rawName) return null;
+  const trimmed = rawName.trim();
+  const code = countries.getAlpha2Code(trimmed, "en");
+  if (!code) return null;
+  return {
+    code: code.toUpperCase(),
+    name: countries.getName(code, "en")
+    // canonical spelling
+  };
+};
+
 // src/modules/room/room.modal.ts
 import { Schema as Schema22, model as model22 } from "mongoose";
 var roomSchema = new Schema22(
@@ -16287,7 +16305,14 @@ var roomSchema = new Schema22(
       type: Schema22.Types.ObjectId,
       ref: "User",
       required: true
-    }
+    },
+    type: {
+      type: String,
+      enum: ["general", "country"],
+      default: "general"
+    },
+    countryName: String,
+    countryCode: { type: String, unique: true, sparse: true }
   },
   {
     timestamps: true
@@ -16296,17 +16321,37 @@ var roomSchema = new Schema22(
 var Room = model22("Room", roomSchema);
 
 // src/modules/room/room.service.ts
-var getGeneralRoom = async (userId) => {
-  let room = await Room.findOne({ name: "General" });
-  if (!room) {
-    room = await Room.create({
-      name: "General",
-      description: "General discussion for everyone",
-      members: [userId],
-      createdBy: userId
-    });
+var getGeneralRoom = async (createdBy) => {
+  return Room.findOneAndUpdate(
+    { type: "general" },
+    {
+      $setOnInsert: {
+        name: "General Community",
+        createdBy,
+        type: "general"
+      }
+    },
+    { upsert: true, new: true }
+  );
+};
+var getOrCreateCountryRoom = async (countryName, createdBy) => {
+  const country = resolveCountry(countryName);
+  if (!country) {
+    throw new Error("Invalid country name");
   }
-  return room;
+  return Room.findOneAndUpdate(
+    { countryCode: country.code, type: "country" },
+    {
+      $setOnInsert: {
+        name: `${country.name} Community`,
+        createdBy,
+        countryCode: country.code,
+        countryName: country.name,
+        type: "country"
+      }
+    },
+    { upsert: true, new: true }
+  );
 };
 
 // src/modules/room/room.controller.ts
@@ -16326,10 +16371,51 @@ var getGeneralRoomHandler = async (req, res, next) => {
     next(error);
   }
 };
+var getCountryRoomHandler = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Authentication required" });
+      return;
+    }
+    const canChooseAnyRoom = req.user?.role === "founder" || req.user?.role === "admin" || req.user?.role === "manager";
+    const countryName = req.query.countryName;
+    if (typeof countryName !== "string" || !countryName.trim()) {
+      res.status(400).json({
+        success: false,
+        message: "countryName query parameter is required"
+      });
+      return;
+    }
+    if (!canChooseAnyRoom) {
+      const userDoc = await User.findById(userId).select("country");
+      const userCountry = resolveCountry(userDoc?.country);
+      const requestedCountry = resolveCountry(countryName);
+      if (!userCountry || !requestedCountry || userCountry.code !== requestedCountry.code) {
+        res.status(403).json({
+          success: false,
+          message: "You can only access your own country room"
+        });
+        return;
+      }
+    }
+    const room = await getOrCreateCountryRoom(
+      countryName,
+      userId
+    );
+    res.status(200).json({
+      success: true,
+      data: room
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // src/modules/room/room.route.ts
 var router19 = Router19();
 router19.get("/general", verifyToken, getGeneralRoomHandler);
+router19.get("/country", verifyToken, getCountryRoomHandler);
 var room_route_default = router19;
 
 // src/modules/message/message.route.ts
@@ -23074,14 +23160,69 @@ var initSocket = (httpServer) => {
     try {
       const userId = socket.data.user.id;
       const userDoc = await User.findById(userId).select(
-        "fullName profileImage"
+        "fullName profileImage country"
       );
       socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
       socket.data.user.profileImage = userDoc?.profileImage ?? null;
-      const room = await getGeneralRoom(userId);
-      const roomId = room._id.toString();
+      const countryName = userDoc?.country?.trim();
+      if (!countryName) {
+        socket.emit("error", "No country set on your profile");
+        return socket.disconnect();
+      }
+      const country = resolveCountry(countryName);
+      if (!country) {
+        socket.emit("error", "Invalid country on your profile");
+        return socket.disconnect();
+      }
+      const room = await getOrCreateCountryRoom(country.name, userId);
+      let roomId = room._id.toString();
       socket.data.roomId = roomId;
       socket.join(roomId);
+      socket.emit("room:joined", {
+        roomId,
+        countryCode: room.countryCode,
+        countryName: room.countryName
+      });
+      socket.on("room:join", async (requestedCountryName) => {
+        try {
+          const canSwitchRooms = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager";
+          if (!canSwitchRooms) {
+            socket.emit(
+              "error",
+              "Only founders, admins, and managers can change community rooms"
+            );
+            return;
+          }
+          const requestedCountry = resolveCountry(requestedCountryName);
+          if (!requestedCountry) {
+            socket.emit("error", "Invalid country name");
+            return;
+          }
+          const nextRoom = await getOrCreateCountryRoom(
+            requestedCountry.name,
+            userId
+          );
+          const nextRoomId = nextRoom._id.toString();
+          if (roomId !== nextRoomId) {
+            socket.leave(roomId);
+            socket.to(roomId).emit("presence:update", {
+              userId,
+              online: false
+            });
+            socket.join(nextRoomId);
+            roomId = nextRoomId;
+            socket.data.roomId = nextRoomId;
+          }
+          socket.emit("room:joined", {
+            roomId: nextRoomId,
+            countryCode: nextRoom.countryCode,
+            countryName: nextRoom.countryName
+          });
+        } catch (error) {
+          console.error("room:join error:", error);
+          socket.emit("error", error.message || "Failed to join room");
+        }
+      });
       const isFirstConnectionForUser = !onlineUsers.has(userId);
       if (isFirstConnectionForUser) {
         onlineUsers.set(userId, /* @__PURE__ */ new Set());
@@ -26624,10 +26765,10 @@ var isDuplicateKeyError11 = (error) => {
 };
 var productModelMap = {
   ChallengePillar: {
-    findById: (id3) => ChallengePillar.findById(id3)
+    findById: (id) => ChallengePillar.findById(id)
   },
   RetreatBatch: {
-    findById: (id3) => RetreatBatch.findById(id3)
+    findById: (id) => RetreatBatch.findById(id)
   }
 };
 var ensureProductReferenceIsValid = async ({
@@ -28394,1005 +28535,325 @@ var router41 = Router41();
 router41.post(
   "/",
   verifyToken,
-  authorizeRoles("admin", "manager", "founder", "super_admin"),
+  authorizeRoles("founder", "super_admin"),
   validateRequest_default(createActivityLogValidation),
   activityLogController.createActivityLog
 );
 router41.get(
   "/",
   verifyToken,
-  authorizeRoles("admin", "manager", "founder", "super_admin"),
+  authorizeRoles("manager", "founder", "super_admin"),
   validateRequest_default(getAllActivityLogsValidation),
   activityLogController.getAllActivityLogs
 );
 router41.get(
   "/:id",
   verifyToken,
-  authorizeRoles("admin", "manager", "founder", "super_admin"),
+  authorizeRoles("manager", "founder", "super_admin"),
   validateRequest_default(activityLogIdValidation),
   activityLogController.getSingleActivityLog
 );
 var activityLogRoutes = router41;
 
-// src/modules/supportTickets/support.ticket.route.ts
+// src/modules/sessionSchedules/sessionschedules.route.ts
 import { Router as Router42 } from "express";
 
-// src/modules/supportTickets/support.ticket.service.ts
+// src/modules/sessionSchedules/sessionschedules.service.ts
 import { Types as Types41 } from "mongoose";
 
-// src/modules/supportTickets/support.ticket.model.schema.ts
+// src/modules/sessionSchedules/sessionschedules.model.schema.ts
 import { model as model39, Schema as Schema39 } from "mongoose";
 
-// src/modules/supportTickets/support.ticket.interface.ts
-var SUPPORT_TICKET_CATEGORIES = [
-  "general",
-  "technical",
-  "billing",
-  "membership",
-  "account"
-];
-var SUPPORT_TICKET_PRIORITIES = ["low", "medium", "high", "urgent"];
-var SUPPORT_TICKET_STATUSES = ["open", "in_progress", "resolved", "closed"];
-
-// src/modules/supportTickets/support.ticket.model.schema.ts
-var supportTicketSchema = new Schema39(
-  {
-    ticketNumber: { type: String, required: true, unique: true, index: true, trim: true },
-    requester: { type: Schema39.Types.ObjectId, ref: "User", required: true, index: true },
-    assignedTo: { type: Schema39.Types.ObjectId, ref: "User", index: true },
-    subject: { type: String, required: true, trim: true, maxlength: 200 },
-    message: { type: String, required: true, trim: true, maxlength: 5e3 },
-    category: { type: String, enum: SUPPORT_TICKET_CATEGORIES, default: "general", required: true, index: true },
-    priority: { type: String, enum: SUPPORT_TICKET_PRIORITIES, default: "medium", required: true, index: true },
-    status: { type: String, enum: SUPPORT_TICKET_STATUSES, default: "open", required: true, index: true },
-    adminResponse: { type: String, trim: true, maxlength: 5e3 },
-    respondedAt: Date,
-    resolvedAt: Date
-  },
-  { timestamps: true, collection: "supporttickets" }
-);
-supportTicketSchema.index({ requester: 1, createdAt: -1 });
-supportTicketSchema.index({ status: 1, priority: 1, createdAt: -1 });
-var SupportTicket = model39("SupportTicket", supportTicketSchema);
-
-// src/modules/supportTickets/support.ticket.service.ts
-var populate = [
-  { path: "requester", select: "fullName email role" },
-  { path: "assignedTo", select: "fullName email role" }
-];
-var ticketNumber = () => `TKT-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10).replace(/-/g, "")}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-var list = async (filter, query) => {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
-  const [data, total] = await Promise.all([
-    SupportTicket.find(filter).populate(populate).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
-    SupportTicket.countDocuments(filter)
-  ]);
-  return { data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
-};
-var supportTicketService = {
-  async create(requester, payload) {
-    const user = await User.findById(requester).select("_id");
-    assertFound_default(user, "Requester user not found", 404);
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        return await SupportTicket.create({ ...payload, requester: new Types41.ObjectId(requester), ticketNumber: ticketNumber() });
-      } catch (error) {
-        if (error.code !== 11e3) throw error;
-      }
-    }
-    throw new BadRequestError("Could not generate a unique ticket number");
-  },
-  myTickets(requester, query) {
-    return list({ requester: new Types41.ObjectId(requester), ...queryFilters(query) }, query);
-  },
-  adminList(query) {
-    return list(queryFilters(query), query);
-  },
-  async getById(id3, requester, isAdmin) {
-    const filter = isAdmin ? { _id: id3 } : { _id: id3, requester };
-    const ticket = await SupportTicket.findOne(filter).populate(populate);
-    assertFound_default(ticket, "Support ticket not found", 404);
-    return ticket;
-  },
-  async update(id3, adminId, payload) {
-    if (payload.assignedTo) {
-      const assignee = await User.findById(payload.assignedTo).select("_id");
-      assertFound_default(assignee, "Assigned user not found", 404);
-    }
-    const update2 = { status: payload.status };
-    if (payload.adminResponse !== void 0) {
-      update2.adminResponse = payload.adminResponse;
-      update2.respondedAt = /* @__PURE__ */ new Date();
-    }
-    if (payload.assignedTo) update2.assignedTo = new Types41.ObjectId(payload.assignedTo);
-    if (payload.status === "resolved" || payload.status === "closed") update2.resolvedAt = /* @__PURE__ */ new Date();
-    const ticket = await SupportTicket.findByIdAndUpdate(id3, update2, { new: true, runValidators: true }).populate(populate);
-    assertFound_default(ticket, "Support ticket not found", 404);
-    return ticket;
-  }
-};
-var queryFilters = (query) => {
-  const { page: _page, limit: _limit, ...filters } = query;
-  return filters;
-};
-
-// src/modules/supportTickets/support.ticket.controller.ts
-var auth = (req) => {
-  assertFound_default(req.user, "Authentication required", 401);
-  return req.user;
-};
-var admins = ["founder", "super_admin", "admin", "manager"];
-var create = async (req, res, next) => {
-  try {
-    const user = auth(req);
-    const data = await supportTicketService.create(user.id, req.body);
-    sendResponse_default(res, {
-      statusCode: 201,
-      success: true,
-      message: "Support ticket created successfully",
-      data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var mine = async (req, res, next) => {
-  try {
-    const user = auth(req);
-    const data = await supportTicketService.myTickets(user.id, req.query);
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Support tickets retrieved successfully",
-      data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var adminList = async (req, res, next) => {
-  try {
-    auth(req);
-    const data = await supportTicketService.adminList(req.query);
-    sendResponse_default(
-      res,
-      {
-        statusCode: 200,
-        success: true,
-        message: "Support tickets retrieved successfully",
-        data
-      }
-    );
-  } catch (error) {
-    next(error);
-  }
-};
-var getById = async (req, res, next) => {
-  try {
-    const user = auth(req);
-    const data = await supportTicketService.getById(String(req.params.id), user.id, admins.includes(user.role));
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Support ticket retrieved successfully",
-      data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var update = async (req, res, next) => {
-  try {
-    const user = auth(req);
-    const data = await supportTicketService.update(String(req.params.id), user.id, req.body);
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Support ticket updated successfully",
-      data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var supportTicketController = {
-  create,
-  mine,
-  adminList,
-  getById,
-  update
-};
-
-// src/modules/supportTickets/support.ticket.validation.ts
-import { z as z34 } from "zod";
-var id = z34.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var createSupportTicketValidation = z34.object({
-  body: z34.object({
-    subject: z34.string().trim().min(3).max(200),
-    message: z34.string().trim().min(5).max(5e3),
-    category: z34.enum(SUPPORT_TICKET_CATEGORIES).default("general"),
-    priority: z34.enum(SUPPORT_TICKET_PRIORITIES).default("medium")
-  })
-});
-var supportTicketIdValidation = z34.object({ params: z34.object({ id }) });
-var supportTicketListValidation = z34.object({
-  query: z34.object({
-    status: z34.enum(SUPPORT_TICKET_STATUSES).optional(),
-    priority: z34.enum(SUPPORT_TICKET_PRIORITIES).optional(),
-    category: z34.enum(SUPPORT_TICKET_CATEGORIES).optional(),
-    page: z34.coerce.number().int().min(1).optional(),
-    limit: z34.coerce.number().int().min(1).max(100).optional()
-  })
-});
-var updateSupportTicketValidation = z34.object({
-  params: z34.object({ id }),
-  body: z34.object({
-    status: z34.enum(SUPPORT_TICKET_STATUSES),
-    adminResponse: z34.string().trim().max(5e3).optional(),
-    assignedTo: id.optional()
-  })
-});
-
-// src/modules/supportTickets/support.ticket.route.ts
-var router42 = Router42();
-var ADMIN_ROLES3 = ["founder", "super_admin", "admin", "manager"];
-router42.get("/", (req, res, next) => {
-  res.status(200).json({ message: "Support ticket creation endpoint" });
-});
-router42.post("/", verifyToken, validateRequest_default(createSupportTicketValidation), supportTicketController.create);
-router42.get("/me", verifyToken, validateRequest_default(supportTicketListValidation), supportTicketController.mine);
-router42.get("/admin", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(supportTicketListValidation), supportTicketController.adminList);
-router42.get("/:id", verifyToken, validateRequest_default(supportTicketIdValidation), supportTicketController.getById);
-router42.patch("/:id", verifyToken, authorizeRoles(...ADMIN_ROLES3), validateRequest_default(updateSupportTicketValidation), supportTicketController.update);
-var supportTicketRoutes = router42;
-
-// src/modules/userDevices/user.device.route.ts
-import { Router as Router43 } from "express";
-
-// src/modules/userDevices/user.device.service.ts
-import { Types as Types42 } from "mongoose";
-
-// src/modules/userDevices/user.device.model.schema.ts
-import { model as model40, Schema as Schema40 } from "mongoose";
-
-// src/modules/userDevices/user.device.interface.ts
-var DEVICE_PLATFORMS = ["ios", "android", "web", "windows", "macos", "linux"];
-
-// src/modules/userDevices/user.device.model.schema.ts
-var pushSubscriptionSchema = new Schema40(
-  {
-    endpoint: { type: String, trim: true, maxlength: 2e3 },
-    p256dh: { type: String, select: false },
-    auth: { type: String, select: false }
-  },
-  { _id: false }
-);
-var userDeviceSchema = new Schema40(
-  {
-    user: { type: Schema40.Types.ObjectId, ref: "User", required: true, index: true },
-    deviceIdentifier: { type: String, required: true, trim: true, maxlength: 200, index: true },
-    platform: { type: String, enum: DEVICE_PLATFORMS, required: true },
-    deviceName: { type: String, trim: true, maxlength: 120 },
-    appVersion: { type: String, trim: true, maxlength: 40 },
-    pushSubscription: { type: pushSubscriptionSchema },
-    isActive: { type: Boolean, default: true, required: true, index: true },
-    lastActiveAt: { type: Date, default: Date.now, required: true },
-    revokedAt: Date
-  },
-  { timestamps: true, collection: "userdevices" }
-);
-userDeviceSchema.index({ user: 1, deviceIdentifier: 1 }, { unique: true });
-userDeviceSchema.index(
-  { "pushSubscription.endpoint": 1 },
-  { unique: true, sparse: true, partialFilterExpression: { isActive: true } }
-);
-var UserDevice = model40("UserDevice", userDeviceSchema);
-
-// src/modules/userDevices/user.device.service.ts
-var safeSelect = "_id deviceIdentifier platform deviceName appVersion isActive lastActiveAt revokedAt createdAt updatedAt";
-var userDeviceService = {
-  async register(userId, payload) {
-    const device = await UserDevice.findOneAndUpdate(
-      { user: new Types42.ObjectId(userId), deviceIdentifier: payload.deviceIdentifier },
-      { ...payload, user: new Types42.ObjectId(userId), isActive: true, revokedAt: void 0, lastActiveAt: /* @__PURE__ */ new Date() },
-      { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
-    ).select(safeSelect);
-    return device;
-  },
-  list(userId) {
-    return UserDevice.find({ user: userId }).select(safeSelect).sort({ lastActiveAt: -1 });
-  },
-  async revoke(userId, id3) {
-    const device = await UserDevice.findOneAndUpdate(
-      { _id: id3, user: userId },
-      { isActive: false, revokedAt: /* @__PURE__ */ new Date() },
-      { new: true }
-    ).select(safeSelect);
-    assertFound_default(device, "Device not found", 404);
-    return device;
-  }
-};
-
-// src/modules/userDevices/user.device.controller.ts
-var auth2 = (req) => {
-  assertFound_default(req.user, "Authentication required", 401);
-  return req.user;
-};
-var register = async (req, res, next) => {
-  try {
-    const user = auth2(req);
-    const data = await userDeviceService.register(user.id, req.body);
-    sendResponse_default(
-      res,
-      {
-        statusCode: 200,
-        success: true,
-        message: "Device registered successfully",
-        data
-      }
-    );
-  } catch (error) {
-    next(error);
-  }
-};
-var list2 = async (req, res, next) => {
-  try {
-    const user = auth2(req);
-    const data = await userDeviceService.list(user.id);
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Devices retrieved successfully",
-      data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var revoke = async (req, res, next) => {
-  try {
-    const user = auth2(req);
-    const data = await userDeviceService.revoke(user.id, String(req.params.id));
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Device revoked successfully",
-      data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var userDeviceController = {
-  register,
-  list: list2,
-  revoke
-};
-
-// src/modules/userDevices/user.device.validation.ts
-import { z as z35 } from "zod";
-var id2 = z35.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var registerUserDeviceValidation = z35.object({
-  body: z35.object({
-    deviceIdentifier: z35.string().trim().min(1).max(200),
-    platform: z35.enum(DEVICE_PLATFORMS),
-    deviceName: z35.string().trim().max(120).optional(),
-    appVersion: z35.string().trim().max(40).optional(),
-    pushSubscription: z35.object({
-      endpoint: z35.string().url().max(2e3),
-      p256dh: z35.string().min(1).max(500).optional(),
-      auth: z35.string().min(1).max(500).optional()
-    }).optional()
-  })
-});
-var userDeviceIdValidation = z35.object({ params: z35.object({ id: id2 }) });
-
-// src/modules/userDevices/user.device.route.ts
-var router43 = Router43();
-router43.post("/me", verifyToken, validateRequest_default(registerUserDeviceValidation), userDeviceController.register);
-router43.get("/me", verifyToken, userDeviceController.list);
-router43.patch("/me/:id/revoke", verifyToken, validateRequest_default(userDeviceIdValidation), userDeviceController.revoke);
-var userDeviceRoutes = router43;
-
-// src/modules/streakLogs/streaklog.route.ts
-import { Router as Router44 } from "express";
-
-// src/modules/streakLogs/streaklog.service.ts
-import { Types as Types43 } from "mongoose";
-
-// src/modules/streakLogs/streaklog.model.schema.ts
-import { model as model41, Schema as Schema41 } from "mongoose";
-
-// src/modules/streakLogs/streaklog.interface.ts
-var STREAK_TIMEZONES = ["UTC", "Asia/Dhaka"];
-var STREAK_ACTIVITY_TYPES = [
-  "login",
-  "module",
-  "quiz",
-  "session",
-  "manual",
+// src/modules/sessionSchedules/sessionschedules.interface.ts
+var SESSION_TYPES = [
+  "academy_live",
+  "mentorship_group",
+  "retreat_prep",
+  "community_call",
   "other"
 ];
+var SESSION_STATUSES = [
+  "scheduled",
+  "ongoing",
+  "completed",
+  "cancelled",
+  "postponed"
+];
 
-// src/modules/streakLogs/streaklog.model.schema.ts
-var streakLogSchema = new Schema41(
+// src/modules/sessionSchedules/sessionschedules.model.schema.ts
+var sessionScheduleSchema = new Schema39(
   {
-    user: {
-      type: Schema41.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    academyProfile: {
-      type: Schema41.Types.ObjectId,
-      ref: "AcademyProfile",
-      index: true
-    },
-    activityDate: {
-      type: Date,
-      required: true,
-      index: true
-    },
-    normalizedDate: {
+    title: {
       type: String,
       required: true,
       trim: true,
-      maxlength: 10,
-      match: /^\d{4}-\d{2}-\d{2}$/,
-      index: true
-    },
-    timezone: {
-      type: String,
-      enum: STREAK_TIMEZONES,
-      default: "UTC",
-      required: true,
-      index: true
-    },
-    activityType: {
-      type: String,
-      enum: STREAK_ACTIVITY_TYPES,
-      default: "manual",
-      required: true,
-      index: true
-    },
-    activityCount: {
-      type: Number,
-      default: 1,
-      min: 1,
-      required: true
-    },
-    currentStreakDays: {
-      type: Number,
-      default: 1,
-      min: 0,
-      required: true
-    },
-    longestStreakDays: {
-      type: Number,
-      default: 1,
-      min: 0,
-      required: true
-    },
-    lastActivityDate: {
-      type: Date,
-      default: Date.now
-    }
-  },
-  {
-    timestamps: true,
-    collection: "streaklog"
-  }
-);
-streakLogSchema.index({ user: 1, activityDate: 1 }, { unique: true });
-streakLogSchema.index({ user: 1, normalizedDate: 1 });
-streakLogSchema.index({ academyProfile: 1, normalizedDate: 1 });
-var StreakLog = model41("StreakLog", streakLogSchema);
-
-// src/modules/streakLogs/streaklog.service.ts
-var normalizeDateString = (input, timezone = "UTC") => {
-  const date = input instanceof Date ? input : new Date(input);
-  if (Number.isNaN(date.getTime())) {
-    throw new Error("Invalid activityDate");
-  }
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  });
-  const formatted = formatter.format(date);
-  const [year, month, day] = formatted.split("-");
-  return `${year}-${month}-${day}`;
-};
-var getDateFromNormalized = (normalizedDate) => /* @__PURE__ */ new Date(`${normalizedDate}T00:00:00.000Z`);
-var syncStreaksForUser = async (userId) => {
-  const entries = await StreakLog.find({ user: new Types43.ObjectId(userId) }).sort({ normalizedDate: 1 }).lean();
-  if (entries.length === 0) {
-    return;
-  }
-  let currentStreakDays = 0;
-  let longestStreakDays = 0;
-  let previousDate = null;
-  for (const entry of entries) {
-    const currentDate = getDateFromNormalized(entry.normalizedDate);
-    if (previousDate && currentDate.getTime() - previousDate.getTime() === 864e5) {
-      currentStreakDays += 1;
-    } else {
-      currentStreakDays = 1;
-    }
-    longestStreakDays = Math.max(longestStreakDays, currentStreakDays);
-    previousDate = currentDate;
-    await StreakLog.findByIdAndUpdate(
-      entry._id,
-      {
-        currentStreakDays,
-        longestStreakDays,
-        lastActivityDate: currentDate
-      },
-      { runValidators: true }
-    );
-  }
-  await StreakLog.updateMany(
-    { user: new Types43.ObjectId(userId) },
-    {
-      currentStreakDays,
-      longestStreakDays,
-      lastActivityDate: previousDate ?? void 0
-    },
-    { runValidators: true }
-  );
-};
-var createStreakLog = async (payload) => {
-  const user = await User.findById(payload.user).select("_id");
-  assertFound_default(user, "User not found", 404);
-  if (payload.academyProfile) {
-    const academyProfile = await User.findById(payload.academyProfile).select("_id");
-    assertFound_default(academyProfile, "Academy profile not found", 404);
-  }
-  const timezone = payload.timezone ?? "UTC";
-  const normalizedDate = normalizeDateString(payload.activityDate, timezone);
-  const activityDateValue = getDateFromNormalized(normalizedDate);
-  const existing = await StreakLog.findOne({
-    user: new Types43.ObjectId(payload.user),
-    normalizedDate
-  }).select("_id");
-  if (existing) {
-    throw new Error("A streak log already exists for this user and date");
-  }
-  const log = await StreakLog.create({
-    user: new Types43.ObjectId(payload.user),
-    academyProfile: payload.academyProfile ? new Types43.ObjectId(payload.academyProfile) : void 0,
-    activityDate: activityDateValue,
-    normalizedDate,
-    timezone,
-    activityType: payload.activityType ?? "manual",
-    activityCount: payload.activityCount ?? 1,
-    currentStreakDays: 1,
-    longestStreakDays: 1,
-    lastActivityDate: activityDateValue
-  });
-  await syncStreaksForUser(payload.user);
-  return log;
-};
-var getStreakLogs = async (query) => {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
-  const skip = (page - 1) * limit;
-  const filter = {};
-  if (query.userId) {
-    filter.user = new Types43.ObjectId(query.userId);
-  }
-  if (query.academyProfileId) {
-    filter.academyProfile = new Types43.ObjectId(query.academyProfileId);
-  }
-  if (query.timezone) {
-    filter.timezone = query.timezone;
-  }
-  if (query.fromDate || query.toDate) {
-    filter.normalizedDate = {};
-    if (query.fromDate) {
-      filter.normalizedDate.$gte = query.fromDate;
-    }
-    if (query.toDate) {
-      filter.normalizedDate.$lte = query.toDate;
-    }
-  }
-  const [data, total] = await Promise.all([
-    StreakLog.find(filter).populate("user", "fullName email role").populate("academyProfile", "fullName companyName").sort({ normalizedDate: -1 }).skip(skip).limit(limit),
-    StreakLog.countDocuments(filter)
-  ]);
-  return {
-    data,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit)
-    }
-  };
-};
-var getSingleStreakLog = async (streakLogId) => {
-  const log = await StreakLog.findById(streakLogId).populate("user", "fullName email role").populate("academyProfile", "fullName companyName");
-  assertFound_default(log, "Streak log not found", 404);
-  return log;
-};
-var streakLogService = {
-  createStreakLog,
-  getStreakLogs,
-  getSingleStreakLog,
-  syncStreaksForUser
-};
-
-// src/modules/streakLogs/streaklog.controller.ts
-var getAuthUser29 = (req) => {
-  assertFound_default(req.user, "Authentication required", 401);
-  return {
-    id: req.user.id,
-    role: req.user.role
-  };
-};
-var createStreakLog2 = async (req, res, next) => {
-  try {
-    const auth3 = getAuthUser29(req);
-    const payload = {
-      ...req.body,
-      user: req.body.user ?? auth3.id
-    };
-    const result = await streakLogService.createStreakLog(payload);
-    sendResponse_default(res, {
-      statusCode: 201,
-      success: true,
-      message: "Streak log created successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getMyStreakLogs = async (req, res, next) => {
-  try {
-    const auth3 = getAuthUser29(req);
-    const query = {
-      userId: auth3.id,
-      page: typeof req.query.page === "string" ? Number(req.query.page) : void 0,
-      limit: typeof req.query.limit === "string" ? Number(req.query.limit) : void 0
-    };
-    if (typeof req.query.fromDate === "string") {
-      query.fromDate = req.query.fromDate;
-    }
-    if (typeof req.query.toDate === "string") {
-      query.toDate = req.query.toDate;
-    }
-    const result = await streakLogService.getStreakLogs(query);
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Streak logs retrieved successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getStreakLogs2 = async (req, res, next) => {
-  try {
-    getAuthUser29(req);
-    const query = {};
-    if (typeof req.query.userId === "string") {
-      query.userId = req.query.userId;
-    }
-    if (typeof req.query.academyProfileId === "string") {
-      query.academyProfileId = req.query.academyProfileId;
-    }
-    if (typeof req.query.timezone === "string") {
-      query.timezone = req.query.timezone;
-    }
-    if (typeof req.query.fromDate === "string") {
-      query.fromDate = req.query.fromDate;
-    }
-    if (typeof req.query.toDate === "string") {
-      query.toDate = req.query.toDate;
-    }
-    if (typeof req.query.page === "string") {
-      query.page = Number(req.query.page);
-    }
-    if (typeof req.query.limit === "string") {
-      query.limit = Number(req.query.limit);
-    }
-    const result = await streakLogService.getStreakLogs(query);
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Streak logs retrieved successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getSingleStreakLog2 = async (req, res, next) => {
-  try {
-    getAuthUser29(req);
-    const result = await streakLogService.getSingleStreakLog(String(req.params.id));
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Streak log retrieved successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var streakLogController = {
-  createStreakLog: createStreakLog2,
-  getMyStreakLogs,
-  getStreakLogs: getStreakLogs2,
-  getSingleStreakLog: getSingleStreakLog2
-};
-
-// src/modules/streakLogs/streaklog.validation.ts
-import { z as z36 } from "zod";
-var mongoObjectIdSchema26 = z36.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var dateStringSchema = z36.union([
-  z36.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
-  z36.string().datetime({ offset: true })
-]).or(z36.date());
-var streakLogIdValidation = z36.object({
-  params: z36.object({
-    id: mongoObjectIdSchema26
-  })
-});
-var createStreakLogValidation = z36.object({
-  body: z36.object({
-    user: mongoObjectIdSchema26,
-    academyProfile: mongoObjectIdSchema26.optional(),
-    activityDate: dateStringSchema,
-    timezone: z36.enum(STREAK_TIMEZONES).optional(),
-    activityType: z36.enum(STREAK_ACTIVITY_TYPES).optional(),
-    activityCount: z36.number().int().min(1).max(100).optional()
-  })
-});
-var getStreakLogsValidation = z36.object({
-  query: z36.object({
-    userId: mongoObjectIdSchema26.optional(),
-    academyProfileId: mongoObjectIdSchema26.optional(),
-    timezone: z36.enum(STREAK_TIMEZONES).optional(),
-    fromDate: z36.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    toDate: z36.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    page: z36.coerce.number().int().min(1).optional(),
-    limit: z36.coerce.number().int().min(1).max(100).optional()
-  })
-});
-
-// src/modules/streakLogs/streaklog.route.ts
-var ADMIN_ROLES4 = ["founder", "super_admin", "admin", "manager"];
-var router44 = Router44();
-router44.post(
-  "/",
-  verifyToken,
-  validateRequest_default(createStreakLogValidation),
-  streakLogController.createStreakLog
-);
-router44.get(
-  "/me",
-  verifyToken,
-  streakLogController.getMyStreakLogs
-);
-router44.get(
-  "/",
-  verifyToken,
-  authorizeRoles(...ADMIN_ROLES4),
-  validateRequest_default(getStreakLogsValidation),
-  streakLogController.getStreakLogs
-);
-router44.get(
-  "/:id",
-  verifyToken,
-  validateRequest_default(streakLogIdValidation),
-  streakLogController.getSingleStreakLog
-);
-var streakLogRoutes = router44;
-
-// src/modules/pointsLedger/pointsledger.route.ts
-import { Router as Router45 } from "express";
-
-// src/modules/pointsLedger/pointsledger.service.ts
-import { Types as Types44 } from "mongoose";
-
-// src/modules/pointsLedger/pointsledger.model.schema.ts
-import { model as model42, Schema as Schema42 } from "mongoose";
-
-// src/modules/pointsLedger/pointsledger.interface.ts
-var POINTS_LEDGER_TYPES = [
-  "credit",
-  "debit",
-  "adjustment",
-  "reward",
-  "penalty"
-];
-var POINTS_LEDGER_SOURCE_TYPES = [
-  "module",
-  "video",
-  "quiz",
-  "action",
-  "session",
-  "manual",
-  "system",
-  "other"
-];
-var POINTS_LEDGER_REASONS = [
-  "module_completion",
-  "video_completion",
-  "quiz_pass",
-  "action_complete",
-  "session_attendance",
-  "manual_adjustment",
-  "system_reward",
-  "penalty",
-  "other"
-];
-
-// src/modules/pointsLedger/pointsledger.model.schema.ts
-var pointsLedgerSchema = new Schema42(
-  {
-    user: {
-      type: Schema42.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    sourceType: {
-      type: String,
-      enum: POINTS_LEDGER_SOURCE_TYPES,
-      index: true
-    },
-    sourceId: {
-      type: Schema42.Types.ObjectId,
-      index: true
-    },
-    sourceEntity: {
-      type: String,
-      trim: true,
-      maxlength: 120,
-      index: true
-    },
-    points: {
-      type: Number,
-      required: true,
-      min: -1e6,
-      max: 1e6
-    },
-    transactionType: {
-      type: String,
-      enum: POINTS_LEDGER_TYPES,
-      required: true,
-      index: true
-    },
-    reason: {
-      type: String,
-      enum: POINTS_LEDGER_REASONS,
-      required: true,
-      index: true
+      maxlength: 200
     },
     description: {
       type: String,
       trim: true,
-      maxlength: 500
+      maxlength: 2e3
     },
-    balanceAfter: {
-      type: Number,
-      min: -1e6,
-      max: 1e6
+    sessionType: {
+      type: String,
+      enum: SESSION_TYPES,
+      required: true,
+      index: true
     },
-    balanceBefore: {
-      type: Number,
-      min: -1e6,
-      max: 1e6
+    host: {
+      type: Schema39.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
     },
-    module: {
-      type: Schema42.Types.ObjectId,
+    pillar: {
+      type: Schema39.Types.ObjectId,
+      ref: "ChallengePillar",
+      index: true
+    },
+    courseModule: {
+      type: Schema39.Types.ObjectId,
       ref: "CourseModule",
       index: true
     },
-    video: {
-      type: Schema42.Types.ObjectId,
-      ref: "ModuleVideo",
+    startTime: {
+      type: Date,
+      required: true,
       index: true
     },
-    action: {
-      type: Schema42.Types.ObjectId,
-      ref: "ModuleAction",
+    endTime: {
+      type: Date,
+      required: true,
       index: true
     },
-    quiz: {
-      type: Schema42.Types.ObjectId,
-      ref: "QuizQuestion",
+    timezone: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    meetingUrl: {
+      type: String,
+      trim: true
+    },
+    capacity: {
+      type: Number,
+      min: 1
+    },
+    status: {
+      type: String,
+      enum: SESSION_STATUSES,
+      default: "scheduled",
       index: true
     },
-    session: {
-      type: Schema42.Types.ObjectId,
-      ref: "SessionSchedule",
-      index: true
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
     },
-    metadata: {
-      type: Schema42.Types.Mixed,
-      default: {}
+    cancelledBy: {
+      type: Schema39.Types.ObjectId,
+      ref: "User"
+    },
+    cancelledAt: {
+      type: Date
+    },
+    createdBy: {
+      type: Schema39.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema39.Types.ObjectId,
+      ref: "User"
     }
   },
   {
     timestamps: true,
-    collection: "pointsledger"
+    collection: "sessionschedule"
   }
 );
-pointsLedgerSchema.index(
-  { user: 1, sourceType: 1, sourceId: 1, reason: 1 },
-  { unique: true, sparse: true }
+sessionScheduleSchema.pre("validate", function() {
+  if (this.startTime && this.endTime && this.endTime.getTime() <= this.startTime.getTime()) {
+    this.invalidate("endTime", "End time must be after start time");
+  }
+});
+sessionScheduleSchema.index({
+  host: 1,
+  startTime: 1
+});
+sessionScheduleSchema.index({
+  pillar: 1,
+  startTime: 1
+});
+sessionScheduleSchema.index({
+  status: 1,
+  startTime: 1
+});
+var SessionSchedule = model39(
+  "SessionSchedule",
+  sessionScheduleSchema
 );
-pointsLedgerSchema.index({ user: 1, createdAt: -1 });
-pointsLedgerSchema.index({ sourceType: 1, sourceId: 1 });
-var PointsLedger = model42("PointsLedger", pointsLedgerSchema);
 
-// src/modules/pointsLedger/pointsledger.service.ts
-var createPointsLedger = async (payload) => {
-  const user = await User.findById(payload.user).select("_id");
-  assertFound_default(user, "User not found", 404);
-  const sourceFilter = payload.sourceType && payload.sourceId ? {
-    user: new Types44.ObjectId(payload.user),
-    sourceType: payload.sourceType,
-    sourceId: new Types44.ObjectId(payload.sourceId),
-    reason: payload.reason
-  } : null;
-  if (sourceFilter) {
-    const duplicate = await PointsLedger.findOne(sourceFilter).select("_id");
-    if (duplicate) {
-      throw new Error("A points entry already exists for this user, source and reason");
-    }
-  }
-  const entry = await PointsLedger.create({
-    user: new Types44.ObjectId(payload.user),
-    sourceType: payload.sourceType,
-    sourceId: payload.sourceId ? new Types44.ObjectId(payload.sourceId) : void 0,
-    sourceEntity: payload.sourceEntity,
-    points: payload.points,
-    transactionType: payload.transactionType,
-    reason: payload.reason,
-    description: payload.description,
-    balanceAfter: payload.balanceAfter,
-    balanceBefore: payload.balanceBefore,
-    module: payload.module ? new Types44.ObjectId(payload.module) : void 0,
-    video: payload.video ? new Types44.ObjectId(payload.video) : void 0,
-    action: payload.action ? new Types44.ObjectId(payload.action) : void 0,
-    quiz: payload.quiz ? new Types44.ObjectId(payload.quiz) : void 0,
-    session: payload.session ? new Types44.ObjectId(payload.session) : void 0,
-    metadata: payload.metadata ?? {}
-  });
-  return entry;
+// src/modules/sessionSchedules/sessionschedules.service.ts
+var throwServiceError23 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
 };
-var getPointsLedger = async (query) => {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
+var assertFound25 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError23(message, statusCode);
+  }
+};
+var assertValidObjectId21 = (value, fieldName) => {
+  if (!Types41.ObjectId.isValid(value)) {
+    throwServiceError23(`${fieldName} is invalid`, 400);
+  }
+};
+var safeLogActivityEvent2 = async (params) => {
+  try {
+    await activityLogService.createActivityLog({
+      actor: params.actorId,
+      action: params.action,
+      targetEntityType: "SessionSchedule",
+      targetEntityId: params.targetEntityId,
+      ...params.changeSummary !== void 0 ? { changeSummary: params.changeSummary } : {}
+    });
+  } catch (error) {
+    console.error("Failed to write activity log:", error);
+  }
+};
+var ensureHostExists = async (hostId) => {
+  assertValidObjectId21(hostId, "Host ID");
+  const host = await User.findById(hostId).select("_id fullName email role");
+  assertFound25(host, "Host user not found", 404);
+  return host;
+};
+var ensurePillarExists2 = async (pillarId) => {
+  assertValidObjectId21(pillarId, "Pillar ID");
+  const pillar = await ChallengePillar.findById(pillarId);
+  assertFound25(pillar, "Challenge pillar not found", 404);
+  return pillar;
+};
+var ensureCourseModuleExists6 = async (courseModuleId) => {
+  assertValidObjectId21(courseModuleId, "Course module ID");
+  const courseModule = await CourseModule.findById(courseModuleId);
+  assertFound25(courseModule, "Course module not found", 404);
+  return courseModule;
+};
+var assertNoHostConflict = async (params) => {
+  const filter = {
+    host: new Types41.ObjectId(params.hostId),
+    status: { $nin: ["cancelled"] },
+    startTime: { $lt: params.endTime },
+    endTime: { $gt: params.startTime }
+  };
+  if (params.excludeSessionId) {
+    filter._id = { $ne: new Types41.ObjectId(params.excludeSessionId) };
+  }
+  const conflictingSession = await SessionSchedule.findOne(filter);
+  if (conflictingSession) {
+    throwServiceError23(
+      "This host already has a session scheduled during this time range",
+      409
+    );
+  }
+};
+var populateSessionSchedule = (id) => SessionSchedule.findById(id).populate("host", "fullName email role").populate("pillar", "name slug title").populate("courseModule", "title slug").populate("createdBy", "fullName email role").populate("updatedBy", "fullName email role").populate("cancelledBy", "fullName email role");
+var createSessionSchedule = async (payload, actorId) => {
+  await ensureHostExists(payload.host);
+  if (payload.pillar) {
+    await ensurePillarExists2(payload.pillar);
+  }
+  if (payload.courseModule) {
+    await ensureCourseModuleExists6(payload.courseModule);
+  }
+  const startTime = new Date(payload.startTime);
+  const endTime = new Date(payload.endTime);
+  if (endTime.getTime() <= startTime.getTime()) {
+    throwServiceError23("End time must be after start time", 400);
+  }
+  await assertNoHostConflict({
+    hostId: payload.host,
+    startTime,
+    endTime
+  });
+  const createData = {
+    title: payload.title,
+    sessionType: payload.sessionType,
+    host: new Types41.ObjectId(payload.host),
+    startTime,
+    endTime,
+    timezone: payload.timezone,
+    createdBy: new Types41.ObjectId(actorId)
+  };
+  if (payload.description !== void 0) {
+    createData.description = payload.description;
+  }
+  if (payload.pillar) {
+    createData.pillar = new Types41.ObjectId(payload.pillar);
+  }
+  if (payload.courseModule) {
+    createData.courseModule = new Types41.ObjectId(payload.courseModule);
+  }
+  if (payload.meetingUrl !== void 0) {
+    createData.meetingUrl = payload.meetingUrl;
+  }
+  if (payload.capacity !== void 0) {
+    createData.capacity = payload.capacity;
+  }
+  const session = await SessionSchedule.create(createData);
+  await safeLogActivityEvent2({
+    actorId,
+    action: "create",
+    targetEntityId: session._id.toString(),
+    changeSummary: `Session "${payload.title}" scheduled`
+  });
+  const populated = await populateSessionSchedule(session._id);
+  assertFound25(populated, "Session schedule not found after creation", 500);
+  return populated;
+};
+var getAllSessionSchedules = async (options2) => {
+  const page = options2.page ?? 1;
+  const limit = options2.limit ?? 20;
   const skip = (page - 1) * limit;
   const filter = {};
-  if (query.userId) {
-    filter.user = new Types44.ObjectId(query.userId);
+  if (options2.hostId) {
+    assertValidObjectId21(options2.hostId, "Host ID");
+    filter.host = new Types41.ObjectId(options2.hostId);
   }
-  if (query.sourceType) {
-    filter.sourceType = query.sourceType;
+  if (options2.pillarId) {
+    assertValidObjectId21(options2.pillarId, "Pillar ID");
+    filter.pillar = new Types41.ObjectId(options2.pillarId);
   }
-  if (query.sourceEntity) {
-    filter.sourceEntity = query.sourceEntity;
+  if (options2.courseModuleId) {
+    assertValidObjectId21(options2.courseModuleId, "Course module ID");
+    filter.courseModule = new Types41.ObjectId(options2.courseModuleId);
   }
-  if (query.reason) {
-    filter.reason = query.reason;
+  if (options2.sessionType) {
+    filter.sessionType = options2.sessionType;
   }
-  if (query.transactionType) {
-    filter.transactionType = query.transactionType;
+  if (options2.status) {
+    filter.status = options2.status;
+  }
+  if (options2.startDate || options2.endDate) {
+    filter.startTime = {};
+    if (options2.startDate) {
+      filter.startTime.$gte = new Date(
+        options2.startDate
+      );
+    }
+    if (options2.endDate) {
+      filter.startTime.$lte = new Date(
+        options2.endDate
+      );
+    }
   }
   const [data, total] = await Promise.all([
-    PointsLedger.find(filter).populate("user", "fullName email role").sort({ createdAt: -1 }).skip(skip).limit(limit),
-    PointsLedger.countDocuments(filter)
+    SessionSchedule.find(filter).sort({
+      startTime: 1
+    }).skip(skip).limit(limit).populate("host", "fullName email role").populate("pillar", "name slug title").populate("courseModule", "title slug"),
+    SessionSchedule.countDocuments(filter)
   ]);
   return {
     data,
@@ -29404,149 +28865,903 @@ var getPointsLedger = async (query) => {
     }
   };
 };
-var getSinglePointsLedger = async (entryId) => {
-  const entry = await PointsLedger.findById(entryId).populate("user", "fullName email role");
-  assertFound_default(entry, "Points ledger entry not found", 404);
-  return entry;
+var getSingleSessionSchedule = async (sessionId) => {
+  assertValidObjectId21(sessionId, "Session schedule ID");
+  const session = await populateSessionSchedule(
+    new Types41.ObjectId(sessionId)
+  );
+  assertFound25(session, "Session schedule not found", 404);
+  return session;
 };
-var pointsLedgerService = {
-  createPointsLedger,
-  getPointsLedger,
-  getSinglePointsLedger
+var updateSessionSchedule = async (sessionId, payload, actorId) => {
+  assertValidObjectId21(sessionId, "Session schedule ID");
+  const session = await SessionSchedule.findById(sessionId);
+  assertFound25(session, "Session schedule not found", 404);
+  if (session.status === "cancelled") {
+    throwServiceError23("Cannot update a cancelled session", 400);
+  }
+  if (payload.host) {
+    await ensureHostExists(payload.host);
+    session.host = new Types41.ObjectId(payload.host);
+  }
+  if (payload.pillar !== void 0) {
+    if (payload.pillar === null) {
+      session.set("pillar", void 0);
+    } else {
+      await ensurePillarExists2(payload.pillar);
+      session.pillar = new Types41.ObjectId(payload.pillar);
+    }
+  }
+  if (payload.courseModule !== void 0) {
+    if (payload.courseModule === null) {
+      session.set("courseModule", void 0);
+    } else {
+      await ensureCourseModuleExists6(payload.courseModule);
+      session.courseModule = new Types41.ObjectId(payload.courseModule);
+    }
+  }
+  const nextStartTime = payload.startTime ? new Date(payload.startTime) : session.startTime;
+  const nextEndTime = payload.endTime ? new Date(payload.endTime) : session.endTime;
+  if (nextEndTime.getTime() <= nextStartTime.getTime()) {
+    throwServiceError23("End time must be after start time", 400);
+  }
+  if (payload.startTime || payload.endTime || payload.host) {
+    await assertNoHostConflict({
+      hostId: payload.host ?? session.host.toString(),
+      startTime: nextStartTime,
+      endTime: nextEndTime,
+      excludeSessionId: sessionId
+    });
+  }
+  session.startTime = nextStartTime;
+  session.endTime = nextEndTime;
+  if (payload.title !== void 0) {
+    session.title = payload.title;
+  }
+  if (payload.description !== void 0) {
+    session.description = payload.description;
+  }
+  if (payload.sessionType !== void 0) {
+    session.sessionType = payload.sessionType;
+  }
+  if (payload.timezone !== void 0) {
+    session.timezone = payload.timezone;
+  }
+  if (payload.meetingUrl !== void 0) {
+    session.set(
+      "meetingUrl",
+      payload.meetingUrl === null ? void 0 : payload.meetingUrl
+    );
+  }
+  if (payload.capacity !== void 0) {
+    session.set(
+      "capacity",
+      payload.capacity === null ? void 0 : payload.capacity
+    );
+  }
+  if (payload.status !== void 0) {
+    session.status = payload.status;
+  }
+  session.updatedBy = new Types41.ObjectId(actorId);
+  await session.save();
+  await safeLogActivityEvent2({
+    actorId,
+    action: "update",
+    targetEntityId: session._id.toString(),
+    changeSummary: `Session "${session.title}" updated`
+  });
+  const populated = await populateSessionSchedule(session._id);
+  assertFound25(populated, "Session schedule not found after update", 500);
+  return populated;
 };
-
-// src/modules/pointsLedger/pointsledger.controller.ts
-var getAuthUser30 = (req) => {
-  assertFound_default(req.user, "Authentication required", 401);
+var cancelSessionSchedule = async (sessionId, payload, actorId) => {
+  assertValidObjectId21(sessionId, "Session schedule ID");
+  const session = await SessionSchedule.findById(sessionId);
+  assertFound25(session, "Session schedule not found", 404);
+  if (session.status === "cancelled") {
+    throwServiceError23("Session is already cancelled", 400);
+  }
+  if (session.status === "completed") {
+    throwServiceError23("Cannot cancel a completed session", 400);
+  }
+  session.status = "cancelled";
+  session.cancellationReason = payload.reason;
+  session.cancelledBy = new Types41.ObjectId(actorId);
+  session.cancelledAt = /* @__PURE__ */ new Date();
+  session.updatedBy = new Types41.ObjectId(actorId);
+  await session.save();
+  await safeLogActivityEvent2({
+    actorId,
+    action: "update",
+    targetEntityId: session._id.toString(),
+    changeSummary: `Session "${session.title}" cancelled \u2014 ${payload.reason}`
+  });
+  const populated = await populateSessionSchedule(session._id);
+  assertFound25(populated, "Session schedule not found after cancellation", 500);
+  return populated;
+};
+var deleteSessionSchedule = async (sessionId, actorId) => {
+  assertValidObjectId21(sessionId, "Session schedule ID");
+  const session = await SessionSchedule.findById(sessionId);
+  assertFound25(session, "Session schedule not found", 404);
+  await SessionSchedule.findByIdAndDelete(sessionId);
+  await safeLogActivityEvent2({
+    actorId,
+    action: "delete",
+    targetEntityId: sessionId,
+    changeSummary: `Session "${session.title}" deleted`
+  });
   return {
-    id: req.user.id,
-    role: req.user.role
+    message: "Session schedule deleted successfully"
   };
 };
-var createPointsLedger2 = async (req, res, next) => {
+var sessionScheduleService = {
+  createSessionSchedule,
+  getAllSessionSchedules,
+  getSingleSessionSchedule,
+  updateSessionSchedule,
+  cancelSessionSchedule,
+  deleteSessionSchedule
+};
+
+// src/modules/sessionSchedules/sessionschedules.controller.ts
+var throwControllerError11 = (message, status) => {
+  const error = new Error(message);
+  error.status = status;
+  throw error;
+};
+var assertFound26 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwControllerError11(message, statusCode);
+  }
+};
+var getAuthUserId3 = (req) => {
+  const user = req.user;
+  assertFound26(user, "Authentication required", 401);
+  const id = user.id;
+  assertFound26(id, "Authentication required", 401);
+  return id;
+};
+var createSessionSchedule2 = async (req, res, next) => {
   try {
-    getAuthUser30(req);
-    const payload = req.body;
-    const result = await pointsLedgerService.createPointsLedger(payload);
+    const actorId = getAuthUserId3(req);
+    const result = await sessionScheduleService.createSessionSchedule(
+      req.body,
+      actorId
+    );
     sendResponse_default(res, {
       statusCode: 201,
       success: true,
-      message: "Points ledger entry created successfully",
+      message: "Session scheduled successfully",
       data: result
     });
   } catch (error) {
     next(error);
   }
 };
-var getPointsLedger2 = async (req, res, next) => {
+var getAllSessionSchedules2 = async (req, res, next) => {
   try {
-    getAuthUser30(req);
-    const query = {};
-    if (typeof req.query.userId === "string") query.userId = req.query.userId;
-    if (typeof req.query.sourceType === "string") query.sourceType = req.query.sourceType;
-    if (typeof req.query.sourceEntity === "string") query.sourceEntity = req.query.sourceEntity;
-    if (typeof req.query.reason === "string") query.reason = req.query.reason;
-    if (typeof req.query.transactionType === "string") query.transactionType = req.query.transactionType;
-    if (typeof req.query.page === "string") query.page = Number(req.query.page);
-    if (typeof req.query.limit === "string") query.limit = Number(req.query.limit);
-    const result = await pointsLedgerService.getPointsLedger(query);
+    const options2 = {
+      page: Number(req.query.page ?? 1),
+      limit: Number(req.query.limit ?? 20)
+    };
+    if (typeof req.query.hostId === "string") {
+      options2.hostId = req.query.hostId;
+    }
+    if (typeof req.query.pillarId === "string") {
+      options2.pillarId = req.query.pillarId;
+    }
+    if (typeof req.query.courseModuleId === "string") {
+      options2.courseModuleId = req.query.courseModuleId;
+    }
+    if (typeof req.query.sessionType === "string") {
+      options2.sessionType = req.query.sessionType;
+    }
+    if (typeof req.query.status === "string") {
+      options2.status = req.query.status;
+    }
+    if (typeof req.query.startDate === "string") {
+      options2.startDate = req.query.startDate;
+    }
+    if (typeof req.query.endDate === "string") {
+      options2.endDate = req.query.endDate;
+    }
+    const result = await sessionScheduleService.getAllSessionSchedules(options2);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-      message: "Points ledger retrieved successfully",
+      message: "Session schedules retrieved successfully",
       data: result
     });
   } catch (error) {
     next(error);
   }
 };
-var getSinglePointsLedger2 = async (req, res, next) => {
+var getSingleSessionSchedule2 = async (req, res, next) => {
   try {
-    getAuthUser30(req);
-    const result = await pointsLedgerService.getSinglePointsLedger(String(req.params.id));
+    const result = await sessionScheduleService.getSingleSessionSchedule(
+      String(req.params.id)
+    );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-      message: "Points ledger entry retrieved successfully",
+      message: "Session schedule retrieved successfully",
       data: result
     });
   } catch (error) {
     next(error);
   }
 };
-var pointsLedgerController = {
-  createPointsLedger: createPointsLedger2,
-  getPointsLedger: getPointsLedger2,
-  getSinglePointsLedger: getSinglePointsLedger2
+var updateSessionSchedule2 = async (req, res, next) => {
+  try {
+    const actorId = getAuthUserId3(req);
+    const result = await sessionScheduleService.updateSessionSchedule(
+      String(req.params.id),
+      req.body,
+      actorId
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session schedule updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var cancelSessionSchedule2 = async (req, res, next) => {
+  try {
+    const actorId = getAuthUserId3(req);
+    const result = await sessionScheduleService.cancelSessionSchedule(
+      String(req.params.id),
+      req.body,
+      actorId
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session schedule cancelled successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var deleteSessionSchedule2 = async (req, res, next) => {
+  try {
+    const actorId = getAuthUserId3(req);
+    const result = await sessionScheduleService.deleteSessionSchedule(
+      String(req.params.id),
+      actorId
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session schedule deleted successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var sessionScheduleController = {
+  createSessionSchedule: createSessionSchedule2,
+  getAllSessionSchedules: getAllSessionSchedules2,
+  getSingleSessionSchedule: getSingleSessionSchedule2,
+  updateSessionSchedule: updateSessionSchedule2,
+  cancelSessionSchedule: cancelSessionSchedule2,
+  deleteSessionSchedule: deleteSessionSchedule2
 };
 
-// src/modules/pointsLedger/pointsledger.validation.ts
-import { z as z37 } from "zod";
-var mongoObjectIdSchema27 = z37.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
-var pointsLedgerIdValidation = z37.object({
-  params: z37.object({
+// src/modules/sessionSchedules/sessionschedules.validation.ts
+import { z as z34 } from "zod";
+var mongoObjectIdSchema26 = z34.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var isoDateTimeSchema = z34.string().refine((value) => !Number.isNaN(Date.parse(value)), {
+  message: "Invalid date/time"
+});
+var createSessionScheduleBodySchema = z34.object({
+  title: z34.string().trim().min(1).max(200),
+  description: z34.string().trim().max(2e3).optional(),
+  sessionType: z34.enum(SESSION_TYPES),
+  host: mongoObjectIdSchema26,
+  pillar: mongoObjectIdSchema26.optional(),
+  courseModule: mongoObjectIdSchema26.optional(),
+  startTime: isoDateTimeSchema,
+  endTime: isoDateTimeSchema,
+  timezone: z34.string().trim().min(1),
+  meetingUrl: z34.string().trim().url().optional(),
+  capacity: z34.coerce.number().int().min(1).optional()
+}).refine((data) => new Date(data.endTime) > new Date(data.startTime), {
+  message: "End time must be after start time",
+  path: ["endTime"]
+});
+var createSessionScheduleValidation = z34.object({
+  body: createSessionScheduleBodySchema
+});
+var updateSessionScheduleBodySchema = z34.object({
+  title: z34.string().trim().min(1).max(200).optional(),
+  description: z34.string().trim().max(2e3).optional(),
+  sessionType: z34.enum(SESSION_TYPES).optional(),
+  host: mongoObjectIdSchema26.optional(),
+  pillar: mongoObjectIdSchema26.nullable().optional(),
+  courseModule: mongoObjectIdSchema26.nullable().optional(),
+  startTime: isoDateTimeSchema.optional(),
+  endTime: isoDateTimeSchema.optional(),
+  timezone: z34.string().trim().min(1).optional(),
+  meetingUrl: z34.string().trim().url().nullable().optional(),
+  capacity: z34.coerce.number().int().min(1).nullable().optional(),
+  status: z34.enum(SESSION_STATUSES).optional()
+}).refine(
+  (data) => !(data.startTime && data.endTime) || new Date(data.endTime) > new Date(data.startTime),
+  {
+    message: "End time must be after start time",
+    path: ["endTime"]
+  }
+);
+var updateSessionScheduleValidation = z34.object({
+  params: z34.object({
+    id: mongoObjectIdSchema26
+  }),
+  body: updateSessionScheduleBodySchema
+});
+var sessionScheduleIdValidation = z34.object({
+  params: z34.object({
+    id: mongoObjectIdSchema26
+  })
+});
+var cancelSessionScheduleValidation = z34.object({
+  params: z34.object({
+    id: mongoObjectIdSchema26
+  }),
+  body: z34.object({
+    reason: z34.string().trim().min(1).max(1e3)
+  })
+});
+var getAllSessionSchedulesValidation = z34.object({
+  query: z34.object({
+    hostId: mongoObjectIdSchema26.optional(),
+    pillarId: mongoObjectIdSchema26.optional(),
+    courseModuleId: mongoObjectIdSchema26.optional(),
+    sessionType: z34.enum(SESSION_TYPES).optional(),
+    status: z34.enum(SESSION_STATUSES).optional(),
+    startDate: isoDateTimeSchema.optional(),
+    endDate: isoDateTimeSchema.optional(),
+    page: z34.coerce.number().int().min(1).optional(),
+    limit: z34.coerce.number().int().min(1).max(100).optional()
+  })
+});
+
+// src/modules/sessionSchedules/sessionschedules.route.ts
+var router42 = Router42();
+router42.post(
+  "/",
+  verifyToken,
+  authorizeRoles("manager", "founder"),
+  validateRequest_default(createSessionScheduleValidation),
+  sessionScheduleController.createSessionSchedule
+);
+router42.get(
+  "/",
+  verifyToken,
+  validateRequest_default(getAllSessionSchedulesValidation),
+  sessionScheduleController.getAllSessionSchedules
+);
+router42.get(
+  "/:id",
+  verifyToken,
+  validateRequest_default(sessionScheduleIdValidation),
+  sessionScheduleController.getSingleSessionSchedule
+);
+router42.patch(
+  "/:id",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  validateRequest_default(updateSessionScheduleValidation),
+  sessionScheduleController.updateSessionSchedule
+);
+router42.patch(
+  "/:id/cancel",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  validateRequest_default(cancelSessionScheduleValidation),
+  sessionScheduleController.cancelSessionSchedule
+);
+router42.delete(
+  "/:id",
+  verifyToken,
+  authorizeRoles("admin", "founder"),
+  validateRequest_default(sessionScheduleIdValidation),
+  sessionScheduleController.deleteSessionSchedule
+);
+var sessionScheduleRoutes = router42;
+
+// src/modules/sessionattendances/sessionattendances.route.ts
+import { Router as Router43 } from "express";
+
+// src/modules/sessionattendances/sessionattendances.service.ts
+import { Types as Types42 } from "mongoose";
+
+// src/modules/sessionattendances/sessionattendances.model.schema.ts
+import { model as model40, Schema as Schema40 } from "mongoose";
+
+// src/modules/sessionattendances/sessionattendances.interface.ts
+var SESSION_ATTENDANCE_STATUSES = [
+  "registered",
+  "attended",
+  "late",
+  "no_show",
+  "cancelled"
+];
+
+// src/modules/sessionattendances/sessionattendances.model.schema.ts
+var sessionAttendanceSchema = new Schema40(
+  {
+    session: {
+      type: Schema40.Types.ObjectId,
+      ref: "SessionSchedule",
+      required: true,
+      index: true
+    },
+    user: {
+      type: Schema40.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    status: {
+      type: String,
+      enum: SESSION_ATTENDANCE_STATUSES,
+      default: "registered",
+      index: true
+    },
+    registeredAt: {
+      type: Date,
+      default: () => /* @__PURE__ */ new Date()
+    },
+    joinedAt: {
+      type: Date
+    },
+    leftAt: {
+      type: Date
+    },
+    markedBy: {
+      type: Schema40.Types.ObjectId,
+      ref: "User"
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    cancelledAt: {
+      type: Date
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    }
+  },
+  {
+    timestamps: true,
+    collection: "sessionattendance"
+  }
+);
+sessionAttendanceSchema.index(
+  {
+    session: 1,
+    user: 1
+  },
+  {
+    unique: true
+  }
+);
+sessionAttendanceSchema.index({
+  session: 1,
+  status: 1
+});
+sessionAttendanceSchema.index({
+  user: 1,
+  status: 1
+});
+var SessionAttendance = model40(
+  "SessionAttendance",
+  sessionAttendanceSchema
+);
+
+// src/modules/sessionattendances/sessionattendances.service.ts
+var throwServiceError24 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
+};
+var assertFound27 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwServiceError24(message, statusCode);
+  }
+};
+var assertValidObjectId22 = (value, fieldName) => {
+  if (!Types42.ObjectId.isValid(value)) {
+    throwServiceError24(`${fieldName} is invalid`, 400);
+  }
+};
+var ensureSessionExists = async (sessionId) => {
+  assertValidObjectId22(sessionId, "Session ID");
+  const session = await SessionSchedule.findById(sessionId);
+  assertFound27(session, "Session schedule not found", 404);
+  return session;
+};
+var ensureUserExists4 = async (userId) => {
+  assertValidObjectId22(userId, "User ID");
+  const user = await User.findById(userId).select("_id fullName email role");
+  assertFound27(user, "User not found", 404);
+  return user;
+};
+var populateAttendance = (id) => SessionAttendance.findById(id).populate("session", "title sessionType startTime endTime status").populate("user", "fullName email role").populate("markedBy", "fullName email role");
+var registerSessionAttendance = async (payload) => {
+  await ensureSessionExists(payload.session);
+  await ensureUserExists4(payload.user);
+  const sessionObjectId = new Types42.ObjectId(payload.session);
+  const userObjectId = new Types42.ObjectId(payload.user);
+  const attendance = await SessionAttendance.findOneAndUpdate(
+    {
+      session: sessionObjectId,
+      user: userObjectId
+    },
+    {
+      $setOnInsert: {
+        session: sessionObjectId,
+        user: userObjectId,
+        status: "registered",
+        registeredAt: /* @__PURE__ */ new Date()
+      }
+    },
+    {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true
+    }
+  );
+  const populated = await populateAttendance(attendance._id);
+  assertFound27(populated, "Session attendance not found after registration", 500);
+  return populated;
+};
+var markSessionAttendance = async (payload) => {
+  await ensureSessionExists(payload.session);
+  await ensureUserExists4(payload.user);
+  const sessionObjectId = new Types42.ObjectId(payload.session);
+  const userObjectId = new Types42.ObjectId(payload.user);
+  const setData = {
+    status: payload.status
+  };
+  if (payload.status === "attended" || payload.status === "late") {
+    setData.joinedAt = /* @__PURE__ */ new Date();
+  }
+  if (payload.markedBy) {
+    assertValidObjectId22(payload.markedBy, "Marked by ID");
+    setData.markedBy = new Types42.ObjectId(payload.markedBy);
+  }
+  if (payload.notes !== void 0) {
+    setData.notes = payload.notes;
+  }
+  const attendance = await SessionAttendance.findOneAndUpdate(
+    {
+      session: sessionObjectId,
+      user: userObjectId
+    },
+    {
+      $set: setData,
+      $setOnInsert: {
+        session: sessionObjectId,
+        user: userObjectId,
+        registeredAt: /* @__PURE__ */ new Date()
+      }
+    },
+    {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true
+    }
+  );
+  const populated = await populateAttendance(attendance._id);
+  assertFound27(populated, "Session attendance not found after marking", 500);
+  return populated;
+};
+var cancelSessionAttendance = async (payload) => {
+  assertValidObjectId22(payload.session, "Session ID");
+  assertValidObjectId22(payload.user, "User ID");
+  const attendance = await SessionAttendance.findOne({
+    session: new Types42.ObjectId(payload.session),
+    user: new Types42.ObjectId(payload.user)
+  });
+  assertFound27(attendance, "Session attendance record not found", 404);
+  if (attendance.status === "cancelled") {
+    const populated2 = await populateAttendance(attendance._id);
+    assertFound27(populated2, "Session attendance not found", 404);
+    return populated2;
+  }
+  attendance.status = "cancelled";
+  attendance.cancellationReason = payload.reason;
+  attendance.cancelledAt = /* @__PURE__ */ new Date();
+  await attendance.save();
+  const populated = await populateAttendance(attendance._id);
+  assertFound27(populated, "Session attendance not found after cancellation", 500);
+  return populated;
+};
+var getAllSessionAttendances = async (options2) => {
+  const page = options2.page ?? 1;
+  const limit = options2.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const filter = {};
+  if (options2.sessionId) {
+    assertValidObjectId22(options2.sessionId, "Session ID");
+    filter.session = new Types42.ObjectId(options2.sessionId);
+  }
+  if (options2.userId) {
+    assertValidObjectId22(options2.userId, "User ID");
+    filter.user = new Types42.ObjectId(options2.userId);
+  }
+  if (options2.status) {
+    filter.status = options2.status;
+  }
+  const [data, total] = await Promise.all([
+    SessionAttendance.find(filter).sort({
+      createdAt: -1
+    }).skip(skip).limit(limit).populate("session", "title sessionType startTime endTime status").populate("user", "fullName email role").populate("markedBy", "fullName email role"),
+    SessionAttendance.countDocuments(filter)
+  ]);
+  return {
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+};
+var getMySessionAttendances = async (userId) => {
+  assertValidObjectId22(userId, "User ID");
+  const attendances = await SessionAttendance.find({
+    user: new Types42.ObjectId(userId)
+  }).sort({
+    createdAt: -1
+  }).populate("session", "title sessionType startTime endTime status");
+  return attendances;
+};
+var getSingleSessionAttendance = async (attendanceId) => {
+  assertValidObjectId22(attendanceId, "Session attendance ID");
+  const attendance = await populateAttendance(
+    new Types42.ObjectId(attendanceId)
+  );
+  assertFound27(attendance, "Session attendance not found", 404);
+  return attendance;
+};
+var sessionAttendanceService = {
+  registerSessionAttendance,
+  markSessionAttendance,
+  cancelSessionAttendance,
+  getAllSessionAttendances,
+  getMySessionAttendances,
+  getSingleSessionAttendance
+};
+
+// src/modules/sessionattendances/sessionattendances.controller.ts
+var throwControllerError12 = (message, status) => {
+  const error = new Error(message);
+  error.status = status;
+  throw error;
+};
+var assertFound28 = (value, message, statusCode) => {
+  if (value === null || value === void 0) {
+    throwControllerError12(message, statusCode);
+  }
+};
+var getAuthUserId4 = (req) => {
+  const user = req.user;
+  assertFound28(user, "Authentication required", 401);
+  const id = user.id;
+  assertFound28(id, "Authentication required", 401);
+  return id;
+};
+var registerSessionAttendance2 = async (req, res, next) => {
+  try {
+    const authUserId = getAuthUserId4(req);
+    const result = await sessionAttendanceService.registerSessionAttendance({
+      session: req.body.session,
+      user: req.body.user ?? authUserId
+    });
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Registered for session successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var markSessionAttendance2 = async (req, res, next) => {
+  try {
+    const actorId = getAuthUserId4(req);
+    const result = await sessionAttendanceService.markSessionAttendance({
+      ...req.body,
+      markedBy: req.body.markedBy ?? actorId
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Attendance marked successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var cancelSessionAttendance2 = async (req, res, next) => {
+  try {
+    const result = await sessionAttendanceService.cancelSessionAttendance(
+      req.body
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session attendance cancelled successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllSessionAttendances2 = async (req, res, next) => {
+  try {
+    const options2 = {
+      page: Number(req.query.page ?? 1),
+      limit: Number(req.query.limit ?? 20)
+    };
+    if (typeof req.query.sessionId === "string") {
+      options2.sessionId = req.query.sessionId;
+    }
+    if (typeof req.query.userId === "string") {
+      options2.userId = req.query.userId;
+    }
+    if (typeof req.query.status === "string") {
+      options2.status = req.query.status;
+    }
+    const result = await sessionAttendanceService.getAllSessionAttendances(options2);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session attendances retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMySessionAttendances2 = async (req, res, next) => {
+  try {
+    const authUserId = getAuthUserId4(req);
+    const result = await sessionAttendanceService.getMySessionAttendances(authUserId);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Your session attendances retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleSessionAttendance2 = async (req, res, next) => {
+  try {
+    const result = await sessionAttendanceService.getSingleSessionAttendance(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Session attendance retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var sessionAttendanceController = {
+  registerSessionAttendance: registerSessionAttendance2,
+  markSessionAttendance: markSessionAttendance2,
+  cancelSessionAttendance: cancelSessionAttendance2,
+  getAllSessionAttendances: getAllSessionAttendances2,
+  getMySessionAttendances: getMySessionAttendances2,
+  getSingleSessionAttendance: getSingleSessionAttendance2
+};
+
+// src/modules/sessionattendances/sessionattendances.validation.ts
+import { z as z35 } from "zod";
+var mongoObjectIdSchema27 = z35.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var registerSessionAttendanceValidation = z35.object({
+  body: z35.object({
+    session: mongoObjectIdSchema27,
+    user: mongoObjectIdSchema27.optional()
+  })
+});
+var markSessionAttendanceValidation = z35.object({
+  body: z35.object({
+    session: mongoObjectIdSchema27,
+    user: mongoObjectIdSchema27,
+    status: z35.enum(SESSION_ATTENDANCE_STATUSES),
+    notes: z35.string().trim().max(1e3).optional()
+  })
+});
+var cancelSessionAttendanceValidation = z35.object({
+  body: z35.object({
+    session: mongoObjectIdSchema27,
+    user: mongoObjectIdSchema27,
+    reason: z35.string().trim().min(1).max(1e3)
+  })
+});
+var sessionAttendanceIdValidation = z35.object({
+  params: z35.object({
     id: mongoObjectIdSchema27
   })
 });
-var createPointsLedgerValidation = z37.object({
-  body: z37.object({
-    user: mongoObjectIdSchema27,
-    sourceType: z37.enum(POINTS_LEDGER_SOURCE_TYPES).optional(),
-    sourceId: mongoObjectIdSchema27.optional(),
-    sourceEntity: z37.string().trim().max(120).optional(),
-    points: z37.number().int().min(-1e6).max(1e6),
-    transactionType: z37.enum(POINTS_LEDGER_TYPES),
-    reason: z37.enum(POINTS_LEDGER_REASONS),
-    description: z37.string().trim().max(500).optional(),
-    balanceAfter: z37.number().int().min(-1e6).max(1e6).optional(),
-    balanceBefore: z37.number().int().min(-1e6).max(1e6).optional(),
-    module: mongoObjectIdSchema27.optional(),
-    video: mongoObjectIdSchema27.optional(),
-    action: mongoObjectIdSchema27.optional(),
-    quiz: mongoObjectIdSchema27.optional(),
-    session: mongoObjectIdSchema27.optional(),
-    metadata: z37.record(z37.unknown()).optional()
-  })
-});
-var getPointsLedgerValidation = z37.object({
-  query: z37.object({
+var getAllSessionAttendancesValidation = z35.object({
+  query: z35.object({
+    sessionId: mongoObjectIdSchema27.optional(),
     userId: mongoObjectIdSchema27.optional(),
-    sourceType: z37.enum(POINTS_LEDGER_SOURCE_TYPES).optional(),
-    sourceEntity: z37.string().trim().max(120).optional(),
-    reason: z37.enum(POINTS_LEDGER_REASONS).optional(),
-    transactionType: z37.enum(POINTS_LEDGER_TYPES).optional(),
-    page: z37.coerce.number().int().min(1).optional(),
-    limit: z37.coerce.number().int().min(1).max(100).optional()
+    status: z35.enum(SESSION_ATTENDANCE_STATUSES).optional(),
+    page: z35.coerce.number().int().min(1).optional(),
+    limit: z35.coerce.number().int().min(1).max(100).optional()
   })
 });
 
-// src/modules/pointsLedger/pointsledger.route.ts
-var ADMIN_ROLES5 = ["founder", "super_admin", "admin", "manager"];
-var router45 = Router45();
-router45.post(
+// src/modules/sessionattendances/sessionattendances.route.ts
+var router43 = Router43();
+router43.post(
+  "/register",
+  verifyToken,
+  validateRequest_default(registerSessionAttendanceValidation),
+  sessionAttendanceController.registerSessionAttendance
+);
+router43.post(
+  "/mark",
+  verifyToken,
+  authorizeRoles("manager", "founder"),
+  validateRequest_default(markSessionAttendanceValidation),
+  sessionAttendanceController.markSessionAttendance
+);
+router43.post(
+  "/cancel",
+  verifyToken,
+  authorizeRoles("manager", "founder"),
+  validateRequest_default(cancelSessionAttendanceValidation),
+  sessionAttendanceController.cancelSessionAttendance
+);
+router43.get(
+  "/me",
+  verifyToken,
+  sessionAttendanceController.getMySessionAttendances
+);
+router43.get(
   "/",
   verifyToken,
-  authorizeRoles(...ADMIN_ROLES5),
-  validateRequest_default(createPointsLedgerValidation),
-  pointsLedgerController.createPointsLedger
+  authorizeRoles("manager", "founder"),
+  validateRequest_default(getAllSessionAttendancesValidation),
+  sessionAttendanceController.getAllSessionAttendances
 );
-router45.get(
-  "/",
-  verifyToken,
-  authorizeRoles(...ADMIN_ROLES5),
-  validateRequest_default(getPointsLedgerValidation),
-  pointsLedgerController.getPointsLedger
-);
-router45.get(
+router43.get(
   "/:id",
   verifyToken,
-  validateRequest_default(pointsLedgerIdValidation),
-  pointsLedgerController.getSinglePointsLedger
+  authorizeRoles("manager", "founder"),
+  validateRequest_default(sessionAttendanceIdValidation),
+  sessionAttendanceController.getSingleSessionAttendance
 );
-var pointsLedgerRoutes = router45;
+var sessionAttendanceRoutes = router43;
 
 // src/routes/index.ts
-var router46 = Router46();
+var router44 = Router44();
 var moduleRoutes = [
   {
     path: "/admin",
@@ -29869,26 +30084,18 @@ var moduleRoutes = [
     route: activityLogRoutes
   },
   {
-    path: "/support-tickets",
-    route: supportTicketRoutes
+    path: "/invictus/session-schedules",
+    route: sessionScheduleRoutes
   },
   {
-    path: "/user-devices",
-    route: userDeviceRoutes
-  },
-  {
-    path: "/invictus/streak-logs",
-    route: streakLogRoutes
-  },
-  {
-    path: "/invictus/points-ledger",
-    route: pointsLedgerRoutes
+    path: "/invictus/session-attendances",
+    route: sessionAttendanceRoutes
   }
 ];
 moduleRoutes.forEach((route) => {
-  router46.use(route.path, route.route);
+  router44.use(route.path, route.route);
 });
-var routes_default = router46;
+var routes_default = router44;
 
 // src/swagger/swagger.ts
 import swaggerJSDoc from "swagger-jsdoc";
