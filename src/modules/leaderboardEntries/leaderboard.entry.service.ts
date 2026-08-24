@@ -101,7 +101,7 @@ const getLeaderboardEntries = async (
       .sort({ rank: 1, points: -1 })
       .skip(skip)
       .limit(limit)
-      .populate("user", "fullName email role profileImage"),
+      .populate("user", "fullName email role profileImage country"),
 
     LeaderboardEntry.countDocuments({ leaderboard: leaderboardId }),
   ]);
@@ -126,7 +126,7 @@ const getSingleUserEntry = async (leaderboardId: string, userId: string) => {
   const entry = await LeaderboardEntry.findOne({
     leaderboard: leaderboardId,
     user: userId,
-  }).populate("user", "fullName email role profileImage");
+  }).populate("user", "fullName email role profileImage country");
 
   assertFound(entry, "Entry not found for this user in this leaderboard", 404);
 

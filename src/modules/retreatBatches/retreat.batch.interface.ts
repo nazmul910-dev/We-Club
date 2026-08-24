@@ -89,6 +89,7 @@ export interface IUpdateRetreatBatch {
 
 export interface IRetreatBatchQuery {
   locationId?: string | undefined;
+  includePast?: boolean | undefined;
   status?: RetreatBatchStatus | undefined;
   isActive?: boolean | undefined;
   isFeatured?: boolean | undefined;
