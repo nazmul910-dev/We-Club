@@ -10729,7 +10729,7 @@ var requireInvictusAccess = async (req, _res, next) => {
         )
       );
     }
-    if (req.user.role === "admin" || req.user.role === "manager") {
+    if (req.user.role === "founder" || req.user.role === "manager") {
       return next();
     }
     const user = await User.findById(userId).select(
@@ -10858,7 +10858,7 @@ function assertPillarExists(pillar, message = "Challenge pillar not found") {
   }
 }
 var isAdminOrManager5 = (role) => {
-  return role === "admin" || role === "manager";
+  return role === "admin" || role === "manager" || role === "founder";
 };
 var validatePaymentConfiguration = ({
   isPaid,
@@ -10996,7 +10996,7 @@ var getAllChallengePillars = async ({
       $ne: "archived"
     };
   }
-  return ChallengePillar.find(filter).sort({ order: 1 }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
+  return ChallengePillar.find().sort({ order: 1 }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
 };
 var getChallengePillarBySlug = async (slug, actorRole) => {
   const filter = {
@@ -11399,13 +11399,13 @@ var router13 = Router13();
 router13.post(
   "/seed-defaults",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   challengePillarController.seedDefaultChallengePillars
 );
 router13.post(
   "/",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(createChallengePillarValidation),
   challengePillarController.createChallengePillar
 );
@@ -11425,28 +11425,28 @@ router13.get(
 router13.patch(
   "/:id",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(updateChallengePillarValidation),
   challengePillarController.updateChallengePillar
 );
 router13.patch(
   "/:id/publish",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(challengePillarIdValidation),
   challengePillarController.publishChallengePillar
 );
 router13.patch(
   "/:id/draft",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(challengePillarIdValidation),
   challengePillarController.moveChallengePillarToDraft
 );
 router13.patch(
   "/:id/archive",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(challengePillarIdValidation),
   challengePillarController.archiveChallengePillar
 );
@@ -11952,454 +11952,6 @@ var courseModuleService = {
   archiveCourseModule
 };
 
-// src/modules/courseModules/course.module.controller.ts
-var getAuthUser4 = (req) => {
-  if (!req.user) {
-    const error = new Error(
-      "Authentication required"
-    );
-    error.statusCode = 401;
-    throw error;
-  }
-  const authUser = req.user;
-  const userId = authUser.id || authUser.userId;
-  if (!userId) {
-    const error = new Error(
-      "Authenticated user ID is missing"
-    );
-    error.statusCode = 401;
-    throw error;
-  }
-  return {
-    id: String(userId),
-    role: String(authUser.role)
-  };
-};
-var createCourseModule2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser4(req);
-    const result = await courseModuleService.createCourseModule(
-      req.body,
-      authUser.id
-    );
-    sendResponse_default(res, {
-      statusCode: 201,
-      success: true,
-      message: "Course module created successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getAllCourseModules2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser4(req);
-    const result = await courseModuleService.getAllCourseModules({
-      actorRole: authUser.role,
-      pillarId: typeof req.query.pillarId === "string" ? req.query.pillarId : void 0,
-      includeArchived: req.query.includeArchived === "true"
-    });
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Course modules retrieved successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getModulesByPillar2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser4(req);
-    const result = await courseModuleService.getModulesByPillar(
-      String(req.params.pillarId),
-      authUser.role
-    );
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Pillar modules retrieved successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getSingleCourseModule2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser4(req);
-    const result = await courseModuleService.getSingleCourseModule(
-      String(req.params.id),
-      authUser.role
-    );
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Course module retrieved successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var updateCourseModule2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser4(req);
-    const result = await courseModuleService.updateCourseModule(
-      String(req.params.id),
-      req.body,
-      authUser.id
-    );
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Course module updated successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var publishCourseModule2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser4(req);
-    const result = await courseModuleService.publishCourseModule(
-      String(req.params.id),
-      authUser.id
-    );
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Course module published successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var moveCourseModuleToDraft2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser4(req);
-    const result = await courseModuleService.moveCourseModuleToDraft(
-      String(req.params.id),
-      authUser.id
-    );
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Course module moved to draft successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var archiveCourseModule2 = async (req, res, next) => {
-  try {
-    const authUser = getAuthUser4(req);
-    const result = await courseModuleService.archiveCourseModule(
-      String(req.params.id),
-      authUser.id
-    );
-    sendResponse_default(res, {
-      statusCode: 200,
-      success: true,
-      message: "Course module archived successfully",
-      data: result
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var courseModuleController = {
-  createCourseModule: createCourseModule2,
-  getAllCourseModules: getAllCourseModules2,
-  getModulesByPillar: getModulesByPillar2,
-  getSingleCourseModule: getSingleCourseModule2,
-  updateCourseModule: updateCourseModule2,
-  publishCourseModule: publishCourseModule2,
-  moveCourseModuleToDraft: moveCourseModuleToDraft2,
-  archiveCourseModule: archiveCourseModule2
-};
-
-// src/modules/courseModules/course.module.validation.ts
-import { z as z10 } from "zod";
-var mongoObjectIdSchema2 = z10.string().regex(
-  /^[0-9a-fA-F]{24}$/,
-  "Invalid MongoDB ObjectId"
-);
-var moduleSlugSchema = z10.string().trim().min(2).max(200).regex(
-  /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-  "Slug may contain lowercase letters, numbers and hyphens only"
-);
-var createCourseModuleBodySchema = z10.object({
-  pillar: mongoObjectIdSchema2,
-  title: z10.string().trim().min(2).max(200),
-  slug: moduleSlugSchema,
-  shortDescription: z10.string().trim().max(500).optional(),
-  description: z10.string().trim().min(10).max(5e3),
-  thumbnailUrl: z10.string().url().optional(),
-  moduleNumber: z10.number().int().min(1),
-  estimatedDurationMinutes: z10.number().int().nonnegative().default(0),
-  minimumVideoPercent: z10.number().min(1).max(100).default(80),
-  minimumActionPercent: z10.number().min(1).max(100).default(80),
-  minimumQuizScore: z10.number().min(1).max(100).default(70),
-  maximumQuizAttempts: z10.number().int().min(1).max(10).default(2),
-  completionPoints: z10.number().int().nonnegative().default(20)
-});
-var updateCourseModuleBodySchema = z10.object({
-  title: z10.string().trim().min(2).max(200).optional(),
-  slug: moduleSlugSchema.optional(),
-  shortDescription: z10.string().trim().max(500).nullable().optional(),
-  description: z10.string().trim().min(10).max(5e3).optional(),
-  thumbnailUrl: z10.string().url().nullable().optional(),
-  moduleNumber: z10.number().int().min(1).optional(),
-  estimatedDurationMinutes: z10.number().int().nonnegative().optional(),
-  minimumVideoPercent: z10.number().min(1).max(100).optional(),
-  minimumActionPercent: z10.number().min(1).max(100).optional(),
-  minimumQuizScore: z10.number().min(1).max(100).optional(),
-  maximumQuizAttempts: z10.number().int().min(1).max(10).optional(),
-  completionPoints: z10.number().int().nonnegative().optional()
-}).refine(
-  (data) => Object.keys(data).length > 0,
-  {
-    message: "At least one field is required"
-  }
-);
-var createCourseModuleValidation = z10.object({
-  body: createCourseModuleBodySchema
-});
-var updateCourseModuleValidation = z10.object({
-  params: z10.object({
-    id: mongoObjectIdSchema2
-  }),
-  body: updateCourseModuleBodySchema
-});
-var courseModuleIdValidation = z10.object({
-  params: z10.object({
-    id: mongoObjectIdSchema2
-  })
-});
-var courseModulePillarValidation = z10.object({
-  params: z10.object({
-    pillarId: mongoObjectIdSchema2
-  })
-});
-
-// src/modules/courseModules/course.module.route.ts
-var router14 = Router14();
-router14.post(
-  "/",
-  verifyToken,
-  authorizeRoles("admin", "manager"),
-  validateRequest_default(
-    createCourseModuleValidation
-  ),
-  courseModuleController.createCourseModule
-);
-router14.get(
-  "/",
-  verifyToken,
-  invictusAccessMiddleware_default,
-  courseModuleController.getAllCourseModules
-);
-router14.get(
-  "/pillar/:pillarId",
-  verifyToken,
-  invictusAccessMiddleware_default,
-  validateRequest_default(
-    courseModulePillarValidation
-  ),
-  courseModuleController.getModulesByPillar
-);
-router14.get(
-  "/:id",
-  verifyToken,
-  invictusAccessMiddleware_default,
-  validateRequest_default(
-    courseModuleIdValidation
-  ),
-  courseModuleController.getSingleCourseModule
-);
-router14.patch(
-  "/:id",
-  verifyToken,
-  authorizeRoles("admin", "manager"),
-  validateRequest_default(
-    updateCourseModuleValidation
-  ),
-  courseModuleController.updateCourseModule
-);
-router14.patch(
-  "/:id/publish",
-  verifyToken,
-  authorizeRoles("admin", "manager"),
-  validateRequest_default(
-    courseModuleIdValidation
-  ),
-  courseModuleController.publishCourseModule
-);
-router14.patch(
-  "/:id/draft",
-  verifyToken,
-  authorizeRoles("admin", "manager"),
-  validateRequest_default(
-    courseModuleIdValidation
-  ),
-  courseModuleController.moveCourseModuleToDraft
-);
-router14.patch(
-  "/:id/archive",
-  verifyToken,
-  authorizeRoles("admin", "manager"),
-  validateRequest_default(
-    courseModuleIdValidation
-  ),
-  courseModuleController.archiveCourseModule
-);
-var courseModuleRoutes = router14;
-
-// src/modules/moduleVideos/module.video.route.ts
-import { Router as Router15 } from "express";
-
-// src/middleware/mediaUploadMiddleware.ts
-import multer2 from "multer";
-var memoryStorage = multer2.memoryStorage();
-var allowedVideoTypes = [
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-  "video/x-m4v",
-  "video/mpeg"
-];
-var allowedImageTypes = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp"
-];
-var allowedResourceTypes = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "text/plain",
-  "text/csv",
-  ...allowedImageTypes
-];
-var uploadModuleVideo = multer2({
-  storage: memoryStorage,
-  limits: {
-    fileSize: 150 * 1024 * 1024,
-    files: 1
-  },
-  fileFilter: (_req, file, callback) => {
-    if (!allowedVideoTypes.includes(file.mimetype)) {
-      return callback(
-        new Error("Only MP4, WEBM, MOV, M4V, and MPEG video files are allowed")
-      );
-    }
-    return callback(null, true);
-  }
-});
-var uploadModuleResource = multer2({
-  storage: memoryStorage,
-  limits: {
-    fileSize: 30 * 1024 * 1024,
-    files: 2
-  },
-  fileFilter: (_req, file, callback) => {
-    if (file.fieldname === "thumbnail") {
-      if (!allowedImageTypes.includes(file.mimetype)) {
-        return callback(
-          new Error("Thumbnail must be JPG, JPEG, PNG, or WEBP")
-        );
-      }
-      return callback(null, true);
-    }
-    if (file.fieldname === "resource") {
-      if (!allowedResourceTypes.includes(file.mimetype)) {
-        return callback(
-          new Error(
-            "Unsupported resource type. Upload PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, CSV, JPG, PNG, or WEBP"
-          )
-        );
-      }
-      return callback(null, true);
-    }
-    return callback(new Error(`Unexpected upload field: ${file.fieldname}`));
-  }
-});
-var uploadModuleResourceFields = uploadModuleResource.fields([
-  { name: "resource", maxCount: 1 },
-  { name: "thumbnail", maxCount: 1 }
-]);
-var parseBoolean = (value) => {
-  if (value === true || value === "true") {
-    return true;
-  }
-  if (value === false || value === "false") {
-    return false;
-  }
-  return void 0;
-};
-var parseNumber = (value) => {
-  if (typeof value !== "string" || value.trim() === "") {
-    return value;
-  }
-  const parsed = Number(value);
-  return Number.isNaN(parsed) ? value : parsed;
-};
-var normalizeModuleVideoMultipartBody = (req, _res, next) => {
-  const parsedIsPaid = parseBoolean(
-    req.body.isPaid
-  );
-  const parsedIsRequired = parseBoolean(
-    req.body.isRequired
-  );
-  if (parsedIsPaid !== void 0) {
-    req.body.isPaid = parsedIsPaid;
-  }
-  if (parsedIsRequired !== void 0) {
-    req.body.isRequired = parsedIsRequired;
-  }
-  if (req.body.requiredWatchPercent !== void 0) {
-    req.body.requiredWatchPercent = Number(
-      req.body.requiredWatchPercent
-    );
-  }
-  if (req.body.pointsReward !== void 0) {
-    req.body.pointsReward = Number(
-      req.body.pointsReward
-    );
-  }
-  if (req.body.order !== void 0) {
-    req.body.order = Number(
-      req.body.order
-    );
-  }
-  next();
-};
-var normalizeModuleResourceMultipartBody = (req, _res, next) => {
-  req.body.isRequired = parseBoolean(req.body.isRequired);
-  req.body.pointsReward = parseNumber(req.body.pointsReward);
-  req.body.order = parseNumber(req.body.order);
-  return next();
-};
-var getUploadedFieldFile = (req, fieldName) => {
-  const files = req.files;
-  if (!files || Array.isArray(files)) {
-    return void 0;
-  }
-  const fieldFiles = files[fieldName];
-  return fieldFiles?.[0];
-};
-
 // src/utility/cloudinaryMedia.ts
 import { Readable } from "stream";
 import {
@@ -12572,6 +12124,468 @@ var uploadThumbnailToCloudinary = async (file, folder) => {
     ]
   });
   return result.secure_url;
+};
+
+// src/modules/courseModules/course.module.controller.ts
+var getAuthUser4 = (req) => {
+  if (!req.user) {
+    const error = new Error("Authentication required");
+    error.statusCode = 401;
+    throw error;
+  }
+  const authUser = req.user;
+  const userId = authUser.id || authUser.userId;
+  if (!userId) {
+    const error = new Error("Authenticated user ID is missing");
+    error.statusCode = 401;
+    throw error;
+  }
+  return {
+    id: String(userId),
+    role: String(authUser.role)
+  };
+};
+var createCourseModule2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser4(req);
+    let thumbnailUrl;
+    if (req.file) {
+      thumbnailUrl = await uploadThumbnailToCloudinary(
+        req.file,
+        "invictus/courses"
+      );
+    }
+    const result = await courseModuleService.createCourseModule(
+      {
+        ...req.body,
+        thumbnailUrl
+      },
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Course module created successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAllCourseModules2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser4(req);
+    const result = await courseModuleService.getAllCourseModules({
+      actorRole: authUser.role,
+      pillarId: typeof req.query.pillarId === "string" ? req.query.pillarId : void 0,
+      includeArchived: req.query.includeArchived === "true"
+    });
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Course modules retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getModulesByPillar2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser4(req);
+    const result = await courseModuleService.getModulesByPillar(
+      String(req.params.pillarId),
+      authUser.role
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Pillar modules retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSingleCourseModule2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser4(req);
+    const result = await courseModuleService.getSingleCourseModule(
+      String(req.params.id),
+      authUser.role
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Course module retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateCourseModule2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser4(req);
+    let thumbnailUrl;
+    if (req.file) {
+      thumbnailUrl = await uploadThumbnailToCloudinary(
+        req.file,
+        "invictus/courses"
+      );
+    }
+    const result = await courseModuleService.updateCourseModule(
+      String(req.params.id),
+      {
+        ...req.body,
+        ...thumbnailUrl && {
+          thumbnailUrl
+        }
+      },
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Course module updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var publishCourseModule2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser4(req);
+    const result = await courseModuleService.publishCourseModule(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Course module published successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var moveCourseModuleToDraft2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser4(req);
+    const result = await courseModuleService.moveCourseModuleToDraft(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Course module moved to draft successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var archiveCourseModule2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser4(req);
+    const result = await courseModuleService.archiveCourseModule(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Course module archived successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var courseModuleController = {
+  createCourseModule: createCourseModule2,
+  getAllCourseModules: getAllCourseModules2,
+  getModulesByPillar: getModulesByPillar2,
+  getSingleCourseModule: getSingleCourseModule2,
+  updateCourseModule: updateCourseModule2,
+  publishCourseModule: publishCourseModule2,
+  moveCourseModuleToDraft: moveCourseModuleToDraft2,
+  archiveCourseModule: archiveCourseModule2
+};
+
+// src/modules/courseModules/course.module.validation.ts
+import { z as z10 } from "zod";
+var mongoObjectIdSchema2 = z10.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var moduleSlugSchema = z10.string().trim().min(2).max(200).regex(
+  /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+  "Slug may contain lowercase letters, numbers and hyphens only"
+);
+var createCourseModuleBodySchema = z10.object({
+  pillar: mongoObjectIdSchema2,
+  title: z10.string().trim().min(2).max(200),
+  slug: moduleSlugSchema,
+  shortDescription: z10.string().trim().max(500).optional(),
+  description: z10.string().trim().min(10).max(5e3),
+  thumbnailUrl: z10.string().url().optional(),
+  moduleNumber: z10.coerce.number().int().min(1),
+  estimatedDurationMinutes: z10.coerce.number().int().nonnegative(),
+  minimumVideoPercent: z10.coerce.number().min(1).max(100),
+  minimumActionPercent: z10.coerce.number().min(1).max(100),
+  minimumQuizScore: z10.coerce.number().min(1).max(100),
+  maximumQuizAttempts: z10.coerce.number().int().min(1).max(10),
+  completionPoints: z10.coerce.number().int().nonnegative()
+});
+var updateCourseModuleBodySchema = z10.object({
+  title: z10.string().trim().min(2).max(200).optional(),
+  slug: moduleSlugSchema.optional(),
+  shortDescription: z10.string().trim().max(500).nullable().optional(),
+  description: z10.string().trim().min(10).max(5e3).optional(),
+  thumbnailUrl: z10.string().url().nullable().optional(),
+  moduleNumber: z10.coerce.number().int().min(1).optional(),
+  estimatedDurationMinutes: z10.coerce.number().int().nonnegative().optional(),
+  minimumVideoPercent: z10.coerce.number().min(1).max(100).optional(),
+  minimumActionPercent: z10.coerce.number().min(1).max(100).optional(),
+  minimumQuizScore: z10.coerce.number().min(1).max(100).optional(),
+  maximumQuizAttempts: z10.coerce.number().int().min(1).max(10).optional(),
+  completionPoints: z10.coerce.number().int().nonnegative().optional()
+}).refine((data) => Object.keys(data).length > 0, {
+  message: "At least one field is required"
+});
+var createCourseModuleValidation = z10.object({
+  body: createCourseModuleBodySchema
+});
+var updateCourseModuleValidation = z10.object({
+  params: z10.object({
+    id: mongoObjectIdSchema2
+  }),
+  body: updateCourseModuleBodySchema
+});
+var courseModuleIdValidation = z10.object({
+  params: z10.object({
+    id: mongoObjectIdSchema2
+  })
+});
+var courseModulePillarValidation = z10.object({
+  params: z10.object({
+    pillarId: mongoObjectIdSchema2
+  })
+});
+
+// src/modules/courseModules/course.module.route.ts
+var router14 = Router14();
+router14.post(
+  "/",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  upload.single("thumbnail"),
+  validateRequest_default(
+    createCourseModuleValidation
+  ),
+  courseModuleController.createCourseModule
+);
+router14.get(
+  "/",
+  verifyToken,
+  invictusAccessMiddleware_default,
+  courseModuleController.getAllCourseModules
+);
+router14.get(
+  "/pillar/:pillarId",
+  verifyToken,
+  invictusAccessMiddleware_default,
+  validateRequest_default(
+    courseModulePillarValidation
+  ),
+  courseModuleController.getModulesByPillar
+);
+router14.get(
+  "/:id",
+  verifyToken,
+  invictusAccessMiddleware_default,
+  validateRequest_default(
+    courseModuleIdValidation
+  ),
+  courseModuleController.getSingleCourseModule
+);
+router14.patch(
+  "/:id",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  upload.single("thumbnail"),
+  validateRequest_default(
+    updateCourseModuleValidation
+  ),
+  courseModuleController.updateCourseModule
+);
+router14.patch(
+  "/:id/publish",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  validateRequest_default(
+    courseModuleIdValidation
+  ),
+  courseModuleController.publishCourseModule
+);
+router14.patch(
+  "/:id/draft",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  validateRequest_default(
+    courseModuleIdValidation
+  ),
+  courseModuleController.moveCourseModuleToDraft
+);
+router14.patch(
+  "/:id/archive",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  validateRequest_default(
+    courseModuleIdValidation
+  ),
+  courseModuleController.archiveCourseModule
+);
+var courseModuleRoutes = router14;
+
+// src/modules/moduleVideos/module.video.route.ts
+import { Router as Router15 } from "express";
+
+// src/middleware/mediaUploadMiddleware.ts
+import multer2 from "multer";
+var memoryStorage = multer2.memoryStorage();
+var allowedVideoTypes = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-m4v",
+  "video/mpeg"
+];
+var allowedImageTypes = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp"
+];
+var allowedResourceTypes = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/csv",
+  ...allowedImageTypes
+];
+var uploadModuleVideo = multer2({
+  storage: memoryStorage,
+  limits: {
+    fileSize: 150 * 1024 * 1024,
+    files: 1
+  },
+  fileFilter: (_req, file, callback) => {
+    if (!allowedVideoTypes.includes(file.mimetype)) {
+      return callback(
+        new Error("Only MP4, WEBM, MOV, M4V, and MPEG video files are allowed")
+      );
+    }
+    return callback(null, true);
+  }
+});
+var uploadModuleResource = multer2({
+  storage: memoryStorage,
+  limits: {
+    fileSize: 30 * 1024 * 1024,
+    files: 2
+  },
+  fileFilter: (_req, file, callback) => {
+    if (file.fieldname === "thumbnail") {
+      if (!allowedImageTypes.includes(file.mimetype)) {
+        return callback(
+          new Error("Thumbnail must be JPG, JPEG, PNG, or WEBP")
+        );
+      }
+      return callback(null, true);
+    }
+    if (file.fieldname === "resource") {
+      if (!allowedResourceTypes.includes(file.mimetype)) {
+        return callback(
+          new Error(
+            "Unsupported resource type. Upload PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, CSV, JPG, PNG, or WEBP"
+          )
+        );
+      }
+      return callback(null, true);
+    }
+    return callback(new Error(`Unexpected upload field: ${file.fieldname}`));
+  }
+});
+var uploadModuleResourceFields = uploadModuleResource.fields([
+  { name: "resource", maxCount: 1 },
+  { name: "thumbnail", maxCount: 1 }
+]);
+var parseBoolean = (value) => {
+  if (value === true || value === "true") {
+    return true;
+  }
+  if (value === false || value === "false") {
+    return false;
+  }
+  return void 0;
+};
+var parseNumber = (value) => {
+  if (typeof value !== "string" || value.trim() === "") {
+    return value;
+  }
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? value : parsed;
+};
+var normalizeModuleVideoMultipartBody = (req, _res, next) => {
+  const parsedIsPaid = parseBoolean(
+    req.body.isPaid
+  );
+  const parsedIsRequired = parseBoolean(
+    req.body.isRequired
+  );
+  if (parsedIsPaid !== void 0) {
+    req.body.isPaid = parsedIsPaid;
+  }
+  if (parsedIsRequired !== void 0) {
+    req.body.isRequired = parsedIsRequired;
+  }
+  if (req.body.requiredWatchPercent !== void 0) {
+    req.body.requiredWatchPercent = Number(
+      req.body.requiredWatchPercent
+    );
+  }
+  if (req.body.pointsReward !== void 0) {
+    req.body.pointsReward = Number(
+      req.body.pointsReward
+    );
+  }
+  if (req.body.order !== void 0) {
+    req.body.order = Number(
+      req.body.order
+    );
+  }
+  next();
+};
+var normalizeModuleResourceMultipartBody = (req, _res, next) => {
+  req.body.isRequired = parseBoolean(req.body.isRequired);
+  req.body.pointsReward = parseNumber(req.body.pointsReward);
+  req.body.order = parseNumber(req.body.order);
+  return next();
+};
+var getUploadedFieldFile = (req, fieldName) => {
+  const files = req.files;
+  if (!files || Array.isArray(files)) {
+    return void 0;
+  }
+  const fieldFiles = files[fieldName];
+  return fieldFiles?.[0];
 };
 
 // src/modules/moduleVideos/module.video.service.ts

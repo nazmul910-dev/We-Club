@@ -1,23 +1,18 @@
-import {
-  NextFunction,
-  Request,
-  Response,
-} from 'express';
+import { NextFunction, Request, Response } from "express";
 
-import sendResponse from '../../utility/sendResponse';
+import sendResponse from "../../utility/sendResponse";
 
-import { courseModuleService } from './course.module.service';
+import { courseModuleService } from "./course.module.service";
+import { uploadThumbnailToCloudinary } from "../../utility/cloudinaryMedia";
 
 const getAuthUser = (
-  req: Request
+  req: Request,
 ): {
   id: string;
   role: string;
 } => {
   if (!req.user) {
-    const error = new Error(
-      'Authentication required'
-    ) as Error & {
+    const error = new Error("Authentication required") as Error & {
       statusCode?: number;
     };
 
@@ -27,13 +22,10 @@ const getAuthUser = (
 
   const authUser = req.user as any;
 
-  const userId =
-    authUser.id || authUser.userId;
+  const userId = authUser.id || authUser.userId;
 
   if (!userId) {
-    const error = new Error(
-      'Authenticated user ID is missing'
-    ) as Error & {
+    const error = new Error("Authenticated user ID is missing") as Error & {
       statusCode?: number;
     };
 
@@ -50,23 +42,37 @@ const getAuthUser = (
 const createCourseModule = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await courseModuleService
-        .createCourseModule(
-          req.body,
-          authUser.id
-        );
+    let thumbnailUrl;
+
+    if (req.file) {
+      thumbnailUrl = await uploadThumbnailToCloudinary(
+        req.file,
+        "invictus/courses",
+      );
+    }
+
+    const result = await courseModuleService.createCourseModule(
+      {
+        ...req.body,
+
+        thumbnailUrl,
+      },
+
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 201,
+
       success: true,
-      message:
-        'Course module created successfully',
+
+      message: "Course module created successfully",
+
       data: result,
     });
   } catch (error) {
@@ -77,32 +83,24 @@ const createCourseModule = async (
 const getAllCourseModules = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await courseModuleService
-        .getAllCourseModules({
-          actorRole: authUser.role,
+    const result = await courseModuleService.getAllCourseModules({
+      actorRole: authUser.role,
 
-          pillarId:
-            typeof req.query.pillarId ===
-            'string'
-              ? req.query.pillarId
-              : undefined,
+      pillarId:
+        typeof req.query.pillarId === "string" ? req.query.pillarId : undefined,
 
-          includeArchived:
-            req.query.includeArchived ===
-            'true',
-        });
+      includeArchived: req.query.includeArchived === "true",
+    });
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Course modules retrieved successfully',
+      message: "Course modules retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -113,23 +111,20 @@ const getAllCourseModules = async (
 const getModulesByPillar = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await courseModuleService
-        .getModulesByPillar(
-          String(req.params.pillarId),
-          authUser.role
-        );
+    const result = await courseModuleService.getModulesByPillar(
+      String(req.params.pillarId),
+      authUser.role,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Pillar modules retrieved successfully',
+      message: "Pillar modules retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -140,23 +135,20 @@ const getModulesByPillar = async (
 const getSingleCourseModule = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await courseModuleService
-        .getSingleCourseModule(
-          String(req.params.id),
-          authUser.role
-        );
+    const result = await courseModuleService.getSingleCourseModule(
+      String(req.params.id),
+      authUser.role,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Course module retrieved successfully',
+      message: "Course module retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -167,24 +159,42 @@ const getSingleCourseModule = async (
 const updateCourseModule = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await courseModuleService
-        .updateCourseModule(
-          String(req.params.id),
-          req.body,
-          authUser.id
-        );
+    let thumbnailUrl;
+
+    if (req.file) {
+      thumbnailUrl = await uploadThumbnailToCloudinary(
+        req.file,
+
+        "invictus/courses",
+      );
+    }
+
+    const result = await courseModuleService.updateCourseModule(
+      String(req.params.id),
+
+      {
+        ...req.body,
+
+        ...(thumbnailUrl && {
+          thumbnailUrl,
+        }),
+      },
+
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
+
       success: true,
-      message:
-        'Course module updated successfully',
+
+      message: "Course module updated successfully",
+
       data: result,
     });
   } catch (error) {
@@ -195,23 +205,20 @@ const updateCourseModule = async (
 const publishCourseModule = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await courseModuleService
-        .publishCourseModule(
-          String(req.params.id),
-          authUser.id
-        );
+    const result = await courseModuleService.publishCourseModule(
+      String(req.params.id),
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Course module published successfully',
+      message: "Course module published successfully",
       data: result,
     });
   } catch (error) {
@@ -222,23 +229,20 @@ const publishCourseModule = async (
 const moveCourseModuleToDraft = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await courseModuleService
-        .moveCourseModuleToDraft(
-          String(req.params.id),
-          authUser.id
-        );
+    const result = await courseModuleService.moveCourseModuleToDraft(
+      String(req.params.id),
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Course module moved to draft successfully',
+      message: "Course module moved to draft successfully",
       data: result,
     });
   } catch (error) {
@@ -249,23 +253,20 @@ const moveCourseModuleToDraft = async (
 const archiveCourseModule = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
-    const result =
-      await courseModuleService
-        .archiveCourseModule(
-          String(req.params.id),
-          authUser.id
-        );
+    const result = await courseModuleService.archiveCourseModule(
+      String(req.params.id),
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        'Course module archived successfully',
+      message: "Course module archived successfully",
       data: result,
     });
   } catch (error) {

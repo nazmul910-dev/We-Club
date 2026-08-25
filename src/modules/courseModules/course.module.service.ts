@@ -162,7 +162,7 @@ const getAllCourseModules = async ({
     };
   }
 
-  return CourseModule.find(filter)
+  return CourseModule.find()
     .sort({
       pillar: 1,
       moduleNumber: 1,
@@ -252,7 +252,7 @@ const getSingleCourseModule = async (
   }
 
   const courseModule =
-    await CourseModule.findOne(filter)
+    await CourseModule.findOne()
       .populate(
         'pillar',
         'name slug title isPaid priceCents currency status'
