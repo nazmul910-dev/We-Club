@@ -51,7 +51,7 @@ export const requireInvictusAccess = async (
      * তাই তাদের membership/subscription check bypass করা হচ্ছে।
      */
     if (
-      req.user.role === "admin" ||
+      req.user.role === "founder" ||
       req.user.role === "manager"
     ) {
       return next();
