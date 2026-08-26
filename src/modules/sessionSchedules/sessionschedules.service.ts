@@ -288,7 +288,8 @@ const getAllSessionSchedules = async (options: ISessionScheduleQuery) => {
       .limit(limit)
       .populate("host", "fullName email role")
       .populate("pillar", "name slug title")
-      .populate("courseModule", "title slug"),
+      .populate("courseModule", "title slug")
+      .lean(),
 
     SessionSchedule.countDocuments(filter),
   ]);

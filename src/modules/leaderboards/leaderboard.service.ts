@@ -96,7 +96,7 @@ const getAllLeaderboards = async (query: IGetAllLeaderboardsQuery) => {
 
   const page = query.page ?? 1;
 
-  const limit = query.limit ?? 20;
+  const limit = Math.min(query.limit ?? 20, 100);
 
   const skip = (page - 1) * limit;
 
@@ -106,7 +106,8 @@ const getAllLeaderboards = async (query: IGetAllLeaderboardsQuery) => {
       .skip(skip)
       .limit(limit)
       .populate("createdBy", "fullName email role")
-      .populate("updatedBy", "fullName email role"),
+      .populate("updatedBy", "fullName email role")
+      .lean(),
 
     Leaderboard.countDocuments(filter),
   ]);

@@ -31,7 +31,7 @@ export const createMessage = async (
 ) => {
 
   if (replyTo) {
-    const parent = await Message.findOne({ _id: replyTo, room: roomId });
+    const parent = await Message.findOne({ _id: replyTo, room: roomId }).lean();
     if (!parent) {
       throw new Error("Message you're replying to no longer exists in this room");
     }

@@ -129,7 +129,8 @@ const getAllRetreatLocations = async (
       .sort({ isFeatured: -1, order: 1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate(LOCATION_POPULATE),
+      .populate(LOCATION_POPULATE)
+      .lean(),
     RetreatLocation.countDocuments(filter),
   ]);
 
@@ -163,7 +164,7 @@ const getSingleRetreatLocation = async (
 
   const location = await RetreatLocation.findOne(filter).populate(
     LOCATION_POPULATE,
-  );
+  ).lean();
 
   assertFound(location, "Retreat location not found", 404);
   return location;

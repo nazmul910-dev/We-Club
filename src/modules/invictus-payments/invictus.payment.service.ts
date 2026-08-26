@@ -416,7 +416,7 @@ const getMyInvictusPurchases = async (
     .populate(
       "paymentPlan",
       "name slug productType mode amountCents currency"
-    );
+    ).lean();
 };
 
 export const invictusPaymentService = {

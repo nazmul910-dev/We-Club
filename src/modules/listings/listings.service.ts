@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 import { ListingViewStats } from "./listings.viewsHistory.modal.schema";
 
 const generateRefCode = (): string => {
-  const digits = Math.floor(100000 + Math.random() * 900000); 
+  const digits = Math.floor(100000 + Math.random() * 900000);
   return `WE-${digits}`;
 };
 
@@ -67,11 +67,10 @@ const getAllListingFromDB = async (
     Listing.find().populate(
       "associate_id",
       "fullName email bio phone city country brokerage profileImage licenseNumber role accountStatus approvalStatus"
-    ),
-    
+    ).lean(),
     queryWithDefaultSort,
   )
-    .search(["title", "ref_code","location.country"])
+    .search(["title", "ref_code", "location.country"])
     .filter()
     .sort()
     .paginate()
@@ -101,7 +100,7 @@ const getMyListingFromDB = async (
   };
 
   const listingQuery = new QueryBuilder<IListing>(
-    Listing.find({ associate_id: associateId }),
+    Listing.find({ associate_id: associateId }).lean(),
     queryWithDefaultSort,
   )
     .search(["title", "ref_code"])
@@ -122,7 +121,7 @@ const getMyListingFromDB = async (
 };
 
 const getListingByIdFromDB = async (id: string): Promise<IListing | null> => {
-  return await Listing.findById(id).populate("associate_id", "name email");
+  return await Listing.findById(id).populate("associate_id", "name email").lean();
 };
 
 const getMyPromotersFromDB = async (

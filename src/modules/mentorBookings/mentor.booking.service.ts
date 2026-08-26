@@ -86,7 +86,7 @@ const BOOKING_POPULATE = [
 const checkUserExists = async (userId: string, label: string) => {
   assertValidObjectId(userId, label);
 
-  const user = await User.findById(userId).select("_id fullName email role");
+  const user = await User.findById(userId).select("_id fullName email role").lean();
 
   assertFound(user, `${label} not found`, 404);
 
@@ -100,7 +100,7 @@ const resolveMentorshipProfileId = async (
   if (explicitProfileId) {
     assertValidObjectId(explicitProfileId, "Mentorship profile ID");
 
-    const profile = await MentorshipProfile.findById(explicitProfileId);
+    const profile = await MentorshipProfile.findById(explicitProfileId).lean();
 
     assertFound(profile, "Mentorship profile not found", 404);
 
@@ -117,7 +117,7 @@ const resolveMentorshipProfileId = async (
   const profile = await MentorshipProfile.findOne({
     mentor: new Types.ObjectId(mentorUserId),
     isActive: true,
-  });
+  }).lean();
 
   return profile ? (profile._id as Types.ObjectId) : undefined;
 };
@@ -371,7 +371,8 @@ const getMyMemberBookings = async (
       .sort({ scheduledStartTime: -1 })
       .skip(skip)
       .limit(limit)
-      .populate(BOOKING_POPULATE),
+      .populate(BOOKING_POPULATE)
+      .lean(),
     MentorBooking.countDocuments(filter),
   ]);
 
@@ -396,7 +397,7 @@ const getMyMemberSingleBooking = async (
   const booking = await MentorBooking.findOne({
     _id: new Types.ObjectId(bookingId),
     member: new Types.ObjectId(memberUserId),
-  }).populate(BOOKING_POPULATE);
+  }).populate(BOOKING_POPULATE).lean();
 
   assertFound(booking, "Mentor booking not found", 404);
 
@@ -442,7 +443,8 @@ const getMyMentorBookings = async (
       .sort({ scheduledStartTime: 1 })
       .skip(skip)
       .limit(limit)
-      .populate(BOOKING_POPULATE),
+      .populate(BOOKING_POPULATE)
+      .lean(),
     MentorBooking.countDocuments(filter),
   ]);
 
@@ -469,7 +471,7 @@ const getMyMentorSingleBooking = async (
   const booking = await MentorBooking.findOne({
     _id: new Types.ObjectId(bookingId),
     $or: [{ leadMentor: mentorObjectId }, { coMentor: mentorObjectId }],
-  }).populate(BOOKING_POPULATE);
+  }).populate(BOOKING_POPULATE).lean();
 
   assertFound(booking, "Mentor booking not found", 404);
 
@@ -527,7 +529,8 @@ const getAllBookingsAdmin = async (query: IMentorBookingQuery = {}) => {
       .sort({ scheduledStartTime: -1 })
       .skip(skip)
       .limit(limit)
-      .populate(BOOKING_POPULATE),
+      .populate(BOOKING_POPULATE)
+      .lean(),
     MentorBooking.countDocuments(filter),
   ]);
 
@@ -547,7 +550,7 @@ const getSingleBookingAdmin = async (bookingId: string) => {
 
   const booking = await MentorBooking.findById(bookingId).populate(
     BOOKING_POPULATE,
-  );
+  ).lean();
 
   assertFound(booking, "Mentor booking not found", 404);
 

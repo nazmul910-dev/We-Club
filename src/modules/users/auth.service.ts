@@ -36,7 +36,7 @@ const getAllUsersFromDB = async (
   }
 
   const userQuery = new QueryBuilder<IUser>(
-    User.find(baseFilter).select("-password"),
+    User.find(baseFilter).select("-password").lean(),
     restQuery,
   )
     .search(["fullName", "email"])
@@ -55,7 +55,7 @@ const getAllUsersFromDB = async (
 
 
 const getSingleUserFromDB = async (id: any) => {
-  const user = await User.findById(id);
+  const user = await User.findById(id).lean();
   return user;
 };
 

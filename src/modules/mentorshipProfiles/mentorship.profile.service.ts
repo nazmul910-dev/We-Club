@@ -172,7 +172,7 @@ const getAllMentorshipProfiles = async ({
 
   return MentorshipProfile.find(filter)
     .sort({ isPrimaryMentor: -1, order: 1, createdAt: 1 })
-    .populate(PROFILE_POPULATE);
+    .populate(PROFILE_POPULATE).lean();
 };
 
 const getPrimaryMentor = async () => {
@@ -180,7 +180,7 @@ const getPrimaryMentor = async () => {
     isPrimaryMentor: true,
     isActive: true,
     status: "published",
-  }).populate(PROFILE_POPULATE);
+  }).populate(PROFILE_POPULATE).lean();
 
   assertFound(profile, "No primary mentor is currently configured", 404);
 
@@ -204,12 +204,13 @@ const getSingleMentorshipProfile = async (
 
   const profile = await MentorshipProfile.findOne(filter).populate(
     PROFILE_POPULATE,
-  );
+  ).lean();
 
   assertFound(profile, "Mentorship profile not found", 404);
 
   return profile;
 };
+
 
 const updateMentorshipProfile = async (
   profileId: string,

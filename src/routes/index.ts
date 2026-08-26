@@ -48,364 +48,74 @@ import { userDeviceRoutes } from "../modules/userDevices/user.device.route";
 import { streakLogRoutes } from "../modules/streakLogs/streaklog.route";
 import { pointsLedgerRoutes } from "../modules/pointsLedger/pointsledger.route";
 
+
+import type { RequestHandler } from "express";
+import { authLimiter, paymentLimiter } from "../middleware/rateLimiter";
+
 const router = Router();
 
 type TModuleRoute = {
   path: string;
   route: Router;
+  limiter?: RequestHandler;
 };
 
 const moduleRoutes: TModuleRoute[] = [
-  {
-    path: "/admin",
-    route: adminRoutes,
-  },
-  {
-    path: "/users",
-    route: userRoutes,
-  },
-  {
-    path: "/auth",
-    route: authRoutes,
-  },
-  {
-    path: "/listings",
-    route: listingsRoutes,
-  },
-  {
-    path: "/listings/promote-request",
-    route: listingPromoteRequestRoutes,
-  },
-  {
-    path: "/commission",
-    route: commissionLedgerRoutes,
-  },
-  {
-    path: "/listing-assets",
-    route: listingAssetsRoutes,
-  },
-  {
-    path: "/payments",
-    route: paymentRoutes,
-  },
-  {
-    path: "/profile",
-    route: profileRoutes,
-  },
-  {
-    path: "/discounts",
-    route: discountRoutes,
-  },
-  {
-    path: "/promoters",
-    route: promoterRoutes,
-  },
-  {
-    path: "/dashboard",
-    route: dashboardAnalyticsRoutes,
-  },
-  {
-    path: "/invictus/challenge-pillars",
-    route: challengePillarRoutes,
-  },
-
-  {
-    path: "/invictus/course-modules",
-    route: courseModuleRoutes,
-  },
-  {
-    path: "/invictus/module-videos",
-    route: moduleVideoRoutes,
-  },
-  {
-    path: "/invictus/module-resources",
-    route: moduleResourceRoutes,
-  },
-  {
-    path: "/invictus/quiz-questions",
-    route: quizQuestionRoutes,
-  },
-  {
-    path: "/invictus/module-actions",
-    route: moduleActionRoutes,
-  },
-  {
-    path: "/rooms",
-    route: roomRoutes,
-  },
-  {
-    path: "/messages",
-    route: messageRoutes,
-  },
-  {
-    path: "/logo",
-    route: LogoRoutes,
-  },
-  {
-    path: "/invictus/academy-profile",
-    route: academyProfileRoutes,
-  },
-  {
-    path: "/invictus/user-entitlements",
-    route: userEntitlementRoutes,
-  },
-  {
-    path: "/invictus/video-progress",
-    route: videoProgressRoutes,
-  },
-  {
-    path: "/invictus/module-progress",
-    route: moduleProgressRoutes,
-  },
-  {
-    path: "/invictus/quiz-attempts",
-    route: quizAttemptRoutes,
-  },
-  {
-    path: "/invictus/quiz-certificates",
-    route: quizCertificateRoutes,
-  },
-  {
-    path: "/invictus/mentorship-profiles",
-    route: mentorshipProfileRoutes,
-  },
-  {
-    path: "/invictus/mentorship-reviews",
-    route: mentorshipReviewRoutes,
-  },
-  {
-    path: "/invictus",
-    route: leaderboardEntryRoutes,
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardRoutes,
-  },
-  {
-    path: "/invictus/course-modules",
-    route: courseModuleRoutes,
-  },
-  {
-    path: "/invictus/module-videos",
-    route: moduleVideoRoutes,
-  },
-  {
-    path: "/invictus/module-resources",
-    route: moduleResourceRoutes,
-  },
-  {
-    path: "/invictus/quiz-questions",
-    route: quizQuestionRoutes,
-  },
-  {
-    path: "/invictus/module-actions",
-    route: moduleActionRoutes,
-  },
-  {
-    path: "/rooms",
-    route: roomRoutes,
-  },
-  {
-    path: "/messages",
-    route: messageRoutes,
-  },
-  {
-    path: "/logo",
-    route: LogoRoutes,
-  },
-  {
-    path: "/invictus/academy-profile",
-    route: academyProfileRoutes,
-  },
-  {
-    path: "/invictus/user-entitlements",
-    route: userEntitlementRoutes,
-  },
-  {
-    path: "/invictus/video-progress",
-    route: videoProgressRoutes,
-  },
-  {
-    path: "/invictus/module-progress",
-    route: moduleProgressRoutes,
-  },
-  {
-    path: "/invictus/quiz-attempts",
-    route: quizAttemptRoutes,
-  },
-  {
-    path: "/invictus/quiz-certificates",
-    route: quizCertificateRoutes,
-  },
-  {
-    path: "/invictus/mentorship-profiles",
-    route: mentorshipProfileRoutes,
-  },
-  {
-    path: "/invictus/mentor-bookings",
-    route: mentorBookingRoutes,
-  },
-  {
-    path: "/invictus/retreat-locations",
-    route: retreatLocationRoutes,
-  },
-  {
-    path: "/invictus/retreat-batches",
-    route: retreatBatchRoutes,
-  },
-  {
-    path: "/invictus/retreat-bookings",
-    route: retreatBookingRoutes,
-  },
-  {
-    path: "/invictus/payment-plans",
-    route: paymentPlanRoutes,
-  },
-  {
-    path: "/invictus/payments",
-    route: invictusPaymentRoutes,
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardEntryRoutes,
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardRoutes
-  },
-  {
-    path: "/invictus/course-modules",
-    route: courseModuleRoutes,
-  },
-  {
-    path: "/invictus/module-videos",
-    route: moduleVideoRoutes,
-  },
-  {
-    path: "/invictus/module-resources",
-    route: moduleResourceRoutes,
-  },
-  {
-    path: "/invictus/quiz-questions",
-    route: quizQuestionRoutes,
-  },
-  {
-    path: "/invictus/module-actions",
-    route: moduleActionRoutes,
-  },
-  {
-    path: "/rooms",
-    route: roomRoutes,
-  },
-  {
-    path: "/messages",
-    route: messageRoutes,
-  },
-  {
-    path: "/logo",
-    route: LogoRoutes,
-  },
-  {
-    path: "/invictus/academy-profile",
-    route: academyProfileRoutes,
-  },
-  {
-    path: "/invictus/user-entitlements",
-    route: userEntitlementRoutes,
-  },
-  {
-    path: "/invictus/video-progress",
-    route: videoProgressRoutes,
-  },
-  {
-    path: "/invictus/module-progress",
-    route: moduleProgressRoutes,
-  },
-  {
-    path: "/invictus/quiz-attempts",
-    route: quizAttemptRoutes,
-  },
-  {
-    path: "/invictus/quiz-certificates",
-    route: quizCertificateRoutes,
-  },
-  {
-    path: "/invictus/mentorship-profiles",
-    route: mentorshipProfileRoutes,
-  },
-  {
-    path: "/invictus/mentor-bookings",
-    route: mentorBookingRoutes,
-  },
-  {
-    path: "/invictus/retreat-locations",
-    route: retreatLocationRoutes,
-  },
-  {
-    path: "/invictus/retreat-batches",
-    route: retreatBatchRoutes,
-  },
-  {
-    path: "/invictus/retreat-bookings",
-    route: retreatBookingRoutes,
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardEntryRoutes,
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardRoutes
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardRoutes
-  },
-  {
-    path: "/invictus/notifications",
-    route: notificationRoutes,
-  },
-  {
-    path: "/invictus/notification-templates",
-    route: notificationTemplateRoutes,
-  },
-   
-  {
-    path: "/invictus/entitlement-logs",
-    route: entitlementLogRoutes,
-  },
-  {
-    path: "/invictus/activity-logs",
-    route: activityLogRoutes,
-  },
-  {
-    path: "/invictus/session-schedules",
-    route: sessionScheduleRoutes,
-  },
-  {
-    path: "/invictus/session-attendances",
-    route: sessionAttendanceRoutes,
-  },
-  {
-    path: "/support-tickets",
-    route: supportTicketRoutes,
-  },
-  {
-    path: "/user-devices",
-    route: userDeviceRoutes,
-  },
-  {
-    path: "/invictus/streak-logs",
-    route: streakLogRoutes,
-  },
-  {
-    path: "/invictus/points-ledger",
-    route: pointsLedgerRoutes,
-  },
+  { path: "/admin", route: adminRoutes },
+  { path: "/users", route: userRoutes },
+  { path: "/auth", route: authRoutes, limiter: authLimiter },
+  { path: "/listings", route: listingsRoutes },
+  { path: "/listings/promote-request", route: listingPromoteRequestRoutes },
+  { path: "/commission", route: commissionLedgerRoutes },
+  { path: "/listing-assets", route: listingAssetsRoutes },
+  { path: "/payments", route: paymentRoutes, limiter: paymentLimiter },
+  { path: "/profile", route: profileRoutes },
+  { path: "/discounts", route: discountRoutes },
+  { path: "/promoters", route: promoterRoutes },
+  { path: "/dashboard", route: dashboardAnalyticsRoutes },
+  { path: "/invictus/challenge-pillars", route: challengePillarRoutes },
+  { path: "/invictus/course-modules", route: courseModuleRoutes },
+  { path: "/invictus/module-videos", route: moduleVideoRoutes },
+  { path: "/invictus/module-resources", route: moduleResourceRoutes },
+  { path: "/invictus/quiz-questions", route: quizQuestionRoutes },
+  { path: "/invictus/module-actions", route: moduleActionRoutes },
+  { path: "/rooms", route: roomRoutes },
+  { path: "/messages", route: messageRoutes },
+  { path: "/logo", route: LogoRoutes },
+  { path: "/invictus/academy-profile", route: academyProfileRoutes },
+  { path: "/invictus/user-entitlements", route: userEntitlementRoutes },
+  { path: "/invictus/video-progress", route: videoProgressRoutes },
+  { path: "/invictus/module-progress", route: moduleProgressRoutes },
+  { path: "/invictus/quiz-attempts", route: quizAttemptRoutes },
+  { path: "/invictus/quiz-certificates", route: quizCertificateRoutes },
+  { path: "/invictus/mentorship-profiles", route: mentorshipProfileRoutes },
+  { path: "/invictus/mentorship-reviews", route: mentorshipReviewRoutes },
+  { path: "/invictus", route: leaderboardEntryRoutes },
+  { path: "/invictus/leaderboards", route: leaderboardRoutes },
+  { path: "/invictus/mentor-bookings", route: mentorBookingRoutes },
+  { path: "/invictus/retreat-locations", route: retreatLocationRoutes },
+  { path: "/invictus/retreat-batches", route: retreatBatchRoutes },
+  { path: "/invictus/retreat-bookings", route: retreatBookingRoutes },
+  { path: "/invictus/payment-plans", route: paymentPlanRoutes },
+  { path: "/invictus/payments", route: invictusPaymentRoutes, limiter: paymentLimiter },
+  { path: "/invictus/notifications", route: notificationRoutes },
+  { path: "/invictus/notification-templates", route: notificationTemplateRoutes },
+  { path: "/invictus/entitlement-logs", route: entitlementLogRoutes },
+  { path: "/invictus/activity-logs", route: activityLogRoutes },
+  { path: "/invictus/session-schedules", route: sessionScheduleRoutes },
+  { path: "/invictus/session-attendances", route: sessionAttendanceRoutes },
+  { path: "/support-tickets", route: supportTicketRoutes },
+  { path: "/user-devices", route: userDeviceRoutes },
+  { path: "/invictus/streak-logs", route: streakLogRoutes },
+  { path: "/invictus/points-ledger", route: pointsLedgerRoutes },
 ];
 
-moduleRoutes.forEach((route) => {
-  router.use(route.path, route.route);
+moduleRoutes.forEach(({ path, route, limiter }) => {
+  if (limiter) {
+    router.use(path, limiter, route);
+  } else {
+    router.use(path, route);
+  }
 });
 
 export default router;

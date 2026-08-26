@@ -105,7 +105,7 @@ const createActivityLog = async (payload: ICreateActivityLogInput) => {
 const getAllActivityLogs = async (options: IGetActivityLogsOptions) => {
   const page = options.page ?? 1;
 
-  const limit = options.limit ?? 20;
+  const limit = Math.min(options.limit ?? 20, 100);
 
   const skip = (page - 1) * limit;
 
@@ -138,7 +138,8 @@ const getAllActivityLogs = async (options: IGetActivityLogsOptions) => {
       })
       .skip(skip)
       .limit(limit)
-      .populate("actor", "fullName email role"),
+      .populate("actor", "fullName email role")
+      .lean(),
 
     ActivityLog.countDocuments(filter),
   ]);
@@ -162,7 +163,7 @@ const getSingleActivityLog = async (logId: string) => {
   const log = await ActivityLog.findById(logId).populate(
     "actor",
     "fullName email role",
-  );
+  ).lean();
 
   assertFound(log, "Activity log not found", 404);
 

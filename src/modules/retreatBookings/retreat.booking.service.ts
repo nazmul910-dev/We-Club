@@ -742,7 +742,8 @@ const getMyRetreatBookings = async (
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate(BOOKING_POPULATE),
+      .populate(BOOKING_POPULATE)
+      .lean(),
     RetreatBooking.countDocuments(filter),
   ]);
 
@@ -767,7 +768,7 @@ const getMySingleRetreatBooking = async (
   const booking = await RetreatBooking.findOne({
     _id: new Types.ObjectId(bookingId),
     user: new Types.ObjectId(userId),
-  }).populate(BOOKING_POPULATE);
+  }).populate(BOOKING_POPULATE).lean();
 
   assertFound(booking, "Retreat booking not found", 404);
   return booking;
@@ -804,7 +805,8 @@ const getAllRetreatBookingsAdmin = async (query: IRetreatBookingQuery = {}) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate(BOOKING_POPULATE),
+      .populate(BOOKING_POPULATE)
+      .lean(),
     RetreatBooking.countDocuments(filter),
   ]);
 
@@ -824,7 +826,7 @@ const getSingleRetreatBookingAdmin = async (bookingId: string) => {
 
   const booking = await RetreatBooking.findById(bookingId).populate(
     BOOKING_POPULATE,
-  );
+  ).lean();
   assertFound(booking, "Retreat booking not found", 404);
 
   return booking;

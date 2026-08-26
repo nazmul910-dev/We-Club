@@ -176,7 +176,8 @@ const getAllRetreatBatches = async (
       .sort({ startDate: 1 })
       .skip(skip)
       .limit(limit)
-      .populate(BATCH_POPULATE),
+      .populate(BATCH_POPULATE)
+      .lean(),
     RetreatBatch.countDocuments(filter),
   ]);
 
@@ -207,7 +208,7 @@ const getSingleRetreatBatch = async (
     filter.isActive = true;
   }
 
-  const batch = await RetreatBatch.findOne(filter).populate(BATCH_POPULATE);
+  const batch = await RetreatBatch.findOne(filter).populate(BATCH_POPULATE).lean();
   assertFound(batch, "Retreat batch not found", 404);
 
   return batch;

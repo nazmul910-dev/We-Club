@@ -183,7 +183,7 @@ const getAllModuleVideos = async ({
     );
   }
 
-  return query;
+  return query.lean();
 };
 
 const getVideosByModule = async (
@@ -198,8 +198,8 @@ const getVideosByModule = async (
 
   const courseModule = await CourseModule.findOne(moduleFilter).populate(
     "pillar",
-    "name slug title isPaid priceCents currency status",
-  );
+    "name slug title isPaid priceCents currency status"
+  ).lean();
 
   assertFound(courseModule, "Course module not found or unavailable", 404);
 
@@ -226,7 +226,7 @@ const getVideosByModule = async (
     );
   }
 
-  const videos = await query;
+  const videos = await query.lean();
 
   return {
     module: courseModule,
@@ -266,7 +266,7 @@ const getSingleModuleVideo = async (
     query.select(" -cloudinaryPublicId -cloudinaryAssetId");
   }
 
-  const video = await query;
+  const video = await query.lean();
 
   assertFound(video, "Module video not found", 404);
 

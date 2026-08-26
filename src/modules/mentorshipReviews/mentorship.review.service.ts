@@ -84,7 +84,7 @@ const ensureMentorUserExists = async (mentorId: string) => {
 
   const mentor = await User.findById(mentorId).select(
     "_id fullName email role profileImage",
-  );
+  ).lean();
 
   assertFound(mentor, "Mentor user not found", 404);
 
@@ -160,7 +160,7 @@ const createReview = async (
 
   const existingReview = await MentorshipReview.findOne({
     booking: new Types.ObjectId(payload.booking),
-  });
+  }).lean();
 
   if (existingReview) {
     throwServiceError(
@@ -173,7 +173,7 @@ const createReview = async (
   if (!mentorshipProfileId) {
     const profile = await MentorshipProfile.findOne({
       mentor: new Types.ObjectId(payload.mentor),
-    }).select("_id");
+    }).select("_id").lean();
 
     if (profile) {
       mentorshipProfileId = profile._id.toString();
@@ -237,7 +237,7 @@ const getReviewsForMentor = async (
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate(getReviewPopulate()),
+      .populate(getReviewPopulate()).lean(),
     MentorshipReview.countDocuments(filter),
     MentorshipReview.aggregate<{
       _id: number;
@@ -294,15 +294,11 @@ const getReviewsForMentor = async (
 
   // Mask user info if review is anonymous
   const sanitizedReviews = reviews.map((rev) => {
-    const doc = rev.toObject();
-    if (doc.isAnonymous) {
-      doc.user = {
-        fullName: "Anonymous Member",
-        role: "we_club_member",
-      } as unknown as Types.ObjectId;
-    }
-    return doc;
-  });
+  if (rev.isAnonymous) {
+    return { ...rev, user: { fullName: "Anonymous Member", role: "we_club_member" } };
+  }
+  return rev;
+});
 
   return {
     stats,
@@ -333,7 +329,8 @@ const getMyReviews = async (
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate(getReviewPopulate()),
+      .populate(getReviewPopulate())
+      .lean(),
     MentorshipReview.countDocuments(filter),
   ]);
 
@@ -357,7 +354,7 @@ const getSingleReview = async (
 
   const review = await MentorshipReview.findById(reviewId).populate(
     getReviewPopulate(),
-  );
+  ).lean();
 
   assertFound(review, "Mentorship review not found", 404);
 
@@ -372,7 +369,7 @@ const getSingleReview = async (
     throwServiceError("Mentorship review not found", 404);
   }
 
-  const doc = review.toObject();
+  const doc = review
   if (doc.isAnonymous && !isOwner && !isAdmin) {
     doc.user = {
       fullName: "Anonymous Member",
@@ -482,7 +479,8 @@ const getAllReviewsAdmin = async (query: IMentorshipReviewQuery) => {
       .sort({ [sortField]: sortDirection })
       .skip(skip)
       .limit(limit)
-      .populate(getReviewPopulate()),
+      .populate(getReviewPopulate())
+      .lean(),
     MentorshipReview.countDocuments(filter),
   ]);
 
