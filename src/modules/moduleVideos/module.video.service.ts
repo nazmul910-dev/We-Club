@@ -9,10 +9,7 @@ import {
 import { ModuleVideo } from "./module.video.model.schema";
 import { userEntitlementService } from "../userEntitlements/userEntitlements.service";
 
-const throwServiceError = (
-  message: string,
-  statusCode: number
-): never => {
+const throwServiceError = (message: string, statusCode: number): never => {
   const error = new Error(message) as Error & {
     statusCode?: number;
   };
@@ -24,7 +21,7 @@ const throwServiceError = (
 const assertFound: <T>(
   value: T | null | undefined,
   message: string,
-  statusCode: number
+  statusCode: number,
 ) => asserts value is T = (value, message, statusCode) => {
   if (value === null || value === undefined) {
     throwServiceError(message, statusCode);
@@ -38,7 +35,7 @@ const isAdminOrManager = (role?: string | undefined): boolean => {
 const setNullableField = (
   document: { set: (path: string, value: unknown) => unknown },
   path: string,
-  value: unknown
+  value: unknown,
 ): void => {
   if (value === null) {
     document.set(path, undefined);
@@ -58,7 +55,7 @@ const ensureCourseModuleExists = async (moduleId: string) => {
   if (courseModule.status === "archived") {
     throwServiceError(
       "Cannot manage videos under an archived course module",
-      400
+      400,
     );
   }
 
@@ -68,7 +65,7 @@ const ensureCourseModuleExists = async (moduleId: string) => {
 const createModuleVideo = async (
   moduleId: string,
   payload: ICreateModuleVideo,
-  actorId: string
+  actorId: string,
 ) => {
   await ensureCourseModuleExists(moduleId);
 
@@ -83,7 +80,7 @@ const createModuleVideo = async (
   if (existingVideo) {
     throwServiceError(
       "Video slug, order or Cloudinary public ID already exists",
-      409
+      409,
     );
   }
 
@@ -166,7 +163,7 @@ const getAllModuleVideos = async ({
     filter.status = { $ne: "archived" };
   }
 
-  const query = ModuleVideo.find(filter)
+  const query = ModuleVideo.find()
     .sort({ module: 1, order: 1 })
     .populate({
       path: "module",
@@ -182,7 +179,7 @@ const getAllModuleVideos = async ({
 
   if (!isPrivileged) {
     query.select(
-      "-secureUrl -playbackUrl -cloudinaryPublicId -cloudinaryAssetId"
+      "-secureUrl -playbackUrl -cloudinaryPublicId -cloudinaryAssetId",
     );
   }
 
@@ -191,7 +188,7 @@ const getAllModuleVideos = async ({
 
 const getVideosByModule = async (
   moduleId: string,
-  actorRole?: string | undefined
+  actorRole?: string | undefined,
 ) => {
   const moduleFilter: Record<string, unknown> = { _id: moduleId };
 
@@ -201,14 +198,10 @@ const getVideosByModule = async (
 
   const courseModule = await CourseModule.findOne(moduleFilter).populate(
     "pillar",
-    "name slug title isPaid priceCents currency status"
+    "name slug title isPaid priceCents currency status",
   );
 
-  assertFound(
-    courseModule,
-    "Course module not found or unavailable",
-    404
-  );
+  assertFound(courseModule, "Course module not found or unavailable", 404);
 
   const filter: QueryFilter<IModuleVideo> = {
     module: new Types.ObjectId(moduleId),
@@ -222,14 +215,14 @@ const getVideosByModule = async (
     filter.status = { $ne: "archived" };
   }
 
-  const query = ModuleVideo.find(filter)
+  const query = ModuleVideo.find()
     .sort({ order: 1 })
     .populate("uploadedBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage");
 
   if (!isPrivileged) {
     query.select(
-      "-secureUrl -playbackUrl -cloudinaryPublicId -cloudinaryAssetId"
+      "-secureUrl -playbackUrl -cloudinaryPublicId -cloudinaryAssetId",
     );
   }
 
@@ -243,10 +236,11 @@ const getVideosByModule = async (
 
 const getSingleModuleVideo = async (
   videoId: string,
-  actorRole?: string | undefined
+  actorRole?: string | undefined,
 ) => {
   const filter: QueryFilter<IModuleVideo> = {
     _id: videoId,
+    // status : "published"
   };
 
   const isPrivileged = isAdminOrManager(actorRole);
@@ -255,23 +249,21 @@ const getSingleModuleVideo = async (
     filter.status = "published";
   }
 
-  const query = ModuleVideo.findOne(filter)
+  const query = ModuleVideo.findOne()
     .populate({
       path: "module",
       select: "title slug moduleNumber pillar status",
       populate: {
         path: "pillar",
         model: "ChallengePillar",
-        select: "name slug title isPaid priceCents currency status",
+        select: "name slug title isPaid priceCents currency status  ",
       },
     })
     .populate("uploadedBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage");
 
   if (!isPrivileged) {
-    query.select(
-      "-secureUrl -playbackUrl -cloudinaryPublicId -cloudinaryAssetId"
-    );
+    query.select(" -cloudinaryPublicId -cloudinaryAssetId");
   }
 
   const video = await query;
@@ -281,10 +273,7 @@ const getSingleModuleVideo = async (
   return video;
 };
 
-const checkVideoAccess = async (
-  videoId: string,
-  userId: string
-) => {
+const checkVideoAccess = async (videoId: string, userId: string) => {
   const video = await ModuleVideo.findById(videoId).populate({
     path: "module",
     select: "title slug moduleNumber pillar status",
@@ -314,7 +303,7 @@ const checkVideoAccess = async (
 
   const access = await userEntitlementService.checkPillarAccess(
     userId,
-    String(moduleData.pillar._id)
+    String(moduleData.pillar._id),
   );
 
   if (!access.hasAccess) {
@@ -341,7 +330,7 @@ const checkVideoAccess = async (
 const updateModuleVideo = async (
   videoId: string,
   payload: IUpdateModuleVideo,
-  actorId: string
+  actorId: string,
 ) => {
   const video = await ModuleVideo.findById(videoId);
 
@@ -376,7 +365,7 @@ const updateModuleVideo = async (
     if (duplicateVideo) {
       throwServiceError(
         "Video slug, order or Cloudinary public ID already exists",
-        409
+        409,
       );
     }
   }
@@ -390,9 +379,8 @@ const updateModuleVideo = async (
   if (payload.durationSeconds !== undefined) {
     video.durationSeconds = payload.durationSeconds;
     if (payload.isPaid !== undefined) {
-  video.isPaid = payload.isPaid;
-}
-
+      video.isPaid = payload.isPaid;
+    }
   }
   if (payload.isRequired !== undefined) video.isRequired = payload.isRequired;
   if (payload.requiredWatchPercent !== undefined) {
@@ -437,10 +425,7 @@ const updateModuleVideo = async (
   ]);
 };
 
-const publishModuleVideo = async (
-  videoId: string,
-  actorId: string
-) => {
+const publishModuleVideo = async (videoId: string, actorId: string) => {
   const video = await ModuleVideo.findById(videoId);
 
   assertFound(video, "Module video not found", 404);
@@ -460,7 +445,7 @@ const publishModuleVideo = async (
   if (courseModule.status !== "published") {
     throwServiceError(
       "Publish the parent course module before publishing this video",
-      400
+      400,
     );
   }
 
@@ -474,10 +459,7 @@ const publishModuleVideo = async (
   return video;
 };
 
-const moveModuleVideoToDraft = async (
-  videoId: string,
-  actorId: string
-) => {
+const moveModuleVideoToDraft = async (videoId: string, actorId: string) => {
   const video = await ModuleVideo.findById(videoId);
 
   assertFound(video, "Module video not found", 404);
@@ -495,10 +477,7 @@ const moveModuleVideoToDraft = async (
   return video;
 };
 
-const archiveModuleVideo = async (
-  videoId: string,
-  actorId: string
-) => {
+const archiveModuleVideo = async (videoId: string, actorId: string) => {
   const video = await ModuleVideo.findById(videoId);
 
   assertFound(video, "Module video not found", 404);

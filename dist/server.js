@@ -11688,7 +11688,7 @@ var getAllCourseModules = async ({
       $ne: "archived"
     };
   }
-  return CourseModule.find(filter).sort({
+  return CourseModule.find().sort({
     pillar: 1,
     moduleNumber: 1
   }).populate(
@@ -11746,7 +11746,7 @@ var getSingleCourseModule = async (moduleId, actorRole) => {
   if (!isAdminOrManager6(actorRole)) {
     filter.status = "published";
   }
-  const courseModule = await CourseModule.findOne(filter).populate(
+  const courseModule = await CourseModule.findOne().populate(
     "pillar",
     "name slug title isPaid priceCents currency status"
   ).populate(
@@ -12879,7 +12879,7 @@ var getAllModuleVideos = async ({
   } else if (!includeArchived) {
     filter.status = { $ne: "archived" };
   }
-  const query = ModuleVideo.find(filter).sort({ module: 1, order: 1 }).populate({
+  const query = ModuleVideo.find().sort({ module: 1, order: 1 }).populate({
     path: "module",
     select: "title slug moduleNumber pillar status",
     populate: {
@@ -12904,11 +12904,7 @@ var getVideosByModule = async (moduleId, actorRole) => {
     "pillar",
     "name slug title isPaid priceCents currency status"
   );
-  assertFound6(
-    courseModule,
-    "Course module not found or unavailable",
-    404
-  );
+  assertFound6(courseModule, "Course module not found or unavailable", 404);
   const filter = {
     module: new Types20.ObjectId(moduleId)
   };
@@ -12918,7 +12914,7 @@ var getVideosByModule = async (moduleId, actorRole) => {
   } else {
     filter.status = { $ne: "archived" };
   }
-  const query = ModuleVideo.find(filter).sort({ order: 1 }).populate("uploadedBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
+  const query = ModuleVideo.find().sort({ order: 1 }).populate("uploadedBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
   if (!isPrivileged) {
     query.select(
       "-secureUrl -playbackUrl -cloudinaryPublicId -cloudinaryAssetId"
@@ -12933,24 +12929,23 @@ var getVideosByModule = async (moduleId, actorRole) => {
 var getSingleModuleVideo = async (videoId, actorRole) => {
   const filter = {
     _id: videoId
+    // status : "published"
   };
   const isPrivileged = isAdminOrManager7(actorRole);
   if (!isPrivileged) {
     filter.status = "published";
   }
-  const query = ModuleVideo.findOne(filter).populate({
+  const query = ModuleVideo.findOne().populate({
     path: "module",
     select: "title slug moduleNumber pillar status",
     populate: {
       path: "pillar",
       model: "ChallengePillar",
-      select: "name slug title isPaid priceCents currency status"
+      select: "name slug title isPaid priceCents currency status  "
     }
   }).populate("uploadedBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
   if (!isPrivileged) {
-    query.select(
-      "-secureUrl -playbackUrl -cloudinaryPublicId -cloudinaryAssetId"
-    );
+    query.select(" -cloudinaryPublicId -cloudinaryAssetId");
   }
   const video = await query;
   assertFound6(video, "Module video not found", 404);
@@ -13426,7 +13421,7 @@ var router15 = Router15();
 router15.post(
   "/module/:moduleId",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   uploadModuleVideo.single("video"),
   normalizeModuleVideoMultipartBody,
   validateRequest_default(createModuleVideoValidation),
@@ -13455,28 +13450,28 @@ router15.get(
 router15.patch(
   "/:id",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(updateModuleVideoValidation),
   moduleVideoController.updateModuleVideo
 );
 router15.patch(
   "/:id/publish",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(moduleVideoIdValidation),
   moduleVideoController.publishModuleVideo
 );
 router15.patch(
   "/:id/draft",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(moduleVideoIdValidation),
   moduleVideoController.moveModuleVideoToDraft
 );
 router15.patch(
   "/:id/archive",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(moduleVideoIdValidation),
   moduleVideoController.archiveModuleVideo
 );
