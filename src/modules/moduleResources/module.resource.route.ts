@@ -23,7 +23,7 @@ const router = Router();
 router.post(
   "/module/:moduleId",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   uploadModuleResourceFields,
   normalizeModuleResourceMultipartBody,
   validateRequest(createModuleResourceValidation),
@@ -56,7 +56,7 @@ router.get(
 router.patch(
   "/:id",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   validateRequest(updateModuleResourceValidation),
   moduleResourceController.updateModuleResource
 );
@@ -64,7 +64,7 @@ router.patch(
 router.patch(
   "/:id/publish",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   validateRequest(moduleResourceIdValidation),
   moduleResourceController.publishModuleResource
 );
@@ -72,7 +72,7 @@ router.patch(
 router.patch(
   "/:id/draft",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   validateRequest(moduleResourceIdValidation),
   moduleResourceController.moveModuleResourceToDraft
 );
@@ -80,7 +80,7 @@ router.patch(
 router.patch(
   "/:id/archive",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   validateRequest(moduleResourceIdValidation),
   moduleResourceController.archiveModuleResource
 );
