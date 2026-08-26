@@ -138,7 +138,7 @@ const createEntitlementLog = async (payload: ICreateEntitlementLogInput) => {
 const getAllEntitlementLogs = async (options: IGetEntitlementLogsOptions) => {
   const page = options.page ?? 1;
 
-  const limit = options.limit ?? 20;
+  const limit = Math.min(options.limit ?? 20, 100);
 
   const skip = (page - 1) * limit;
 
@@ -181,7 +181,7 @@ const getAllEntitlementLogs = async (options: IGetEntitlementLogsOptions) => {
       .populate("entitlement", "entitlementType entitlementKey status")
       .populate("pillar", "name slug title")
       .populate("paymentSession", "purpose status amountTotal currency")
-      .populate("actor", "fullName email role"),
+      .populate("actor", "fullName email role").lean(),
 
     EntitlementLog.countDocuments(filter),
   ]);
@@ -209,7 +209,7 @@ const getMyEntitlementLogs = async (userId: string) => {
       createdAt: -1,
     })
     .populate("entitlement", "entitlementType entitlementKey status")
-    .populate("pillar", "name slug title");
+    .populate("pillar", "name slug title").lean();
 
   return logs;
 };
@@ -222,7 +222,7 @@ const getSingleEntitlementLog = async (logId: string) => {
     .populate("entitlement", "entitlementType entitlementKey status")
     .populate("pillar", "name slug title")
     .populate("paymentSession", "purpose status amountTotal currency")
-    .populate("actor", "fullName email role");
+    .populate("actor", "fullName email role").lean();
 
   assertFound(log, "Entitlement log not found", 404);
 

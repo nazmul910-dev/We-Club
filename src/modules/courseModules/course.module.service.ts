@@ -76,7 +76,7 @@ const createCourseModule = async (
             payload.moduleNumber,
         },
       ],
-    });
+    }).lean();
 
   if (existingModule) {
     throwServiceError(
@@ -178,7 +178,7 @@ const getAllCourseModules = async ({
     .populate(
       'updatedBy',
       'fullName email role profileImage'
-    );
+    ).lean();
 };
 
 const getModulesByPillar = async (
@@ -199,7 +199,7 @@ const getModulesByPillar = async (
   const pillar =
     await ChallengePillar.findOne(
       pillarFilter
-    );
+    ).lean();
 
   if (!pillar) {
     throwServiceError(
@@ -231,7 +231,7 @@ const getModulesByPillar = async (
       .populate(
         'pillar',
         'name slug title isPaid priceCents currency status'
-      );
+      ).lean();
 
   return {
     pillar,
@@ -264,7 +264,7 @@ const getSingleCourseModule = async (
       .populate(
         'updatedBy',
         'fullName email role profileImage'
-      );
+      ).lean();
 
   if (!courseModule) {
     throwServiceError(

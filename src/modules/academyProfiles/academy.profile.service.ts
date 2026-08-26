@@ -52,7 +52,8 @@ const getMyProfile = async (userId: string) => {
 
   const profile = await AcademyProfile.findOne(filter)
     .populate("currentPillar", "name slug title")
-    .populate("mentor", "fullName email profileImage");
+    .populate("mentor", "fullName email profileImage")
+    .lean();
 
   assertFound(profile, "Academy profile not found", 404);
 
@@ -96,10 +97,9 @@ const getAllProfiles = async () => {
   return AcademyProfile.find()
 
     .populate("user", "fullName email role profileImage")
-
     .populate("mentor", "fullName email")
-
-    .populate("currentPillar", "title slug");
+    .populate("currentPillar", "title slug")
+    .lean();
 };
 
 export const academyProfileService = {

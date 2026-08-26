@@ -388,7 +388,7 @@ const getAllListingPromoteRequest = async (
       .populate(
         "requester.user_id",
         "fullName email profileImage licenseNumber phone country city role bio",
-      ),
+      ).lean(),
     // no populate on requester — email is already embedded
     queryWithDefaultSort,
   )
@@ -396,7 +396,8 @@ const getAllListingPromoteRequest = async (
     .filter()
     .sort()
     .paginate()
-    .fieldsLimit();
+    .fieldsLimit()
+    ;
 
   const data = await promoteRequestQuery.modelQuery;
   const meta = await promoteRequestQuery.countTotal();
@@ -436,7 +437,7 @@ const getMyListingsPromoteRequestFromDB = async (
       .populate(
         "requester.user_id",
         "fullName email profileImage licenseNumber phone country city role bio",
-      ),
+      ).lean(),
     queryWithDefaultSort,
   )
     .search(["message"])
@@ -480,7 +481,7 @@ const getMyPromoteRequestsFromDB = async (
       .populate(
         "requester.user_id",
         "fullName email profileImage licenseNumber phone country city role bio",
-      ),
+      ).lean(),
     queryWithDefaultSort,
   )
     .search(["message"])

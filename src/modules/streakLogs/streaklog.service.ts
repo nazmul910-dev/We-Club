@@ -159,7 +159,8 @@ const getStreakLogs = async (query: IStreakLogQuery) => {
       .populate("academyProfile", "fullName companyName")
       .sort({ normalizedDate: -1 })
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     StreakLog.countDocuments(filter),
   ]);
 
@@ -177,7 +178,8 @@ const getStreakLogs = async (query: IStreakLogQuery) => {
 const getSingleStreakLog = async (streakLogId: string) => {
   const log = await StreakLog.findById(streakLogId)
     .populate("user", "fullName email role")
-    .populate("academyProfile", "fullName companyName");
+    .populate("academyProfile", "fullName companyName")
+    .lean();
 
   assertFound(log, "Streak log not found", 404);
 

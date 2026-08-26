@@ -186,7 +186,7 @@ const getAllModuleVideos = async ({
     );
   }
 
-  return query;
+  return query.lean();
 };
 
 const getVideosByModule = async (
@@ -202,7 +202,7 @@ const getVideosByModule = async (
   const courseModule = await CourseModule.findOne(moduleFilter).populate(
     "pillar",
     "name slug title isPaid priceCents currency status"
-  );
+  ).lean();
 
   assertFound(
     courseModule,
@@ -233,7 +233,7 @@ const getVideosByModule = async (
     );
   }
 
-  const videos = await query;
+  const videos = await query.lean();
 
   return {
     module: courseModule,
@@ -274,7 +274,7 @@ const getSingleModuleVideo = async (
     );
   }
 
-  const video = await query;
+  const video = await query.lean();
 
   assertFound(video, "Module video not found", 404);
 

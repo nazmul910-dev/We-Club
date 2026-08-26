@@ -217,13 +217,14 @@ const getMyCommissionsFromDB = async (
     filter.status = query.status;
   }
 
-  const { page, limit, skip } = getPaginationParams(query);
+  const { page,  skip } = getPaginationParams(query);
+  const limit = Math.min(1000, Math.max(1, Number(query.limit) || 10));
 
   // Run the page of results and the total count in parallel — same filter,
   // one for `.find()`, one for `.countDocuments()`.
   const [data, total] = await Promise.all([
     CommissionLedger.find(filter)
-      .populate(populateCommissionQuery())
+      .populate(populateCommissionQuery()).lean()
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(limit),

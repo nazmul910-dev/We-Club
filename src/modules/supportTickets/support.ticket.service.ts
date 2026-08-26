@@ -18,7 +18,7 @@ const list = async (filter: Record<string, unknown>, query: ISupportTicketListQu
   const page = query.page ?? 1;
   const limit = query.limit ?? 20;
   const [data, total] = await Promise.all([
-    SupportTicket.find(filter).populate(populate).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+    SupportTicket.find(filter).populate(populate).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
     SupportTicket.countDocuments(filter),
   ]);
   return { data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
@@ -43,7 +43,7 @@ export const supportTicketService = {
   adminList(query: ISupportTicketListQuery) { return list(queryFilters(query), query); },
   async getById(id: string, requester: string, isAdmin: boolean) {
     const filter = isAdmin ? { _id: id } : { _id: id, requester };
-    const ticket = await SupportTicket.findOne(filter).populate(populate);
+    const ticket = await SupportTicket.findOne(filter).populate(populate).lean();
     assertFound(ticket, "Support ticket not found", 404);
     return ticket;
   },

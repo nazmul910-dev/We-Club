@@ -221,7 +221,8 @@ const getListingAssetLogsFromDB = async (
   })
     .populate('downloaded_by', 'fullName email role')
     .populate('listing_id', 'title ref_code')
-    .sort({ downloaded_at: -1 });
+    .sort({ downloaded_at: -1 })
+    .lean();
 };
 
 const getAllListingAssetLogsFromDB = async (authUser: AuthUser) => {
@@ -232,7 +233,8 @@ const getAllListingAssetLogsFromDB = async (authUser: AuthUser) => {
   return ListingAssetDownload.find()
     .populate('downloaded_by', 'fullName email role')
     .populate('listing_id', 'title ref_code')
-    .sort({ downloaded_at: -1 });
+    .sort({ downloaded_at: -1 })
+    .lean();
 };
 
 export const listingAssetsService = {

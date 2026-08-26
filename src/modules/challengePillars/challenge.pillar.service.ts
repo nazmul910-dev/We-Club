@@ -66,7 +66,7 @@ const createChallengePillar = async (
       { slug: payload.slug },
       { order: payload.order },
     ],
-  });
+  }).lean();
 
   if (existingPillar) {
     throwServiceError("Challenge pillar already exists", 409);
@@ -212,7 +212,8 @@ const seedDefaultChallengePillars = async (actorId: string) => {
 
   return ChallengePillar.find()
     .sort({ order: 1 })
-    .populate("createdBy", "fullName email role profileImage");
+    .populate("createdBy", "fullName email role profileImage")
+    .lean();
 };
 
 const getAllChallengePillars = async ({
@@ -235,7 +236,8 @@ const getAllChallengePillars = async ({
   return ChallengePillar.find(filter)
     .sort({ order: 1 })
     .populate("createdBy", "fullName email role profileImage")
-    .populate("updatedBy", "fullName email role profileImage");
+    .populate("updatedBy", "fullName email role profileImage")
+    .lean();
 };
 
 const getChallengePillarBySlug = async (
@@ -252,7 +254,8 @@ const getChallengePillarBySlug = async (
 
   const pillar = await ChallengePillar.findOne(filter)
     .populate("createdBy", "fullName email role profileImage")
-    .populate("updatedBy", "fullName email role profileImage");
+    .populate("updatedBy", "fullName email role profileImage")
+    .lean();
 
   assertPillarExists(pillar);
 

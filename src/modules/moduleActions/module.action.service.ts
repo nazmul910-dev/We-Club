@@ -125,7 +125,7 @@ const createModuleAction = async (
     await ModuleAction.findOne({
       module: moduleId,
       order: payload.order,
-    });
+    }).lean();
 
   if (existingAction) {
     throwServiceError(
@@ -256,7 +256,7 @@ const getAllModuleActions = async ({
     .populate(
       "updatedBy",
       "fullName email role profileImage"
-    );
+    ).lean();
 };
 
 const getActionsByModule = async (
@@ -289,7 +289,7 @@ const getActionsByModule = async (
     ).populate(
       "pillar",
       "name slug title status"
-    );
+    ).lean();
 
   assertFound(
     courseModule,
@@ -325,7 +325,7 @@ const getActionsByModule = async (
       .populate(
         "updatedBy",
         "fullName email role profileImage"
-      );
+      ).lean();
 
   return {
     module: courseModule,
@@ -373,7 +373,7 @@ const getSingleModuleAction = async (
       .populate(
         "updatedBy",
         "fullName email role profileImage"
-      );
+      ).lean();
 
   assertFound(
     action,
@@ -427,7 +427,7 @@ const updateModuleAction = async (
         module: action.module,
 
         order: payload.order,
-      });
+      }).lean();
 
     if (duplicateAction) {
       throwServiceError(
@@ -548,7 +548,7 @@ const publishModuleAction = async (
   const courseModule =
     await CourseModule.findById(
       action.module
-    );
+    ).lean();
 
   assertFound(
     courseModule,
