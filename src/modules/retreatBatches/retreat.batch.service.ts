@@ -134,7 +134,9 @@ const getAllRetreatBatches = async (
   }
 
   if (isPublicOnly) {
-    filter.status = { $in: ["upcoming", "open", "sold_out"] };
+    filter.status = query.includePast
+      ? { $in: ["upcoming", "open", "sold_out", "in_progress", "completed"] }
+      : { $in: ["upcoming", "open", "sold_out"] };
     filter.isActive = true;
   } else {
     if (query.status) {

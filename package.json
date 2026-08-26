@@ -7,7 +7,9 @@
     "start": "node dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/server.ts",
-    "build": "tsup"
+    "build": "tsup",
+    "seed:leaderboard": "tsx src/scripts/seedLeaderboard.ts",
+    "seed:retreats": "tsx src/scripts/seedRetreats.ts"
   },
   "keywords": [],
   "author": "",

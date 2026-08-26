@@ -89,6 +89,7 @@ export const queryRetreatBatchValidation = z.object({
   query: z
     .object({
       locationId: mongoObjectIdSchema.optional(),
+      includePast: z.coerce.boolean().optional(),
       status: z.enum(RETREAT_BATCH_STATUSES).optional(),
       isActive: z.coerce.boolean().optional(),
       isFeatured: z.coerce.boolean().optional(),
