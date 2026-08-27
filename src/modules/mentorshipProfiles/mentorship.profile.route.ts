@@ -9,6 +9,7 @@ import { mentorshipProfileController } from "./mentorship.profile.controller";
 import {
   createMentorshipProfileValidation,
   mentorshipProfileIdValidation,
+  selectCoMentorValidation,
   updateMentorshipProfileValidation,
 } from "./mentorship.profile.validation";
 
@@ -18,6 +19,20 @@ const router = Router();
 router.get("/", mentorshipProfileController.getAllMentorshipProfiles);
 
 router.get("/primary", mentorshipProfileController.getPrimaryMentor);
+
+// Member co-mentor selection — must be declared before "/:id" routes
+router.get(
+  "/me/co-mentor",
+  verifyToken,
+  mentorshipProfileController.getMyCoMentor,
+);
+
+router.patch(
+  "/me/co-mentor",
+  verifyToken,
+  validateRequest(selectCoMentorValidation),
+  mentorshipProfileController.selectCoMentor,
+);
 
 router.get(
   "/:id",

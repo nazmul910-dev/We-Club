@@ -115,3 +115,51 @@ export interface IMentorBookingQuery {
   page?: number | undefined;
   limit?: number | undefined;
 }
+
+// ---- Types for GET /invictus/mentor-bookings/me/my-mentor ----
+// Kept here (rather than relying on inference) so the frontend can mirror
+// this shape exactly. NOTE: these describe the shape after Mongoose
+// .populate(...).lean() resolves the refs, so fields typed as
+// Types.ObjectId above (member, leadMentor, coMentor, etc.) appear here
+// as the summary objects below instead.
+
+export interface IUserSummary {
+  _id: Types.ObjectId | string;
+  fullName: string;
+  email: string;
+  role: string;
+  profileImage?: string | undefined;
+}
+
+export interface IMentorshipProfileSummary {
+  _id: Types.ObjectId | string;
+  mentor?: IUserSummary;
+  bio?: string;
+  expertise?: string[];
+  profileImage?: string;
+  sessionDurationMinutes?: number;
+  isPrimaryMentor?: boolean;
+  isActive?: boolean;
+  status?: string;
+}
+
+export interface IMentorPairing {
+  mentor: IUserSummary;
+  mentorProfile: IMentorshipProfileSummary;
+}
+
+/**
+ * - primaryMentor: the platform's single configured primary mentor.
+ *   Same for every member, always present.
+ * - coMentor: the non-primary mentor this member selected for themselves
+ *   (User.assignedCoMentorProfile). Null until they've picked one via
+ *   PATCH /invictus/mentorship-profiles/me/co-mentor.
+ * - nextSession: the member's soonest upcoming confirmed booking, or most
+ *   recent active booking as a fallback. Informational only — does not
+ *   determine who the mentor/co-mentor are.
+ */
+export interface IMyMentorResponse {
+  primaryMentor: IMentorPairing;
+  coMentor: IMentorPairing | null;
+  nextSession: IMentorBooking | null;
+}

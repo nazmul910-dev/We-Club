@@ -78,3 +78,11 @@ export const mentorshipProfileIdValidation = z.object({
     id: mongoObjectIdSchema,
   }),
 });
+
+export const selectCoMentorValidation = z.object({
+  body: z
+    .object({
+      mentorshipProfileId: mongoObjectIdSchema,
+    })
+    .strict(),
+});

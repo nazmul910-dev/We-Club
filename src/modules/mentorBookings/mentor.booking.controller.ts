@@ -322,6 +322,29 @@ const markNoShowBooking = async (
   }
 };
 
+
+const getMyMentor = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+ 
+    const result = await mentorBookingService.getMyMentor(authUser.id);
+ 
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Current mentor retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+ 
+
 export const mentorBookingController = {
   createBooking,
   getMyMemberBookings,
@@ -335,4 +358,5 @@ export const mentorBookingController = {
   cancelBooking,
   completeBooking,
   markNoShowBooking,
+  getMyMentor
 };

@@ -38,6 +38,13 @@ router.get(
 );
 
 router.get(
+  "/me/my-mentor",
+  verifyToken,
+  requireInvictusAccess,
+  mentorBookingController.getMyMentor,
+);
+
+router.get(
   "/me/:id",
   verifyToken,
   requireInvictusAccess,

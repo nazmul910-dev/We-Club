@@ -125,34 +125,6 @@ const getSingleLeaderboard = async (
   }
 };
 
-const getLeaderboardEntries = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    getAuthUser(req);
-    const page = Number(req.query.page);
-    const limit = Math.min(Number(req.query.limit) ?? 20, 100);
-
-    const result = await leaderboardService.getLeaderboardEntries(
-      String(req.params.id),
-      { page, limit },
-    );
-
-    sendResponse(res, {
-      statusCode: 200,
-      success: true,
-
-      message: "Leaderboard retrieved2 successfully",
-
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 const updateLeaderboard = async (
   req: Request,
   res: Response,
@@ -269,5 +241,5 @@ export const leaderboardController = {
   activateLeaderboard,
   finalizeLeaderboard,
 
-  getLeaderboardEntries,
+ 
 };

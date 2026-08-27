@@ -130,6 +130,13 @@ export interface IUser {
     approvedAt?: Date | undefined;
     rejectedReason?: string | undefined;
 
+    // The member's selected co-mentor (a non-primary MentorshipProfile),
+    // chosen at purchase/onboarding time. Paired with the platform's single
+    // primary mentor on the accountability page.
+    assignedCoMentorProfile?: Types.ObjectId | undefined;
+    coMentorAssignedAt?: Date | undefined;
+    coMentorAssignedBy?: Types.ObjectId | undefined;
+
     lifetimeCommissionEarned?: number | undefined;
     discretionScore?: number | undefined;
 

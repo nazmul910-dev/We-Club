@@ -404,6 +404,114 @@ const getMyMemberSingleBooking = async (
   return booking;
 };
 
+const MENTOR_FIELD_POPULATE = {
+  path: "mentor",
+  select: "fullName email role profileImage",
+};
+
+const ACTIVE_BOOKING_STATUSES: MentorBookingStatus[] = [
+  "confirmed",
+  "completed",
+  "requested",
+];
+
+/**
+ * The next session to surface on the "book / join" card: the soonest
+ * upcoming CONFIRMED booking, falling back to the member's most recent
+ * booking of any active status (so there's still something useful to show
+ * — e.g. a pending "requested" booking awaiting mentor confirmation).
+ */
+const resolveNextSession = async (memberObjectId: Types.ObjectId) => {
+  const now = new Date();
+
+  const upcomingBooking = await MentorBooking.findOne({
+    member: memberObjectId,
+    status: "confirmed",
+    scheduledStartTime: { $gte: now },
+  })
+    .sort({ scheduledStartTime: 1 })
+    .populate(BOOKING_POPULATE)
+    .lean();
+
+  if (upcomingBooking) return upcomingBooking;
+
+  return MentorBooking.findOne({
+    member: memberObjectId,
+    status: { $in: ACTIVE_BOOKING_STATUSES },
+  })
+    .sort({ scheduledStartTime: -1 })
+    .populate(BOOKING_POPULATE)
+    .lean();
+};
+
+/**
+ * Resolves the member's accountability pairing for the accountability page:
+ *
+ *  - `primaryMentor`: the platform's single configured primary mentor
+ *    (MentorshipProfile.isPrimaryMentor === true). Same for every member.
+ *  - `coMentor`: the non-primary mentor the member selected for themselves
+ *    (typically at purchase/onboarding time), stored on
+ *    User.assignedCoMentorProfile. Null if they haven't picked one yet.
+ *  - `nextSession`: the member's soonest upcoming confirmed booking (or
+ *    most recent active booking as a fallback), for the "book / join" card.
+ *    This is informational only and does not affect who the mentor/co-mentor
+ *    are — that's driven purely by the assignment above.
+ */
+const getMyMentor = async (memberUserId: string) => {
+  assertValidObjectId(memberUserId, "Member user ID");
+
+  const memberObjectId = new Types.ObjectId(memberUserId);
+  console.log("id", memberObjectId)
+
+  const [primaryProfile, member, nextSession] = await Promise.all([
+    MentorshipProfile.findOne({
+      isPrimaryMentor: true,
+      isActive: true,
+      status: "published",
+    })
+      .populate(MENTOR_FIELD_POPULATE)
+      .lean(),
+
+    User.findById(memberObjectId)
+      .select("_id assignedCoMentorProfile coMentorAssignedAt")
+      .populate({
+        path: "assignedCoMentorProfile",
+        populate: MENTOR_FIELD_POPULATE,
+      })
+      .lean(),
+
+    resolveNextSession(memberObjectId),
+  ]);
+
+  console.log(member)
+
+  assertFound(
+    primaryProfile,
+    "No primary mentor is currently configured",
+    404,
+  );
+
+  const coMentorProfile =
+    (member as { assignedCoMentorProfile?: unknown } | null)
+      ?.assignedCoMentorProfile ?? null;
+
+  console.log("co mentor profile ", coMentorProfile)
+
+  return {
+    primaryMentor: {
+      mentor: primaryProfile.mentor,
+      mentorProfile: primaryProfile,
+    },
+    coMentor: coMentorProfile
+      ? {
+        mentor: (coMentorProfile as { mentor: unknown }).mentor,
+        mentorProfile: coMentorProfile,
+      }
+      : null,
+    nextSession: nextSession ?? null,
+  };
+};
+
 const getMyMentorBookings = async (
   mentorUserId: string,
   query: IMentorBookingQuery = {},
@@ -1053,6 +1161,7 @@ export const mentorBookingService = {
   createBooking,
   getMyMemberBookings,
   getMyMemberSingleBooking,
+  getMyMentor,
   getMyMentorBookings,
   getMyMentorSingleBooking,
   getAllBookingsAdmin,
