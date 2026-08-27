@@ -337,4 +337,5 @@ export const leaderboardService = {
   finalizeLeaderboard,
   getLeaderboardEntries,
   recalculateLeaderboardRanks,
+
 };

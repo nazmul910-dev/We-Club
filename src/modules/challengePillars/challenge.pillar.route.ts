@@ -20,14 +20,14 @@ const router = Router();
 router.post(
   "/seed-defaults",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   challengePillarController.seedDefaultChallengePillars,
 );
 
 router.post(
   "/",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   validateRequest(createChallengePillarValidation),
   challengePillarController.createChallengePillar,
 );
@@ -50,7 +50,7 @@ router.get(
 router.patch(
   "/:id",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   validateRequest(updateChallengePillarValidation),
   challengePillarController.updateChallengePillar,
 );
@@ -58,7 +58,7 @@ router.patch(
 router.patch(
   "/:id/publish",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   validateRequest(challengePillarIdValidation),
   challengePillarController.publishChallengePillar,
 );
@@ -66,7 +66,7 @@ router.patch(
 router.patch(
   "/:id/draft",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   validateRequest(challengePillarIdValidation),
   challengePillarController.moveChallengePillarToDraft,
 );
@@ -74,7 +74,7 @@ router.patch(
 router.patch(
   "/:id/archive",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
   validateRequest(challengePillarIdValidation),
   challengePillarController.archiveChallengePillar,
 );

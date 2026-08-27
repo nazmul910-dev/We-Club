@@ -1,11 +1,8 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 const mongoObjectIdSchema = z
   .string()
-  .regex(
-    /^[0-9a-fA-F]{24}$/,
-    'Invalid MongoDB ObjectId'
-  );
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
 
 const moduleSlugSchema = z
   .string()
@@ -14,187 +11,87 @@ const moduleSlugSchema = z
   .max(200)
   .regex(
     /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-    'Slug may contain lowercase letters, numbers and hyphens only'
+    "Slug may contain lowercase letters, numbers and hyphens only",
   );
 
-const createCourseModuleBodySchema =
-  z.object({
-    pillar: mongoObjectIdSchema,
+const createCourseModuleBodySchema = z.object({
+  pillar: mongoObjectIdSchema,
 
-    title: z
-      .string()
-      .trim()
-      .min(2)
-      .max(200),
+  title: z.string().trim().min(2).max(200),
 
-    slug: moduleSlugSchema,
+  slug: moduleSlugSchema,
 
-    shortDescription: z
-      .string()
-      .trim()
-      .max(500)
-      .optional(),
+  shortDescription: z.string().trim().max(500).optional(),
 
-    description: z
-      .string()
-      .trim()
-      .min(10)
-      .max(5000),
+  description: z.string().trim().min(10).max(5000),
 
-    thumbnailUrl: z
-      .string()
-      .url()
-      .optional(),
+  thumbnailUrl: z.string().url().optional(),
 
-    moduleNumber: z
-      .number()
-      .int()
-      .min(1),
+  moduleNumber: z.coerce.number().int().min(1),
 
-    estimatedDurationMinutes: z
-      .number()
-      .int()
-      .nonnegative()
-      .default(0),
+  estimatedDurationMinutes: z.coerce.number().int().nonnegative(),
 
-    minimumVideoPercent: z
-      .number()
-      .min(1)
-      .max(100)
-      .default(80),
+  minimumVideoPercent: z.coerce.number().min(1).max(100),
 
-    minimumActionPercent: z
-      .number()
-      .min(1)
-      .max(100)
-      .default(80),
+  minimumActionPercent: z.coerce.number().min(1).max(100),
 
-    minimumQuizScore: z
-      .number()
-      .min(1)
-      .max(100)
-      .default(70),
+  minimumQuizScore: z.coerce.number().min(1).max(100),
 
-    maximumQuizAttempts: z
-      .number()
-      .int()
-      .min(1)
-      .max(10)
-      .default(2),
+  maximumQuizAttempts: z.coerce.number().int().min(1).max(10),
 
-    completionPoints: z
-      .number()
-      .int()
-      .nonnegative()
-      .default(20),
-  });
+  completionPoints: z.coerce.number().int().nonnegative(),
+});
 
-const updateCourseModuleBodySchema =
-  z.object({
-    title: z
-      .string()
-      .trim()
-      .min(2)
-      .max(200)
-      .optional(),
+const updateCourseModuleBodySchema = z
+  .object({
+    title: z.string().trim().min(2).max(200).optional(),
 
     slug: moduleSlugSchema.optional(),
 
-    shortDescription: z
-      .string()
-      .trim()
-      .max(500)
-      .nullable()
-      .optional(),
+    shortDescription: z.string().trim().max(500).nullable().optional(),
 
-    description: z
-      .string()
-      .trim()
-      .min(10)
-      .max(5000)
-      .optional(),
+    description: z.string().trim().min(10).max(5000).optional(),
 
-    thumbnailUrl: z
-      .string()
-      .url()
-      .nullable()
-      .optional(),
+    thumbnailUrl: z.string().url().nullable().optional(),
 
-    moduleNumber: z
-      .number()
-      .int()
-      .min(1)
-      .optional(),
+    moduleNumber: z.coerce.number().int().min(1).optional(),
 
-    estimatedDurationMinutes: z
-      .number()
-      .int()
-      .nonnegative()
-      .optional(),
+    estimatedDurationMinutes: z.coerce.number().int().nonnegative().optional(),
 
-    minimumVideoPercent: z
-      .number()
-      .min(1)
-      .max(100)
-      .optional(),
+    minimumVideoPercent: z.coerce.number().min(1).max(100).optional(),
 
-    minimumActionPercent: z
-      .number()
-      .min(1)
-      .max(100)
-      .optional(),
+    minimumActionPercent: z.coerce.number().min(1).max(100).optional(),
 
-    minimumQuizScore: z
-      .number()
-      .min(1)
-      .max(100)
-      .optional(),
+    minimumQuizScore: z.coerce.number().min(1).max(100).optional(),
 
-    maximumQuizAttempts: z
-      .number()
-      .int()
-      .min(1)
-      .max(10)
-      .optional(),
+    maximumQuizAttempts: z.coerce.number().int().min(1).max(10).optional(),
 
-    completionPoints: z
-      .number()
-      .int()
-      .nonnegative()
-      .optional(),
+    completionPoints: z.coerce.number().int().nonnegative().optional(),
   })
-  .refine(
-    (data) => Object.keys(data).length > 0,
-    {
-      message:
-        'At least one field is required',
-    }
-  );
-
-export const createCourseModuleValidation =
-  z.object({
-    body: createCourseModuleBodySchema,
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field is required",
   });
 
-export const updateCourseModuleValidation =
-  z.object({
-    params: z.object({
-      id: mongoObjectIdSchema,
-    }),
+export const createCourseModuleValidation = z.object({
+  body: createCourseModuleBodySchema,
+});
 
-    body: updateCourseModuleBodySchema,
-  });
+export const updateCourseModuleValidation = z.object({
+  params: z.object({
+    id: mongoObjectIdSchema,
+  }),
 
-export const courseModuleIdValidation =
-  z.object({
-    params: z.object({
-      id: mongoObjectIdSchema,
-    }),
-  });
+  body: updateCourseModuleBodySchema,
+});
 
-export const courseModulePillarValidation =
-  z.object({
-    params: z.object({
-      pillarId: mongoObjectIdSchema,
-    }),
-  });
+export const courseModuleIdValidation = z.object({
+  params: z.object({
+    id: mongoObjectIdSchema,
+  }),
+});
+
+export const courseModulePillarValidation = z.object({
+  params: z.object({
+    pillarId: mongoObjectIdSchema,
+  }),
+});

@@ -28,7 +28,7 @@ function assertPillarExists<T>(
 }
 
 const isAdminOrManager = (role?: string): boolean => {
-  return role === "admin" || role === "manager";
+  return role === "admin" || role === "manager" || role === "founder";
 };
 
 const validatePaymentConfiguration = ({
@@ -233,7 +233,9 @@ const getAllChallengePillars = async ({
     };
   }
 
-  return ChallengePillar.find(filter)
+  //filter
+
+  return ChallengePillar.find()
     .sort({ order: 1 })
     .populate("createdBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage")

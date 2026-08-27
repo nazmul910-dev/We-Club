@@ -25,7 +25,8 @@ router.post(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest(
     createModuleActionValidation
@@ -69,7 +70,8 @@ router.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest(
     updateModuleActionValidation
@@ -83,7 +85,8 @@ router.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest(
     moduleActionIdValidation
@@ -97,7 +100,8 @@ router.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest(
     moduleActionIdValidation
@@ -111,7 +115,8 @@ router.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest(
     moduleActionIdValidation

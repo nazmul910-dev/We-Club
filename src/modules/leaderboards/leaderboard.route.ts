@@ -55,6 +55,13 @@ router.get(
   leaderboardController.getSingleLeaderboard,
 );
 
+router.get(
+     "/:id/entries",
+     verifyToken,
+     requireInvictusAccess,
+     leaderboardController.getLeaderboardEntries,
+   );
+
 router.patch(
   "/:id",
 

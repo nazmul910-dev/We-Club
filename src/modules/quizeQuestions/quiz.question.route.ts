@@ -25,7 +25,8 @@ router.post(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest(
     createQuizQuestionValidation
@@ -69,7 +70,8 @@ router.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest(
     updateQuizQuestionValidation
@@ -83,7 +85,8 @@ router.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest(
     quizQuestionIdValidation
@@ -97,7 +100,8 @@ router.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest(
     quizQuestionIdValidation
@@ -111,7 +115,8 @@ router.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest(
     quizQuestionIdValidation
