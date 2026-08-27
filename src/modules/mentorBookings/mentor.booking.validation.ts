@@ -69,7 +69,13 @@ export const confirmMentorBookingValidation = z.object({
 
   body: z
     .object({
-      meetingUrl: z.string().trim().url().optional(),
+      sessionTopic: z
+        .string()
+        .trim()
+        .min(3, "Session title must be at least 3 characters")
+        .max(500),
+      meetingUrl: z.string().trim().url(),
+      notes: z.string().trim().max(2000).optional(),
     })
     .strict(),
 });

@@ -101,7 +101,9 @@ export interface IUpdateMentorBooking {
 }
 
 export interface IConfirmMentorBooking {
-  meetingUrl?: string | undefined;
+  sessionTopic: string;
+  meetingUrl: string;
+  notes?: string | undefined;
 }
 
 export interface ICancelMentorBooking {

@@ -870,13 +870,17 @@ const confirmBooking = async ({
   }
 
   if (booking.status === "confirmed") {
-    if (payload.meetingUrl) {
-      booking.meetingUrl = payload.meetingUrl;
-      booking.updatedBy = new Types.ObjectId(actorId);
-      await booking.save();
-      return booking.populate(BOOKING_POPULATE);
+    // Idempotent re-confirm: allow updating the title/link/notes without
+    // re-running the conflict check or re-sending the "confirmed" notification.
+    booking.sessionTopic = payload.sessionTopic;
+    booking.meetingUrl = payload.meetingUrl;
+
+    if (payload.notes !== undefined) {
+      booking.notes = payload.notes;
     }
 
+    booking.updatedBy = new Types.ObjectId(actorId);
+    await booking.save();
     return booking.populate(BOOKING_POPULATE);
   }
 
@@ -895,9 +899,11 @@ const confirmBooking = async ({
   });
 
   booking.status = "confirmed";
+  booking.sessionTopic = payload.sessionTopic;
+  booking.meetingUrl = payload.meetingUrl;
 
-  if (payload.meetingUrl !== undefined) {
-    booking.meetingUrl = payload.meetingUrl;
+  if (payload.notes !== undefined) {
+    booking.notes = payload.notes;
   }
 
   booking.updatedBy = new Types.ObjectId(actorId);
