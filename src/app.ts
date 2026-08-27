@@ -13,7 +13,6 @@ import compression from "compression";
 
 
 const app: Application = express();
-
 app.set('trust proxy', 1);
 
 const limiter = rateLimit({
