@@ -14,6 +14,18 @@ export const NO_SHOW_PARTIES = ["member", "mentor", "both"] as const;
 
 export type NoShowParty = (typeof NO_SHOW_PARTIES)[number];
 
+export interface IMentorBookingRecording {
+  provider: "cloudinary";
+  cloudinaryPublicId: string;
+  cloudinaryAssetId?: string | undefined;
+  secureUrl: string;
+  playbackUrl?: string | undefined;
+  thumbnailUrl?: string | undefined;
+  durationSeconds?: number | undefined;
+  format?: string | undefined;
+  bytes?: number | undefined;
+}
+
 export interface IMentorBooking {
   member: Types.ObjectId;
 
@@ -39,6 +51,9 @@ export interface IMentorBooking {
   cancelledAt?: Date | undefined;
 
   completedAt?: Date | undefined;
+
+  recordingTitle?: string | undefined;
+  recording?: IMentorBookingRecording | undefined;
 
   noShowAt?: Date | undefined;
   noShowBy?: NoShowParty | undefined;
@@ -94,6 +109,7 @@ export interface ICancelMentorBooking {
 }
 
 export interface ICompleteMentorBooking {
+  recordingTitle: string;
   mentorFeedback?: string | undefined;
 }
 

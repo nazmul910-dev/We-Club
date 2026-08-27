@@ -3,6 +3,7 @@ import { QueryFilter, Types } from "mongoose";
 import { User } from "../users/users.model.schema";
 import { MentorshipProfile } from "../mentorshipProfiles/mentorship.profile.model.schema";
 import { notificationService } from "../notifications/notification.service";
+import type { ICloudinaryVideoUpload } from "../../utility/cloudinaryMedia";
 
 import {
   ICancelMentorBooking,
@@ -11,6 +12,7 @@ import {
   ICreateMentorBooking,
   IMentorBooking,
   IMentorBookingQuery,
+  IMentorBookingRecording,
   INoShowMentorBooking,
   IUpdateMentorBooking,
   MentorBookingStatus,
@@ -461,7 +463,6 @@ const getMyMentor = async (memberUserId: string) => {
   assertValidObjectId(memberUserId, "Member user ID");
 
   const memberObjectId = new Types.ObjectId(memberUserId);
-  console.log("id", memberObjectId)
 
   const [primaryProfile, member, nextSession] = await Promise.all([
     MentorshipProfile.findOne({
@@ -483,8 +484,6 @@ const getMyMentor = async (memberUserId: string) => {
     resolveNextSession(memberObjectId),
   ]);
 
-  console.log(member)
-
   assertFound(
     primaryProfile,
     "No primary mentor is currently configured",
@@ -495,8 +494,6 @@ const getMyMentor = async (memberUserId: string) => {
     (member as { assignedCoMentorProfile?: unknown } | null)
       ?.assignedCoMentorProfile ?? null;
 
-  console.log("co mentor profile ", coMentorProfile)
-
   return {
     primaryMentor: {
       mentor: primaryProfile.mentor,
@@ -504,9 +501,9 @@ const getMyMentor = async (memberUserId: string) => {
     },
     coMentor: coMentorProfile
       ? {
-        mentor: (coMentorProfile as { mentor: unknown }).mentor,
-        mentorProfile: coMentorProfile,
-      }
+          mentor: (coMentorProfile as { mentor: unknown }).mentor,
+          mentorProfile: coMentorProfile,
+        }
       : null,
     nextSession: nextSession ?? null,
   };
@@ -1012,15 +1009,31 @@ const cancelBooking = async ({
 const completeBooking = async ({
   bookingId,
   payload,
+  recording,
   actorId,
   actorRole,
 }: {
   bookingId: string;
   payload: ICompleteMentorBooking;
+  recording: ICloudinaryVideoUpload;
   actorId: string;
   actorRole?: string | undefined;
 }) => {
   assertValidObjectId(bookingId, "Booking ID");
+
+  if (!payload.recordingTitle || !payload.recordingTitle.trim()) {
+    throwServiceError(
+      "A title for the session recording is required",
+      400,
+    );
+  }
+
+  if (!recording || !recording.secureUrl || !recording.cloudinaryPublicId) {
+    throwServiceError(
+      "A recording of the session is required to mark it as completed",
+      400,
+    );
+  }
 
   const booking = await MentorBooking.findById(bookingId);
 
@@ -1044,6 +1057,31 @@ const completeBooking = async ({
 
   booking.status = "completed";
   booking.completedAt = new Date();
+
+  booking.recordingTitle = payload.recordingTitle.trim();
+
+  const recordingData: IMentorBookingRecording = {
+    provider: "cloudinary",
+    cloudinaryPublicId: recording.cloudinaryPublicId,
+    secureUrl: recording.secureUrl,
+    playbackUrl: recording.playbackUrl,
+    thumbnailUrl: recording.thumbnailUrl,
+    durationSeconds: recording.durationSeconds,
+  };
+
+  if (recording.cloudinaryAssetId !== undefined) {
+    recordingData.cloudinaryAssetId = recording.cloudinaryAssetId;
+  }
+
+  if (recording.format !== undefined) {
+    recordingData.format = recording.format;
+  }
+
+  if (recording.bytes !== undefined) {
+    recordingData.bytes = recording.bytes;
+  }
+
+  booking.recording = recordingData;
 
   if (payload.mentorFeedback !== undefined) {
     booking.mentorFeedback = payload.mentorFeedback;

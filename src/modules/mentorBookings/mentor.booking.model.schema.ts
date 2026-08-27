@@ -2,9 +2,64 @@ import { model, Schema } from "mongoose";
 
 import {
   IMentorBooking,
+  IMentorBookingRecording,
   MENTOR_BOOKING_STATUSES,
   NO_SHOW_PARTIES,
 } from "./mentor.booking.interface";
+
+const mentorBookingRecordingSchema = new Schema<IMentorBookingRecording>(
+  {
+    provider: {
+      type: String,
+      enum: ["cloudinary"],
+      default: "cloudinary",
+      required: true,
+    },
+
+    cloudinaryPublicId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    cloudinaryAssetId: {
+      type: String,
+      trim: true,
+    },
+
+    secureUrl: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    playbackUrl: {
+      type: String,
+      trim: true,
+    },
+
+    thumbnailUrl: {
+      type: String,
+      trim: true,
+    },
+
+    durationSeconds: {
+      type: Number,
+      min: 0,
+    },
+
+    format: {
+      type: String,
+      trim: true,
+    },
+
+    bytes: {
+      type: Number,
+      min: 0,
+    },
+  },
+  { _id: false },
+);
 
 const mentorBookingSchema = new Schema<IMentorBooking>(
   {
@@ -108,6 +163,16 @@ const mentorBookingSchema = new Schema<IMentorBooking>(
 
     completedAt: {
       type: Date,
+    },
+
+    recordingTitle: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+    },
+
+    recording: {
+      type: mentorBookingRecordingSchema,
     },
 
     noShowAt: {

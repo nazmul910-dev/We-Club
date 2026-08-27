@@ -97,6 +97,11 @@ export const completeMentorBookingValidation = z.object({
 
   body: z
     .object({
+      recordingTitle: z
+        .string()
+        .trim()
+        .min(3, "Recording title must be at least 3 characters")
+        .max(200),
       mentorFeedback: z.string().trim().max(3000).optional(),
     })
     .strict(),
