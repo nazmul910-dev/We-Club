@@ -3,6 +3,7 @@ import { QueryFilter, Types } from "mongoose";
 import { User } from "../users/users.model.schema";
 import { MentorshipProfile } from "../mentorshipProfiles/mentorship.profile.model.schema";
 import { notificationService } from "../notifications/notification.service";
+import type { ICloudinaryVideoUpload } from "../../utility/cloudinaryMedia";
 
 import {
   ICancelMentorBooking,
@@ -11,6 +12,7 @@ import {
   ICreateMentorBooking,
   IMentorBooking,
   IMentorBookingQuery,
+  IMentorBookingRecording,
   INoShowMentorBooking,
   IUpdateMentorBooking,
   MentorBookingStatus,
@@ -404,6 +406,109 @@ const getMyMemberSingleBooking = async (
   return booking;
 };
 
+const MENTOR_FIELD_POPULATE = {
+  path: "mentor",
+  select: "fullName email role profileImage",
+};
+
+const ACTIVE_BOOKING_STATUSES: MentorBookingStatus[] = [
+  "confirmed",
+  "completed",
+  "requested",
+];
+
+/**
+ * The next session to surface on the "book / join" card: the soonest
+ * upcoming CONFIRMED booking, falling back to the member's most recent
+ * booking of any active status (so there's still something useful to show
+ * — e.g. a pending "requested" booking awaiting mentor confirmation).
+ */
+const resolveNextSession = async (memberObjectId: Types.ObjectId) => {
+  const now = new Date();
+
+  const upcomingBooking = await MentorBooking.findOne({
+    member: memberObjectId,
+    status: "confirmed",
+    scheduledStartTime: { $gte: now },
+  })
+    .sort({ scheduledStartTime: 1 })
+    .populate(BOOKING_POPULATE)
+    .lean();
+
+  if (upcomingBooking) return upcomingBooking;
+
+  return MentorBooking.findOne({
+    member: memberObjectId,
+    status: { $in: ACTIVE_BOOKING_STATUSES },
+  })
+    .sort({ scheduledStartTime: -1 })
+    .populate(BOOKING_POPULATE)
+    .lean();
+};
+
+/**
+ * Resolves the member's accountability pairing for the accountability page:
+ *
+ *  - `primaryMentor`: the platform's single configured primary mentor
+ *    (MentorshipProfile.isPrimaryMentor === true). Same for every member.
+ *  - `coMentor`: the non-primary mentor the member selected for themselves
+ *    (typically at purchase/onboarding time), stored on
+ *    User.assignedCoMentorProfile. Null if they haven't picked one yet.
+ *  - `nextSession`: the member's soonest upcoming confirmed booking (or
+ *    most recent active booking as a fallback), for the "book / join" card.
+ *    This is informational only and does not affect who the mentor/co-mentor
+ *    are — that's driven purely by the assignment above.
+ */
+const getMyMentor = async (memberUserId: string) => {
+  assertValidObjectId(memberUserId, "Member user ID");
+
+  const memberObjectId = new Types.ObjectId(memberUserId);
+
+  const [primaryProfile, member, nextSession] = await Promise.all([
+    MentorshipProfile.findOne({
+      isPrimaryMentor: true,
+      isActive: true,
+      status: "published",
+    })
+      .populate(MENTOR_FIELD_POPULATE)
+      .lean(),
+
+    User.findById(memberObjectId)
+      .select("_id assignedCoMentorProfile coMentorAssignedAt")
+      .populate({
+        path: "assignedCoMentorProfile",
+        populate: MENTOR_FIELD_POPULATE,
+      })
+      .lean(),
+
+    resolveNextSession(memberObjectId),
+  ]);
+
+  assertFound(
+    primaryProfile,
+    "No primary mentor is currently configured",
+    404,
+  );
+
+  const coMentorProfile =
+    (member as { assignedCoMentorProfile?: unknown } | null)
+      ?.assignedCoMentorProfile ?? null;
+
+  return {
+    primaryMentor: {
+      mentor: primaryProfile.mentor,
+      mentorProfile: primaryProfile,
+    },
+    coMentor: coMentorProfile
+      ? {
+          mentor: (coMentorProfile as { mentor: unknown }).mentor,
+          mentorProfile: coMentorProfile,
+        }
+      : null,
+    nextSession: nextSession ?? null,
+  };
+};
+
 const getMyMentorBookings = async (
   mentorUserId: string,
   query: IMentorBookingQuery = {},
@@ -765,13 +870,17 @@ const confirmBooking = async ({
   }
 
   if (booking.status === "confirmed") {
-    if (payload.meetingUrl) {
-      booking.meetingUrl = payload.meetingUrl;
-      booking.updatedBy = new Types.ObjectId(actorId);
-      await booking.save();
-      return booking.populate(BOOKING_POPULATE);
+    // Idempotent re-confirm: allow updating the title/link/notes without
+    // re-running the conflict check or re-sending the "confirmed" notification.
+    booking.sessionTopic = payload.sessionTopic;
+    booking.meetingUrl = payload.meetingUrl;
+
+    if (payload.notes !== undefined) {
+      booking.notes = payload.notes;
     }
 
+    booking.updatedBy = new Types.ObjectId(actorId);
+    await booking.save();
     return booking.populate(BOOKING_POPULATE);
   }
 
@@ -790,9 +899,11 @@ const confirmBooking = async ({
   });
 
   booking.status = "confirmed";
+  booking.sessionTopic = payload.sessionTopic;
+  booking.meetingUrl = payload.meetingUrl;
 
-  if (payload.meetingUrl !== undefined) {
-    booking.meetingUrl = payload.meetingUrl;
+  if (payload.notes !== undefined) {
+    booking.notes = payload.notes;
   }
 
   booking.updatedBy = new Types.ObjectId(actorId);
@@ -904,15 +1015,31 @@ const cancelBooking = async ({
 const completeBooking = async ({
   bookingId,
   payload,
+  recording,
   actorId,
   actorRole,
 }: {
   bookingId: string;
   payload: ICompleteMentorBooking;
+  recording: ICloudinaryVideoUpload;
   actorId: string;
   actorRole?: string | undefined;
 }) => {
   assertValidObjectId(bookingId, "Booking ID");
+
+  if (!payload.recordingTitle || !payload.recordingTitle.trim()) {
+    throwServiceError(
+      "A title for the session recording is required",
+      400,
+    );
+  }
+
+  if (!recording || !recording.secureUrl || !recording.cloudinaryPublicId) {
+    throwServiceError(
+      "A recording of the session is required to mark it as completed",
+      400,
+    );
+  }
 
   const booking = await MentorBooking.findById(bookingId);
 
@@ -936,6 +1063,31 @@ const completeBooking = async ({
 
   booking.status = "completed";
   booking.completedAt = new Date();
+
+  booking.recordingTitle = payload.recordingTitle.trim();
+
+  const recordingData: IMentorBookingRecording = {
+    provider: "cloudinary",
+    cloudinaryPublicId: recording.cloudinaryPublicId,
+    secureUrl: recording.secureUrl,
+    playbackUrl: recording.playbackUrl,
+    thumbnailUrl: recording.thumbnailUrl,
+    durationSeconds: recording.durationSeconds,
+  };
+
+  if (recording.cloudinaryAssetId !== undefined) {
+    recordingData.cloudinaryAssetId = recording.cloudinaryAssetId;
+  }
+
+  if (recording.format !== undefined) {
+    recordingData.format = recording.format;
+  }
+
+  if (recording.bytes !== undefined) {
+    recordingData.bytes = recording.bytes;
+  }
+
+  booking.recording = recordingData;
 
   if (payload.mentorFeedback !== undefined) {
     booking.mentorFeedback = payload.mentorFeedback;
@@ -1053,6 +1205,7 @@ export const mentorBookingService = {
   createBooking,
   getMyMemberBookings,
   getMyMemberSingleBooking,
+  getMyMentor,
   getMyMentorBookings,
   getMyMentorSingleBooking,
   getAllBookingsAdmin,

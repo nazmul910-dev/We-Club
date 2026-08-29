@@ -131,6 +131,19 @@ const getAllRetreatBatches = async (
   if (query.locationId) {
     assertValidObjectId(query.locationId, "Retreat location ID");
     filter.retreatLocation = new Types.ObjectId(query.locationId);
+  } else if (query.locationIds) {
+    // Accept a comma-separated list of location IDs so callers can fetch
+    // batches for many locations in a single request instead of N calls.
+    const ids = query.locationIds
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    ids.forEach((id) => assertValidObjectId(id, "Retreat location ID"));
+
+    filter.retreatLocation = {
+      $in: ids.map((id) => new Types.ObjectId(id)),
+    } as unknown as Types.ObjectId;
   }
 
   if (isPublicOnly) {
@@ -168,7 +181,7 @@ const getAllRetreatBatches = async (
   }
 
   const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
+  const limit = query.limit ?? (query.locationIds ? 200 : 20);
   const skip = (page - 1) * limit;
 
   const [batches, total] = await Promise.all([

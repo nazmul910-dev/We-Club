@@ -17,6 +17,7 @@ import {
   updateMentorBookingValidation,
 } from "./mentor.booking.validation";
 import { mentorBookingController } from "./mentor.booking.controller";
+import { uploadMentorBookingRecording } from "../../middleware/membershipMiddleware";
 
 const router = Router();
 
@@ -35,6 +36,14 @@ router.get(
   requireInvictusAccess,
   validateRequest(queryMentorBookingValidation),
   mentorBookingController.getMyMemberBookings,
+);
+
+// IMPORTANT: must be declared before "/me/:id" so "my-mentor" isn't captured as an :id param
+router.get(
+  "/me/my-mentor",
+  verifyToken,
+  requireInvictusAccess,
+  mentorBookingController.getMyMentor,
 );
 
 router.get(
@@ -84,9 +93,11 @@ router.patch(
   mentorBookingController.confirmBooking,
 );
 
+// multer parses the "recording" file + text fields before zod validates req.body
 router.patch(
   "/:id/complete",
   verifyToken,
+  uploadMentorBookingRecording.single("recording"),
   validateRequest(completeMentorBookingValidation),
   mentorBookingController.completeBooking,
 );

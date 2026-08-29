@@ -11,6 +11,7 @@ import {
 } from "./leaderboard.interface";
 
 import { leaderboardService } from "./leaderboard.service";
+import { string } from "zod";
 
 const getAuthUser = (
   req: Request,
@@ -115,7 +116,7 @@ const getSingleLeaderboard = async (
       statusCode: 200,
       success: true,
 
-      message: "Leaderboard retrieved successfully",
+      message: "Leaderboard retrieved2 successfully",
 
       data: result,
     });
@@ -203,6 +204,32 @@ const finalizeLeaderboard = async (
   }
 };
 
+const getLeaderboardEntries = async (req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+
+    const page = Number(req.query.page)
+    const limit = Number(req.query.limit)
+
+    const result = await leaderboardService.getLeaderboardEntries(
+      String(req.params.id), { page, limit }
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboard finalized successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
 export const leaderboardController = {
   createLeaderboard,
 
@@ -210,7 +237,9 @@ export const leaderboardController = {
   getSingleLeaderboard,
 
   updateLeaderboard,
-
+  getLeaderboardEntries,
   activateLeaderboard,
   finalizeLeaderboard,
+
+ 
 };

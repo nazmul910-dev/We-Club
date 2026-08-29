@@ -348,6 +348,95 @@ const archiveMentorshipProfile = async (
   return profile.populate(PROFILE_POPULATE);
 };
 
+const MENTOR_FIELD_POPULATE = {
+  path: "mentor",
+  select: "fullName email role profileImage",
+};
+
+/**
+ * Member self-selects their co-mentor from the published, non-primary
+ * mentorship profiles (e.g. at purchase/onboarding time). The primary
+ * mentor is global and not selectable here.
+ */
+const selectMyCoMentor = async (
+  memberUserId: string,
+  mentorshipProfileId: string,
+) => {
+  assertValidObjectId(memberUserId, "Member user ID");
+  assertValidObjectId(mentorshipProfileId, "Mentorship profile ID");
+
+  const member = await User.findById(memberUserId)
+    .select("_id fullName email role")
+    .lean();
+
+  assertFound(member, "Member not found", 404);
+
+  const profile = await MentorshipProfile.findOne({
+    _id: mentorshipProfileId,
+    status: "published",
+    isActive: true,
+  })
+    .populate(MENTOR_FIELD_POPULATE)
+    .lean();
+
+  assertFound(
+    profile,
+    "Mentorship profile not found or not available for selection",
+    404,
+  );
+
+  if (profile.isPrimaryMentor) {
+    throwServiceError(
+      "The primary mentor is assigned automatically and cannot be selected as a co-mentor",
+      400,
+    );
+  }
+
+  if (!profile.mentor) {
+    throwServiceError(
+      "This mentorship profile is not assigned to a mentor",
+      400,
+    );
+  }
+
+  if (String(profile.mentor._id) === memberUserId) {
+    throwServiceError(
+      "You cannot select yourself as your own co-mentor",
+      400,
+    );
+  }
+
+  await User.findByIdAndUpdate(
+    memberUserId,
+    {
+      assignedCoMentorProfile: profile._id,
+      coMentorAssignedAt: new Date(),
+      coMentorAssignedBy: new Types.ObjectId(memberUserId),
+    },
+    { new: true },
+  );
+
+  return profile;
+};
+/**
+ * Fetch the member's currently selected co-mentor (if any).
+ */
+const getMyCoMentor = async (memberUserId: string) => {
+  assertValidObjectId(memberUserId, "Member user ID");
+
+  const member = await User.findById(memberUserId)
+    .select("_id assignedCoMentorProfile coMentorAssignedAt")
+    .populate({
+      path: "assignedCoMentorProfile",
+      populate: MENTOR_FIELD_POPULATE,
+    })
+    .lean();
+
+  assertFound(member, "Member not found", 404);
+
+  return member;
+};
+
 export const mentorshipProfileService = {
   createMentorshipProfile,
 
@@ -360,4 +449,7 @@ export const mentorshipProfileService = {
   publishMentorshipProfile,
   moveMentorshipProfileToDraft,
   archiveMentorshipProfile,
+
+  selectMyCoMentor,
+  getMyCoMentor,
 };

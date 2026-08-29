@@ -190,6 +190,20 @@ const userSchema = new Schema<IUser>(
       trim: true,
     },
 
+    assignedCoMentorProfile: {
+      type: Schema.Types.ObjectId,
+      ref: "MentorshipProfile",
+    },
+
+    coMentorAssignedAt: {
+      type: Date,
+    },
+
+    coMentorAssignedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+
     lifetimeCommissionEarned: {
       type: Number,
       default: 0,

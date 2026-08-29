@@ -285,6 +285,46 @@ const finalizeLeaderboard = async (
   return leaderboard;
 };
 
+const getLeaderboardEntries = async (
+  leaderboardId: string,
+  query: { page?: number; limit?: number },
+) => {
+  assertValidObjectId(leaderboardId, "Leaderboard ID");
+
+  const leaderboard = await Leaderboard.findById(leaderboardId);
+
+  assertFound(leaderboard, "Leaderboard not found", 404);
+
+  const page = query.page ?? 1;
+
+  const limit = Math.min(query.limit ?? 20, 100);
+
+  const skip = (page - 1) * limit;
+
+  const [entries, total] = await Promise.all([
+    LeaderboardEntry.find({ leaderboard: leaderboardId })
+      .sort({ rank: 1, points: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("user", "fullName profileImage country")
+      .lean(),
+
+    LeaderboardEntry.countDocuments({ leaderboard: leaderboardId }),
+  ]);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+
+      totalPages: Math.ceil(total / limit),
+    },
+
+    data: entries,
+  };
+};
+
 export const leaderboardService = {
   createLeaderboard,
 
@@ -295,6 +335,7 @@ export const leaderboardService = {
 
   activateLeaderboard,
   finalizeLeaderboard,
-
+  getLeaderboardEntries,
   recalculateLeaderboardRanks,
+
 };

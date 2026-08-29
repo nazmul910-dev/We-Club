@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import sendResponse from "../../utility/sendResponse";
 import assertFound from "../../utility/assertFound";
+import { uploadVideoToCloudinary } from "../../utility/cloudinaryMedia";
 
 import {
   ICancelMentorBooking,
@@ -27,6 +28,12 @@ const getAuthUser = (
     id: req.user.id as string,
     role: req.user.role as string,
   };
+};
+
+const throwControllerError = (message: string, statusCode: number): never => {
+  const error = new Error(message) as Error & { statusCode?: number };
+  error.statusCode = statusCode;
+  throw error;
 };
 
 const createBooking = async (
@@ -96,6 +103,27 @@ const getMyMemberSingleBooking = async (
       success: true,
       message: "Member booking retrieved successfully",
       data: booking,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getMyMentor = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+
+    const result = await mentorBookingService.getMyMentor(authUser.id);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Current mentor retrieved successfully",
+      data: result,
     });
   } catch (error) {
     next(error);
@@ -277,10 +305,26 @@ const completeBooking = async (
 ) => {
   try {
     const authUser = getAuthUser(req);
+    const bookingId = String(req.params.id);
+
+    const recordingFile = req.file;
+
+    if (!recordingFile) {
+      throwControllerError(
+        'Session recording is required in multipart field "recording"',
+        400,
+      );
+    }
+
+    const uploadedRecording = await uploadVideoToCloudinary(
+      recordingFile,
+      `invictus/mentor-bookings/${bookingId}/recordings`,
+    );
 
     const booking = await mentorBookingService.completeBooking({
-      bookingId: String(req.params.id),
+      bookingId,
       payload: req.body as ICompleteMentorBooking,
+      recording: uploadedRecording,
       actorId: authUser.id,
       actorRole: authUser.role,
     });
@@ -326,6 +370,7 @@ export const mentorBookingController = {
   createBooking,
   getMyMemberBookings,
   getMyMemberSingleBooking,
+  getMyMentor,
   getMyMentorBookings,
   getMyMentorSingleBooking,
   getAllBookingsAdmin,

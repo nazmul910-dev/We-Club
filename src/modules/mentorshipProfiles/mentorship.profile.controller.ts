@@ -221,6 +221,51 @@ const archiveMentorshipProfile = async (
   }
 };
 
+const selectCoMentor = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+
+    const member = await mentorshipProfileService.selectMyCoMentor(
+      authUser.id,
+      String((req.body as { mentorshipProfileId: string }).mentorshipProfileId),
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Co-mentor selected successfully",
+      data: member,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getMyCoMentor = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+
+    const member = await mentorshipProfileService.getMyCoMentor(authUser.id);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Co-mentor retrieved successfully",
+      data: member,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const mentorshipProfileController = {
   createMentorshipProfile,
 
@@ -233,4 +278,7 @@ export const mentorshipProfileController = {
   publishMentorshipProfile,
   moveMentorshipProfileToDraft,
   archiveMentorshipProfile,
+
+  selectCoMentor,
+  getMyCoMentor,
 };
