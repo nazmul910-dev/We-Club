@@ -46,6 +46,14 @@ router.get(
 );
 
 router.get(
+  "/:id/access",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest(moduleVideoIdValidation),
+  moduleVideoController.checkVideoAccess
+);
+
+router.get(
   "/:id",
   verifyToken,
   requireInvictusAccess,
