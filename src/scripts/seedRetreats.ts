@@ -206,10 +206,10 @@ const main = async () => {
       owner._id,
     );
 
-    console.log(
-      `Seeded ${users.length} users, ${locations.length} retreat locations, ${locations.length} retreat batches, and ${bookingCount} retreat bookings.`,
-    );
-    console.log(`Seed login password: ${SEED_PASSWORD}`);
+    // console.log(
+    //   `Seeded ${users.length} users, ${locations.length} retreat locations, ${locations.length} retreat batches, and ${bookingCount} retreat bookings.`,
+    // );
+    // console.log(`Seed login password: ${SEED_PASSWORD}`);
   } finally {
     await mongoose.disconnect();
   }

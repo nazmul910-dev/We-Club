@@ -168,10 +168,10 @@ const main = async () => {
     const leaderboards = await createSeedLeaderboards(owner._id);
     const entryCount = await createSeedEntries(leaderboards, users);
 
-    console.log(
-      `Seeded ${users.length} users, ${leaderboards.length} leaderboards, and ${entryCount} leaderboard entries.`,
-    );
-    console.log(`Seed login password: ${SEED_PASSWORD}`);
+    // console.log(
+    //   `Seeded ${users.length} users, ${leaderboards.length} leaderboards, and ${entryCount} leaderboard entries.`,
+    // );
+    // console.log(`Seed login password: ${SEED_PASSWORD}`);
   } finally {
     await mongoose.disconnect();
   }
