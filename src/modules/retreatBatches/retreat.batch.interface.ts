@@ -98,4 +98,5 @@ export interface IRetreatBatchQuery {
   search?: string | undefined;
   page?: number | undefined;
   limit?: number | undefined;
+  locationIds? : string
 }

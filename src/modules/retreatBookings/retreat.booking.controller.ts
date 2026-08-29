@@ -91,8 +91,9 @@ const verifyPayment = async (
 
     sendResponse(res, {
       statusCode: 200,
-      success: result.paid,
+      success: true,
       message: result.message,
+      paid: result.paid,
       data: result.booking ?? null,
     });
   } catch (error) {

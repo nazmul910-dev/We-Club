@@ -239,8 +239,8 @@ const createRetreatBookingCheckoutSession = async ({
   const stripeClient = getStripeClient();
   const user = booking.user as unknown as { _id: Types.ObjectId; fullName: string; email: string };
 
-  const defaultSuccessUrl = `${config.FRONTEND_URL || "http://localhost:5173"}/retreats/payment-success?session_id={CHECKOUT_SESSION_ID}&booking_id=${booking._id}`;
-  const defaultCancelUrl = `${config.FRONTEND_URL || "http://localhost:5173"}/retreats/payment-cancelled?booking_id=${booking._id}`;
+  const defaultSuccessUrl = `${config.FRONTEND_URL || "http://localhost:5173"}/invictus/retreats/payment-success?session_id={CHECKOUT_SESSION_ID}&booking_id=${booking._id}`;
+  const defaultCancelUrl = `${config.FRONTEND_URL || "http://localhost:5173"}/invictus/retreats/payment-cancelled?booking_id=${booking._id}`;
 
   const session = await stripeClient.checkout.sessions.create({
     payment_method_types: ["card"],
@@ -386,6 +386,9 @@ const verifyRetreatBookingPayment = async (sessionId: string) => {
     },
     dedupeKey: `retreat_booking_confirmed:${paidBookingId}`,
   });
+
+  console.log("this is booking updated", booking);
+  
 
   return {
     paid: true,
