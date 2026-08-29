@@ -163,7 +163,7 @@ const getAllModuleVideos = async ({
     filter.status = { $ne: "archived" };
   }
 
-  const query = ModuleVideo.find()
+  const query = ModuleVideo.find(filter)
     .sort({ module: 1, order: 1 })
     .populate({
       path: "module",
@@ -215,7 +215,7 @@ const getVideosByModule = async (
     filter.status = { $ne: "archived" };
   }
 
-  const query = ModuleVideo.find()
+  const query = ModuleVideo.find(filter)
     .sort({ order: 1 })
     .populate("uploadedBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage");
@@ -249,7 +249,7 @@ const getSingleModuleVideo = async (
     filter.status = "published";
   }
 
-  const query = ModuleVideo.findOne()
+  const query = ModuleVideo.findOne(filter)
     .populate({
       path: "module",
       select: "title slug moduleNumber pillar status",

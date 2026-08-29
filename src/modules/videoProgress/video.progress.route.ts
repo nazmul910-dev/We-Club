@@ -86,7 +86,7 @@ router.get(
 
   verifyToken,
 
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
 
   validateRequest(getAllVideoProgressValidation),
 

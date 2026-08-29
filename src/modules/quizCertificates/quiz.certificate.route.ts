@@ -108,7 +108,7 @@ router.get(
 
   verifyToken,
 
-  authorizeRoles("founder", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
 
   validateRequest(getAllCertificatesValidation),
 
@@ -120,7 +120,7 @@ router.get(
 
   verifyToken,
 
-  authorizeRoles("founder", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
 
   validateRequest(adminCertificateIdValidation),
 
@@ -132,7 +132,7 @@ router.patch(
 
   verifyToken,
 
-  authorizeRoles("founder", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
 
   validateRequest(attachCertificateUrlValidation),
 
@@ -144,7 +144,7 @@ router.patch(
 
   verifyToken,
 
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
 
   validateRequest(revokeCertificateValidation),
 

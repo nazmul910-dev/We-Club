@@ -238,8 +238,8 @@ const createInvictusCheckoutSession = async ({
 
     customer_email: email,
 
-    success_url: `${config.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${config.FRONTEND_URL}/payment/cancel`,
+    success_url: `${config.FRONTEND_URL}/invictus/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config.FRONTEND_URL}/invictus/payment/cancel`,
 
     metadata: {
       purpose: "invictus_purchase",

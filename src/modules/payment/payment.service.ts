@@ -1114,6 +1114,8 @@ const verifyCheckoutSessionFromStripe = async (sessionId: string) => {
 
   if (purpose === 'upgrade') {
     await activateUpgradePayment(session);
+  } else if (purpose === 'invictus_purchase') {
+    await invictusPaymentService.activateInvictusPurchase(session);
   } else {
     await activateRegistrationPayment(session);
   }

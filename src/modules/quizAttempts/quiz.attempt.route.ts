@@ -71,7 +71,7 @@ router.get(
 
   verifyToken,
 
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
 
   validateRequest(getAllQuizAttemptsValidation),
 
@@ -87,7 +87,7 @@ router.get(
 
   verifyToken,
 
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
 
   validateRequest(adminQuizAttemptIdValidation),
 
