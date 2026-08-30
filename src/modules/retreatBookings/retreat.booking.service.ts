@@ -388,7 +388,7 @@ const verifyRetreatBookingPayment = async (sessionId: string) => {
   });
 
   console.log("this is booking updated", booking);
-  
+
 
   return {
     paid: true,
@@ -620,9 +620,56 @@ const refundRetreatBooking = async (
     throwServiceError("Only confirmed retreat bookings can be refunded", 400);
   }
 
+  const refundAmount =
+    payload.refundAmount ?? booking.amountPaid ?? booking.amount;
+
+
+  // -------------------------------------------------
+  // 1. Real Stripe refund
+  // -------------------------------------------------
+  if (booking.stripePaymentIntentId) {
+    if (!stripe) {
+      throwServiceError(
+        "Stripe is not configured. Cannot process refund.",
+        500,
+      );
+    }
+
+    const stripeClient = getStripeClient();
+
+    try {
+      await stripeClient.refunds.create({
+        payment_intent: booking.stripePaymentIntentId,
+        amount: Math.round(refundAmount * 100),
+        reason: "requested_by_customer",
+        metadata: {
+          bookingId: String(booking._id),
+          refundedBy: actorId,
+          reason: payload.reason ?? "Customer requested",
+        },
+      });
+
+      // Optional: store the Stripe refund ID
+      // booking.stripeRefundId = stripeRefund.id;
+    } catch (err: any) {
+      throwServiceError(
+        err?.message || "Failed to process refund with Stripe",
+        400,
+      );
+    }
+  } else {
+    throwServiceError(
+      "This booking has no Stripe payment intent. Cannot process a real refund.",
+      400,
+    );
+  }
+
+  // -------------------------------------------------
+  // 2. Update booking in DB
+  // -------------------------------------------------
   booking.status = "refunded";
   booking.refundedAt = new Date();
-  booking.refundAmount = payload.refundAmount ?? booking.amountPaid ?? booking.amount;
+  booking.refundAmount = refundAmount;
 
   if (payload.reason !== undefined) {
     booking.refundReason = payload.reason;
@@ -631,6 +678,9 @@ const refundRetreatBooking = async (
   booking.updatedBy = new Types.ObjectId(actorId);
   await booking.save();
 
+  // -------------------------------------------------
+  // 3. Update batch capacity
+  // -------------------------------------------------
   const batch = await RetreatBatch.findById(booking.retreatBatch);
   if (batch && batch.confirmedBookingsCount > 0) {
     batch.confirmedBookingsCount -= 1;
@@ -640,6 +690,9 @@ const refundRetreatBooking = async (
     await batch.save();
   }
 
+  // -------------------------------------------------
+  // 4. Notification
+  // -------------------------------------------------
   const refundedBookingId = String(booking._id);
 
   await notificationService.safeCreateFromTemplateOrFallback({
