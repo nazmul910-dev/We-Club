@@ -6,7 +6,7 @@ const mongoObjectIdSchema = z
 
 export const issueCertificateValidation = z.object({
   params: z.object({
-    moduleId: mongoObjectIdSchema,
+    pillarId: mongoObjectIdSchema,
   }),
 });
 

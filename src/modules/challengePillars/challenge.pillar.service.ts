@@ -233,9 +233,7 @@ const getAllChallengePillars = async ({
     };
   }
 
-  //filter
-
-  return ChallengePillar.find()
+  return ChallengePillar.find(filter)
     .sort({ order: 1 })
     .populate("createdBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage")

@@ -103,8 +103,8 @@ const createDefaultProgressData = (
     videoSummary: {
       totalRequired: 0,
       completedRequired: 0,
-      completionPercent: 100,
-      completed: true,
+      completionPercent: 0,
+      completed: false,
     },
 
     resourceSummary: {
@@ -179,23 +179,12 @@ const getOrCreateModuleProgress = async (
 };
 
 const recalculateDerivedFields = (progress: ModuleProgressDocument): void => {
-  /**
-   * Resources are part of the required
-   * progression after videos.
-   */
-  progress.actionsUnlocked =
-    progress.videoSummary.completed && progress.resourceSummary.completed;
+  // Videos completion unlocks quiz and actions
+  const videosCompleted = progress.videoSummary.completed;
 
-  /**
-   * Required action threshold is 80%.
-   */
-  const requiredActionsCompleted =
-    progress.actionSummary.totalRequired === 0 ||
-    progress.actionSummary.completionPercent >= ACTION_COMPLETION_REQUIREMENT;
-
-  progress.actionSummary.completed = requiredActionsCompleted;
-
-  progress.quizUnlocked = progress.actionsUnlocked && requiredActionsCompleted;
+  progress.actionsUnlocked = videosCompleted;
+  progress.actionSummary.completed = true;
+  progress.quizUnlocked = videosCompleted;
 
   if (progress.quizSummary.passed) {
     progress.quizSummary.status = "passed";
@@ -209,40 +198,15 @@ const recalculateDerivedFields = (progress: ModuleProgressDocument): void => {
     progress.quizSummary.status = "failed";
   }
 
-  const videoStagePercent = progress.videoSummary.completionPercent;
-
-  const resourceStagePercent = progress.resourceSummary.completionPercent;
-
-  /**
-   * 80% required action completion means
-   * the action stage is 100% complete.
-   */
-  const actionStagePercent =
-    progress.actionSummary.totalRequired === 0
-      ? 100
-      : clamp(
-          (progress.actionSummary.completionPercent /
-            ACTION_COMPLETION_REQUIREMENT) *
-            100,
-          0,
-          100,
-        );
-
-  const quizStagePercent = progress.quizSummary.passed ? 100 : 0;
-
-  progress.overallCompletionPercent = roundToTwoDecimals(
-    (videoStagePercent +
-      resourceStagePercent +
-      actionStagePercent +
-      quizStagePercent) /
-      4,
-  );
+  // Progress is 100% when quiz is passed, or proportional to video completion
+  if (progress.quizSummary.passed) {
+    progress.overallCompletionPercent = 100;
+  } else {
+    progress.overallCompletionPercent = progress.videoSummary.completionPercent;
+  }
 
   const moduleCompleted =
-    progress.videoSummary.completed &&
-    progress.resourceSummary.completed &&
-    requiredActionsCompleted &&
-    progress.quizSummary.passed;
+    progress.videoSummary.completed && progress.quizSummary.passed;
 
   const newlyCompleted = !progress.isCompleted && moduleCompleted;
 
@@ -266,103 +230,71 @@ const refreshModuleProgress = async (userId: string, moduleId: string) => {
 
   const userObjectId = new Types.ObjectId(userId);
 
-  const requiredVideos = await ModuleVideo.find({
+  const publishedVideos = await ModuleVideo.find({
     module: moduleObjectId,
     status: "published",
-    isRequired: true,
   })
-    .select("_id")
+    .select("_id isRequired")
     .lean();
 
-  const requiredVideoIds = requiredVideos.map((video) => video._id);
+  const requiredVideos = publishedVideos.filter(
+    (video) => video.isRequired !== false,
+  );
+  const targetVideos =
+    requiredVideos.length > 0 ? requiredVideos : publishedVideos;
+  const targetVideoIds = targetVideos.map((video) => video._id);
 
-  const [
-    completedRequiredVideos,
-    totalRequiredResources,
-    totalRequiredActions,
-  ] = await Promise.all([
-    requiredVideoIds.length === 0
-      ? Promise.resolve(0)
-      : VideoProgress.countDocuments({
+  const completedVideosCount =
+    targetVideoIds.length === 0
+      ? 0
+      : await VideoProgress.countDocuments({
           user: userObjectId,
-
           video: {
-            $in: requiredVideoIds,
+            $in: targetVideoIds,
           },
-
           isCompleted: true,
-        }),
+        });
 
-    ModuleResource.countDocuments({
-      module: moduleObjectId,
-      status: "published",
-      isRequired: true,
-    }),
-
-    ModuleAction.countDocuments({
-      module: moduleObjectId,
-      status: "published",
-      isRequired: true,
-    }),
-  ]);
-
-  const totalRequiredVideos = requiredVideoIds.length;
+  const totalRequiredVideos = targetVideoIds.length;
+  const isVideoCompleted =
+    totalRequiredVideos === 0 || completedVideosCount >= totalRequiredVideos;
+  const videoPercent =
+    totalRequiredVideos === 0
+      ? 100
+      : calculateCompletionPercent(
+          completedVideosCount,
+          totalRequiredVideos,
+        );
 
   progress.set("videoSummary", {
     totalRequired: totalRequiredVideos,
-
-    completedRequired: completedRequiredVideos,
-
-    completionPercent: calculateCompletionPercent(
-      completedRequiredVideos,
-      totalRequiredVideos,
-    ),
-
-    completed:
-      totalRequiredVideos === 0 ||
-      completedRequiredVideos >= totalRequiredVideos,
+    completedRequired: completedVideosCount,
+    completionPercent: videoPercent,
+    completed: isVideoCompleted,
   });
 
-  const completedResources = Math.min(
-    progress.resourceSummary.completedRequired,
-    totalRequiredResources,
-  );
+  const totalRequiredResources = await ModuleResource.countDocuments({
+    module: moduleObjectId,
+    status: "published",
+  });
 
   progress.set("resourceSummary", {
     totalRequired: totalRequiredResources,
-
-    completedRequired: completedResources,
-
-    completionPercent: calculateCompletionPercent(
-      completedResources,
-      totalRequiredResources,
-    ),
-
-    completed:
-      totalRequiredResources === 0 ||
-      completedResources >= totalRequiredResources,
+    completedRequired: totalRequiredResources,
+    completionPercent: 100,
+    completed: true,
   });
 
-  const completedActions = Math.min(
-    progress.actionSummary.completedRequired,
-    totalRequiredActions,
-  );
-
-  const actionCompletionPercent = calculateCompletionPercent(
-    completedActions,
-    totalRequiredActions,
-  );
+  const totalRequiredActions = await ModuleAction.countDocuments({
+    module: moduleObjectId,
+    status: "published",
+  });
 
   progress.set("actionSummary", {
     totalRequired: totalRequiredActions,
-
-    completedRequired: completedActions,
-
-    completionPercent: actionCompletionPercent,
-
-    completed:
-      totalRequiredActions === 0 ||
-      actionCompletionPercent >= ACTION_COMPLETION_REQUIREMENT,
+    completedRequired: totalRequiredActions,
+    completionPercent: 100,
+    completed: true,
   });
 
   recalculateDerivedFields(progress);

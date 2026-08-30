@@ -125,7 +125,7 @@ const getAllCourseModules = async ({
     };
   }
 
-  return CourseModule.find()
+  return CourseModule.find(filter)
     .sort({
       pillar: 1,
       moduleNumber: 1,
@@ -183,7 +183,7 @@ const getSingleCourseModule = async (moduleId: string, actorRole?: string) => {
     filter.status = "published";
   }
 
-  const courseModule = await CourseModule.findOne()
+  const courseModule = await CourseModule.findOne(filter)
     .populate("pillar", "name slug title isPaid priceCents currency status")
     .populate("createdBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage")

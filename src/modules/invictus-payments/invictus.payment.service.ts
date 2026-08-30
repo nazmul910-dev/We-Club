@@ -13,6 +13,7 @@ import { PaymentPlanProductRefModel } from "../paymentPlans/payment.plan.interfa
 import { PaymentSession } from "../payment/payment.model.schema";
 
 import { userEntitlementService } from "../userEntitlements/userEntitlements.service";
+import { notificationService } from "../notifications/notification.service";
 
 import { ICreateInvictusCheckoutInput } from "./invictus.payment.interface";
 
@@ -132,27 +133,100 @@ const createInvictusCheckoutSession = async ({
   email: string;
   input: ICreateInvictusCheckoutInput;
 }) => {
-  if (
-    !Types.ObjectId.isValid(
-      input.paymentPlanId
-    )
-  ) {
-    throwServiceError(
-      "Payment plan ID is invalid",
-      400
+  const stripeClient = getStripeClient();
+
+  // 1. If pillarId is provided directly (or fallback when direct pillar is checked out)
+  if (input.pillarId) {
+    if (!Types.ObjectId.isValid(input.pillarId)) {
+      throwServiceError("Pillar ID is invalid", 400);
+    }
+
+    const pillar = await ChallengePillar.findById(input.pillarId);
+    assertFound(pillar, "Challenge pillar not found", 404);
+
+    if (pillar.status === "archived") {
+      throwServiceError("Cannot purchase an archived pillar", 400);
+    }
+
+    if (!pillar.isPaid) {
+      throwServiceError("This pillar is free and does not require purchase", 400);
+    }
+
+    if (pillar.priceCents <= 0 && !pillar.stripePriceId) {
+      throwServiceError("This pillar does not have a valid price configured", 400);
+    }
+
+    const lineItem = pillar.stripePriceId
+      ? {
+          price: pillar.stripePriceId,
+          quantity: 1,
+        }
+      : {
+          quantity: 1,
+          price_data: {
+            currency: (pillar.currency || "usd").toLowerCase(),
+            unit_amount: pillar.priceCents,
+            product_data: {
+              name: pillar.title || pillar.name,
+              description: pillar.tagline || pillar.description || "Invictus Challenge Pillar Access",
+            },
+          },
+        };
+
+    const sessionCreateParams: Record<string, unknown> = {
+      mode: "payment",
+      line_items: [lineItem],
+      customer_email: email,
+      success_url: `${config.FRONTEND_URL}/invictus/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${config.FRONTEND_URL}/invictus/payment/cancel`,
+      metadata: {
+        purpose: "invictus_purchase",
+        userId,
+        fullName,
+        email,
+        productType: "pillar",
+        product: pillar._id.toString(),
+        productRefModel: "ChallengePillar",
+      },
+    };
+
+    const session = await stripeClient.checkout.sessions.create(
+      sessionCreateParams as any
     );
+
+    if (!session.url) {
+      throwServiceError("Failed to create Stripe Checkout session", 500);
+    }
+
+    await PaymentSession.create(
+      stripUndefined({
+        user: userId,
+        purpose: "invictus_purchase",
+        status: "pending",
+        stripeCheckoutSessionId: session.id,
+        stripeCustomerId:
+          typeof session.customer === "string" ? session.customer : undefined,
+        checkoutUrl: session.url ?? undefined,
+        amountTotal: pillar.priceCents,
+        currency: (pillar.currency || "usd").toLowerCase(),
+        product: pillar._id,
+        productRefModel: "ChallengePillar",
+      }) as any
+    );
+
+    return {
+      checkoutUrl: session.url as string,
+      sessionId: session.id,
+    };
   }
 
-  const plan =
-    await PaymentPlan.findById(
-      input.paymentPlanId
-    );
+  // 2. If paymentPlanId is provided
+  if (!input.paymentPlanId || !Types.ObjectId.isValid(input.paymentPlanId)) {
+    throwServiceError("Payment plan ID is invalid", 400);
+  }
 
-  assertFound(
-    plan,
-    "Payment plan not found",
-    404
-  );
+  const plan = await PaymentPlan.findById(input.paymentPlanId);
+  assertFound(plan, "Payment plan not found", 404);
 
   if (plan.status !== "active") {
     throwServiceError(
@@ -161,9 +235,7 @@ const createInvictusCheckoutSession = async ({
     );
   }
 
-  if (
-    plan.productType === "membership"
-  ) {
+  if (plan.productType === "membership") {
     throwServiceError(
       "Membership plans must be purchased through the membership checkout flow",
       400
@@ -177,125 +249,77 @@ const createInvictusCheckoutSession = async ({
     );
   }
 
-  if (
-    plan.product &&
-    plan.productRefModel
-  ) {
+  if (plan.product && plan.productRefModel) {
     const lookup =
-      productLookup[
-        plan.productRefModel as PaymentPlanProductRefModel
-      ];
+      productLookup[plan.productRefModel as PaymentPlanProductRefModel];
 
-    const referencedProduct =
-      await lookup.findById(
-        plan.product.toString()
+    if (lookup) {
+      const referencedProduct = await lookup.findById(plan.product.toString());
+      assertFound(
+        referencedProduct,
+        "The product linked to this payment plan no longer exists",
+        404
       );
-
-    assertFound(
-      referencedProduct,
-      "The product linked to this payment plan no longer exists",
-      404
-    );
+    }
   }
 
-  /**
-   * একই user একই plan-এর জন্য আগে থেকে pending/paid
-   * session থাকলে সেটা আবার নতুন করে না বানিয়ে reuse করা যেত,
-   * কিন্তু Stripe checkout session-এর নিজস্ব expiry থাকায়
-   * এখানে প্রতিবার নতুন session তৈরি করা হচ্ছে —
-   * idempotency webhook side-এ handled হয় (stripeCheckoutSessionId unique)।
-   */
-  const stripeClient = getStripeClient();
-
-  const sessionCreateParams: Record<
-    string,
-    unknown
-  > = {
+  const sessionCreateParams: Record<string, unknown> = {
     mode: "payment",
-
     line_items: [
       plan.stripePriceId
         ? {
-            price:
-              plan.stripePriceId,
+            price: plan.stripePriceId,
             quantity: 1,
           }
         : {
             quantity: 1,
             price_data: {
-              currency:
-                plan.currency,
-              unit_amount:
-                plan.amountCents,
+              currency: plan.currency,
+              unit_amount: plan.amountCents,
               product_data: {
                 name: plan.name,
-                description:
-                  plan.description,
+                description: plan.description,
               },
             },
           },
     ],
-
     customer_email: email,
-
     success_url: `${config.FRONTEND_URL}/invictus/payment/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${config.FRONTEND_URL}/invictus/payment/cancel`,
-
     metadata: {
       purpose: "invictus_purchase",
       userId,
       fullName,
       email,
-      paymentPlanId:
-        plan._id.toString(),
+      paymentPlanId: plan._id.toString(),
       productType: plan.productType,
-      product:
-        plan.product?.toString() ??
-        "",
-      productRefModel:
-        plan.productRefModel ?? "",
+      product: plan.product?.toString() ?? "",
+      productRefModel: plan.productRefModel ?? "",
     },
   };
 
-  const session =
-    await stripeClient.checkout.sessions.create(
-      sessionCreateParams as any
-    );
+  const session = await stripeClient.checkout.sessions.create(
+    sessionCreateParams as any
+  );
 
   if (!session.url) {
-    throwServiceError(
-      "Failed to create Stripe Checkout session",
-      500
-    );
+    throwServiceError("Failed to create Stripe Checkout session", 500);
   }
 
   await PaymentSession.create(
     stripUndefined({
       user: userId,
-
       purpose: "invictus_purchase",
       status: "pending",
-
-      stripeCheckoutSessionId:
-        session.id,
-
+      stripeCheckoutSessionId: session.id,
       stripeCustomerId:
-        typeof session.customer ===
-        "string"
-          ? session.customer
-          : undefined,
-
-      checkoutUrl:
-        session.url ?? undefined,
-
+        typeof session.customer === "string" ? session.customer : undefined,
+      checkoutUrl: session.url ?? undefined,
       amountTotal: plan.amountCents,
       currency: plan.currency,
-
       paymentPlan: plan._id,
-
       product: plan.product,
-      productRefModel:
-        plan.productRefModel,
+      productRefModel: plan.productRefModel,
     }) as any
   );
 
@@ -403,6 +427,17 @@ const activateInvictusPurchase = async (
     new Date();
 
   await paymentSession.save();
+
+  notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "purchase_confirmed",
+    fallbackTitle: "Purchase Confirmed",
+    fallbackBody: `Your access to ${entitlementType === "pillar" ? "the Challenge Pillar" : entitlementType} has been successfully activated.`,
+    recipient: userId,
+    relatedEntityType: "PaymentSession",
+    relatedEntityId: paymentSession._id.toString(),
+    actionUrl: `/invictus/invictus-challenge`,
+    dedupeKey: `purchase_confirmed:${paymentSession._id}`,
+  }).catch(() => {});
 };
 
 const getMyInvictusPurchases = async (

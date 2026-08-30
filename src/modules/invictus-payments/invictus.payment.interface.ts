@@ -1,5 +1,6 @@
 export interface ICreateInvictusCheckoutInput {
-  paymentPlanId: string;
+  paymentPlanId?: string | undefined;
+  pillarId?: string | undefined;
   discountCode?: string | undefined;
 }
 

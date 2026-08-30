@@ -30,7 +30,7 @@ const issueMyCertificate = async (
 
     const certificate = await quizCertificateService.issueCertificateIfEligible(
       authUser.id,
-      String(req.params.moduleId),
+      String(req.params.pillarId),
     );
 
     sendResponse(res, {

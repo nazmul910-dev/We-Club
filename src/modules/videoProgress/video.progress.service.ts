@@ -2,6 +2,8 @@ import { QueryFilter, Types } from "mongoose";
 
 import { CourseModule } from "../courseModules/course.module.model.schema";
 import { ModuleVideo } from "../moduleVideos/module.video.model.schema";
+import { ChallengePillar } from "../challengePillars/challenge.pillar.model.schema";
+import { userEntitlementService } from "../userEntitlements/userEntitlements.service";
 
 import {
   IRecordVideoHeartbeat,
@@ -254,6 +256,24 @@ const recordVideoHeartbeat = async (
 
   const { video, courseModule } = await ensureVideoIsAvailable(videoId);
 
+  if (courseModule.pillar) {
+    const pillar = await ChallengePillar.findById(courseModule.pillar).select(
+      "isPaid status"
+    );
+    if (pillar?.isPaid || video.isPaid) {
+      const access = await userEntitlementService.checkPillarAccess(
+        userId,
+        String(courseModule.pillar)
+      );
+      if (!access.hasAccess) {
+        throwServiceError(
+          "Active pillar access required to track video progress",
+          403
+        );
+      }
+    }
+  }
+
   const durationSeconds = video.durationSeconds;
 
   const requiredWatchPercent = video.requiredWatchPercent ?? 80;
@@ -389,6 +409,19 @@ const recordVideoHeartbeat = async (
   }
 
   await progress.save();
+
+  try {
+    const { moduleProgressService } = await import(
+      "../moduleProgress/module.progress.service"
+    );
+    await moduleProgressService.refreshModuleProgress(
+      userId,
+      courseModule._id.toString(),
+    );
+  } catch (syncError) {
+    // eslint-disable-next-line no-console
+    console.error("Auto sync module progress failed on heartbeat:", syncError);
+  }
 
   return populateVideoProgress(progress);
 };

@@ -572,12 +572,32 @@ const checkPillarAccess = async (userId: string, pillarId: string) => {
 
   assertValidObjectId(pillarId, "Pillar ID");
 
+  const user = await User.findById(userId).select(
+    "_id role accessTo accountStatus"
+  );
+  assertFound(user, "User not found", 404);
+
   const pillar = await ChallengePillar.findOne({
     _id: pillarId,
-    status: "published",
+    status: { $ne: "archived" },
   }).select("name slug title isPaid priceCents currency status");
 
   assertFound(pillar, "Challenge pillar not found or unavailable", 404);
+
+  // Admins, managers, and founders have full access
+  if (
+    user.role === "admin" ||
+    user.role === "manager" ||
+    user.role === "founder"
+  ) {
+    return {
+      hasAccess: true,
+      accessType: "admin" as const,
+      reason: "admin_override",
+      pillar,
+      entitlement: null,
+    };
+  }
 
   if (!pillar.isPaid) {
     return {
