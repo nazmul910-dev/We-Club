@@ -10,6 +10,7 @@ import {
   retreatLocationIdValidation,
   updateRetreatLocationValidation,
 } from "./retreat.location.validation";
+import { uploadRetreatImages } from "../../middleware/uploadMiddleware";
 
 const router = Router();
 
@@ -30,6 +31,7 @@ router.post(
   "/",
   verifyToken,
   authorizeRoles("founder", "super_admin", "admin", "manager"),
+  uploadRetreatImages,
   validateRequest(createRetreatLocationValidation),
   retreatLocationController.createRetreatLocation,
 );
@@ -38,6 +40,7 @@ router.patch(
   "/:id",
   verifyToken,
   authorizeRoles("founder", "super_admin", "admin", "manager"),
+  uploadRetreatImages,
   validateRequest(updateRetreatLocationValidation),
   retreatLocationController.updateRetreatLocation,
 );
