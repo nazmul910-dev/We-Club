@@ -34,6 +34,23 @@ const ensureEditableLeaderboard = async (leaderboardId: string) => {
 };
 
 
+/**
+ * Re-ranks every entry on a leaderboard right after its points (or
+ * a breakdown field) change, so `rank` on the /invictus/leaderboard
+ * page is always live instead of only updating when an admin
+ * manually hits "recalculate" or finalizes the leaderboard.
+ * Never allowed to throw — a ranking hiccup must not roll back the
+ * points/streak write that triggered it.
+ */
+const refreshRanksSilently = async (leaderboardId: string) => {
+  try {
+    await leaderboardService.recalculateLeaderboardRanks(leaderboardId);
+  } catch {
+    // Best-effort — the entry itself is already saved and correct;
+    // the rank will self-correct on the next successful call.
+  }
+};
+
 const upsertPoints = async (
   leaderboardId: string,
   payload: IUpsertLeaderboardPointsPayload,
@@ -73,6 +90,8 @@ const upsertPoints = async (
     );
 
     await session.commitTransaction();
+
+    await refreshRanksSilently(leaderboardId);
 
     return entry;
   } catch (error) {
@@ -194,6 +213,12 @@ const setBreakdownField = async (
       setDefaultsOnInsert: true,
     },
   );
+
+  // breakdown.points never changes here, but breakdown-only fields
+  // (streak/modules/success) can still affect tie-breaking display,
+  // and this keeps a freshly-upserted entry included in the ranked
+  // set immediately instead of waiting for the next points event.
+  await refreshRanksSilently(leaderboardId);
 
   return entry;
 };

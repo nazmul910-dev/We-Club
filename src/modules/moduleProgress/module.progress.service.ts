@@ -253,6 +253,137 @@ const awardModuleCompletionPoints = async (userId: string, moduleId: string) => 
   });
 };
 
+/**
+ * Writes the real "MODULES" column shown on the live INVICTUS
+ * leaderboard (see LeaderboardTable "modules" column on the
+ * frontend) — a plain COUNT of fully completed modules, not a
+ * points total. This is intentionally separate from
+ * awardModuleCompletionPoints (which deals with the points ledger)
+ * so the column stays accurate even for modules worth 0 points.
+ *
+ * Uses setBreakdownField (SET, not $inc) because the count must
+ * always reflect the true current total, and this can be called
+ * more than once safely.
+ */
+const syncModulesBreakdownForUser = async (userId: string) => {
+  try {
+    const completedModulesCount = await ModuleProgress.countDocuments({
+      user: new Types.ObjectId(userId),
+      isCompleted: true,
+    });
+
+    const { Leaderboard } = await import(
+      "../leaderboards/leaderboard.model.schema"
+    );
+    const { leaderboardEntryService } = await import(
+      "../leaderboardEntries/leaderboard.entry.service"
+    );
+
+    const activeLeaderboards = await Leaderboard.find({
+      type: "points",
+      status: "active",
+    })
+      .select("_id")
+      .lean();
+
+    await Promise.all(
+      activeLeaderboards.map((leaderboard) =>
+        leaderboardEntryService.setBreakdownField(leaderboard._id.toString(), {
+          userId,
+          breakdownKey: "modules",
+          value: completedModulesCount,
+        }),
+      ),
+    );
+  } catch {
+    // A leaderboard snapshot issue must never break module progress.
+  }
+};
+
+/**
+ * Writes the real "SUCCESS" (%) column shown on the live INVICTUS
+ * leaderboard — the user's quiz pass-rate across every module
+ * they've attempted a quiz on (passed modules / attempted modules).
+ * Recalculated after every quiz attempt (pass or fail) so the
+ * percentage always reflects the current state.
+ */
+const syncQuizSuccessBreakdownForUser = async (userId: string) => {
+  try {
+    const userObjectId = new Types.ObjectId(userId);
+
+    const [attemptedCount, passedCount] = await Promise.all([
+      ModuleProgress.countDocuments({
+        user: userObjectId,
+        "quizSummary.attemptsUsed": { $gt: 0 },
+      }),
+      ModuleProgress.countDocuments({
+        user: userObjectId,
+        "quizSummary.passed": true,
+      }),
+    ]);
+
+    const successPercent =
+      attemptedCount === 0
+        ? 0
+        : Math.round((passedCount / attemptedCount) * 100);
+
+    const { Leaderboard } = await import(
+      "../leaderboards/leaderboard.model.schema"
+    );
+    const { leaderboardEntryService } = await import(
+      "../leaderboardEntries/leaderboard.entry.service"
+    );
+
+    const activeLeaderboards = await Leaderboard.find({
+      type: "points",
+      status: "active",
+    })
+      .select("_id")
+      .lean();
+
+    await Promise.all(
+      activeLeaderboards.map((leaderboard) =>
+        leaderboardEntryService.setBreakdownField(leaderboard._id.toString(), {
+          userId,
+          breakdownKey: "success",
+          value: successPercent,
+        }),
+      ),
+    );
+  } catch {
+    // A leaderboard snapshot issue must never break quiz progress.
+  }
+};
+
+/**
+ * Awards a small, one-time points bonus the moment a user first
+ * passes a module's quiz (independent of full module completion,
+ * which is rewarded separately by awardModuleCompletionPoints).
+ * Idempotent via pointsLedgerService.awardPoints's unique
+ * (user, sourceType, sourceId, reason) index.
+ */
+const QUIZ_PASS_POINTS = 10;
+
+const awardQuizPassPoints = async (userId: string, moduleId: string) => {
+  const courseModule = await CourseModule.findById(moduleId).select("title");
+
+  const { pointsLedgerService } = await import(
+    "../pointsLedger/pointsledger.service"
+  );
+
+  await pointsLedgerService.awardPoints({
+    user: userId,
+    points: QUIZ_PASS_POINTS,
+    reason: "quiz_pass",
+    sourceType: "quiz",
+    sourceId: moduleId,
+    module: moduleId,
+    description: courseModule
+      ? `Passed quiz: ${courseModule.title}`
+      : "Passed module quiz",
+  });
+};
+
 const refreshModuleProgress = async (userId: string, moduleId: string) => {
   const progress = await getOrCreateModuleProgress(userId, moduleId);
 
@@ -430,6 +561,8 @@ const syncQuizSummary = async (input: ISyncQuizSummary) => {
     input.moduleId,
   );
 
+  const quizWasPassedBefore = progress.quizSummary.passed;
+
   const attemptsUsed = clamp(input.attemptsUsed, 0, MAXIMUM_QUIZ_ATTEMPTS);
 
   const bestScore = clamp(
@@ -459,9 +592,19 @@ const syncQuizSummary = async (input: ISyncQuizSummary) => {
 
   await progress.save();
 
+  const quizNewlyPassed = !quizWasPassedBefore && progress.quizSummary.passed;
+
+  if (quizNewlyPassed) {
+    await awardQuizPassPoints(input.userId, input.moduleId);
+  }
+
   if (!wasCompletedBeforeThisAttempt && progress.isCompleted) {
     await awardModuleCompletionPoints(input.userId, input.moduleId);
+    await syncModulesBreakdownForUser(input.userId);
   }
+
+  // Success % reflects every attempt (pass or fail), not just passes.
+  await syncQuizSuccessBreakdownForUser(input.userId);
 
   return progress;
 };
@@ -573,4 +716,7 @@ export const moduleProgressService = {
 
   getUserModuleProgress,
   getAllModuleProgress,
+
+  syncModulesBreakdownForUser,
+  syncQuizSuccessBreakdownForUser,
 };

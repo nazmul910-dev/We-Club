@@ -24,18 +24,19 @@ const isDuplicateKeyError = (error: unknown): boolean => {
 /**
  * Maps a points-ledger reason to the breakdown key shown on the
  * live INVICTUS leaderboard table (see LeaderboardEntry.breakdown).
- * "streak" is intentionally excluded — that field is written
- * directly by streaklog.service.ts, not by points transactions.
+ *
+ * "streak" (written by streaklog.service.ts), "modules" (a plain
+ * completed-module COUNT, written by
+ * moduleProgressService.syncModulesBreakdownForUser) and "success"
+ * (a quiz pass-RATE %, written by
+ * moduleProgressService.syncQuizSuccessBreakdownForUser) are all
+ * intentionally excluded here — they are domain-specific
+ * counts/percentages, not point totals, so they must never be
+ * $inc'd by a raw points delta. Points transactions only ever
+ * touch the top-level `points` field.
  */
-const reasonToBreakdownKey = (reason: PointsLedgerReason): string | undefined => {
-  switch (reason) {
-    case "module_completion":
-      return "modules";
-    case "quiz_pass":
-      return "success";
-    default:
-      return undefined;
-  }
+const reasonToBreakdownKey = (_reason: PointsLedgerReason): string | undefined => {
+  return undefined;
 };
 
 /**
