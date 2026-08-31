@@ -277,6 +277,25 @@ export const loginUser = async (payload: unknown) => {
   // delete userObject.password;
   const { password: _password, ...safeUserObject } = userObject;
 
+  // Every successful login counts as one day of activity for the
+  // Academy streak (once per calendar day — repeat logins same day
+  // are a no-op inside recordDailyActivity).
+  try {
+    const { streakLogService } = await import('../streakLogs/streaklog.service');
+    await streakLogService.recordDailyActivity(user._id.toString(), 'login');
+  } catch {
+    // Streak tracking must never block login.
+  }
+
+  // Auto-complete "auto_on_login" associates checklist items
+  // (Welcome Video, Join the Community Rooms, ...).
+  try {
+    const { onboardingTaskService } = await import('../onboardingTasks/onboarding.task.service');
+    await onboardingTaskService.completeAutoLoginTasksForUser(user._id.toString());
+  } catch {
+    // Onboarding checklist sync must never block login.
+  }
+
   return {
     accessToken,
     refreshToken,

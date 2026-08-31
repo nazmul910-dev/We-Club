@@ -51,6 +51,7 @@ import { pointsLedgerRoutes } from "../modules/pointsLedger/pointsledger.route";
 
 import type { RequestHandler } from "express";
 import { authLimiter, paymentLimiter } from "../middleware/rateLimiter";
+import { onboardingTaskRoutes } from "../modules/onboardingTasks/onboarding.task.route";
 
 const router = Router();
 
@@ -108,6 +109,7 @@ const moduleRoutes: TModuleRoute[] = [
   { path: "/user-devices", route: userDeviceRoutes },
   { path: "/invictus/streak-logs", route: streakLogRoutes },
   { path: "/invictus/points-ledger", route: pointsLedgerRoutes },
+  { path: "/invictus/onboarding-tasks", route: onboardingTaskRoutes},
 ];
 
 moduleRoutes.forEach(({ path, route, limiter }) => {

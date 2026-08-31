@@ -186,9 +186,79 @@ const getSingleStreakLog = async (streakLogId: string) => {
   return log;
 };
 
+/**
+ * Idempotent "count today as active" helper.
+ *
+ * Call this from anywhere a daily-activity streak should be kept
+ * alive — login, watching a video, etc. Unlike createStreakLog this
+ * never throws if today's entry already exists; it just returns the
+ * existing state. One calendar day (per `timezone`) = one streak
+ * tick. Missing a day breaks the streak back down to 1 the next
+ * time the user shows up (handled by syncStreaksForUser's gap check).
+ */
+const recordDailyActivity = async (
+  userId: string,
+  activityType: ICreateStreakLogInput["activityType"] = "login",
+  timezone: ICreateStreakLogInput["timezone"] = "UTC",
+) => {
+  const normalizedDate = normalizeDateString(new Date(), timezone);
+
+  const existing = await StreakLog.findOne({
+    user: new Types.ObjectId(userId),
+    normalizedDate,
+  });
+
+  let currentStreakDays: number;
+
+  if (existing) {
+    existing.activityCount += 1;
+    await existing.save();
+    currentStreakDays = existing.currentStreakDays;
+  } else {
+    const created = await createStreakLog({
+      user: userId,
+      activityDate: normalizedDate,
+      timezone,
+      activityType,
+    });
+
+    currentStreakDays = created.currentStreakDays;
+  }
+
+  try {
+    const { Leaderboard } = await import("../leaderboards/leaderboard.model.schema");
+    const { leaderboardEntryService } = await import(
+      "../leaderboardEntries/leaderboard.entry.service"
+    );
+
+    const activeLeaderboards = await Leaderboard.find({
+      type: "points",
+      status: "active",
+    })
+      .select("_id")
+      .lean();
+
+    await Promise.all(
+      activeLeaderboards.map((leaderboard) =>
+        leaderboardEntryService.setBreakdownField(leaderboard._id.toString(), {
+          userId,
+          breakdownKey: "streak",
+          value: currentStreakDays,
+        }),
+      ),
+    );
+  } catch {
+    // Streak tracking itself must never fail because a leaderboard
+    // snapshot couldn't be updated.
+  }
+
+  return { normalizedDate, currentStreakDays, alreadyLoggedToday: Boolean(existing) };
+};
+
 export const streakLogService = {
   createStreakLog,
   getStreakLogs,
   getSingleStreakLog,
   syncStreaksForUser,
+  recordDailyActivity,
 };

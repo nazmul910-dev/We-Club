@@ -223,6 +223,36 @@ const recalculateDerivedFields = (progress: ModuleProgressDocument): void => {
   progress.lastCalculatedAt = new Date();
 };
 
+/**
+ * Awards CourseModule.completionPoints the moment a module becomes
+ * fully complete (all required videos watched + quiz passed).
+ * Idempotent via pointsLedgerService.awardPoints (unique per
+ * user+module+reason), so a re-computed/duplicate call is a no-op.
+ */
+const awardModuleCompletionPoints = async (userId: string, moduleId: string) => {
+  const courseModule = await CourseModule.findById(moduleId).select(
+    "title completionPoints",
+  );
+
+  if (!courseModule || !courseModule.completionPoints) {
+    return;
+  }
+
+  const { pointsLedgerService } = await import(
+    "../pointsLedger/pointsledger.service"
+  );
+
+  await pointsLedgerService.awardPoints({
+    user: userId,
+    points: courseModule.completionPoints,
+    reason: "module_completion",
+    sourceType: "module",
+    sourceId: moduleId,
+    module: moduleId,
+    description: `Completed module: ${courseModule.title}`,
+  });
+};
+
 const refreshModuleProgress = async (userId: string, moduleId: string) => {
   const progress = await getOrCreateModuleProgress(userId, moduleId);
 
@@ -423,9 +453,15 @@ const syncQuizSummary = async (input: ISyncQuizSummary) => {
     progress.quizSummary.lastAttemptAt = input.lastAttemptAt;
   }
 
+  const wasCompletedBeforeThisAttempt = progress.isCompleted;
+
   recalculateDerivedFields(progress);
 
   await progress.save();
+
+  if (!wasCompletedBeforeThisAttempt && progress.isCompleted) {
+    await awardModuleCompletionPoints(input.userId, input.moduleId);
+  }
 
   return progress;
 };

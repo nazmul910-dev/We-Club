@@ -133,6 +133,7 @@ const ensureVideoIsAvailable = async (videoId: string) => {
       "thumbnailUrl",
       "durationSeconds",
       "requiredWatchPercent",
+      "pointsReward",
       "isRequired",
       "isPaid",
       "order",
@@ -247,6 +248,34 @@ const populateVideoProgress = async (
   ]);
 };
 
+/**
+ * Awards ModuleVideo.pointsReward the moment a video is first
+ * completed. Uses pointsLedgerService.awardPoints, which is
+ * idempotent (unique per user+video+reason), so this is safe to
+ * call defensively from both the "first heartbeat" and
+ * "later heartbeat" code paths below.
+ */
+const awardVideoCompletionPoints = async (
+  userId: string,
+  video: { _id: Types.ObjectId; title?: string; pointsReward?: number },
+  moduleId: string,
+) => {
+  const { pointsLedgerService } = await import(
+    "../pointsLedger/pointsledger.service"
+  );
+
+  await pointsLedgerService.awardPoints({
+    user: userId,
+    points: video.pointsReward ?? 5,
+    reason: "video_completion",
+    sourceType: "video",
+    sourceId: video._id.toString(),
+    module: moduleId,
+    video: video._id.toString(),
+    description: video.title ? `Completed video: ${video.title}` : undefined,
+  });
+};
+
 const recordVideoHeartbeat = async (
   userId: string,
   videoId: string,
@@ -342,6 +371,10 @@ const recordVideoHeartbeat = async (
     try {
       progress = await VideoProgress.create(createData);
 
+      if (isCompleted) {
+        await awardVideoCompletionPoints(userId, video, courseModule._id.toString());
+      }
+
       return populateVideoProgress(progress);
     } catch (error) {
       /**
@@ -409,6 +442,10 @@ const recordVideoHeartbeat = async (
   }
 
   await progress.save();
+
+  if (newlyCompleted) {
+    await awardVideoCompletionPoints(userId, video, courseModule._id.toString());
+  }
 
   try {
     const { moduleProgressService } = await import(
