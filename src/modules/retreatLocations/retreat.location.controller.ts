@@ -1,7 +1,13 @@
+// server/src/modules/retreatLocations/retreat.location.controller.ts
 import type { NextFunction, Request, Response } from "express";
 
 import assertFound from "../../utility/assertFound";
 import sendResponse from "../../utility/sendResponse";
+import {
+  uploadRetreatCoverToCloudinary,
+  uploadRetreatGalleryToCloudinary,
+  uploadRetreatPromoVideoToCloudinary,
+} from "../../utility/cloudinaryUpload";
 
 import {
   ICreateRetreatLocation,
@@ -10,18 +16,18 @@ import {
 } from "./retreat.location.interface";
 import { retreatLocationService } from "./retreat.location.service";
 
-const getAuthUser = (
-  req: Request,
-): {
-  id: string;
-  role: string;
-} => {
+const getAuthUser = (req: Request): { id: string; role: string } => {
   assertFound(req.user, "Authentication required", 401);
-
   return {
     id: req.user.id as string,
     role: req.user.role as string,
   };
+};
+
+type RetreatFiles = {
+  coverImage?: Express.Multer.File[];
+  gallery?: Express.Multer.File[];
+  promoVideo?: Express.Multer.File[];
 };
 
 const createRetreatLocation = async (
@@ -31,9 +37,37 @@ const createRetreatLocation = async (
 ) => {
   try {
     const authUser = getAuthUser(req);
+    const files = req.files as RetreatFiles | undefined;
+
+    const payload = { ...(req.body as ICreateRetreatLocation) };
+
+
+
+
+    // Cover upload wins over any body URL
+    if (files?.coverImage?.[0]) {
+      payload.coverImage = await uploadRetreatCoverToCloudinary(
+        files.coverImage[0],
+      );
+    }
+
+    // Gallery uploads append to any existing URL list from body
+    if (files?.gallery?.length) {
+      const uploaded = await Promise.all(
+        files.gallery.map((file) => uploadRetreatGalleryToCloudinary(file)),
+      );
+      payload.galleryImages = [...(payload.galleryImages ?? []), ...uploaded];
+    }
+
+    if (files?.promoVideo?.[0]) {
+      payload.promoVideoUrl = await uploadRetreatPromoVideoToCloudinary(
+        files.promoVideo[0],
+      );
+    }
+
 
     const location = await retreatLocationService.createRetreatLocation(
-      req.body as ICreateRetreatLocation,
+      payload,
       authUser.id,
     );
 
@@ -54,7 +88,12 @@ const getAllRetreatLocations = async (
   next: NextFunction,
 ) => {
   try {
-    const isPublicOnly = !req.user || (req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager");
+    const isPublicOnly =
+      !req.user ||
+      (req.user.role !== "founder" &&
+        req.user.role !== "admin" &&
+        req.user.role !== "manager" &&
+        req.user.role !== "super_admin");
 
     const result = await retreatLocationService.getAllRetreatLocations(
       req.query as IRetreatLocationQuery,
@@ -78,7 +117,12 @@ const getSingleRetreatLocation = async (
   next: NextFunction,
 ) => {
   try {
-    const isPublicOnly = !req.user || (req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager");
+    const isPublicOnly =
+      !req.user ||
+      (req.user.role !== "founder" &&
+        req.user.role !== "admin" &&
+        req.user.role !== "manager" &&
+        req.user.role !== "super_admin");
 
     const location = await retreatLocationService.getSingleRetreatLocation(
       String(req.params.idOrSlug),
@@ -103,10 +147,46 @@ const updateRetreatLocation = async (
 ) => {
   try {
     const authUser = getAuthUser(req);
+    const files = req.files as RetreatFiles | undefined;
+
+    const payload = { ...(req.body as IUpdateRetreatLocation) };
+
+
+
+    if (files?.coverImage?.[0]) {
+      payload.coverImage = await uploadRetreatCoverToCloudinary(
+        files.coverImage[0],
+      );
+    }
+
+    if (files?.gallery?.length) {
+      const uploaded = await Promise.all(
+        files.gallery.map((file) => uploadRetreatGalleryToCloudinary(file)),
+      );
+
+      // If client sends replaceGallery=true, replace; otherwise append
+      const replace =
+        (req.body as { replaceGallery?: boolean }).replaceGallery === true;
+
+      if (replace) {
+        payload.galleryImages = uploaded;
+      } else {
+        payload.galleryImages = [
+          ...(payload.galleryImages ?? []),
+          ...uploaded,
+        ];
+      }
+    }
+
+    if (files?.promoVideo?.[0]) {
+      payload.promoVideoUrl = await uploadRetreatPromoVideoToCloudinary(
+        files.promoVideo[0],
+      );
+    }
 
     const location = await retreatLocationService.updateRetreatLocation(
       String(req.params.id),
-      req.body as IUpdateRetreatLocation,
+      payload,
       authUser.id,
     );
 

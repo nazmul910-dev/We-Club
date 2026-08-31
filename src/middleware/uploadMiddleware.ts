@@ -1,44 +1,59 @@
-import multer from 'multer';
-import path from 'path';
+import multer from "multer";
+import path from "path";
 
 const storage = multer.memoryStorage();
 
-const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+const allowedImageMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const allowedImageExts = [".jpg", ".jpeg", ".png", ".webp"];
+
+const allowedVideoMimes = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime", // .mov
+  "video/x-m4v",
+  "video/mpeg",
+];
+const allowedVideoExts = [".mp4", ".webm", ".mov", ".m4v", ".mpeg", ".mpg"];
 
 export const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024,
+    // 150MB so a promo video can fit; images stay small in practice
+    fileSize: 150 * 1024 * 1024,
   },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    const isMimeValid = allowedMimeTypes.includes(file.mimetype);
-    const isExtValid = allowedExtensions.includes(ext);
 
-    if (!isMimeValid && !isExtValid) {
-      return cb(new Error('Only JPG, JPEG, PNG, and WEBP images are allowed'));
+    if (file.fieldname === "promoVideo") {
+      const ok =
+        allowedVideoMimes.includes(file.mimetype) ||
+        allowedVideoExts.includes(ext);
+      if (!ok) {
+        return cb(
+          new Error("Promo video must be MP4, WEBM, MOV, M4V, or MPEG"),
+        );
+      }
+      return cb(null, true);
     }
 
-    cb(null, true);
+    // coverImage + gallery
+    const ok =
+      allowedImageMimes.includes(file.mimetype) ||
+      allowedImageExts.includes(ext);
+    if (!ok) {
+      return cb(new Error("Only JPG, JPEG, PNG, and WEBP images are allowed"));
+    }
+    return cb(null, true);
   },
 });
- 
-/**
- * For createListing: expects a single "cover_image" file and up to 10 "images" files
- * in the same multipart/form-data submission.
- */
+
 export const uploadListingImages = upload.fields([
   { name: "cover_image", maxCount: 1 },
   { name: "images", maxCount: 10 },
 ]);
 
-/**
- * For createRetreatLocation / updateRetreatLocation:
- * expects a single "coverImage" file and up to 10 "gallery" files
- * in the multipart/form-data submission.
- */
 export const uploadRetreatImages = upload.fields([
   { name: "coverImage", maxCount: 1 },
   { name: "gallery", maxCount: 10 },
-]);
+  { name: "promoVideo", maxCount: 1 },
+]);
