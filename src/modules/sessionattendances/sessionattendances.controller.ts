@@ -96,9 +96,21 @@ const cancelSessionAttendance = async (
   next: NextFunction,
 ) => {
   try {
-    const result = await sessionAttendanceService.cancelSessionAttendance(
-      req.body,
+    const authUserId = getAuthUserId(req);
+    const targetUserId = req.body.user ?? authUserId;
+    const isStaff = ["founder", "manager", "admin", "super_admin"].includes(
+      req.user?.role ?? "",
     );
+
+    if (!isStaff && targetUserId !== authUserId) {
+      throwControllerError("You are not authorized to cancel this attendance", 403);
+    }
+
+    const result = await sessionAttendanceService.cancelSessionAttendance({
+      session: req.body.session,
+      user: targetUserId,
+      reason: req.body.reason ?? "Cancelled by user",
+    });
 
     sendResponse(res, {
       statusCode: 200,

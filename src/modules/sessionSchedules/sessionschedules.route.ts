@@ -20,7 +20,7 @@ const router = Router();
 router.post(
   "/",
   verifyToken,
-  authorizeRoles( "manager", "founder"),
+  authorizeRoles("founder", "manager", "admin", "super_admin"),
   validateRequest(createSessionScheduleValidation),
   sessionScheduleController.createSessionSchedule,
 );
@@ -42,7 +42,7 @@ router.get(
 router.patch(
   "/:id",
   verifyToken,
-  authorizeRoles("admin", "manager", "founder"),
+  authorizeRoles("founder", "manager", "admin", "super_admin"),
   validateRequest(updateSessionScheduleValidation),
   sessionScheduleController.updateSessionSchedule,
 );
@@ -50,7 +50,7 @@ router.patch(
 router.patch(
   "/:id/cancel",
   verifyToken,
-  authorizeRoles("admin", "manager", "founder"),
+  authorizeRoles("founder", "manager", "admin", "super_admin"),
   validateRequest(cancelSessionScheduleValidation),
   sessionScheduleController.cancelSessionSchedule,
 );
@@ -58,7 +58,7 @@ router.patch(
 router.delete(
   "/:id",
   verifyToken,
-  authorizeRoles("admin", "founder"),
+  authorizeRoles("founder", "manager", "admin", "super_admin"),
   validateRequest(sessionScheduleIdValidation),
   sessionScheduleController.deleteSessionSchedule,
 );

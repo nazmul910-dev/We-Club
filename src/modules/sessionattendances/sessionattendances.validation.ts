@@ -27,9 +27,9 @@ export const markSessionAttendanceValidation = z.object({
 export const cancelSessionAttendanceValidation = z.object({
   body: z.object({
     session: mongoObjectIdSchema,
-    user: mongoObjectIdSchema,
+    user: mongoObjectIdSchema.optional(),
 
-    reason: z.string().trim().min(1).max(1000),
+    reason: z.string().trim().max(1000).optional(),
   }),
 });
 

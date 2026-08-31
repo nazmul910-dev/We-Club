@@ -55,7 +55,7 @@ export interface ICancelSessionAttendance {
   session: string;
   user: string;
 
-  reason: string;
+  reason?: string | undefined;
 }
 
 export interface ISessionAttendanceQuery {
