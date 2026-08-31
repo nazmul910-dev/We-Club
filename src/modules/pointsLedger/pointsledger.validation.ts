@@ -33,7 +33,7 @@ export const createPointsLedgerValidation = z.object({
     action: mongoObjectIdSchema.optional(),
     quiz: mongoObjectIdSchema.optional(),
     session: mongoObjectIdSchema.optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 

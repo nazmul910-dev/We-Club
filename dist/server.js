@@ -2,6 +2,1546 @@
       import { createRequire } from 'module';
       const require = createRequire(import.meta.url);
     
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// src/modules/challengePillars/challenge.pillar.interface.ts
+var PILLAR_NAMES, PILLAR_SLUGS, PILLAR_ICONS, PILLAR_STATUSES, INTRO_VIDEO_STATUSES;
+var init_challenge_pillar_interface = __esm({
+  "src/modules/challengePillars/challenge.pillar.interface.ts"() {
+    "use strict";
+    PILLAR_NAMES = ["FEARLESS", "LIMITLESS", "BORDERLESS"];
+    PILLAR_SLUGS = ["fearless", "limitless", "borderless"];
+    PILLAR_ICONS = ["crown", "infinity", "globe"];
+    PILLAR_STATUSES = ["draft", "published", "archived"];
+    INTRO_VIDEO_STATUSES = [
+      "not_uploaded",
+      "processing",
+      "ready",
+      "failed"
+    ];
+  }
+});
+
+// src/modules/challengePillars/challenge.pillar.model.schema.ts
+var challenge_pillar_model_schema_exports = {};
+__export(challenge_pillar_model_schema_exports, {
+  ChallengePillar: () => ChallengePillar
+});
+import { Schema as Schema12, model as model12 } from "mongoose";
+var pillarIntroVideoSchema, challengePillarSchema, ChallengePillar;
+var init_challenge_pillar_model_schema = __esm({
+  "src/modules/challengePillars/challenge.pillar.model.schema.ts"() {
+    "use strict";
+    init_challenge_pillar_interface();
+    pillarIntroVideoSchema = new Schema12(
+      {
+        cloudinaryPublicId: {
+          type: String,
+          trim: true
+        },
+        cloudinaryAssetId: {
+          type: String,
+          trim: true
+        },
+        secureUrl: {
+          type: String,
+          trim: true
+        },
+        playbackUrl: {
+          type: String,
+          trim: true
+        },
+        thumbnailUrl: {
+          type: String,
+          trim: true
+        },
+        durationSeconds: {
+          type: Number,
+          min: 0
+        },
+        format: {
+          type: String,
+          trim: true
+        },
+        bytes: {
+          type: Number,
+          min: 0
+        },
+        status: {
+          type: String,
+          enum: INTRO_VIDEO_STATUSES,
+          default: "not_uploaded"
+        }
+      },
+      {
+        _id: false
+      }
+    );
+    challengePillarSchema = new Schema12(
+      {
+        name: {
+          type: String,
+          enum: PILLAR_NAMES,
+          required: true,
+          unique: true,
+          trim: true
+        },
+        slug: {
+          type: String,
+          enum: PILLAR_SLUGS,
+          required: true,
+          unique: true,
+          lowercase: true,
+          trim: true
+        },
+        title: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 150
+        },
+        tagline: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 250
+        },
+        description: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 3e3
+        },
+        icon: {
+          type: String,
+          enum: PILLAR_ICONS,
+          required: true
+        },
+        accentColor: {
+          type: String,
+          default: "#C9A84C",
+          trim: true
+        },
+        isPaid: {
+          type: Boolean,
+          default: false,
+          required: true,
+          index: true
+        },
+        priceCents: {
+          type: Number,
+          default: 0,
+          min: 0
+        },
+        currency: {
+          type: String,
+          enum: ["usd"],
+          default: "usd"
+        },
+        stripePriceId: {
+          type: String,
+          trim: true
+        },
+        introVideo: {
+          type: pillarIntroVideoSchema,
+          default: () => ({
+            status: "not_uploaded"
+          })
+        },
+        order: {
+          type: Number,
+          required: true,
+          unique: true,
+          min: 1,
+          max: 3
+        },
+        status: {
+          type: String,
+          enum: PILLAR_STATUSES,
+          default: "draft",
+          index: true
+        },
+        publishedAt: {
+          type: Date
+        },
+        archivedAt: {
+          type: Date
+        },
+        createdBy: {
+          type: Schema12.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        updatedBy: {
+          type: Schema12.Types.ObjectId,
+          ref: "User"
+        }
+      },
+      {
+        timestamps: true,
+        collection: "challengepillars"
+      }
+    );
+    challengePillarSchema.index({
+      status: 1,
+      order: 1
+    });
+    challengePillarSchema.index({
+      isPaid: 1,
+      status: 1
+    });
+    ChallengePillar = model12(
+      "ChallengePillar",
+      challengePillarSchema
+    );
+  }
+});
+
+// src/modules/courseModules/course.module.interface.ts
+var COURSE_MODULE_STATUSES;
+var init_course_module_interface = __esm({
+  "src/modules/courseModules/course.module.interface.ts"() {
+    "use strict";
+    COURSE_MODULE_STATUSES = [
+      "draft",
+      "published",
+      "archived"
+    ];
+  }
+});
+
+// src/modules/courseModules/course.module.model.schema.ts
+import { Schema as Schema21, model as model21 } from "mongoose";
+var courseModuleSchema, CourseModule;
+var init_course_module_model_schema = __esm({
+  "src/modules/courseModules/course.module.model.schema.ts"() {
+    "use strict";
+    init_course_module_interface();
+    courseModuleSchema = new Schema21(
+      {
+        pillar: {
+          type: Schema21.Types.ObjectId,
+          ref: "ChallengePillar",
+          required: true,
+          index: true
+        },
+        title: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 200
+        },
+        slug: {
+          type: String,
+          required: true,
+          lowercase: true,
+          trim: true,
+          maxlength: 200
+        },
+        shortDescription: {
+          type: String,
+          trim: true,
+          maxlength: 500
+        },
+        description: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 5e3
+        },
+        thumbnailUrl: {
+          type: String,
+          trim: true
+        },
+        moduleNumber: {
+          type: Number,
+          required: true,
+          min: 1
+        },
+        estimatedDurationMinutes: {
+          type: Number,
+          default: 0,
+          min: 0
+        },
+        minimumVideoPercent: {
+          type: Number,
+          default: 80,
+          min: 1,
+          max: 100
+        },
+        minimumActionPercent: {
+          type: Number,
+          default: 80,
+          min: 1,
+          max: 100
+        },
+        minimumQuizScore: {
+          type: Number,
+          default: 70,
+          min: 1,
+          max: 100
+        },
+        maximumQuizAttempts: {
+          type: Number,
+          default: 2,
+          min: 1,
+          max: 10
+        },
+        completionPoints: {
+          type: Number,
+          default: 20,
+          min: 0
+        },
+        status: {
+          type: String,
+          enum: COURSE_MODULE_STATUSES,
+          default: "draft",
+          index: true
+        },
+        publishedAt: {
+          type: Date
+        },
+        archivedAt: {
+          type: Date
+        },
+        createdBy: {
+          type: Schema21.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        updatedBy: {
+          type: Schema21.Types.ObjectId,
+          ref: "User"
+        }
+      },
+      {
+        timestamps: true,
+        collection: "coursemodules"
+      }
+    );
+    courseModuleSchema.index(
+      {
+        pillar: 1,
+        moduleNumber: 1
+      },
+      {
+        unique: true
+      }
+    );
+    courseModuleSchema.index(
+      {
+        pillar: 1,
+        slug: 1
+      },
+      {
+        unique: true
+      }
+    );
+    courseModuleSchema.index({
+      pillar: 1,
+      status: 1,
+      moduleNumber: 1
+    });
+    CourseModule = model21(
+      "CourseModule",
+      courseModuleSchema
+    );
+  }
+});
+
+// src/modules/moduleVideos/module.video.interface.ts
+var MODULE_VIDEO_STATUSES, VIDEO_UPLOAD_STATUSES;
+var init_module_video_interface = __esm({
+  "src/modules/moduleVideos/module.video.interface.ts"() {
+    "use strict";
+    MODULE_VIDEO_STATUSES = [
+      "draft",
+      "published",
+      "archived"
+    ];
+    VIDEO_UPLOAD_STATUSES = [
+      "processing",
+      "ready",
+      "failed"
+    ];
+  }
+});
+
+// src/modules/moduleVideos/module.video.model.schema.ts
+import { model as model22, Schema as Schema22 } from "mongoose";
+var moduleVideoSchema, ModuleVideo;
+var init_module_video_model_schema = __esm({
+  "src/modules/moduleVideos/module.video.model.schema.ts"() {
+    "use strict";
+    init_module_video_interface();
+    moduleVideoSchema = new Schema22(
+      {
+        module: {
+          type: Schema22.Types.ObjectId,
+          ref: "CourseModule",
+          required: true,
+          index: true
+        },
+        title: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 200
+        },
+        slug: {
+          type: String,
+          required: true,
+          lowercase: true,
+          trim: true,
+          maxlength: 200
+        },
+        description: {
+          type: String,
+          trim: true,
+          maxlength: 3e3
+        },
+        provider: {
+          type: String,
+          enum: ["cloudinary"],
+          default: "cloudinary",
+          required: true
+        },
+        resourceType: {
+          type: String,
+          enum: ["video"],
+          default: "video",
+          required: true
+        },
+        cloudinaryPublicId: {
+          type: String,
+          required: true,
+          trim: true
+        },
+        cloudinaryAssetId: {
+          type: String,
+          trim: true
+        },
+        secureUrl: {
+          type: String,
+          required: true,
+          trim: true
+        },
+        playbackUrl: {
+          type: String,
+          trim: true
+        },
+        thumbnailUrl: {
+          type: String,
+          trim: true
+        },
+        folder: {
+          type: String,
+          trim: true
+        },
+        format: {
+          type: String,
+          trim: true
+        },
+        durationSeconds: {
+          type: Number,
+          required: true,
+          min: 0
+        },
+        bytes: {
+          type: Number,
+          min: 0
+        },
+        width: {
+          type: Number,
+          min: 0
+        },
+        height: {
+          type: Number,
+          min: 0
+        },
+        isPaid: {
+          type: Boolean,
+          required: true,
+          default: false,
+          index: true
+        },
+        isRequired: {
+          type: Boolean,
+          default: true
+        },
+        requiredWatchPercent: {
+          type: Number,
+          default: 80,
+          min: 1,
+          max: 100
+        },
+        pointsReward: {
+          type: Number,
+          default: 10,
+          min: 0
+        },
+        order: {
+          type: Number,
+          required: true,
+          min: 1
+        },
+        uploadStatus: {
+          type: String,
+          enum: VIDEO_UPLOAD_STATUSES,
+          default: "ready",
+          index: true
+        },
+        status: {
+          type: String,
+          enum: MODULE_VIDEO_STATUSES,
+          default: "draft",
+          index: true
+        },
+        publishedAt: {
+          type: Date
+        },
+        archivedAt: {
+          type: Date
+        },
+        uploadedBy: {
+          type: Schema22.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        updatedBy: {
+          type: Schema22.Types.ObjectId,
+          ref: "User"
+        }
+      },
+      {
+        timestamps: true,
+        collection: "modulevideos"
+      }
+    );
+    moduleVideoSchema.index({ module: 1, order: 1 }, { unique: true });
+    moduleVideoSchema.index({ module: 1, slug: 1 }, { unique: true });
+    moduleVideoSchema.index({ cloudinaryPublicId: 1 }, { unique: true });
+    moduleVideoSchema.index({
+      module: 1,
+      status: 1,
+      order: 1
+    });
+    ModuleVideo = model22(
+      "ModuleVideo",
+      moduleVideoSchema
+    );
+  }
+});
+
+// src/modules/moduleResources/module.resource.interface.ts
+var MODULE_RESOURCE_STATUSES, MODULE_RESOURCE_TYPES, MODULE_RESOURCE_PROVIDERS, CLOUDINARY_RESOURCE_TYPES;
+var init_module_resource_interface = __esm({
+  "src/modules/moduleResources/module.resource.interface.ts"() {
+    "use strict";
+    MODULE_RESOURCE_STATUSES = [
+      "draft",
+      "published",
+      "archived"
+    ];
+    MODULE_RESOURCE_TYPES = [
+      "pdf",
+      "worksheet",
+      "template",
+      "external_link",
+      "other"
+    ];
+    MODULE_RESOURCE_PROVIDERS = [
+      "cloudinary",
+      "external"
+    ];
+    CLOUDINARY_RESOURCE_TYPES = [
+      "image",
+      "raw",
+      "video"
+    ];
+  }
+});
+
+// src/modules/moduleResources/module.resource.model.schema.ts
+import { model as model23, Schema as Schema23 } from "mongoose";
+var moduleResourceSchema, ModuleResource;
+var init_module_resource_model_schema = __esm({
+  "src/modules/moduleResources/module.resource.model.schema.ts"() {
+    "use strict";
+    init_module_resource_interface();
+    moduleResourceSchema = new Schema23(
+      {
+        module: {
+          type: Schema23.Types.ObjectId,
+          ref: "CourseModule",
+          required: true,
+          index: true
+        },
+        title: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 200
+        },
+        slug: {
+          type: String,
+          required: true,
+          lowercase: true,
+          trim: true,
+          maxlength: 200
+        },
+        description: {
+          type: String,
+          trim: true,
+          maxlength: 3e3
+        },
+        resourceType: {
+          type: String,
+          enum: MODULE_RESOURCE_TYPES,
+          required: true,
+          index: true
+        },
+        provider: {
+          type: String,
+          enum: MODULE_RESOURCE_PROVIDERS,
+          required: true
+        },
+        fileName: {
+          type: String,
+          trim: true
+        },
+        mimeType: {
+          type: String,
+          trim: true
+        },
+        format: {
+          type: String,
+          trim: true
+        },
+        bytes: {
+          type: Number,
+          min: 0
+        },
+        cloudinaryPublicId: {
+          type: String,
+          trim: true
+        },
+        cloudinaryAssetId: {
+          type: String,
+          trim: true
+        },
+        cloudinaryResourceType: {
+          type: String,
+          enum: CLOUDINARY_RESOURCE_TYPES
+        },
+        secureUrl: {
+          type: String,
+          trim: true
+        },
+        externalUrl: {
+          type: String,
+          trim: true
+        },
+        thumbnailUrl: {
+          type: String,
+          trim: true
+        },
+        isRequired: {
+          type: Boolean,
+          default: true
+        },
+        pointsReward: {
+          type: Number,
+          default: 5,
+          min: 0
+        },
+        order: {
+          type: Number,
+          required: true,
+          min: 1
+        },
+        status: {
+          type: String,
+          enum: MODULE_RESOURCE_STATUSES,
+          default: "draft",
+          index: true
+        },
+        publishedAt: {
+          type: Date
+        },
+        archivedAt: {
+          type: Date
+        },
+        createdBy: {
+          type: Schema23.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        updatedBy: {
+          type: Schema23.Types.ObjectId,
+          ref: "User"
+        }
+      },
+      {
+        timestamps: true,
+        collection: "moduleresources"
+      }
+    );
+    moduleResourceSchema.index(
+      { module: 1, order: 1 },
+      { unique: true }
+    );
+    moduleResourceSchema.index(
+      { module: 1, slug: 1 },
+      { unique: true }
+    );
+    moduleResourceSchema.index(
+      { cloudinaryPublicId: 1 },
+      {
+        unique: true,
+        sparse: true
+      }
+    );
+    moduleResourceSchema.index({
+      module: 1,
+      status: 1,
+      order: 1
+    });
+    ModuleResource = model23(
+      "ModuleResource",
+      moduleResourceSchema
+    );
+  }
+});
+
+// src/modules/moduleActions/module.action.interface.ts
+var MODULE_ACTION_STATUSES;
+var init_module_action_interface = __esm({
+  "src/modules/moduleActions/module.action.interface.ts"() {
+    "use strict";
+    MODULE_ACTION_STATUSES = [
+      "draft",
+      "published",
+      "archived"
+    ];
+  }
+});
+
+// src/modules/moduleActions/module.action.model.schema.ts
+import {
+  model as model25,
+  Schema as Schema25
+} from "mongoose";
+var moduleActionSchema, ModuleAction;
+var init_module_action_model_schema = __esm({
+  "src/modules/moduleActions/module.action.model.schema.ts"() {
+    "use strict";
+    init_module_action_interface();
+    moduleActionSchema = new Schema25(
+      {
+        module: {
+          type: Schema25.Types.ObjectId,
+          ref: "CourseModule",
+          required: true,
+          index: true
+        },
+        title: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 300
+        },
+        description: {
+          type: String,
+          trim: true,
+          maxlength: 5e3
+        },
+        order: {
+          type: Number,
+          required: true,
+          min: 1
+        },
+        isRequired: {
+          type: Boolean,
+          default: true,
+          required: true
+        },
+        pointsReward: {
+          type: Number,
+          default: 5,
+          min: 0
+        },
+        status: {
+          type: String,
+          enum: MODULE_ACTION_STATUSES,
+          default: "draft",
+          index: true
+        },
+        publishedAt: {
+          type: Date
+        },
+        archivedAt: {
+          type: Date
+        },
+        createdBy: {
+          type: Schema25.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        updatedBy: {
+          type: Schema25.Types.ObjectId,
+          ref: "User"
+        }
+      },
+      {
+        timestamps: true,
+        collection: "moduleactions"
+      }
+    );
+    moduleActionSchema.index(
+      {
+        module: 1,
+        order: 1
+      },
+      {
+        unique: true
+      }
+    );
+    moduleActionSchema.index({
+      module: 1,
+      status: 1,
+      order: 1
+    });
+    moduleActionSchema.index({
+      module: 1,
+      isRequired: 1,
+      status: 1
+    });
+    ModuleAction = model25(
+      "ModuleAction",
+      moduleActionSchema
+    );
+  }
+});
+
+// src/modules/videoProgress/video.progress.model.schema.ts
+import { model as model28, Schema as Schema28 } from "mongoose";
+var watchedRangeSchema, videoProgressSchema, VideoProgress;
+var init_video_progress_model_schema = __esm({
+  "src/modules/videoProgress/video.progress.model.schema.ts"() {
+    "use strict";
+    watchedRangeSchema = new Schema28(
+      {
+        startSeconds: {
+          type: Number,
+          required: true,
+          min: 0
+        },
+        endSeconds: {
+          type: Number,
+          required: true,
+          min: 0
+        }
+      },
+      {
+        _id: false
+      }
+    );
+    videoProgressSchema = new Schema28(
+      {
+        user: {
+          type: Schema28.Types.ObjectId,
+          ref: "User",
+          required: true,
+          index: true
+        },
+        video: {
+          type: Schema28.Types.ObjectId,
+          ref: "ModuleVideo",
+          required: true,
+          index: true
+        },
+        module: {
+          type: Schema28.Types.ObjectId,
+          ref: "CourseModule",
+          required: true,
+          index: true
+        },
+        durationSecondsSnapshot: {
+          type: Number,
+          required: true,
+          min: 0
+        },
+        requiredWatchPercentSnapshot: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 100
+        },
+        watchedRanges: {
+          type: [watchedRangeSchema],
+          default: []
+        },
+        totalWatchedSeconds: {
+          type: Number,
+          default: 0,
+          min: 0
+        },
+        watchPercent: {
+          type: Number,
+          default: 0,
+          min: 0,
+          max: 100
+        },
+        lastPositionSeconds: {
+          type: Number,
+          default: 0,
+          min: 0
+        },
+        isCompleted: {
+          type: Boolean,
+          default: false,
+          required: true,
+          index: true
+        },
+        startedAt: {
+          type: Date,
+          default: Date.now,
+          required: true
+        },
+        lastWatchedAt: {
+          type: Date,
+          default: Date.now,
+          required: true
+        },
+        completedAt: {
+          type: Date
+        }
+      },
+      {
+        timestamps: true,
+        collection: "videoprogress",
+        /**
+         * Prevent silent concurrent overwrites.
+         */
+        optimisticConcurrency: true
+      }
+    );
+    videoProgressSchema.index(
+      {
+        user: 1,
+        video: 1
+      },
+      {
+        unique: true
+      }
+    );
+    videoProgressSchema.index({
+      user: 1,
+      module: 1,
+      isCompleted: 1
+    });
+    videoProgressSchema.index({
+      module: 1,
+      isCompleted: 1,
+      updatedAt: -1
+    });
+    videoProgressSchema.index({
+      user: 1,
+      lastWatchedAt: -1
+    });
+    VideoProgress = model28(
+      "VideoProgress",
+      videoProgressSchema
+    );
+  }
+});
+
+// src/modules/moduleProgress/module.progress.interface.ts
+var QUIZ_PROGRESS_STATUSES;
+var init_module_progress_interface = __esm({
+  "src/modules/moduleProgress/module.progress.interface.ts"() {
+    "use strict";
+    QUIZ_PROGRESS_STATUSES = [
+      "locked",
+      "unlocked",
+      "in_progress",
+      "passed",
+      "failed"
+    ];
+  }
+});
+
+// src/modules/moduleProgress/module.progress.model.schema.ts
+import { model as model29, Schema as Schema29 } from "mongoose";
+var requirementSummarySchema, quizSummarySchema, moduleProgressSchema, ModuleProgress;
+var init_module_progress_model_schema = __esm({
+  "src/modules/moduleProgress/module.progress.model.schema.ts"() {
+    "use strict";
+    init_module_progress_interface();
+    requirementSummarySchema = new Schema29(
+      {
+        totalRequired: {
+          type: Number,
+          default: 0,
+          min: 0,
+          required: true
+        },
+        completedRequired: {
+          type: Number,
+          default: 0,
+          min: 0,
+          required: true
+        },
+        completionPercent: {
+          type: Number,
+          default: 100,
+          min: 0,
+          max: 100,
+          required: true
+        },
+        completed: {
+          type: Boolean,
+          default: true,
+          required: true
+        }
+      },
+      {
+        _id: false
+      }
+    );
+    quizSummarySchema = new Schema29(
+      {
+        status: {
+          type: String,
+          enum: QUIZ_PROGRESS_STATUSES,
+          default: "locked",
+          required: true
+        },
+        attemptsUsed: {
+          type: Number,
+          default: 0,
+          min: 0,
+          max: 2,
+          required: true
+        },
+        maximumAttempts: {
+          type: Number,
+          default: 2,
+          min: 2,
+          max: 2,
+          required: true
+        },
+        bestScore: {
+          type: Number,
+          default: 0,
+          min: 0,
+          max: 100,
+          required: true
+        },
+        passScore: {
+          type: Number,
+          default: 70,
+          min: 70,
+          max: 70,
+          required: true
+        },
+        passed: {
+          type: Boolean,
+          default: false,
+          required: true
+        },
+        lastAttemptAt: {
+          type: Date
+        }
+      },
+      {
+        _id: false
+      }
+    );
+    moduleProgressSchema = new Schema29(
+      {
+        user: {
+          type: Schema29.Types.ObjectId,
+          ref: "User",
+          required: true,
+          index: true
+        },
+        module: {
+          type: Schema29.Types.ObjectId,
+          ref: "CourseModule",
+          required: true,
+          index: true
+        },
+        videoSummary: {
+          type: requirementSummarySchema,
+          default: () => ({
+            totalRequired: 0,
+            completedRequired: 0,
+            completionPercent: 100,
+            completed: true
+          })
+        },
+        resourceSummary: {
+          type: requirementSummarySchema,
+          default: () => ({
+            totalRequired: 0,
+            completedRequired: 0,
+            completionPercent: 100,
+            completed: true
+          })
+        },
+        actionSummary: {
+          type: requirementSummarySchema,
+          default: () => ({
+            totalRequired: 0,
+            completedRequired: 0,
+            completionPercent: 100,
+            completed: true
+          })
+        },
+        quizSummary: {
+          type: quizSummarySchema,
+          default: () => ({
+            status: "locked",
+            attemptsUsed: 0,
+            maximumAttempts: 2,
+            bestScore: 0,
+            passScore: 70,
+            passed: false
+          })
+        },
+        actionsUnlocked: {
+          type: Boolean,
+          default: false,
+          required: true
+        },
+        quizUnlocked: {
+          type: Boolean,
+          default: false,
+          required: true,
+          index: true
+        },
+        overallCompletionPercent: {
+          type: Number,
+          default: 0,
+          min: 0,
+          max: 100,
+          required: true
+        },
+        isCompleted: {
+          type: Boolean,
+          default: false,
+          required: true,
+          index: true
+        },
+        completedAt: {
+          type: Date
+        },
+        lastCalculatedAt: {
+          type: Date,
+          default: Date.now,
+          required: true
+        }
+      },
+      {
+        timestamps: true,
+        collection: "moduleprogress",
+        optimisticConcurrency: true
+      }
+    );
+    moduleProgressSchema.index(
+      {
+        user: 1,
+        module: 1
+      },
+      {
+        unique: true
+      }
+    );
+    moduleProgressSchema.index({
+      user: 1,
+      isCompleted: 1,
+      updatedAt: -1
+    });
+    moduleProgressSchema.index({
+      module: 1,
+      isCompleted: 1
+    });
+    ModuleProgress = model29(
+      "ModuleProgress",
+      moduleProgressSchema
+    );
+  }
+});
+
+// src/modules/moduleProgress/module.progress.service.ts
+var module_progress_service_exports = {};
+__export(module_progress_service_exports, {
+  moduleProgressService: () => moduleProgressService
+});
+import { Types as Types27 } from "mongoose";
+var ACTION_COMPLETION_REQUIREMENT, QUIZ_PASS_SCORE, MAXIMUM_QUIZ_ATTEMPTS, throwServiceError13, assertFound12, assertValidObjectId7, isDuplicateKeyError4, roundToTwoDecimals, clamp, calculateCompletionPercent, ensureCourseModuleExists5, createDefaultProgressData, getOrCreateModuleProgress, recalculateDerivedFields, refreshModuleProgress, syncResourceSummary, syncActionSummary, syncQuizSummary, getMyModuleProgress, getMyAllModuleProgress, getUserModuleProgress, getAllModuleProgress, moduleProgressService;
+var init_module_progress_service = __esm({
+  "src/modules/moduleProgress/module.progress.service.ts"() {
+    "use strict";
+    init_course_module_model_schema();
+    init_module_action_model_schema();
+    init_module_resource_model_schema();
+    init_module_video_model_schema();
+    init_video_progress_model_schema();
+    init_module_progress_model_schema();
+    ACTION_COMPLETION_REQUIREMENT = 80;
+    QUIZ_PASS_SCORE = 70;
+    MAXIMUM_QUIZ_ATTEMPTS = 2;
+    throwServiceError13 = (message, statusCode) => {
+      const error = new Error(message);
+      error.statusCode = statusCode;
+      throw error;
+    };
+    assertFound12 = (value, message, statusCode) => {
+      if (value === null || value === void 0) {
+        throwServiceError13(message, statusCode);
+      }
+    };
+    assertValidObjectId7 = (value, fieldName) => {
+      if (!Types27.ObjectId.isValid(value)) {
+        throwServiceError13(`${fieldName} is invalid`, 400);
+      }
+    };
+    isDuplicateKeyError4 = (error) => {
+      return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
+    };
+    roundToTwoDecimals = (value) => {
+      return Math.round(value * 100) / 100;
+    };
+    clamp = (value, minimum, maximum) => {
+      return Math.min(Math.max(value, minimum), maximum);
+    };
+    calculateCompletionPercent = (completed, total) => {
+      if (total === 0) {
+        return 100;
+      }
+      return roundToTwoDecimals(clamp(completed / total * 100, 0, 100));
+    };
+    ensureCourseModuleExists5 = async (moduleId) => {
+      assertValidObjectId7(moduleId, "Course module ID");
+      const courseModule = await CourseModule.findById(moduleId).select(
+        "_id pillar title slug moduleNumber status"
+      );
+      assertFound12(courseModule, "Course module not found", 404);
+      if (courseModule.status === "archived") {
+        throwServiceError13("Archived module progress cannot be managed", 400);
+      }
+      return courseModule;
+    };
+    createDefaultProgressData = (userId, moduleId) => {
+      return {
+        user: new Types27.ObjectId(userId),
+        module: new Types27.ObjectId(moduleId),
+        videoSummary: {
+          totalRequired: 0,
+          completedRequired: 0,
+          completionPercent: 0,
+          completed: false
+        },
+        resourceSummary: {
+          totalRequired: 0,
+          completedRequired: 0,
+          completionPercent: 100,
+          completed: true
+        },
+        actionSummary: {
+          totalRequired: 0,
+          completedRequired: 0,
+          completionPercent: 100,
+          completed: true
+        },
+        quizSummary: {
+          status: "locked",
+          attemptsUsed: 0,
+          maximumAttempts: MAXIMUM_QUIZ_ATTEMPTS,
+          bestScore: 0,
+          passScore: QUIZ_PASS_SCORE,
+          passed: false
+        },
+        actionsUnlocked: false,
+        quizUnlocked: false,
+        overallCompletionPercent: 0,
+        isCompleted: false,
+        lastCalculatedAt: /* @__PURE__ */ new Date()
+      };
+    };
+    getOrCreateModuleProgress = async (userId, moduleId) => {
+      assertValidObjectId7(userId, "User ID");
+      await ensureCourseModuleExists5(moduleId);
+      const filter = {
+        user: new Types27.ObjectId(userId),
+        module: new Types27.ObjectId(moduleId)
+      };
+      const existingProgress = await ModuleProgress.findOne(filter);
+      if (existingProgress) {
+        return existingProgress;
+      }
+      try {
+        return await ModuleProgress.create(
+          createDefaultProgressData(userId, moduleId)
+        );
+      } catch (error) {
+        if (!isDuplicateKeyError4(error)) {
+          throw error;
+        }
+        const progress = await ModuleProgress.findOne(filter);
+        assertFound12(progress, "Module progress could not be created", 500);
+        return progress;
+      }
+    };
+    recalculateDerivedFields = (progress) => {
+      const videosCompleted = progress.videoSummary.completed;
+      progress.actionsUnlocked = videosCompleted;
+      progress.actionSummary.completed = true;
+      progress.quizUnlocked = videosCompleted;
+      if (progress.quizSummary.passed) {
+        progress.quizSummary.status = "passed";
+      } else if (!progress.quizUnlocked) {
+        progress.quizSummary.status = "locked";
+      } else if (progress.quizSummary.attemptsUsed === 0) {
+        progress.quizSummary.status = "unlocked";
+      } else if (progress.quizSummary.attemptsUsed < MAXIMUM_QUIZ_ATTEMPTS) {
+        progress.quizSummary.status = "in_progress";
+      } else {
+        progress.quizSummary.status = "failed";
+      }
+      if (progress.quizSummary.passed) {
+        progress.overallCompletionPercent = 100;
+      } else {
+        progress.overallCompletionPercent = progress.videoSummary.completionPercent;
+      }
+      const moduleCompleted = progress.videoSummary.completed && progress.quizSummary.passed;
+      const newlyCompleted = !progress.isCompleted && moduleCompleted;
+      progress.isCompleted = moduleCompleted;
+      if (newlyCompleted) {
+        progress.completedAt = /* @__PURE__ */ new Date();
+      }
+      if (!moduleCompleted) {
+        progress.set("completedAt", void 0);
+      }
+      progress.lastCalculatedAt = /* @__PURE__ */ new Date();
+    };
+    refreshModuleProgress = async (userId, moduleId) => {
+      const progress = await getOrCreateModuleProgress(userId, moduleId);
+      const moduleObjectId = new Types27.ObjectId(moduleId);
+      const userObjectId = new Types27.ObjectId(userId);
+      const publishedVideos = await ModuleVideo.find({
+        module: moduleObjectId,
+        status: "published"
+      }).select("_id isRequired").lean();
+      const requiredVideos = publishedVideos.filter(
+        (video) => video.isRequired !== false
+      );
+      const targetVideos = requiredVideos.length > 0 ? requiredVideos : publishedVideos;
+      const targetVideoIds = targetVideos.map((video) => video._id);
+      const completedVideosCount = targetVideoIds.length === 0 ? 0 : await VideoProgress.countDocuments({
+        user: userObjectId,
+        video: {
+          $in: targetVideoIds
+        },
+        isCompleted: true
+      });
+      const totalRequiredVideos = targetVideoIds.length;
+      const isVideoCompleted = totalRequiredVideos === 0 || completedVideosCount >= totalRequiredVideos;
+      const videoPercent = totalRequiredVideos === 0 ? 100 : calculateCompletionPercent(
+        completedVideosCount,
+        totalRequiredVideos
+      );
+      progress.set("videoSummary", {
+        totalRequired: totalRequiredVideos,
+        completedRequired: completedVideosCount,
+        completionPercent: videoPercent,
+        completed: isVideoCompleted
+      });
+      const totalRequiredResources = await ModuleResource.countDocuments({
+        module: moduleObjectId,
+        status: "published"
+      });
+      progress.set("resourceSummary", {
+        totalRequired: totalRequiredResources,
+        completedRequired: totalRequiredResources,
+        completionPercent: 100,
+        completed: true
+      });
+      const totalRequiredActions = await ModuleAction.countDocuments({
+        module: moduleObjectId,
+        status: "published"
+      });
+      progress.set("actionSummary", {
+        totalRequired: totalRequiredActions,
+        completedRequired: totalRequiredActions,
+        completionPercent: 100,
+        completed: true
+      });
+      recalculateDerivedFields(progress);
+      await progress.save();
+      return progress.populate([
+        {
+          path: "module",
+          select: "title slug moduleNumber pillar status",
+          populate: {
+            path: "pillar",
+            model: "ChallengePillar",
+            select: "name title slug status"
+          }
+        }
+      ]);
+    };
+    syncResourceSummary = async (input) => {
+      const progress = await getOrCreateModuleProgress(
+        input.userId,
+        input.moduleId
+      );
+      const totalRequired = Math.max(0, input.totalRequired);
+      const completedRequired = clamp(input.completedRequired, 0, totalRequired);
+      const completionPercent = calculateCompletionPercent(
+        completedRequired,
+        totalRequired
+      );
+      progress.set("resourceSummary", {
+        totalRequired,
+        completedRequired,
+        completionPercent,
+        completed: totalRequired === 0 || completedRequired >= totalRequired
+      });
+      recalculateDerivedFields(progress);
+      await progress.save();
+      return progress;
+    };
+    syncActionSummary = async (input) => {
+      const progress = await getOrCreateModuleProgress(
+        input.userId,
+        input.moduleId
+      );
+      const totalRequired = Math.max(0, input.totalRequired);
+      const completedRequired = clamp(input.completedRequired, 0, totalRequired);
+      const completionPercent = calculateCompletionPercent(
+        completedRequired,
+        totalRequired
+      );
+      progress.set("actionSummary", {
+        totalRequired,
+        completedRequired,
+        completionPercent,
+        completed: totalRequired === 0 || completionPercent >= ACTION_COMPLETION_REQUIREMENT
+      });
+      recalculateDerivedFields(progress);
+      await progress.save();
+      return progress;
+    };
+    syncQuizSummary = async (input) => {
+      const progress = await getOrCreateModuleProgress(
+        input.userId,
+        input.moduleId
+      );
+      const attemptsUsed = clamp(input.attemptsUsed, 0, MAXIMUM_QUIZ_ATTEMPTS);
+      const bestScore = clamp(
+        Math.max(progress.quizSummary.bestScore, input.bestScore),
+        0,
+        100
+      );
+      progress.quizSummary.attemptsUsed = attemptsUsed;
+      progress.quizSummary.maximumAttempts = MAXIMUM_QUIZ_ATTEMPTS;
+      progress.quizSummary.bestScore = bestScore;
+      progress.quizSummary.passScore = QUIZ_PASS_SCORE;
+      progress.quizSummary.passed = progress.quizSummary.passed || input.passed || bestScore >= QUIZ_PASS_SCORE;
+      if (input.lastAttemptAt !== void 0) {
+        progress.quizSummary.lastAttemptAt = input.lastAttemptAt;
+      }
+      recalculateDerivedFields(progress);
+      await progress.save();
+      return progress;
+    };
+    getMyModuleProgress = async (userId, moduleId) => {
+      return refreshModuleProgress(userId, moduleId);
+    };
+    getMyAllModuleProgress = async (userId) => {
+      assertValidObjectId7(userId, "User ID");
+      const filter = {
+        user: new Types27.ObjectId(userId)
+      };
+      return ModuleProgress.find(filter).sort({
+        updatedAt: -1
+      }).populate({
+        path: "module",
+        select: "title slug moduleNumber pillar status",
+        populate: {
+          path: "pillar",
+          model: "ChallengePillar",
+          select: "name title slug status"
+        }
+      });
+    };
+    getUserModuleProgress = async (userId, moduleId) => {
+      return refreshModuleProgress(userId, moduleId);
+    };
+    getAllModuleProgress = async (query) => {
+      const filter = {};
+      if (query.userId) {
+        assertValidObjectId7(query.userId, "User ID");
+        filter.user = new Types27.ObjectId(query.userId);
+      }
+      if (query.moduleId) {
+        assertValidObjectId7(query.moduleId, "Course module ID");
+        filter.module = new Types27.ObjectId(query.moduleId);
+      }
+      if (query.isCompleted !== void 0) {
+        filter.isCompleted = query.isCompleted;
+      }
+      const page = query.page ?? 1;
+      const limit = query.limit ?? 20;
+      const skip = (page - 1) * limit;
+      const [records, total] = await Promise.all([
+        ModuleProgress.find(filter).sort({
+          updatedAt: -1
+        }).skip(skip).limit(limit).populate("user", "fullName email role profileImage").populate({
+          path: "module",
+          select: "title slug moduleNumber pillar status",
+          populate: {
+            path: "pillar",
+            model: "ChallengePillar",
+            select: "name title slug status"
+          }
+        }),
+        ModuleProgress.countDocuments(filter)
+      ]);
+      return {
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        },
+        data: records
+      };
+    };
+    moduleProgressService = {
+      refreshModuleProgress,
+      syncResourceSummary,
+      syncActionSummary,
+      syncQuizSummary,
+      getMyModuleProgress,
+      getMyAllModuleProgress,
+      getUserModuleProgress,
+      getAllModuleProgress
+    };
+  }
+});
 
 // src/server.ts
 import mongoose6 from "mongoose";
@@ -327,6 +1867,17 @@ var userSchema = new Schema(
       type: String,
       trim: true
     },
+    assignedCoMentorProfile: {
+      type: Schema.Types.ObjectId,
+      ref: "MentorshipProfile"
+    },
+    coMentorAssignedAt: {
+      type: Date
+    },
+    coMentorAssignedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User"
+    },
     lifetimeCommissionEarned: {
       type: Number,
       default: 0,
@@ -550,7 +2101,7 @@ var getAllUsersFromDB = async (query) => {
     }
   }
   const userQuery = new queryBuilder_default(
-    User.find(baseFilter).select("-password"),
+    User.find(baseFilter).select("-password").lean(),
     restQuery
   ).search(["fullName", "email"]).filter().sort().paginate();
   const data = await userQuery.modelQuery;
@@ -561,7 +2112,7 @@ var getAllUsersFromDB = async (query) => {
   };
 };
 var getSingleUserFromDB = async (id3) => {
-  const user = await User.findById(id3);
+  const user = await User.findById(id3).lean();
   return user;
 };
 var createAdminAccount = async (payload, requesterId, requesterRole) => {
@@ -657,12 +2208,13 @@ var userService = {
 
 // src/utility/sendResponse.ts
 var sendResponse = (res, data) => {
-  const { statusCode, success, message, data: responseData, error } = data;
+  const { statusCode, success, message, data: responseData, error, paid } = data;
   res.status(statusCode).json({
     success,
     message,
     data: responseData,
-    error
+    error,
+    paid
   });
 };
 var sendResponse_default = sendResponse;
@@ -2041,7 +3593,7 @@ var getAllListingFromDB = async (query) => {
     Listing.find().populate(
       "associate_id",
       "fullName email bio phone city country brokerage profileImage licenseNumber role accountStatus approvalStatus"
-    ),
+    ).lean(),
     queryWithDefaultSort
   ).search(["title", "ref_code", "location.country"]).filter().sort().paginate().fieldsLimit();
   const data = await listingQuery.modelQuery;
@@ -2058,7 +3610,7 @@ var getMyListingFromDB = async (associateId, query = {}) => {
     ...query
   };
   const listingQuery = new queryBuilder_default(
-    Listing.find({ associate_id: associateId }),
+    Listing.find({ associate_id: associateId }).lean(),
     queryWithDefaultSort
   ).search(["title", "ref_code"]).filter().sort().paginate().fieldsLimit();
   const data = await listingQuery.modelQuery;
@@ -2070,7 +3622,7 @@ var getMyListingFromDB = async (associateId, query = {}) => {
   return result;
 };
 var getListingByIdFromDB = async (id3) => {
-  return await Listing.findById(id3).populate("associate_id", "name email");
+  return await Listing.findById(id3).populate("associate_id", "name email").lean();
 };
 var getMyPromotersFromDB = async (associateId) => {
   const result = await Listing.aggregate([
@@ -3001,9 +4553,10 @@ var getMyCommissionsFromDB = async (authUser, query) => {
   if (typeof query.status === "string") {
     filter.status = query.status;
   }
-  const { page, limit, skip } = getPaginationParams(query);
+  const { page, skip } = getPaginationParams(query);
+  const limit = Math.min(1e3, Math.max(1, Number(query.limit) || 10));
   const [data, total] = await Promise.all([
-    CommissionLedger.find(filter).populate(populateCommissionQuery()).sort({ created_at: -1 }).skip(skip).limit(limit),
+    CommissionLedger.find(filter).populate(populateCommissionQuery()).lean().sort({ created_at: -1 }).skip(skip).limit(limit),
     CommissionLedger.countDocuments(filter)
   ]);
   return {
@@ -3783,7 +5336,7 @@ var getAllListingPromoteRequest = async (query) => {
     ).populate(
       "requester.user_id",
       "fullName email profileImage licenseNumber phone country city role bio"
-    ),
+    ).lean(),
     // no populate on requester — email is already embedded
     queryWithDefaultSort
   ).search(["message"]).filter().sort().paginate().fieldsLimit();
@@ -3809,7 +5362,7 @@ var getMyListingsPromoteRequestFromDB = async (associateId, query) => {
     ).populate(
       "requester.user_id",
       "fullName email profileImage licenseNumber phone country city role bio"
-    ),
+    ).lean(),
     queryWithDefaultSort
   ).search(["message"]).filter().sort().paginate().fieldsLimit();
   const data = await promoteRequestQuery.modelQuery;
@@ -3831,7 +5384,7 @@ var getMyPromoteRequestsFromDB = async (requesterId, query) => {
     ).populate(
       "requester.user_id",
       "fullName email profileImage licenseNumber phone country city role bio"
-    ),
+    ).lean(),
     queryWithDefaultSort
   ).search(["message"]).filter().sort().paginate().fieldsLimit();
   const documents = await promoteRequestQuery.modelQuery;
@@ -5341,7 +6894,7 @@ var createActivityLog = async (payload) => {
 };
 var getAllActivityLogs = async (options2) => {
   const page = options2.page ?? 1;
-  const limit = options2.limit ?? 20;
+  const limit = Math.min(options2.limit ?? 20, 100);
   const skip = (page - 1) * limit;
   const filter = {};
   if (options2.actorId) {
@@ -5361,7 +6914,7 @@ var getAllActivityLogs = async (options2) => {
   const [data, total] = await Promise.all([
     ActivityLog.find(filter).sort({
       createdAt: -1
-    }).skip(skip).limit(limit).populate("actor", "fullName email role"),
+    }).skip(skip).limit(limit).populate("actor", "fullName email role").lean(),
     ActivityLog.countDocuments(filter)
   ]);
   return {
@@ -5379,7 +6932,7 @@ var getSingleActivityLog = async (logId) => {
   const log = await ActivityLog.findById(logId).populate(
     "actor",
     "fullName email role"
-  );
+  ).lean();
   assertFound2(log, "Activity log not found", 404);
   return log;
 };
@@ -5808,7 +7361,7 @@ var ListingAssetDownload = model9(
 );
 
 // src/modules/listingAssets/listing.assets.utils.ts
-import { Buffer } from "buffer";
+import { Buffer as Buffer2 } from "buffer";
 import axios from "axios";
 import PDFDocument from "pdfkit";
 var sanitizeFileName = (value) => {
@@ -5863,7 +7416,7 @@ var downloadImageFromUrl = async (imageUrl, fileNamePrefix) => {
     const extension = getImageExtension(contentType, imageUrl);
     return {
       fileName: `${fileNamePrefix}.${extension}`,
-      buffer: Buffer.from(response.data),
+      buffer: Buffer2.from(response.data),
       mimeType: contentType
     };
   } catch {
@@ -5899,7 +7452,7 @@ var generateListingOnePagerPdf = async (listing, images, captions) => {
       chunks.push(chunk);
     });
     doc.on("end", () => {
-      resolve(Buffer.concat(chunks));
+      resolve(Buffer2.concat(chunks));
     });
     doc.on("error", reject);
     doc.fontSize(22).fillColor("#111111").text("WORLD ELITE", {
@@ -6080,13 +7633,13 @@ var getListingAssetLogsFromDB = async (listingId, authUser) => {
   }
   return ListingAssetDownload.find({
     listing_id: toObjectId2(listingId)
-  }).populate("downloaded_by", "fullName email role").populate("listing_id", "title ref_code").sort({ downloaded_at: -1 });
+  }).populate("downloaded_by", "fullName email role").populate("listing_id", "title ref_code").sort({ downloaded_at: -1 }).lean();
 };
 var getAllListingAssetLogsFromDB = async (authUser) => {
   if (!isAdminOrManager3(authUser.role)) {
     throwError3("Only admin or manager can view all asset download logs", 403);
   }
-  return ListingAssetDownload.find().populate("downloaded_by", "fullName email role").populate("listing_id", "title ref_code").sort({ downloaded_at: -1 });
+  return ListingAssetDownload.find().populate("downloaded_by", "fullName email role").populate("listing_id", "title ref_code").sort({ downloaded_at: -1 }).lean();
 };
 var listingAssetsService = {
   downloadListingAssetsZipFromDB,
@@ -6657,7 +8210,6 @@ var redeemDiscountCodeAfterPayment = async ({
   if (existingUserRedemption) {
     return existingUserRedemption;
   }
-  console.log("user1;");
   const updatedDiscount = await DiscountCode.findOneAndUpdate(
     {
       _id: discount._id,
@@ -6709,13 +8261,11 @@ var redeemDiscountCodeAfterPayment = async ({
         }
       }
     );
-    console.log("user3;");
     if (error?.code === 11e3) {
       const existing = await DiscountRedemption.findOne({
         discountCode: discount._id,
         user: userObjectId
       });
-      console.log("user4");
       if (existing) {
         return existing;
       }
@@ -6945,185 +8495,8 @@ World Elite Team`,
 
 // src/modules/invictus-payments/invictus.payment.service.ts
 import Stripe from "stripe";
-import { Types as Types16 } from "mongoose";
-
-// src/modules/challengePillars/challenge.pillar.model.schema.ts
-import { Schema as Schema12, model as model12 } from "mongoose";
-
-// src/modules/challengePillars/challenge.pillar.interface.ts
-var PILLAR_NAMES = ["FEARLESS", "LIMITLESS", "BORDERLESS"];
-var PILLAR_SLUGS = ["fearless", "limitless", "borderless"];
-var PILLAR_ICONS = ["crown", "infinity", "globe"];
-var PILLAR_STATUSES = ["draft", "published", "archived"];
-var INTRO_VIDEO_STATUSES = [
-  "not_uploaded",
-  "processing",
-  "ready",
-  "failed"
-];
-
-// src/modules/challengePillars/challenge.pillar.model.schema.ts
-var pillarIntroVideoSchema = new Schema12(
-  {
-    cloudinaryPublicId: {
-      type: String,
-      trim: true
-    },
-    cloudinaryAssetId: {
-      type: String,
-      trim: true
-    },
-    secureUrl: {
-      type: String,
-      trim: true
-    },
-    playbackUrl: {
-      type: String,
-      trim: true
-    },
-    thumbnailUrl: {
-      type: String,
-      trim: true
-    },
-    durationSeconds: {
-      type: Number,
-      min: 0
-    },
-    format: {
-      type: String,
-      trim: true
-    },
-    bytes: {
-      type: Number,
-      min: 0
-    },
-    status: {
-      type: String,
-      enum: INTRO_VIDEO_STATUSES,
-      default: "not_uploaded"
-    }
-  },
-  {
-    _id: false
-  }
-);
-var challengePillarSchema = new Schema12(
-  {
-    name: {
-      type: String,
-      enum: PILLAR_NAMES,
-      required: true,
-      unique: true,
-      trim: true
-    },
-    slug: {
-      type: String,
-      enum: PILLAR_SLUGS,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true
-    },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 150
-    },
-    tagline: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 250
-    },
-    description: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 3e3
-    },
-    icon: {
-      type: String,
-      enum: PILLAR_ICONS,
-      required: true
-    },
-    accentColor: {
-      type: String,
-      default: "#C9A84C",
-      trim: true
-    },
-    isPaid: {
-      type: Boolean,
-      default: false,
-      required: true,
-      index: true
-    },
-    priceCents: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    currency: {
-      type: String,
-      enum: ["usd"],
-      default: "usd"
-    },
-    stripePriceId: {
-      type: String,
-      trim: true
-    },
-    introVideo: {
-      type: pillarIntroVideoSchema,
-      default: () => ({
-        status: "not_uploaded"
-      })
-    },
-    order: {
-      type: Number,
-      required: true,
-      unique: true,
-      min: 1,
-      max: 3
-    },
-    status: {
-      type: String,
-      enum: PILLAR_STATUSES,
-      default: "draft",
-      index: true
-    },
-    publishedAt: {
-      type: Date
-    },
-    archivedAt: {
-      type: Date
-    },
-    createdBy: {
-      type: Schema12.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema12.Types.ObjectId,
-      ref: "User"
-    }
-  },
-  {
-    timestamps: true,
-    collection: "challengepillars"
-  }
-);
-challengePillarSchema.index({
-  status: 1,
-  order: 1
-});
-challengePillarSchema.index({
-  isPaid: 1,
-  status: 1
-});
-var ChallengePillar = model12(
-  "ChallengePillar",
-  challengePillarSchema
-);
+import { Types as Types18 } from "mongoose";
+init_challenge_pillar_model_schema();
 
 // src/modules/retreatBatches/retreat.batch.model.schema.ts
 import { model as model13, Schema as Schema13 } from "mongoose";
@@ -7430,6 +8803,7 @@ var PaymentPlan = model14(
 );
 
 // src/modules/userEntitlements/userEntitlements.service.ts
+init_challenge_pillar_model_schema();
 import { Types as Types15 } from "mongoose";
 
 // src/modules/userEntitlements/userEntitlements.model.schema.ts
@@ -7742,7 +9116,7 @@ var createEntitlementLog = async (payload) => {
 };
 var getAllEntitlementLogs = async (options2) => {
   const page = options2.page ?? 1;
-  const limit = options2.limit ?? 20;
+  const limit = Math.min(options2.limit ?? 20, 100);
   const skip = (page - 1) * limit;
   const filter = {};
   if (options2.userId) {
@@ -7766,7 +9140,7 @@ var getAllEntitlementLogs = async (options2) => {
   const [data, total] = await Promise.all([
     EntitlementLog.find(filter).sort({
       createdAt: -1
-    }).skip(skip).limit(limit).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role"),
+    }).skip(skip).limit(limit).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role").lean(),
     EntitlementLog.countDocuments(filter)
   ]);
   return {
@@ -7785,12 +9159,12 @@ var getMyEntitlementLogs = async (userId) => {
     user: new Types14.ObjectId(userId)
   }).sort({
     createdAt: -1
-  }).populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title");
+  }).populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").lean();
   return logs;
 };
 var getSingleEntitlementLog = async (logId) => {
   assertValidObjectId2(logId, "Entitlement log ID");
-  const log = await EntitlementLog.findById(logId).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role");
+  const log = await EntitlementLog.findById(logId).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role").lean();
   assertFound3(log, "Entitlement log not found", 404);
   return log;
 };
@@ -8108,11 +9482,24 @@ var hasActivePillarEntitlement = async (userId, pillarId) => {
 var checkPillarAccess = async (userId, pillarId) => {
   assertValidObjectId3(userId, "User ID");
   assertValidObjectId3(pillarId, "Pillar ID");
+  const user = await User.findById(userId).select(
+    "_id role accessTo accountStatus"
+  );
+  assertFound4(user, "User not found", 404);
   const pillar = await ChallengePillar.findOne({
     _id: pillarId,
-    status: "published"
+    status: { $ne: "archived" }
   }).select("name slug title isPaid priceCents currency status");
   assertFound4(pillar, "Challenge pillar not found or unavailable", 404);
+  if (user.role === "admin" || user.role === "manager" || user.role === "founder") {
+    return {
+      hasAccess: true,
+      accessType: "admin",
+      reason: "admin_override",
+      pillar,
+      entitlement: null
+    };
+  }
   if (!pillar.isPaid) {
     return {
       hasAccess: true,
@@ -8352,6 +9739,911 @@ var userEntitlementService = {
   reactivateEntitlement
 };
 
+// src/modules/notifications/notification.service.ts
+import { Types as Types17 } from "mongoose";
+
+// src/socket/socket.ts
+import { Server } from "socket.io";
+import jwt4 from "jsonwebtoken";
+
+// src/modules/room/room.modal.ts
+import { Schema as Schema17, model as model17 } from "mongoose";
+var roomSchema = new Schema17(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 500
+    },
+    members: [
+      {
+        type: Schema17.Types.ObjectId,
+        ref: "User"
+      }
+    ],
+    createdBy: {
+      type: Schema17.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ["general", "country"],
+      default: "general"
+    },
+    countryName: String,
+    countryCode: { type: String, unique: true, sparse: true }
+  },
+  {
+    timestamps: true
+  }
+);
+var Room = model17("Room", roomSchema);
+
+// src/utility/country.ts
+import { createRequire as createNodeRequire } from "module";
+import countries from "i18n-iso-countries";
+var requireCountryJson = createNodeRequire(import.meta.url);
+var enLocale = requireCountryJson("i18n-iso-countries/langs/en.json");
+countries.registerLocale(enLocale);
+var resolveCountry = (rawName) => {
+  if (!rawName) return null;
+  const trimmed = rawName.trim();
+  const code = countries.getAlpha2Code(trimmed, "en");
+  if (!code) return null;
+  return {
+    code: code.toUpperCase(),
+    name: countries.getName(code, "en")
+    // canonical spelling
+  };
+};
+
+// src/modules/room/room.service.ts
+var getGeneralRoom = async (createdBy) => {
+  return Room.findOneAndUpdate(
+    { type: "general" },
+    {
+      $setOnInsert: {
+        name: "General Community",
+        createdBy,
+        type: "general"
+      }
+    },
+    { upsert: true, new: true }
+  );
+};
+var getOrCreateCountryRoom = async (countryName, createdBy) => {
+  const country = resolveCountry(countryName);
+  if (!country) {
+    throw new Error("Invalid country name");
+  }
+  return Room.findOneAndUpdate(
+    { countryCode: country.code, type: "country" },
+    {
+      $setOnInsert: {
+        name: `${country.name} Community`,
+        createdBy,
+        countryCode: country.code,
+        countryName: country.name,
+        type: "country"
+      }
+    },
+    { upsert: true, new: true }
+  );
+};
+
+// src/modules/message/message.services.ts
+import { Types as Types16 } from "mongoose";
+
+// src/modules/message/message.model.ts
+import { Schema as Schema18, model as model18 } from "mongoose";
+var messageSchema = new Schema18(
+  {
+    room: {
+      type: Schema18.Types.ObjectId,
+      ref: "Room",
+      required: true,
+      index: true
+    },
+    sender: {
+      type: Schema18.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    content: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2e3
+    },
+    // NEW: reply support
+    replyTo: {
+      type: Schema18.Types.ObjectId,
+      ref: "Message",
+      default: null
+    },
+    // NEW: soft delete support
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null }
+  },
+  {
+    timestamps: true
+  }
+);
+var Message = model18("Message", messageSchema);
+
+// src/modules/message/message.services.ts
+var getMessageHistory = async (roomId, page, limit) => {
+  const skip = (page - 1) * limit;
+  const messages = await Message.find({ room: roomId }).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("sender", "fullName profileImage").populate({
+    path: "replyTo",
+    select: "content sender isDeleted",
+    populate: { path: "sender", select: "fullName" }
+  }).lean();
+  return messages.reverse();
+};
+var createMessage = async (roomId, senderId, content, replyTo) => {
+  if (replyTo) {
+    const parent = await Message.findOne({ _id: replyTo, room: roomId }).lean();
+    if (!parent) {
+      throw new Error("Message you're replying to no longer exists in this room");
+    }
+  }
+  const message = await Message.create({
+    room: roomId,
+    sender: senderId,
+    content,
+    replyTo: replyTo || null
+  });
+  return message.populate([
+    { path: "sender", select: "fullName profileImage" },
+    {
+      path: "replyTo",
+      select: "content sender isDeleted",
+      populate: { path: "sender", select: "fullName" }
+    }
+  ]);
+};
+var deleteMessage = async (messageId, userId) => {
+  if (!Types16.ObjectId.isValid(messageId)) {
+    throw new Error("Invalid message id");
+  }
+  const message = await Message.findById(messageId);
+  if (!message) {
+    throw new Error("Message not found");
+  }
+  message.isDeleted = true;
+  message.deletedAt = /* @__PURE__ */ new Date();
+  message.content = "This message was deleted";
+  await message.save();
+  return message;
+};
+
+// src/socket/socket.ts
+var io;
+var getUserRoom = (userId) => `user:${userId}`;
+var emitNotificationToUser = (userId, payload) => {
+  if (!io) {
+    return;
+  }
+  io.to(getUserRoom(userId)).emit("notification:new", payload);
+};
+var onlineUsers = /* @__PURE__ */ new Map();
+var initSocket = (httpServer) => {
+  io = new Server(httpServer, {
+    cors: {
+      origin: true,
+      credentials: true
+    }
+  });
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) {
+      return next(new Error("Authentication token is required"));
+    }
+    try {
+      const decoded = jwt4.verify(
+        token,
+        config_default.JWT_ACCESS_SECRET
+      );
+      if (!decoded || !decoded.id) {
+        return next(new Error("Invalid token payload"));
+      }
+      socket.data.user = {
+        id: decoded.id,
+        email: decoded.email,
+        role: decoded.role
+      };
+      return next();
+    } catch (error) {
+      return next(new Error("Invalid or expired token"));
+    }
+  });
+  io.on("connection", async (socket) => {
+    try {
+      const userId = socket.data.user.id;
+      const userDoc = await User.findById(userId).select(
+        "fullName profileImage country"
+      );
+      socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
+      socket.data.user.profileImage = userDoc?.profileImage ?? null;
+      const countryName = userDoc?.country?.trim();
+      const isPrivilegedRole = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager";
+      let country = countryName ? resolveCountry(countryName) : null;
+      if (!country && !isPrivilegedRole) {
+        socket.emit(
+          "error",
+          countryName ? "Invalid country on your profile" : "No country set on your profile"
+        );
+        return socket.disconnect();
+      }
+      if (!country) {
+        country = resolveCountry("United States");
+      }
+      if (!country) {
+        socket.emit("error", "No default community room is configured");
+        return socket.disconnect();
+      }
+      const room = await getOrCreateCountryRoom(country.name, userId);
+      let roomId = room._id.toString();
+      socket.data.roomId = roomId;
+      socket.join(roomId);
+      socket.emit("room:joined", {
+        roomId,
+        countryCode: room.countryCode,
+        countryName: room.countryName
+      });
+      socket.on("room:join", async (requestedCountryName) => {
+        try {
+          const canSwitchRooms = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager";
+          if (!canSwitchRooms) {
+            socket.emit(
+              "error",
+              "Only founders, admins, and managers can change community rooms"
+            );
+            return;
+          }
+          const requestedCountry = resolveCountry(requestedCountryName);
+          if (!requestedCountry) {
+            socket.emit("error", "Invalid country name");
+            return;
+          }
+          const nextRoom = await getOrCreateCountryRoom(
+            requestedCountry.name,
+            userId
+          );
+          const nextRoomId = nextRoom._id.toString();
+          if (roomId !== nextRoomId) {
+            socket.leave(roomId);
+            socket.to(roomId).emit("presence:update", {
+              userId,
+              online: false
+            });
+            socket.join(nextRoomId);
+            roomId = nextRoomId;
+            socket.data.roomId = nextRoomId;
+          }
+          socket.emit("room:joined", {
+            roomId: nextRoomId,
+            countryCode: nextRoom.countryCode,
+            countryName: nextRoom.countryName
+          });
+        } catch (error) {
+          console.error("room:join error:", error);
+          socket.emit("error", error.message || "Failed to join room");
+        }
+      });
+      const isFirstConnectionForUser = !onlineUsers.has(userId);
+      if (isFirstConnectionForUser) {
+        onlineUsers.set(userId, /* @__PURE__ */ new Set());
+      }
+      onlineUsers.get(userId).add(socket.id);
+      if (isFirstConnectionForUser) {
+        socket.to(roomId).emit("presence:update", { userId, online: true });
+      }
+      socket.emit("presence:list", Array.from(onlineUsers.keys()));
+      socket.on(
+        "message:send",
+        async (payload) => {
+          try {
+            const content = payload?.content;
+            if (!content || !content.trim()) return;
+            const message = await createMessage(
+              roomId,
+              userId,
+              content.trim(),
+              payload?.replyTo ?? null
+            );
+            io.to(roomId).emit("message:new", message);
+          } catch (error) {
+            console.error("message:send error:", error);
+            socket.emit("error", error.message || "Failed to send message");
+          }
+        }
+      );
+      socket.on("message:delete", async (messageId) => {
+        try {
+          if (!messageId) return;
+          const deleted = await deleteMessage(messageId, userId);
+          io.to(roomId).emit("message:deleted", {
+            messageId: deleted._id.toString(),
+            content: deleted.content
+            // "This message was deleted"
+          });
+        } catch (error) {
+          console.error("message:delete error:", error);
+          socket.emit("error", error.message || "Failed to delete message");
+        }
+      });
+      socket.on("typing:start", () => {
+        socket.to(roomId).emit("typing:update", {
+          userId,
+          fullName: socket.data.user.fullName,
+          typing: true
+        });
+      });
+      socket.on("typing:stop", () => {
+        socket.to(roomId).emit("typing:update", {
+          userId,
+          fullName: socket.data.user.fullName,
+          typing: false
+        });
+      });
+      socket.on("disconnect", () => {
+        const userSockets = onlineUsers.get(userId);
+        userSockets?.delete(socket.id);
+        if (userSockets && userSockets.size === 0) {
+          onlineUsers.delete(userId);
+          socket.to(roomId).emit("presence:update", { userId, online: false });
+        }
+        console.log(`Socket disconnected: ${socket.id}`);
+      });
+    } catch (error) {
+      console.error("Socket connection error:", error);
+      socket.disconnect();
+    }
+  });
+  return io;
+};
+
+// src/modules/notificationTemplates/notification.template.model.schema.ts
+import { model as model19, Schema as Schema19 } from "mongoose";
+
+// src/modules/notifications/notification.interface.ts
+var NOTIFICATION_CHANNELS = ["in_app", "email", "push"];
+
+// src/modules/notificationTemplates/notification.template.model.schema.ts
+var notificationTemplateSchema = new Schema19(
+  {
+    key: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      maxlength: 120,
+      index: true
+    },
+    titleTemplate: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200
+    },
+    bodyTemplate: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2e3
+    },
+    channels: {
+      type: [String],
+      enum: NOTIFICATION_CHANNELS,
+      default: ["in_app"],
+      required: true
+    },
+    actionUrlTemplate: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    enabled: {
+      type: Boolean,
+      default: true,
+      required: true,
+      index: true
+    },
+    createdBy: {
+      type: Schema19.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema19.Types.ObjectId,
+      ref: "User",
+      required: true
+    }
+  },
+  {
+    timestamps: true,
+    collection: "notificationtemplates"
+  }
+);
+notificationTemplateSchema.index({
+  enabled: 1,
+  createdAt: -1
+});
+var NotificationTemplate = model19(
+  "NotificationTemplate",
+  notificationTemplateSchema
+);
+
+// src/modules/notifications/notification.model.schema.ts
+import { model as model20, Schema as Schema20 } from "mongoose";
+var notificationSchema = new Schema20(
+  {
+    recipient: {
+      type: Schema20.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    actor: {
+      type: Schema20.Types.ObjectId,
+      ref: "User"
+    },
+    template: {
+      type: Schema20.Types.ObjectId,
+      ref: "NotificationTemplate"
+    },
+    type: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+      maxlength: 120
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200
+    },
+    body: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2e3
+    },
+    channels: {
+      type: [String],
+      enum: NOTIFICATION_CHANNELS,
+      default: ["in_app"],
+      required: true
+    },
+    relatedEntityType: {
+      type: String,
+      trim: true,
+      maxlength: 120
+    },
+    relatedEntityId: {
+      type: Schema20.Types.ObjectId
+    },
+    actionUrl: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    metadata: {
+      type: Schema20.Types.Mixed
+    },
+    isRead: {
+      type: Boolean,
+      default: false,
+      required: true,
+      index: true
+    },
+    readAt: {
+      type: Date
+    },
+    dedupeKey: {
+      type: String,
+      trim: true
+    }
+  },
+  {
+    timestamps: true,
+    collection: "notifications"
+  }
+);
+notificationSchema.index({
+  recipient: 1,
+  isRead: 1,
+  createdAt: -1
+});
+notificationSchema.index({
+  recipient: 1,
+  createdAt: -1
+});
+notificationSchema.index({
+  type: 1,
+  createdAt: -1
+});
+notificationSchema.index(
+  { dedupeKey: 1 },
+  {
+    unique: true,
+    sparse: true
+  }
+);
+var Notification = model20(
+  "Notification",
+  notificationSchema
+);
+
+// src/modules/notifications/notification.service.ts
+var NOTIFICATION_POPULATE = [
+  {
+    path: "recipient",
+    select: "fullName email role profileImage accessTo"
+  },
+  {
+    path: "actor",
+    select: "fullName email role profileImage"
+  },
+  {
+    path: "template",
+    select: "key titleTemplate bodyTemplate channels enabled"
+  }
+];
+var assertValidObjectId4 = (value, fieldName) => {
+  if (!Types17.ObjectId.isValid(value)) {
+    throwServiceError_default(`${fieldName} is invalid`, 400);
+  }
+};
+var escapeRegex = (value) => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+var renderPlaceholders = (source, variables = {}) => {
+  return source.replace(
+    /{{\s*([a-zA-Z0-9_.-]+)\s*}}/g,
+    (_match, key) => {
+      const value = variables[key];
+      if (value === void 0 || value === null) {
+        return "";
+      }
+      return String(value);
+    }
+  );
+};
+var getExistingByDedupeKey = async (dedupeKey) => {
+  if (!dedupeKey) {
+    return null;
+  }
+  return Notification.findOne({ dedupeKey }).populate(NOTIFICATION_POPULATE);
+};
+var createNotificationRecord = async (payload, templateId) => {
+  assertValidObjectId4(payload.recipient, "Recipient user ID");
+  if (payload.actor) {
+    assertValidObjectId4(payload.actor, "Actor user ID");
+  }
+  if (payload.relatedEntityId) {
+    assertValidObjectId4(payload.relatedEntityId, "Related entity ID");
+  }
+  const existing = await getExistingByDedupeKey(payload.dedupeKey);
+  if (existing) {
+    return existing;
+  }
+  const recipient = await User.findById(payload.recipient).select("_id");
+  assertFound_default(recipient, "Notification recipient user not found", 404);
+  const createData = {
+    recipient: new Types17.ObjectId(payload.recipient),
+    type: payload.type.trim(),
+    title: payload.title.trim(),
+    body: payload.body.trim(),
+    channels: payload.channels ?? ["in_app"],
+    isRead: false
+  };
+  if (payload.actor) {
+    createData.actor = new Types17.ObjectId(payload.actor);
+  }
+  if (templateId) {
+    createData.template = templateId;
+  }
+  if (payload.relatedEntityType) {
+    createData.relatedEntityType = payload.relatedEntityType;
+  }
+  if (payload.relatedEntityId) {
+    createData.relatedEntityId = new Types17.ObjectId(payload.relatedEntityId);
+  }
+  if (payload.actionUrl) {
+    createData.actionUrl = payload.actionUrl;
+  }
+  if (payload.metadata !== void 0) {
+    createData.metadata = payload.metadata;
+  }
+  if (payload.dedupeKey) {
+    createData.dedupeKey = payload.dedupeKey;
+  }
+  try {
+    const notification = await Notification.create(createData);
+    await notification.populate(NOTIFICATION_POPULATE);
+    if (notification.channels.includes("in_app")) {
+      emitNotificationToUser(
+        payload.recipient,
+        notification.toObject()
+      );
+    }
+    return notification;
+  } catch (error) {
+    const maybeMongoError = error;
+    if (maybeMongoError.code === 11e3 && payload.dedupeKey) {
+      const duplicate = await getExistingByDedupeKey(payload.dedupeKey);
+      if (duplicate) {
+        return duplicate;
+      }
+    }
+    throw error;
+  }
+};
+var createNotification = async (payload) => {
+  return createNotificationRecord(payload);
+};
+var createNotificationFromTemplate = async (payload) => {
+  const template = await NotificationTemplate.findOne({
+    key: payload.templateKey.trim().toLowerCase()
+  });
+  assertFound_default(
+    template,
+    `Notification template "${payload.templateKey}" not found`,
+    404
+  );
+  if (!template.enabled) {
+    throwServiceError_default(
+      `Notification template "${template.key}" is disabled`,
+      400
+    );
+  }
+  const variables = payload.variables ?? {};
+  const actionUrl = payload.actionUrl ?? (template.actionUrlTemplate ? renderPlaceholders(template.actionUrlTemplate, variables) : void 0);
+  const notificationPayload = {
+    recipient: payload.recipient,
+    type: template.key,
+    title: renderPlaceholders(template.titleTemplate, variables),
+    body: renderPlaceholders(template.bodyTemplate, variables),
+    channels: payload.channels ?? template.channels,
+    ...payload.actor ? { actor: payload.actor } : {},
+    ...payload.relatedEntityType ? { relatedEntityType: payload.relatedEntityType } : {},
+    ...payload.relatedEntityId ? { relatedEntityId: payload.relatedEntityId } : {},
+    ...actionUrl ? { actionUrl } : {},
+    ...payload.metadata !== void 0 ? { metadata: payload.metadata } : {},
+    ...payload.dedupeKey ? { dedupeKey: payload.dedupeKey } : {}
+  };
+  return createNotificationRecord(
+    notificationPayload,
+    template._id
+  );
+};
+var safeCreateNotification = async (payload) => {
+  try {
+    return await createNotification(payload);
+  } catch (error) {
+    console.error("Notification create failed:", error);
+    return null;
+  }
+};
+var safeCreateFromTemplateOrFallback = async (payload) => {
+  try {
+    const template = await NotificationTemplate.findOne({
+      key: payload.templateKey.trim().toLowerCase()
+    });
+    if (template && !template.enabled) {
+      return null;
+    }
+    if (template) {
+      const fromTemplatePayload = {
+        recipient: payload.recipient,
+        templateKey: template.key,
+        variables: payload.variables ?? {},
+        ...payload.actor ? { actor: payload.actor } : {},
+        ...payload.channels ? { channels: payload.channels } : {},
+        ...payload.relatedEntityType ? { relatedEntityType: payload.relatedEntityType } : {},
+        ...payload.relatedEntityId ? { relatedEntityId: payload.relatedEntityId } : {},
+        ...payload.actionUrl ? { actionUrl: payload.actionUrl } : {},
+        ...payload.metadata !== void 0 ? { metadata: payload.metadata } : {},
+        ...payload.dedupeKey ? { dedupeKey: payload.dedupeKey } : {}
+      };
+      return await createNotificationFromTemplate(fromTemplatePayload);
+    }
+    const fallbackPayload = {
+      recipient: payload.recipient,
+      type: payload.templateKey.trim().toLowerCase(),
+      title: payload.fallbackTitle,
+      body: payload.fallbackBody,
+      channels: payload.channels ?? ["in_app"],
+      ...payload.actor ? { actor: payload.actor } : {},
+      ...payload.relatedEntityType ? { relatedEntityType: payload.relatedEntityType } : {},
+      ...payload.relatedEntityId ? { relatedEntityId: payload.relatedEntityId } : {},
+      ...payload.actionUrl ? { actionUrl: payload.actionUrl } : {},
+      ...payload.metadata !== void 0 ? { metadata: payload.metadata } : {},
+      ...payload.dedupeKey ? { dedupeKey: payload.dedupeKey } : {}
+    };
+    return await createNotification(fallbackPayload);
+  } catch (error) {
+    console.error(
+      `Notification dispatch failed for "${payload.templateKey}":`,
+      error
+    );
+    return null;
+  }
+};
+var buildNotificationFilter = (query, recipientId) => {
+  const filter = {};
+  if (recipientId) {
+    assertValidObjectId4(recipientId, "Recipient user ID");
+    filter.recipient = new Types17.ObjectId(recipientId);
+  }
+  if (query.isRead !== void 0) {
+    filter.isRead = query.isRead;
+  }
+  if (query.type) {
+    filter.type = query.type;
+  }
+  if (query.search) {
+    const regex = new RegExp(escapeRegex(query.search), "i");
+    filter.$or = [
+      { title: regex },
+      { body: regex },
+      { type: regex }
+    ];
+  }
+  return filter;
+};
+var getMyNotifications = async (userId, query = {}) => {
+  const filter = buildNotificationFilter(query, userId);
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [data, total, unreadCount] = await Promise.all([
+    Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(NOTIFICATION_POPULATE),
+    Notification.countDocuments(filter),
+    Notification.countDocuments({
+      recipient: new Types17.ObjectId(userId),
+      isRead: false
+    })
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      unreadCount
+    },
+    data
+  };
+};
+var getUnreadCount = async (userId) => {
+  assertValidObjectId4(userId, "User ID");
+  const unreadCount = await Notification.countDocuments({
+    recipient: new Types17.ObjectId(userId),
+    isRead: false
+  });
+  return {
+    unreadCount
+  };
+};
+var markOneAsRead = async (notificationId, userId) => {
+  assertValidObjectId4(notificationId, "Notification ID");
+  assertValidObjectId4(userId, "User ID");
+  const notification = await Notification.findOneAndUpdate(
+    {
+      _id: new Types17.ObjectId(notificationId),
+      recipient: new Types17.ObjectId(userId)
+    },
+    {
+      $set: {
+        isRead: true,
+        readAt: /* @__PURE__ */ new Date()
+      }
+    },
+    {
+      new: true
+    }
+  ).populate(NOTIFICATION_POPULATE);
+  assertFound_default(notification, "Notification not found", 404);
+  return notification;
+};
+var markOneAsUnread = async (notificationId, userId) => {
+  assertValidObjectId4(notificationId, "Notification ID");
+  assertValidObjectId4(userId, "User ID");
+  const notification = await Notification.findOneAndUpdate(
+    {
+      _id: new Types17.ObjectId(notificationId),
+      recipient: new Types17.ObjectId(userId)
+    },
+    {
+      $set: {
+        isRead: false
+      },
+      $unset: {
+        readAt: 1
+      }
+    },
+    {
+      new: true
+    }
+  ).populate(NOTIFICATION_POPULATE);
+  assertFound_default(notification, "Notification not found", 404);
+  return notification;
+};
+var markAllAsRead = async (userId) => {
+  assertValidObjectId4(userId, "User ID");
+  const now = /* @__PURE__ */ new Date();
+  const result = await Notification.updateMany(
+    {
+      recipient: new Types17.ObjectId(userId),
+      isRead: false
+    },
+    {
+      $set: {
+        isRead: true,
+        readAt: now
+      }
+    }
+  );
+  return {
+    modifiedCount: result.modifiedCount,
+    readAt: now
+  };
+};
+var getAllNotificationsAdmin = async (query = {}) => {
+  const filter = buildNotificationFilter(query, query.recipientId);
+  if (query.actorId) {
+    assertValidObjectId4(query.actorId, "Actor user ID");
+    filter.actor = new Types17.ObjectId(query.actorId);
+  }
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 20;
+  const skip = (page - 1) * limit;
+  const [data, total] = await Promise.all([
+    Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(NOTIFICATION_POPULATE),
+    Notification.countDocuments(filter)
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data
+  };
+};
+var notificationService = {
+  createNotification,
+  createNotificationFromTemplate,
+  safeCreateNotification,
+  safeCreateFromTemplateOrFallback,
+  getMyNotifications,
+  getUnreadCount,
+  markOneAsRead,
+  markOneAsUnread,
+  markAllAsRead,
+  getAllNotificationsAdmin
+};
+
 // src/modules/invictus-payments/invictus.payment.service.ts
 var throwServiceError5 = (message, statusCode) => {
   const error = new Error(
@@ -8407,22 +10699,82 @@ var createInvictusCheckoutSession = async ({
   email,
   input
 }) => {
-  if (!Types16.ObjectId.isValid(
-    input.paymentPlanId
-  )) {
-    throwServiceError5(
-      "Payment plan ID is invalid",
-      400
+  const stripeClient = getStripeClient();
+  if (input.pillarId) {
+    if (!Types18.ObjectId.isValid(input.pillarId)) {
+      throwServiceError5("Pillar ID is invalid", 400);
+    }
+    const pillar = await ChallengePillar.findById(input.pillarId);
+    assertFound5(pillar, "Challenge pillar not found", 404);
+    if (pillar.status === "archived") {
+      throwServiceError5("Cannot purchase an archived pillar", 400);
+    }
+    if (!pillar.isPaid) {
+      throwServiceError5("This pillar is free and does not require purchase", 400);
+    }
+    if (pillar.priceCents <= 0 && !pillar.stripePriceId) {
+      throwServiceError5("This pillar does not have a valid price configured", 400);
+    }
+    const lineItem = pillar.stripePriceId ? {
+      price: pillar.stripePriceId,
+      quantity: 1
+    } : {
+      quantity: 1,
+      price_data: {
+        currency: (pillar.currency || "usd").toLowerCase(),
+        unit_amount: pillar.priceCents,
+        product_data: {
+          name: pillar.title || pillar.name,
+          description: pillar.tagline || pillar.description || "Invictus Challenge Pillar Access"
+        }
+      }
+    };
+    const sessionCreateParams2 = {
+      mode: "payment",
+      line_items: [lineItem],
+      customer_email: email,
+      success_url: `${config_default.FRONTEND_URL}/invictus/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${config_default.FRONTEND_URL}/invictus/payment/cancel`,
+      metadata: {
+        purpose: "invictus_purchase",
+        userId,
+        fullName,
+        email,
+        productType: "pillar",
+        product: pillar._id.toString(),
+        productRefModel: "ChallengePillar"
+      }
+    };
+    const session2 = await stripeClient.checkout.sessions.create(
+      sessionCreateParams2
     );
+    if (!session2.url) {
+      throwServiceError5("Failed to create Stripe Checkout session", 500);
+    }
+    await PaymentSession.create(
+      stripUndefined({
+        user: userId,
+        purpose: "invictus_purchase",
+        status: "pending",
+        stripeCheckoutSessionId: session2.id,
+        stripeCustomerId: typeof session2.customer === "string" ? session2.customer : void 0,
+        checkoutUrl: session2.url ?? void 0,
+        amountTotal: pillar.priceCents,
+        currency: (pillar.currency || "usd").toLowerCase(),
+        product: pillar._id,
+        productRefModel: "ChallengePillar"
+      })
+    );
+    return {
+      checkoutUrl: session2.url,
+      sessionId: session2.id
+    };
   }
-  const plan = await PaymentPlan.findById(
-    input.paymentPlanId
-  );
-  assertFound5(
-    plan,
-    "Payment plan not found",
-    404
-  );
+  if (!input.paymentPlanId || !Types18.ObjectId.isValid(input.paymentPlanId)) {
+    throwServiceError5("Payment plan ID is invalid", 400);
+  }
+  const plan = await PaymentPlan.findById(input.paymentPlanId);
+  assertFound5(plan, "Payment plan not found", 404);
   if (plan.status !== "active") {
     throwServiceError5(
       "This payment plan is not currently available for purchase",
@@ -8443,16 +10795,15 @@ var createInvictusCheckoutSession = async ({
   }
   if (plan.product && plan.productRefModel) {
     const lookup = productLookup[plan.productRefModel];
-    const referencedProduct = await lookup.findById(
-      plan.product.toString()
-    );
-    assertFound5(
-      referencedProduct,
-      "The product linked to this payment plan no longer exists",
-      404
-    );
+    if (lookup) {
+      const referencedProduct = await lookup.findById(plan.product.toString());
+      assertFound5(
+        referencedProduct,
+        "The product linked to this payment plan no longer exists",
+        404
+      );
+    }
   }
-  const stripeClient = getStripeClient();
   const sessionCreateParams = {
     mode: "payment",
     line_items: [
@@ -8472,8 +10823,8 @@ var createInvictusCheckoutSession = async ({
       }
     ],
     customer_email: email,
-    success_url: `${config_default.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${config_default.FRONTEND_URL}/payment/cancel`,
+    success_url: `${config_default.FRONTEND_URL}/invictus/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config_default.FRONTEND_URL}/invictus/payment/cancel`,
     metadata: {
       purpose: "invictus_purchase",
       userId,
@@ -8489,10 +10840,7 @@ var createInvictusCheckoutSession = async ({
     sessionCreateParams
   );
   if (!session.url) {
-    throwServiceError5(
-      "Failed to create Stripe Checkout session",
-      500
-    );
+    throwServiceError5("Failed to create Stripe Checkout session", 500);
   }
   await PaymentSession.create(
     stripUndefined({
@@ -8555,15 +10903,26 @@ var activateInvictusPurchase = async (session) => {
   );
   paymentSession.entitlementActivatedAt = /* @__PURE__ */ new Date();
   await paymentSession.save();
+  notificationService.safeCreateFromTemplateOrFallback({
+    templateKey: "purchase_confirmed",
+    fallbackTitle: "Purchase Confirmed",
+    fallbackBody: `Your access to ${entitlementType === "pillar" ? "the Challenge Pillar" : entitlementType} has been successfully activated.`,
+    recipient: userId,
+    relatedEntityType: "PaymentSession",
+    relatedEntityId: paymentSession._id.toString(),
+    actionUrl: `/invictus/invictus-challenge`,
+    dedupeKey: `purchase_confirmed:${paymentSession._id}`
+  }).catch(() => {
+  });
 };
 var getMyInvictusPurchases = async (userId) => {
   return PaymentSession.find({
-    user: new Types16.ObjectId(userId),
+    user: new Types18.ObjectId(userId),
     purpose: "invictus_purchase"
   }).sort({ createdAt: -1 }).populate(
     "paymentPlan",
     "name slug productType mode amountCents currency"
-  );
+  ).lean();
 };
 var invictusPaymentService = {
   createInvictusCheckoutSession,
@@ -9336,6 +11695,8 @@ var verifyCheckoutSessionFromStripe = async (sessionId) => {
   const purpose = session.metadata?.purpose;
   if (purpose === "upgrade") {
     await activateUpgradePayment(session);
+  } else if (purpose === "invictus_purchase") {
+    await invictusPaymentService.activateInvictusPurchase(session);
   } else {
     await activateRegistrationPayment(session);
   }
@@ -10256,7 +12617,7 @@ var discountRoutes = router10;
 import { Router as Router11 } from "express";
 
 // src/utility/escaperegax.ts
-function escapeRegex(value) {
+function escapeRegex2(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
@@ -10270,7 +12631,7 @@ var getPromotersFromDB = async (query) => {
   const searchTerm = query.search?.trim();
   if (searchTerm) {
     const matchingUserIds = await User.find({
-      fullName: { $regex: escapeRegex(searchTerm), $options: "i" }
+      fullName: { $regex: escapeRegex2(searchTerm), $options: "i" }
     }).distinct("_id");
     baseQuery = baseQuery.find({ user: { $in: matchingUserIds } });
   }
@@ -10345,7 +12706,7 @@ var promoterRoutes = router11;
 import { Router as Router12 } from "express";
 
 // src/modules/dashboardAnalytics/dashboard.analytics.services.ts
-import { Types as Types17 } from "mongoose";
+import { Types as Types19 } from "mongoose";
 var FULL_ANALYTICS_ACCESS_ROLES = [
   "manager",
   "founder"
@@ -10356,7 +12717,7 @@ var FULL_ANALYTICS_ACCESS_ROLES = [
 var hasFullAnalyticsAccess = (role) => FULL_ANALYTICS_ACCESS_ROLES.includes(role);
 var isAdminOrManager4 = (role) => role === "manager" || role === "founder";
 var getDashboardStats = async (userId, role) => {
-  const ownerId = new Types17.ObjectId(userId);
+  const ownerId = new Types19.ObjectId(userId);
   const isPrivileged = isAdminOrManager4(role);
   const listingMatch = isPrivileged ? {} : { associate_id: ownerId };
   const commissionMatch = {
@@ -10456,7 +12817,7 @@ var getTopPromoters = async () => {
   ]);
 };
 var getListingsViewsAnalytics = async (userId, role) => {
-  const ownerId = new Types17.ObjectId(userId);
+  const ownerId = new Types19.ObjectId(userId);
   const canViewAllAnalytics = hasFullAnalyticsAccess(role);
   const listingMatch = canViewAllAnalytics ? {} : {
     associate_id: ownerId
@@ -10846,7 +13207,8 @@ var requireInvictusAccess = async (req, _res, next) => {
 var invictusAccessMiddleware_default = requireInvictusAccess;
 
 // src/modules/challengePillars/challenge.pillar.service.ts
-import { Types as Types18 } from "mongoose";
+init_challenge_pillar_model_schema();
+import { Types as Types20 } from "mongoose";
 var throwServiceError6 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -10885,7 +13247,7 @@ var createChallengePillar = async (payload, actorId) => {
       { slug: payload.slug },
       { order: payload.order }
     ]
-  });
+  }).lean();
   if (existingPillar) {
     throwServiceError6("Challenge pillar already exists", 409);
   }
@@ -10907,12 +13269,12 @@ var createChallengePillar = async (payload, actorId) => {
       ...payload.introVideo
     },
     status: "draft",
-    createdBy: new Types18.ObjectId(actorId)
+    createdBy: new Types20.ObjectId(actorId)
   });
   return pillar;
 };
 var seedDefaultChallengePillars = async (actorId) => {
-  const createdBy = new Types18.ObjectId(actorId);
+  const createdBy = new Types20.ObjectId(actorId);
   const defaultPillars = [
     {
       name: "FEARLESS",
@@ -10982,7 +13344,7 @@ var seedDefaultChallengePillars = async (actorId) => {
       }
     }))
   );
-  return ChallengePillar.find().sort({ order: 1 }).populate("createdBy", "fullName email role profileImage");
+  return ChallengePillar.find().sort({ order: 1 }).populate("createdBy", "fullName email role profileImage").lean();
 };
 var getAllChallengePillars = async ({
   actorRole,
@@ -10996,7 +13358,7 @@ var getAllChallengePillars = async ({
       $ne: "archived"
     };
   }
-  return ChallengePillar.find().sort({ order: 1 }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
+  return ChallengePillar.find(filter).sort({ order: 1 }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage").lean();
 };
 var getChallengePillarBySlug = async (slug, actorRole) => {
   const filter = {
@@ -11005,7 +13367,7 @@ var getChallengePillarBySlug = async (slug, actorRole) => {
   if (!isAdminOrManager5(actorRole)) {
     filter.status = "published";
   }
-  const pillar = await ChallengePillar.findOne(filter).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
+  const pillar = await ChallengePillar.findOne(filter).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage").lean();
   assertPillarExists(pillar);
   return pillar;
 };
@@ -11049,7 +13411,7 @@ var updateChallengePillar = async (pillarId, payload, actorId) => {
       ...payload.introVideo
     });
   }
-  pillar.updatedBy = new Types18.ObjectId(actorId);
+  pillar.updatedBy = new Types20.ObjectId(actorId);
   await pillar.save();
   return pillar.populate("updatedBy", "fullName email role profileImage");
 };
@@ -11067,7 +13429,7 @@ var publishChallengePillar = async (pillarId, actorId) => {
   pillar.status = "published";
   pillar.publishedAt = /* @__PURE__ */ new Date();
   pillar.archivedAt = void 0;
-  pillar.updatedBy = new Types18.ObjectId(actorId);
+  pillar.updatedBy = new Types20.ObjectId(actorId);
   await pillar.save();
   return pillar;
 };
@@ -11079,7 +13441,7 @@ var moveChallengePillarToDraft = async (pillarId, actorId) => {
   }
   pillar.status = "draft";
   pillar.publishedAt = void 0;
-  pillar.updatedBy = new Types18.ObjectId(actorId);
+  pillar.updatedBy = new Types20.ObjectId(actorId);
   await pillar.save();
   return pillar;
 };
@@ -11089,7 +13451,7 @@ var archiveChallengePillar = async (pillarId, actorId) => {
   pillar.status = "archived";
   pillar.archivedAt = /* @__PURE__ */ new Date();
   pillar.publishedAt = void 0;
-  pillar.updatedBy = new Types18.ObjectId(actorId);
+  pillar.updatedBy = new Types20.ObjectId(actorId);
   await pillar.save();
   return pillar;
 };
@@ -11271,6 +13633,7 @@ var challengePillarController = {
 };
 
 // src/modules/challengePillars/challenge.pillar.validation.ts
+init_challenge_pillar_interface();
 import { z as z9 } from "zod";
 var mongoObjectIdSchema = z9.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
 var accentColorSchema = z9.string().regex(/^#[0-9A-Fa-f]{6}$/, "Accent color must be a valid HEX color");
@@ -11456,150 +13819,9 @@ var challengePillarRoutes = router13;
 import { Router as Router14 } from "express";
 
 // src/modules/courseModules/course.module.service.ts
-import { Types as Types19 } from "mongoose";
-
-// src/modules/courseModules/course.module.model.schema.ts
-import { Schema as Schema17, model as model17 } from "mongoose";
-
-// src/modules/courseModules/course.module.interface.ts
-var COURSE_MODULE_STATUSES = [
-  "draft",
-  "published",
-  "archived"
-];
-
-// src/modules/courseModules/course.module.model.schema.ts
-var courseModuleSchema = new Schema17(
-  {
-    pillar: {
-      type: Schema17.Types.ObjectId,
-      ref: "ChallengePillar",
-      required: true,
-      index: true
-    },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 200
-    },
-    slug: {
-      type: String,
-      required: true,
-      lowercase: true,
-      trim: true,
-      maxlength: 200
-    },
-    shortDescription: {
-      type: String,
-      trim: true,
-      maxlength: 500
-    },
-    description: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 5e3
-    },
-    thumbnailUrl: {
-      type: String,
-      trim: true
-    },
-    moduleNumber: {
-      type: Number,
-      required: true,
-      min: 1
-    },
-    estimatedDurationMinutes: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    minimumVideoPercent: {
-      type: Number,
-      default: 80,
-      min: 1,
-      max: 100
-    },
-    minimumActionPercent: {
-      type: Number,
-      default: 80,
-      min: 1,
-      max: 100
-    },
-    minimumQuizScore: {
-      type: Number,
-      default: 70,
-      min: 1,
-      max: 100
-    },
-    maximumQuizAttempts: {
-      type: Number,
-      default: 2,
-      min: 1,
-      max: 10
-    },
-    completionPoints: {
-      type: Number,
-      default: 20,
-      min: 0
-    },
-    status: {
-      type: String,
-      enum: COURSE_MODULE_STATUSES,
-      default: "draft",
-      index: true
-    },
-    publishedAt: {
-      type: Date
-    },
-    archivedAt: {
-      type: Date
-    },
-    createdBy: {
-      type: Schema17.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema17.Types.ObjectId,
-      ref: "User"
-    }
-  },
-  {
-    timestamps: true,
-    collection: "coursemodules"
-  }
-);
-courseModuleSchema.index(
-  {
-    pillar: 1,
-    moduleNumber: 1
-  },
-  {
-    unique: true
-  }
-);
-courseModuleSchema.index(
-  {
-    pillar: 1,
-    slug: 1
-  },
-  {
-    unique: true
-  }
-);
-courseModuleSchema.index({
-  pillar: 1,
-  status: 1,
-  moduleNumber: 1
-});
-var CourseModule = model17(
-  "CourseModule",
-  courseModuleSchema
-);
-
-// src/modules/courseModules/course.module.service.ts
+init_challenge_pillar_model_schema();
+init_course_module_model_schema();
+import { Types as Types21 } from "mongoose";
 var throwServiceError7 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -11611,24 +13833,16 @@ function assertCourseExists(pillar, message = "Challenge pillar not found") {
   }
 }
 var isAdminOrManager6 = (role) => {
-  return role === "admin" || role === "manager";
+  return role === "admin" || role === "manager" || role === "founder";
 };
 var createCourseModule = async (payload, actorId) => {
-  const pillar = await ChallengePillar.findById(
-    payload.pillar
-  );
+  const pillar = await ChallengePillar.findById(payload.pillar);
   assertCourseExists(pillar);
   if (!pillar) {
-    throwServiceError7(
-      "Challenge pillar not found",
-      404
-    );
+    throwServiceError7("Challenge pillar not found", 404);
   }
   if (pillar.status === "archived") {
-    throwServiceError7(
-      "Cannot create module under archived pillar",
-      400
-    );
+    throwServiceError7("Cannot create module under archived pillar", 400);
   }
   const existingModule = await CourseModule.findOne({
     pillar: payload.pillar,
@@ -11640,7 +13854,7 @@ var createCourseModule = async (payload, actorId) => {
         moduleNumber: payload.moduleNumber
       }
     ]
-  });
+  }).lean();
   if (existingModule) {
     throwServiceError7(
       "Module slug or module number already exists in this pillar",
@@ -11649,9 +13863,7 @@ var createCourseModule = async (payload, actorId) => {
   }
   const courseModule = await CourseModule.create({
     ...payload,
-    pillar: new Types19.ObjectId(
-      payload.pillar
-    ),
+    pillar: new Types21.ObjectId(payload.pillar),
     estimatedDurationMinutes: payload.estimatedDurationMinutes ?? 0,
     minimumVideoPercent: payload.minimumVideoPercent ?? 80,
     minimumActionPercent: payload.minimumActionPercent ?? 80,
@@ -11659,7 +13871,7 @@ var createCourseModule = async (payload, actorId) => {
     maximumQuizAttempts: payload.maximumQuizAttempts ?? 2,
     completionPoints: payload.completionPoints ?? 20,
     status: "draft",
-    createdBy: new Types19.ObjectId(actorId)
+    createdBy: new Types21.ObjectId(actorId)
   });
   return courseModule.populate([
     {
@@ -11679,7 +13891,7 @@ var getAllCourseModules = async ({
 }) => {
   const filter = {};
   if (pillarId) {
-    filter.pillar = new Types19.ObjectId(pillarId);
+    filter.pillar = new Types21.ObjectId(pillarId);
   }
   if (!isAdminOrManager6(actorRole)) {
     filter.status = "published";
@@ -11688,19 +13900,10 @@ var getAllCourseModules = async ({
       $ne: "archived"
     };
   }
-  return CourseModule.find().sort({
+  return CourseModule.find(filter).sort({
     pillar: 1,
     moduleNumber: 1
-  }).populate(
-    "pillar",
-    "name slug title isPaid priceCents currency status"
-  ).populate(
-    "createdBy",
-    "fullName email role profileImage"
-  ).populate(
-    "updatedBy",
-    "fullName email role profileImage"
-  );
+  }).populate("pillar", "name slug title isPaid priceCents currency status").populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage").lean();
 };
 var getModulesByPillar = async (pillarId, actorRole) => {
   const pillarFilter = {
@@ -11709,14 +13912,9 @@ var getModulesByPillar = async (pillarId, actorRole) => {
   if (!isAdminOrManager6(actorRole)) {
     pillarFilter.status = "published";
   }
-  const pillar = await ChallengePillar.findOne(
-    pillarFilter
-  );
+  const pillar = await ChallengePillar.findOne(pillarFilter).lean();
   if (!pillar) {
-    throwServiceError7(
-      "Challenge pillar not found or unavailable",
-      404
-    );
+    throwServiceError7("Challenge pillar not found or unavailable", 404);
   }
   const moduleFilter = {
     pillar: pillarId
@@ -11728,12 +13926,7 @@ var getModulesByPillar = async (pillarId, actorRole) => {
       $ne: "archived"
     };
   }
-  const modules = await CourseModule.find(
-    moduleFilter
-  ).sort({ moduleNumber: 1 }).populate(
-    "pillar",
-    "name slug title isPaid priceCents currency status"
-  );
+  const modules = await CourseModule.find(moduleFilter).sort({ moduleNumber: 1 }).populate("pillar", "name slug title isPaid priceCents currency status").lean();
   return {
     pillar,
     modules
@@ -11746,40 +13939,20 @@ var getSingleCourseModule = async (moduleId, actorRole) => {
   if (!isAdminOrManager6(actorRole)) {
     filter.status = "published";
   }
-  const courseModule = await CourseModule.findOne().populate(
-    "pillar",
-    "name slug title isPaid priceCents currency status"
-  ).populate(
-    "createdBy",
-    "fullName email role profileImage"
-  ).populate(
-    "updatedBy",
-    "fullName email role profileImage"
-  );
+  const courseModule = await CourseModule.findOne(filter).populate("pillar", "name slug title isPaid priceCents currency status").populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage").lean();
   if (!courseModule) {
-    throwServiceError7(
-      "Course module not found",
-      404
-    );
+    throwServiceError7("Course module not found", 404);
   }
   return courseModule;
 };
 var updateCourseModule = async (moduleId, payload, actorId) => {
-  const courseModule = await CourseModule.findById(
-    moduleId
-  );
+  const courseModule = await CourseModule.findById(moduleId);
   assertCourseExists(courseModule);
   if (!courseModule) {
-    throwServiceError7(
-      "Course module not found",
-      404
-    );
+    throwServiceError7("Course module not found", 404);
   }
   if (courseModule?.status === "archived") {
-    throwServiceError7(
-      "Archived module cannot be updated",
-      400
-    );
+    throwServiceError7("Archived module cannot be updated", 400);
   }
   if (payload.slug !== void 0 || payload.moduleNumber !== void 0) {
     const duplicateConditions = [];
@@ -11847,7 +14020,7 @@ var updateCourseModule = async (moduleId, payload, actorId) => {
   if (payload.completionPoints !== void 0) {
     courseModule.completionPoints = payload.completionPoints;
   }
-  courseModule.updatedBy = new Types19.ObjectId(actorId);
+  courseModule.updatedBy = new Types21.ObjectId(actorId);
   await courseModule.save();
   return courseModule.populate([
     {
@@ -11861,31 +14034,18 @@ var updateCourseModule = async (moduleId, payload, actorId) => {
   ]);
 };
 var publishCourseModule = async (moduleId, actorId) => {
-  const courseModule = await CourseModule.findById(
-    moduleId
-  );
+  const courseModule = await CourseModule.findById(moduleId);
   assertCourseExists(courseModule);
   if (!courseModule) {
-    throwServiceError7(
-      "Course module not found",
-      404
-    );
+    throwServiceError7("Course module not found", 404);
   }
   if (courseModule.status === "archived") {
-    throwServiceError7(
-      "Archived module cannot be published",
-      400
-    );
+    throwServiceError7("Archived module cannot be published", 400);
   }
-  const pillar = await ChallengePillar.findById(
-    courseModule.pillar
-  );
+  const pillar = await ChallengePillar.findById(courseModule.pillar);
   assertCourseExists(pillar);
   if (!pillar) {
-    throwServiceError7(
-      "Parent challenge pillar not found",
-      404
-    );
+    throwServiceError7("Parent challenge pillar not found", 404);
   }
   if (pillar.status !== "published") {
     throwServiceError7(
@@ -11896,48 +14056,35 @@ var publishCourseModule = async (moduleId, actorId) => {
   courseModule.status = "published";
   courseModule.publishedAt = /* @__PURE__ */ new Date();
   courseModule.archivedAt = void 0;
-  courseModule.updatedBy = new Types19.ObjectId(actorId);
+  courseModule.updatedBy = new Types21.ObjectId(actorId);
   await courseModule.save();
   return courseModule;
 };
 var moveCourseModuleToDraft = async (moduleId, actorId) => {
-  const courseModule = await CourseModule.findById(
-    moduleId
-  );
+  const courseModule = await CourseModule.findById(moduleId);
   assertCourseExists(courseModule);
   if (!courseModule) {
-    throwServiceError7(
-      "Course module not found",
-      404
-    );
+    throwServiceError7("Course module not found", 404);
   }
   if (courseModule.status === "archived") {
-    throwServiceError7(
-      "Archived module cannot be moved to draft",
-      400
-    );
+    throwServiceError7("Archived module cannot be moved to draft", 400);
   }
   courseModule.status = "draft";
   courseModule.publishedAt = void 0;
-  courseModule.updatedBy = new Types19.ObjectId(actorId);
+  courseModule.updatedBy = new Types21.ObjectId(actorId);
   await courseModule.save();
   return courseModule;
 };
 var archiveCourseModule = async (moduleId, actorId) => {
-  const courseModule = await CourseModule.findById(
-    moduleId
-  );
+  const courseModule = await CourseModule.findById(moduleId);
   assertCourseExists(courseModule);
   if (!courseModule) {
-    throwServiceError7(
-      "Course module not found",
-      404
-    );
+    throwServiceError7("Course module not found", 404);
   }
   courseModule.status = "archived";
   courseModule.archivedAt = /* @__PURE__ */ new Date();
   courseModule.publishedAt = void 0;
-  courseModule.updatedBy = new Types19.ObjectId(actorId);
+  courseModule.updatedBy = new Types21.ObjectId(actorId);
   await courseModule.save();
   return courseModule;
 };
@@ -12589,182 +14736,9 @@ var getUploadedFieldFile = (req, fieldName) => {
 };
 
 // src/modules/moduleVideos/module.video.service.ts
-import { Types as Types20 } from "mongoose";
-
-// src/modules/moduleVideos/module.video.model.schema.ts
-import { model as model18, Schema as Schema18 } from "mongoose";
-
-// src/modules/moduleVideos/module.video.interface.ts
-var MODULE_VIDEO_STATUSES = [
-  "draft",
-  "published",
-  "archived"
-];
-var VIDEO_UPLOAD_STATUSES = [
-  "processing",
-  "ready",
-  "failed"
-];
-
-// src/modules/moduleVideos/module.video.model.schema.ts
-var moduleVideoSchema = new Schema18(
-  {
-    module: {
-      type: Schema18.Types.ObjectId,
-      ref: "CourseModule",
-      required: true,
-      index: true
-    },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 200
-    },
-    slug: {
-      type: String,
-      required: true,
-      lowercase: true,
-      trim: true,
-      maxlength: 200
-    },
-    description: {
-      type: String,
-      trim: true,
-      maxlength: 3e3
-    },
-    provider: {
-      type: String,
-      enum: ["cloudinary"],
-      default: "cloudinary",
-      required: true
-    },
-    resourceType: {
-      type: String,
-      enum: ["video"],
-      default: "video",
-      required: true
-    },
-    cloudinaryPublicId: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    cloudinaryAssetId: {
-      type: String,
-      trim: true
-    },
-    secureUrl: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    playbackUrl: {
-      type: String,
-      trim: true
-    },
-    thumbnailUrl: {
-      type: String,
-      trim: true
-    },
-    folder: {
-      type: String,
-      trim: true
-    },
-    format: {
-      type: String,
-      trim: true
-    },
-    durationSeconds: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    bytes: {
-      type: Number,
-      min: 0
-    },
-    width: {
-      type: Number,
-      min: 0
-    },
-    height: {
-      type: Number,
-      min: 0
-    },
-    isPaid: {
-      type: Boolean,
-      required: true,
-      default: false,
-      index: true
-    },
-    isRequired: {
-      type: Boolean,
-      default: true
-    },
-    requiredWatchPercent: {
-      type: Number,
-      default: 80,
-      min: 1,
-      max: 100
-    },
-    pointsReward: {
-      type: Number,
-      default: 10,
-      min: 0
-    },
-    order: {
-      type: Number,
-      required: true,
-      min: 1
-    },
-    uploadStatus: {
-      type: String,
-      enum: VIDEO_UPLOAD_STATUSES,
-      default: "ready",
-      index: true
-    },
-    status: {
-      type: String,
-      enum: MODULE_VIDEO_STATUSES,
-      default: "draft",
-      index: true
-    },
-    publishedAt: {
-      type: Date
-    },
-    archivedAt: {
-      type: Date
-    },
-    uploadedBy: {
-      type: Schema18.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema18.Types.ObjectId,
-      ref: "User"
-    }
-  },
-  {
-    timestamps: true,
-    collection: "modulevideos"
-  }
-);
-moduleVideoSchema.index({ module: 1, order: 1 }, { unique: true });
-moduleVideoSchema.index({ module: 1, slug: 1 }, { unique: true });
-moduleVideoSchema.index({ cloudinaryPublicId: 1 }, { unique: true });
-moduleVideoSchema.index({
-  module: 1,
-  status: 1,
-  order: 1
-});
-var ModuleVideo = model18(
-  "ModuleVideo",
-  moduleVideoSchema
-);
-
-// src/modules/moduleVideos/module.video.service.ts
+init_course_module_model_schema();
+init_module_video_model_schema();
+import { Types as Types22 } from "mongoose";
 var throwServiceError8 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -12814,7 +14788,7 @@ var createModuleVideo = async (moduleId, payload, actorId) => {
     );
   }
   const createData = {
-    module: new Types20.ObjectId(moduleId),
+    module: new Types22.ObjectId(moduleId),
     title: payload.title,
     slug: payload.slug,
     provider: "cloudinary",
@@ -12829,7 +14803,7 @@ var createModuleVideo = async (moduleId, payload, actorId) => {
     order: payload.order,
     uploadStatus: payload.uploadStatus ?? "ready",
     status: "draft",
-    uploadedBy: new Types20.ObjectId(actorId)
+    uploadedBy: new Types22.ObjectId(actorId)
   };
   const optionalValues = [
     ["description", payload.description],
@@ -12871,7 +14845,7 @@ var getAllModuleVideos = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    filter.module = new Types20.ObjectId(moduleId);
+    filter.module = new Types22.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager7(actorRole);
   if (!isPrivileged) {
@@ -12879,7 +14853,7 @@ var getAllModuleVideos = async ({
   } else if (!includeArchived) {
     filter.status = { $ne: "archived" };
   }
-  const query = ModuleVideo.find().sort({ module: 1, order: 1 }).populate({
+  const query = ModuleVideo.find(filter).sort({ module: 1, order: 1 }).populate({
     path: "module",
     select: "title slug moduleNumber pillar status",
     populate: {
@@ -12893,7 +14867,7 @@ var getAllModuleVideos = async ({
       "-secureUrl -playbackUrl -cloudinaryPublicId -cloudinaryAssetId"
     );
   }
-  return query;
+  return query.lean();
 };
 var getVideosByModule = async (moduleId, actorRole) => {
   const moduleFilter = { _id: moduleId };
@@ -12903,10 +14877,10 @@ var getVideosByModule = async (moduleId, actorRole) => {
   const courseModule = await CourseModule.findOne(moduleFilter).populate(
     "pillar",
     "name slug title isPaid priceCents currency status"
-  );
+  ).lean();
   assertFound6(courseModule, "Course module not found or unavailable", 404);
   const filter = {
-    module: new Types20.ObjectId(moduleId)
+    module: new Types22.ObjectId(moduleId)
   };
   const isPrivileged = isAdminOrManager7(actorRole);
   if (!isPrivileged) {
@@ -12914,13 +14888,13 @@ var getVideosByModule = async (moduleId, actorRole) => {
   } else {
     filter.status = { $ne: "archived" };
   }
-  const query = ModuleVideo.find().sort({ order: 1 }).populate("uploadedBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
+  const query = ModuleVideo.find(filter).sort({ order: 1 }).populate("uploadedBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
   if (!isPrivileged) {
     query.select(
       "-secureUrl -playbackUrl -cloudinaryPublicId -cloudinaryAssetId"
     );
   }
-  const videos = await query;
+  const videos = await query.lean();
   return {
     module: courseModule,
     videos
@@ -12935,7 +14909,7 @@ var getSingleModuleVideo = async (videoId, actorRole) => {
   if (!isPrivileged) {
     filter.status = "published";
   }
-  const query = ModuleVideo.findOne().populate({
+  const query = ModuleVideo.findOne(filter).populate({
     path: "module",
     select: "title slug moduleNumber pillar status",
     populate: {
@@ -12947,7 +14921,7 @@ var getSingleModuleVideo = async (videoId, actorRole) => {
   if (!isPrivileged) {
     query.select(" -cloudinaryPublicId -cloudinaryAssetId");
   }
-  const video = await query;
+  const video = await query.lean();
   assertFound6(video, "Module video not found", 404);
   return video;
 };
@@ -12962,7 +14936,11 @@ var checkVideoAccess = async (videoId, userId) => {
     }
   });
   assertFound6(video, "Module video not found", 404);
-  if (!video.isPaid) {
+  const moduleData = video.module;
+  const pillarObj = typeof moduleData?.pillar === "object" && moduleData?.pillar !== null ? moduleData.pillar : null;
+  const isPillarPaid = pillarObj?.isPaid === true;
+  const isVideoPaid = video.isPaid === true;
+  if (!isPillarPaid && !isVideoPaid) {
     return {
       canWatch: true,
       isLocked: false,
@@ -12970,10 +14948,20 @@ var checkVideoAccess = async (videoId, userId) => {
       playbackUrl: video.playbackUrl ?? video.secureUrl
     };
   }
-  const moduleData = video.module;
+  const pillarId = pillarObj?._id ? String(pillarObj._id) : typeof moduleData?.pillar === "string" ? moduleData.pillar : void 0;
+  if (!pillarId) {
+    return {
+      canWatch: false,
+      isLocked: true,
+      paymentRequired: true,
+      reason: "pillar_purchase_required",
+      playbackUrl: null,
+      secureUrl: null
+    };
+  }
   const access = await userEntitlementService.checkPillarAccess(
     userId,
-    String(moduleData.pillar._id)
+    pillarId
   );
   if (!access.hasAccess) {
     return {
@@ -12983,7 +14971,7 @@ var checkVideoAccess = async (videoId, userId) => {
       reason: "pillar_purchase_required",
       playbackUrl: null,
       secureUrl: null,
-      pillar: access.pillar
+      pillar: access.pillar ?? pillarObj
     };
   }
   return {
@@ -13056,7 +15044,7 @@ var updateModuleVideo = async (videoId, payload, actorId) => {
   setNullableField(video, "bytes", payload.bytes);
   setNullableField(video, "width", payload.width);
   setNullableField(video, "height", payload.height);
-  video.updatedBy = new Types20.ObjectId(actorId);
+  video.updatedBy = new Types22.ObjectId(actorId);
   await video.save();
   return video.populate([
     {
@@ -13094,7 +15082,7 @@ var publishModuleVideo = async (videoId, actorId) => {
   video.status = "published";
   video.publishedAt = /* @__PURE__ */ new Date();
   video.set("archivedAt", void 0);
-  video.updatedBy = new Types20.ObjectId(actorId);
+  video.updatedBy = new Types22.ObjectId(actorId);
   await video.save();
   return video;
 };
@@ -13106,7 +15094,7 @@ var moveModuleVideoToDraft = async (videoId, actorId) => {
   }
   video.status = "draft";
   video.set("publishedAt", void 0);
-  video.updatedBy = new Types20.ObjectId(actorId);
+  video.updatedBy = new Types22.ObjectId(actorId);
   await video.save();
   return video;
 };
@@ -13116,7 +15104,7 @@ var archiveModuleVideo = async (videoId, actorId) => {
   video.status = "archived";
   video.archivedAt = /* @__PURE__ */ new Date();
   video.set("publishedAt", void 0);
-  video.updatedBy = new Types20.ObjectId(actorId);
+  video.updatedBy = new Types22.ObjectId(actorId);
   await video.save();
   return video;
 };
@@ -13341,6 +15329,23 @@ var archiveModuleVideo2 = async (req, res, next) => {
     next(error);
   }
 };
+var checkVideoAccess2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser5(req);
+    const result = await moduleVideoService.checkVideoAccess(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Video access checked successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var moduleVideoController = {
   createModuleVideo: createModuleVideo2,
   getAllModuleVideos: getAllModuleVideos2,
@@ -13349,10 +15354,12 @@ var moduleVideoController = {
   updateModuleVideo: updateModuleVideo2,
   publishModuleVideo: publishModuleVideo2,
   moveModuleVideoToDraft: moveModuleVideoToDraft2,
-  archiveModuleVideo: archiveModuleVideo2
+  archiveModuleVideo: archiveModuleVideo2,
+  checkVideoAccess: checkVideoAccess2
 };
 
 // src/modules/moduleVideos/module.video.validation.ts
+init_module_video_interface();
 import { z as z11 } from "zod";
 var mongoObjectIdSchema3 = z11.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
 var slugSchema = z11.string().trim().min(2).max(200).regex(
@@ -13441,6 +15448,13 @@ router15.get(
   moduleVideoController.getVideosByModule
 );
 router15.get(
+  "/:id/access",
+  verifyToken,
+  requireInvictusAccess,
+  validateRequest_default(moduleVideoIdValidation),
+  moduleVideoController.checkVideoAccess
+);
+router15.get(
   "/:id",
   verifyToken,
   requireInvictusAccess,
@@ -13481,179 +15495,9 @@ var moduleVideoRoutes = router15;
 import { Router as Router16 } from "express";
 
 // src/modules/moduleResources/module.resource.service.ts
-import { Types as Types21 } from "mongoose";
-
-// src/modules/moduleResources/module.resource.model.schema.ts
-import { model as model19, Schema as Schema19 } from "mongoose";
-
-// src/modules/moduleResources/module.resource.interface.ts
-var MODULE_RESOURCE_STATUSES = [
-  "draft",
-  "published",
-  "archived"
-];
-var MODULE_RESOURCE_TYPES = [
-  "pdf",
-  "worksheet",
-  "template",
-  "external_link",
-  "other"
-];
-var MODULE_RESOURCE_PROVIDERS = [
-  "cloudinary",
-  "external"
-];
-var CLOUDINARY_RESOURCE_TYPES = [
-  "image",
-  "raw",
-  "video"
-];
-
-// src/modules/moduleResources/module.resource.model.schema.ts
-var moduleResourceSchema = new Schema19(
-  {
-    module: {
-      type: Schema19.Types.ObjectId,
-      ref: "CourseModule",
-      required: true,
-      index: true
-    },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 200
-    },
-    slug: {
-      type: String,
-      required: true,
-      lowercase: true,
-      trim: true,
-      maxlength: 200
-    },
-    description: {
-      type: String,
-      trim: true,
-      maxlength: 3e3
-    },
-    resourceType: {
-      type: String,
-      enum: MODULE_RESOURCE_TYPES,
-      required: true,
-      index: true
-    },
-    provider: {
-      type: String,
-      enum: MODULE_RESOURCE_PROVIDERS,
-      required: true
-    },
-    fileName: {
-      type: String,
-      trim: true
-    },
-    mimeType: {
-      type: String,
-      trim: true
-    },
-    format: {
-      type: String,
-      trim: true
-    },
-    bytes: {
-      type: Number,
-      min: 0
-    },
-    cloudinaryPublicId: {
-      type: String,
-      trim: true
-    },
-    cloudinaryAssetId: {
-      type: String,
-      trim: true
-    },
-    cloudinaryResourceType: {
-      type: String,
-      enum: CLOUDINARY_RESOURCE_TYPES
-    },
-    secureUrl: {
-      type: String,
-      trim: true
-    },
-    externalUrl: {
-      type: String,
-      trim: true
-    },
-    thumbnailUrl: {
-      type: String,
-      trim: true
-    },
-    isRequired: {
-      type: Boolean,
-      default: true
-    },
-    pointsReward: {
-      type: Number,
-      default: 5,
-      min: 0
-    },
-    order: {
-      type: Number,
-      required: true,
-      min: 1
-    },
-    status: {
-      type: String,
-      enum: MODULE_RESOURCE_STATUSES,
-      default: "draft",
-      index: true
-    },
-    publishedAt: {
-      type: Date
-    },
-    archivedAt: {
-      type: Date
-    },
-    createdBy: {
-      type: Schema19.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema19.Types.ObjectId,
-      ref: "User"
-    }
-  },
-  {
-    timestamps: true,
-    collection: "moduleresources"
-  }
-);
-moduleResourceSchema.index(
-  { module: 1, order: 1 },
-  { unique: true }
-);
-moduleResourceSchema.index(
-  { module: 1, slug: 1 },
-  { unique: true }
-);
-moduleResourceSchema.index(
-  { cloudinaryPublicId: 1 },
-  {
-    unique: true,
-    sparse: true
-  }
-);
-moduleResourceSchema.index({
-  module: 1,
-  status: 1,
-  order: 1
-});
-var ModuleResource = model19(
-  "ModuleResource",
-  moduleResourceSchema
-);
-
-// src/modules/moduleResources/module.resource.service.ts
+init_course_module_model_schema();
+init_module_resource_model_schema();
+import { Types as Types23 } from "mongoose";
 var throwServiceError9 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -13732,7 +15576,7 @@ var createModuleResource = async (moduleId, payload, actorId) => {
     );
   }
   const createData = {
-    module: new Types21.ObjectId(moduleId),
+    module: new Types23.ObjectId(moduleId),
     title: payload.title,
     slug: payload.slug,
     resourceType: payload.resourceType,
@@ -13741,7 +15585,7 @@ var createModuleResource = async (moduleId, payload, actorId) => {
     pointsReward: payload.pointsReward ?? 5,
     order: payload.order,
     status: "draft",
-    createdBy: new Types21.ObjectId(actorId)
+    createdBy: new Types23.ObjectId(actorId)
   };
   const optionalValues = [
     ["description", payload.description],
@@ -13785,7 +15629,7 @@ var getAllModuleResources = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    filter.module = new Types21.ObjectId(moduleId);
+    filter.module = new Types23.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager8(actorRole);
   if (!isPrivileged) {
@@ -13824,7 +15668,7 @@ var getResourcesByModule = async (moduleId, actorRole) => {
     404
   );
   const filter = {
-    module: new Types21.ObjectId(moduleId)
+    module: new Types23.ObjectId(moduleId)
   };
   const isPrivileged = isAdminOrManager8(actorRole);
   if (!isPrivileged) {
@@ -13946,7 +15790,7 @@ var updateModuleResource = async (resourceId, payload, actorId) => {
   setNullableField2(resource, "secureUrl", payload.secureUrl);
   setNullableField2(resource, "externalUrl", payload.externalUrl);
   setNullableField2(resource, "thumbnailUrl", payload.thumbnailUrl);
-  resource.updatedBy = new Types21.ObjectId(actorId);
+  resource.updatedBy = new Types23.ObjectId(actorId);
   await resource.save();
   return resource.populate([
     {
@@ -13987,7 +15831,7 @@ var publishModuleResource = async (resourceId, actorId) => {
   resource.status = "published";
   resource.publishedAt = /* @__PURE__ */ new Date();
   resource.set("archivedAt", void 0);
-  resource.updatedBy = new Types21.ObjectId(actorId);
+  resource.updatedBy = new Types23.ObjectId(actorId);
   await resource.save();
   return resource;
 };
@@ -13999,7 +15843,7 @@ var moveModuleResourceToDraft = async (resourceId, actorId) => {
   }
   resource.status = "draft";
   resource.set("publishedAt", void 0);
-  resource.updatedBy = new Types21.ObjectId(actorId);
+  resource.updatedBy = new Types23.ObjectId(actorId);
   await resource.save();
   return resource;
 };
@@ -14009,7 +15853,7 @@ var archiveModuleResource = async (resourceId, actorId) => {
   resource.status = "archived";
   resource.archivedAt = /* @__PURE__ */ new Date();
   resource.set("publishedAt", void 0);
-  resource.updatedBy = new Types21.ObjectId(actorId);
+  resource.updatedBy = new Types23.ObjectId(actorId);
   await resource.save();
   return resource;
 };
@@ -14243,6 +16087,7 @@ var moduleResourceController = {
 };
 
 // src/modules/moduleResources/module.resource.validation.ts
+init_module_resource_interface();
 import { z as z12 } from "zod";
 var mongoObjectIdSchema4 = z12.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
 var slugSchema2 = z12.string().trim().min(2).max(200).regex(
@@ -14325,7 +16170,7 @@ var router16 = Router16();
 router16.post(
   "/module/:moduleId",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   uploadModuleResourceFields,
   normalizeModuleResourceMultipartBody,
   validateRequest_default(createModuleResourceValidation),
@@ -14354,28 +16199,28 @@ router16.get(
 router16.patch(
   "/:id",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(updateModuleResourceValidation),
   moduleResourceController.updateModuleResource
 );
 router16.patch(
   "/:id/publish",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(moduleResourceIdValidation),
   moduleResourceController.publishModuleResource
 );
 router16.patch(
   "/:id/draft",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(moduleResourceIdValidation),
   moduleResourceController.moveModuleResourceToDraft
 );
 router16.patch(
   "/:id/archive",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(moduleResourceIdValidation),
   moduleResourceController.archiveModuleResource
 );
@@ -14385,14 +16230,15 @@ var moduleResourceRoutes = router16;
 import { Router as Router17 } from "express";
 
 // src/modules/quizeQuestions/quiz.question.service.ts
+init_course_module_model_schema();
 import {
-  Types as Types22
+  Types as Types24
 } from "mongoose";
 
 // src/modules/quizeQuestions/quiz.question.model.schema.ts
 import {
-  model as model20,
-  Schema as Schema20
+  model as model24,
+  Schema as Schema24
 } from "mongoose";
 
 // src/modules/quizeQuestions/quiz.question.interface.ts
@@ -14408,10 +16254,10 @@ var QUIZ_QUESTION_STATUSES = [
 ];
 
 // src/modules/quizeQuestions/quiz.question.model.schema.ts
-var quizQuestionSchema = new Schema20(
+var quizQuestionSchema = new Schema24(
   {
     module: {
-      type: Schema20.Types.ObjectId,
+      type: Schema24.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
@@ -14471,12 +16317,12 @@ var quizQuestionSchema = new Schema20(
       type: Date
     },
     createdBy: {
-      type: Schema20.Types.ObjectId,
+      type: Schema24.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema20.Types.ObjectId,
+      type: Schema24.Types.ObjectId,
       ref: "User"
     }
   },
@@ -14499,7 +16345,7 @@ quizQuestionSchema.index({
   status: 1,
   order: 1
 });
-var QuizQuestion = model20(
+var QuizQuestion = model24(
   "QuizQuestion",
   quizQuestionSchema
 );
@@ -14521,8 +16367,8 @@ var assertFound8 = (value, message, statusCode) => {
     );
   }
 };
-var assertValidObjectId4 = (value, fieldName) => {
-  if (!Types22.ObjectId.isValid(value)) {
+var assertValidObjectId5 = (value, fieldName) => {
+  if (!Types24.ObjectId.isValid(value)) {
     throwServiceError10(
       `${fieldName} is invalid`,
       400
@@ -14594,7 +16440,7 @@ var validateQuestionConfiguration = ({
   }
 };
 var ensureCourseModuleExists3 = async (moduleId) => {
-  assertValidObjectId4(
+  assertValidObjectId5(
     moduleId,
     "Course module ID"
   );
@@ -14647,12 +16493,12 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
     );
   }
   const createData = {
-    module: new Types22.ObjectId(moduleId),
+    module: new Types24.ObjectId(moduleId),
     question: payload.question,
     questionType: payload.questionType,
     order: payload.order,
     status: "draft",
-    createdBy: new Types22.ObjectId(actorId)
+    createdBy: new Types24.ObjectId(actorId)
   };
   if (payload.questionType === "true_false") {
     createData.correctBooleanAnswer = payload.correctBooleanAnswer;
@@ -14699,11 +16545,11 @@ var getAllQuizQuestions = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    assertValidObjectId4(
+    assertValidObjectId5(
       moduleId,
       "Course module ID"
     );
-    filter.module = new Types22.ObjectId(moduleId);
+    filter.module = new Types24.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager9(actorRole);
   if (!isPrivileged) {
@@ -14743,7 +16589,7 @@ var getAllQuizQuestions = async ({
   return query;
 };
 var getQuestionsByModule = async (moduleId, actorRole) => {
-  assertValidObjectId4(
+  assertValidObjectId5(
     moduleId,
     "Course module ID"
   );
@@ -14766,7 +16612,7 @@ var getQuestionsByModule = async (moduleId, actorRole) => {
     404
   );
   const questionFilter = {
-    module: new Types22.ObjectId(moduleId)
+    module: new Types24.ObjectId(moduleId)
   };
   if (!isPrivileged) {
     questionFilter.status = "published";
@@ -14800,7 +16646,7 @@ var getQuestionsByModule = async (moduleId, actorRole) => {
   };
 };
 var getSingleQuizQuestion = async (questionId, actorRole) => {
-  assertValidObjectId4(
+  assertValidObjectId5(
     questionId,
     "Quiz question ID"
   );
@@ -14844,7 +16690,7 @@ var getSingleQuizQuestion = async (questionId, actorRole) => {
   return question;
 };
 var updateQuizQuestion = async (questionId, payload, actorId) => {
-  assertValidObjectId4(
+  assertValidObjectId5(
     questionId,
     "Quiz question ID"
   );
@@ -14943,7 +16789,7 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
   if (payload.order !== void 0) {
     question.order = payload.order;
   }
-  question.updatedBy = new Types22.ObjectId(actorId);
+  question.updatedBy = new Types24.ObjectId(actorId);
   try {
     await question.save();
   } catch (error) {
@@ -14972,7 +16818,7 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
   ]);
 };
 var publishQuizQuestion = async (questionId, actorId) => {
-  assertValidObjectId4(
+  assertValidObjectId5(
     questionId,
     "Quiz question ID"
   );
@@ -15018,12 +16864,12 @@ var publishQuizQuestion = async (questionId, actorId) => {
     "archivedAt",
     void 0
   );
-  question.updatedBy = new Types22.ObjectId(actorId);
+  question.updatedBy = new Types24.ObjectId(actorId);
   await question.save();
   return question;
 };
 var moveQuizQuestionToDraft = async (questionId, actorId) => {
-  assertValidObjectId4(
+  assertValidObjectId5(
     questionId,
     "Quiz question ID"
   );
@@ -15046,12 +16892,12 @@ var moveQuizQuestionToDraft = async (questionId, actorId) => {
     "publishedAt",
     void 0
   );
-  question.updatedBy = new Types22.ObjectId(actorId);
+  question.updatedBy = new Types24.ObjectId(actorId);
   await question.save();
   return question;
 };
 var archiveQuizQuestion = async (questionId, actorId) => {
-  assertValidObjectId4(
+  assertValidObjectId5(
     questionId,
     "Quiz question ID"
   );
@@ -15069,7 +16915,7 @@ var archiveQuizQuestion = async (questionId, actorId) => {
     "publishedAt",
     void 0
   );
-  question.updatedBy = new Types22.ObjectId(actorId);
+  question.updatedBy = new Types24.ObjectId(actorId);
   await question.save();
   return question;
 };
@@ -15363,7 +17209,8 @@ router17.post(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest_default(
     createQuizQuestionValidation
@@ -15399,7 +17246,8 @@ router17.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest_default(
     updateQuizQuestionValidation
@@ -15411,7 +17259,8 @@ router17.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest_default(
     quizQuestionIdValidation
@@ -15423,7 +17272,8 @@ router17.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest_default(
     quizQuestionIdValidation
@@ -15435,7 +17285,8 @@ router17.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest_default(
     quizQuestionIdValidation
@@ -15448,110 +17299,11 @@ var quizQuestionRoutes = router17;
 import { Router as Router18 } from "express";
 
 // src/modules/moduleActions/module.action.service.ts
+init_course_module_model_schema();
+init_module_action_model_schema();
 import {
-  Types as Types23
+  Types as Types25
 } from "mongoose";
-
-// src/modules/moduleActions/module.action.model.schema.ts
-import {
-  model as model21,
-  Schema as Schema21
-} from "mongoose";
-
-// src/modules/moduleActions/module.action.interface.ts
-var MODULE_ACTION_STATUSES = [
-  "draft",
-  "published",
-  "archived"
-];
-
-// src/modules/moduleActions/module.action.model.schema.ts
-var moduleActionSchema = new Schema21(
-  {
-    module: {
-      type: Schema21.Types.ObjectId,
-      ref: "CourseModule",
-      required: true,
-      index: true
-    },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 300
-    },
-    description: {
-      type: String,
-      trim: true,
-      maxlength: 5e3
-    },
-    order: {
-      type: Number,
-      required: true,
-      min: 1
-    },
-    isRequired: {
-      type: Boolean,
-      default: true,
-      required: true
-    },
-    pointsReward: {
-      type: Number,
-      default: 5,
-      min: 0
-    },
-    status: {
-      type: String,
-      enum: MODULE_ACTION_STATUSES,
-      default: "draft",
-      index: true
-    },
-    publishedAt: {
-      type: Date
-    },
-    archivedAt: {
-      type: Date
-    },
-    createdBy: {
-      type: Schema21.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema21.Types.ObjectId,
-      ref: "User"
-    }
-  },
-  {
-    timestamps: true,
-    collection: "moduleactions"
-  }
-);
-moduleActionSchema.index(
-  {
-    module: 1,
-    order: 1
-  },
-  {
-    unique: true
-  }
-);
-moduleActionSchema.index({
-  module: 1,
-  status: 1,
-  order: 1
-});
-moduleActionSchema.index({
-  module: 1,
-  isRequired: 1,
-  status: 1
-});
-var ModuleAction = model21(
-  "ModuleAction",
-  moduleActionSchema
-);
-
-// src/modules/moduleActions/module.action.service.ts
 var throwServiceError11 = (message, statusCode) => {
   const error = new Error(
     message
@@ -15567,8 +17319,8 @@ var assertFound9 = (value, message, statusCode) => {
     );
   }
 };
-var assertValidObjectId5 = (value, fieldName) => {
-  if (!Types23.ObjectId.isValid(value)) {
+var assertValidObjectId6 = (value, fieldName) => {
+  if (!Types25.ObjectId.isValid(value)) {
     throwServiceError11(
       `${fieldName} is invalid`,
       400
@@ -15582,7 +17334,7 @@ var isDuplicateKeyError3 = (error) => {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
 };
 var ensureCourseModuleExists4 = async (moduleId) => {
-  assertValidObjectId5(
+  assertValidObjectId6(
     moduleId,
     "Course module ID"
   );
@@ -15609,7 +17361,7 @@ var createModuleAction = async (moduleId, payload, actorId) => {
   const existingAction = await ModuleAction.findOne({
     module: moduleId,
     order: payload.order
-  });
+  }).lean();
   if (existingAction) {
     throwServiceError11(
       "Action order already exists in this module",
@@ -15617,13 +17369,13 @@ var createModuleAction = async (moduleId, payload, actorId) => {
     );
   }
   const createData = {
-    module: new Types23.ObjectId(moduleId),
+    module: new Types25.ObjectId(moduleId),
     title: payload.title,
     order: payload.order,
     isRequired: payload.isRequired ?? true,
     pointsReward: payload.pointsReward ?? 5,
     status: "draft",
-    createdBy: new Types23.ObjectId(actorId)
+    createdBy: new Types25.ObjectId(actorId)
   };
   if (payload.description !== void 0) {
     createData.description = payload.description;
@@ -15664,11 +17416,11 @@ var getAllModuleActions = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    assertValidObjectId5(
+    assertValidObjectId6(
       moduleId,
       "Course module ID"
     );
-    filter.module = new Types23.ObjectId(moduleId);
+    filter.module = new Types25.ObjectId(moduleId);
   }
   if (!isAdminOrManager10(actorRole)) {
     filter.status = "published";
@@ -15694,10 +17446,10 @@ var getAllModuleActions = async ({
   ).populate(
     "updatedBy",
     "fullName email role profileImage"
-  );
+  ).lean();
 };
 var getActionsByModule = async (moduleId, actorRole) => {
-  assertValidObjectId5(
+  assertValidObjectId6(
     moduleId,
     "Course module ID"
   );
@@ -15713,14 +17465,14 @@ var getActionsByModule = async (moduleId, actorRole) => {
   ).populate(
     "pillar",
     "name slug title status"
-  );
+  ).lean();
   assertFound9(
     courseModule,
     "Course module not found or unavailable",
     404
   );
   const actionFilter = {
-    module: new Types23.ObjectId(moduleId)
+    module: new Types25.ObjectId(moduleId)
   };
   if (!isPrivileged) {
     actionFilter.status = "published";
@@ -15737,14 +17489,14 @@ var getActionsByModule = async (moduleId, actorRole) => {
   ).populate(
     "updatedBy",
     "fullName email role profileImage"
-  );
+  ).lean();
   return {
     module: courseModule,
     actions
   };
 };
 var getSingleModuleAction = async (actionId, actorRole) => {
-  assertValidObjectId5(
+  assertValidObjectId6(
     actionId,
     "Module action ID"
   );
@@ -15768,7 +17520,7 @@ var getSingleModuleAction = async (actionId, actorRole) => {
   ).populate(
     "updatedBy",
     "fullName email role profileImage"
-  );
+  ).lean();
   assertFound9(
     action,
     "Module action not found",
@@ -15777,7 +17529,7 @@ var getSingleModuleAction = async (actionId, actorRole) => {
   return action;
 };
 var updateModuleAction = async (actionId, payload, actorId) => {
-  assertValidObjectId5(
+  assertValidObjectId6(
     actionId,
     "Module action ID"
   );
@@ -15802,7 +17554,7 @@ var updateModuleAction = async (actionId, payload, actorId) => {
       },
       module: action.module,
       order: payload.order
-    });
+    }).lean();
     if (duplicateAction) {
       throwServiceError11(
         "Action order already exists in this module",
@@ -15830,7 +17582,7 @@ var updateModuleAction = async (actionId, payload, actorId) => {
   if (payload.pointsReward !== void 0) {
     action.pointsReward = payload.pointsReward;
   }
-  action.updatedBy = new Types23.ObjectId(actorId);
+  action.updatedBy = new Types25.ObjectId(actorId);
   try {
     await action.save();
   } catch (error) {
@@ -15859,7 +17611,7 @@ var updateModuleAction = async (actionId, payload, actorId) => {
   ]);
 };
 var publishModuleAction = async (actionId, actorId) => {
-  assertValidObjectId5(
+  assertValidObjectId6(
     actionId,
     "Module action ID"
   );
@@ -15879,7 +17631,7 @@ var publishModuleAction = async (actionId, actorId) => {
   }
   const courseModule = await CourseModule.findById(
     action.module
-  );
+  ).lean();
   assertFound9(
     courseModule,
     "Parent course module not found",
@@ -15897,12 +17649,12 @@ var publishModuleAction = async (actionId, actorId) => {
     "archivedAt",
     void 0
   );
-  action.updatedBy = new Types23.ObjectId(actorId);
+  action.updatedBy = new Types25.ObjectId(actorId);
   await action.save();
   return action;
 };
 var moveModuleActionToDraft = async (actionId, actorId) => {
-  assertValidObjectId5(
+  assertValidObjectId6(
     actionId,
     "Module action ID"
   );
@@ -15925,12 +17677,12 @@ var moveModuleActionToDraft = async (actionId, actorId) => {
     "publishedAt",
     void 0
   );
-  action.updatedBy = new Types23.ObjectId(actorId);
+  action.updatedBy = new Types25.ObjectId(actorId);
   await action.save();
   return action;
 };
 var archiveModuleAction = async (actionId, actorId) => {
-  assertValidObjectId5(
+  assertValidObjectId6(
     actionId,
     "Module action ID"
   );
@@ -15948,7 +17700,7 @@ var archiveModuleAction = async (actionId, actorId) => {
     "publishedAt",
     void 0
   );
-  action.updatedBy = new Types23.ObjectId(actorId);
+  action.updatedBy = new Types25.ObjectId(actorId);
   await action.save();
   return action;
 };
@@ -16189,7 +17941,8 @@ router18.post(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest_default(
     createModuleActionValidation
@@ -16225,7 +17978,8 @@ router18.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest_default(
     updateModuleActionValidation
@@ -16237,7 +17991,8 @@ router18.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest_default(
     moduleActionIdValidation
@@ -16249,7 +18004,8 @@ router18.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest_default(
     moduleActionIdValidation
@@ -16261,7 +18017,8 @@ router18.patch(
   verifyToken,
   authorizeRoles(
     "admin",
-    "manager"
+    "manager",
+    "founder"
   ),
   validateRequest_default(
     moduleActionIdValidation
@@ -16272,98 +18029,6 @@ var moduleActionRoutes = router18;
 
 // src/modules/room/room.route.ts
 import { Router as Router19 } from "express";
-
-// src/utility/country.ts
-import { createRequire as createNodeRequire } from "module";
-import countries from "i18n-iso-countries";
-var requireCountryJson = createNodeRequire(import.meta.url);
-var enLocale = requireCountryJson("i18n-iso-countries/langs/en.json");
-countries.registerLocale(enLocale);
-var resolveCountry = (rawName) => {
-  if (!rawName) return null;
-  const trimmed = rawName.trim();
-  const code = countries.getAlpha2Code(trimmed, "en");
-  if (!code) return null;
-  return {
-    code: code.toUpperCase(),
-    name: countries.getName(code, "en")
-    // canonical spelling
-  };
-};
-
-// src/modules/room/room.modal.ts
-import { Schema as Schema22, model as model22 } from "mongoose";
-var roomSchema = new Schema22(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100
-    },
-    description: {
-      type: String,
-      trim: true,
-      maxlength: 500
-    },
-    members: [
-      {
-        type: Schema22.Types.ObjectId,
-        ref: "User"
-      }
-    ],
-    createdBy: {
-      type: Schema22.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    type: {
-      type: String,
-      enum: ["general", "country"],
-      default: "general"
-    },
-    countryName: String,
-    countryCode: { type: String, unique: true, sparse: true }
-  },
-  {
-    timestamps: true
-  }
-);
-var Room = model22("Room", roomSchema);
-
-// src/modules/room/room.service.ts
-var getGeneralRoom = async (createdBy) => {
-  return Room.findOneAndUpdate(
-    { type: "general" },
-    {
-      $setOnInsert: {
-        name: "General Community",
-        createdBy,
-        type: "general"
-      }
-    },
-    { upsert: true, new: true }
-  );
-};
-var getOrCreateCountryRoom = async (countryName, createdBy) => {
-  const country = resolveCountry(countryName);
-  if (!country) {
-    throw new Error("Invalid country name");
-  }
-  return Room.findOneAndUpdate(
-    { countryCode: country.code, type: "country" },
-    {
-      $setOnInsert: {
-        name: `${country.name} Community`,
-        createdBy,
-        countryCode: country.code,
-        countryName: country.name,
-        type: "country"
-      }
-    },
-    { upsert: true, new: true }
-  );
-};
 
 // src/modules/room/room.controller.ts
 var getGeneralRoomHandler = async (req, res, next) => {
@@ -16432,93 +18097,6 @@ var room_route_default = router19;
 // src/modules/message/message.route.ts
 import { Router as Router20 } from "express";
 
-// src/modules/message/message.services.ts
-import { Types as Types24 } from "mongoose";
-
-// src/modules/message/message.model.ts
-import { Schema as Schema23, model as model23 } from "mongoose";
-var messageSchema = new Schema23(
-  {
-    room: {
-      type: Schema23.Types.ObjectId,
-      ref: "Room",
-      required: true,
-      index: true
-    },
-    sender: {
-      type: Schema23.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    content: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 2e3
-    },
-    // NEW: reply support
-    replyTo: {
-      type: Schema23.Types.ObjectId,
-      ref: "Message",
-      default: null
-    },
-    // NEW: soft delete support
-    isDeleted: { type: Boolean, default: false },
-    deletedAt: { type: Date, default: null }
-  },
-  {
-    timestamps: true
-  }
-);
-var Message = model23("Message", messageSchema);
-
-// src/modules/message/message.services.ts
-var getMessageHistory = async (roomId, page, limit) => {
-  const skip = (page - 1) * limit;
-  const messages = await Message.find({ room: roomId }).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("sender", "fullName profileImage").populate({
-    path: "replyTo",
-    select: "content sender isDeleted",
-    populate: { path: "sender", select: "fullName" }
-  }).lean();
-  return messages.reverse();
-};
-var createMessage = async (roomId, senderId, content, replyTo) => {
-  if (replyTo) {
-    const parent = await Message.findOne({ _id: replyTo, room: roomId });
-    if (!parent) {
-      throw new Error("Message you're replying to no longer exists in this room");
-    }
-  }
-  const message = await Message.create({
-    room: roomId,
-    sender: senderId,
-    content,
-    replyTo: replyTo || null
-  });
-  return message.populate([
-    { path: "sender", select: "fullName profileImage" },
-    {
-      path: "replyTo",
-      select: "content sender isDeleted",
-      populate: { path: "sender", select: "fullName" }
-    }
-  ]);
-};
-var deleteMessage = async (messageId, userId) => {
-  if (!Types24.ObjectId.isValid(messageId)) {
-    throw new Error("Invalid message id");
-  }
-  const message = await Message.findById(messageId);
-  if (!message) {
-    throw new Error("Message not found");
-  }
-  message.isDeleted = true;
-  message.deletedAt = /* @__PURE__ */ new Date();
-  message.content = "This message was deleted";
-  await message.save();
-  return message;
-};
-
 // src/modules/message/message.controller.ts
 var getMessageHistoryHandler = async (req, res, next) => {
   try {
@@ -16547,8 +18125,8 @@ var message_route_default = router20;
 import { Router as Router21 } from "express";
 
 // src/modules/manageLogo/logo.model.schema.ts
-import { model as model24, Schema as Schema24 } from "mongoose";
-var logoSchema = new Schema24(
+import { model as model26, Schema as Schema26 } from "mongoose";
+var logoSchema = new Schema26(
   {
     logo: {
       type: String,
@@ -16557,7 +18135,7 @@ var logoSchema = new Schema24(
     }
   }
 );
-var logo = model24("logo", logoSchema);
+var logo = model26("logo", logoSchema);
 
 // src/modules/manageLogo/logo.service.ts
 var uploadLogoIntoDB = async (userId, file) => {
@@ -16680,25 +18258,25 @@ var LogoRoutes = router21;
 import { Router as Router22 } from "express";
 
 // src/modules/academyProfiles/academy.profile.service.ts
-import { Types as Types25 } from "mongoose";
+import { Types as Types26 } from "mongoose";
 
 // src/modules/academyProfiles/academy.profile.model.schema.ts
-import { Schema as Schema25, model as model25 } from "mongoose";
-var AcademyProfileSchema = new Schema25(
+import { Schema as Schema27, model as model27 } from "mongoose";
+var AcademyProfileSchema = new Schema27(
   {
     user: {
-      type: Schema25.Types.ObjectId,
+      type: Schema27.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
       index: true
     },
     mentor: {
-      type: Schema25.Types.ObjectId,
+      type: Schema27.Types.ObjectId,
       ref: "User"
     },
     currentPillar: {
-      type: Schema25.Types.ObjectId,
+      type: Schema27.Types.ObjectId,
       ref: "ChallengePillar"
     },
     academyName: {
@@ -16755,7 +18333,7 @@ var AcademyProfileSchema = new Schema25(
     timestamps: true
   }
 );
-var AcademyProfile = model25(
+var AcademyProfile = model27(
   "AcademyProfile",
   AcademyProfileSchema
 );
@@ -16779,22 +18357,22 @@ var createProfile = async (userId, payload) => {
     throwServiceError12("Academy profile already exists", 409);
   }
   const profile = await AcademyProfile.create({
-    user: new Types25.ObjectId(userId),
+    user: new Types26.ObjectId(userId),
     ...payload
   });
   return profile;
 };
 var getMyProfile2 = async (userId) => {
   const filter = {
-    user: new Types25.ObjectId(userId)
+    user: new Types26.ObjectId(userId)
   };
-  const profile = await AcademyProfile.findOne(filter).populate("currentPillar", "name slug title").populate("mentor", "fullName email profileImage");
+  const profile = await AcademyProfile.findOne(filter).populate("currentPillar", "name slug title").populate("mentor", "fullName email profileImage").lean();
   assertFound10(profile, "Academy profile not found", 404);
   return profile;
 };
 var updateProfile = async (userId, payload) => {
   const profile = await AcademyProfile.findOne({
-    user: new Types25.ObjectId(userId)
+    user: new Types26.ObjectId(userId)
   });
   assertFound10(profile, "Academy profile not found", 404);
   if (payload.academyName !== void 0)
@@ -16813,7 +18391,7 @@ var updateProfile = async (userId, payload) => {
   return profile;
 };
 var getAllProfiles = async () => {
-  return AcademyProfile.find().populate("user", "fullName email role profileImage").populate("mentor", "fullName email").populate("currentPillar", "title slug");
+  return AcademyProfile.find().populate("user", "fullName email role profileImage").populate("mentor", "fullName email").populate("currentPillar", "title slug").lean();
 };
 var academyProfileService = {
   createProfile,
@@ -17296,151 +18874,26 @@ var userEntitlementRoutes = router23;
 import { Router as Router24 } from "express";
 
 // src/modules/videoProgress/video.progress.service.ts
-import { Types as Types26 } from "mongoose";
-
-// src/modules/videoProgress/video.progress.model.schema.ts
-import { model as model26, Schema as Schema26 } from "mongoose";
-var watchedRangeSchema = new Schema26(
-  {
-    startSeconds: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    endSeconds: {
-      type: Number,
-      required: true,
-      min: 0
-    }
-  },
-  {
-    _id: false
-  }
-);
-var videoProgressSchema = new Schema26(
-  {
-    user: {
-      type: Schema26.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    video: {
-      type: Schema26.Types.ObjectId,
-      ref: "ModuleVideo",
-      required: true,
-      index: true
-    },
-    module: {
-      type: Schema26.Types.ObjectId,
-      ref: "CourseModule",
-      required: true,
-      index: true
-    },
-    durationSecondsSnapshot: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    requiredWatchPercentSnapshot: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 100
-    },
-    watchedRanges: {
-      type: [watchedRangeSchema],
-      default: []
-    },
-    totalWatchedSeconds: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    watchPercent: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100
-    },
-    lastPositionSeconds: {
-      type: Number,
-      default: 0,
-      min: 0
-    },
-    isCompleted: {
-      type: Boolean,
-      default: false,
-      required: true,
-      index: true
-    },
-    startedAt: {
-      type: Date,
-      default: Date.now,
-      required: true
-    },
-    lastWatchedAt: {
-      type: Date,
-      default: Date.now,
-      required: true
-    },
-    completedAt: {
-      type: Date
-    }
-  },
-  {
-    timestamps: true,
-    collection: "videoprogress",
-    /**
-     * Prevent silent concurrent overwrites.
-     */
-    optimisticConcurrency: true
-  }
-);
-videoProgressSchema.index(
-  {
-    user: 1,
-    video: 1
-  },
-  {
-    unique: true
-  }
-);
-videoProgressSchema.index({
-  user: 1,
-  module: 1,
-  isCompleted: 1
-});
-videoProgressSchema.index({
-  module: 1,
-  isCompleted: 1,
-  updatedAt: -1
-});
-videoProgressSchema.index({
-  user: 1,
-  lastWatchedAt: -1
-});
-var VideoProgress = model26(
-  "VideoProgress",
-  videoProgressSchema
-);
-
-// src/modules/videoProgress/video.progress.service.ts
+init_course_module_model_schema();
+init_module_video_model_schema();
+init_challenge_pillar_model_schema();
+import { Types as Types28 } from "mongoose";
+init_video_progress_model_schema();
 var MAX_HEARTBEAT_SEGMENT_SECONDS = 60;
 var VIDEO_DURATION_TOLERANCE_SECONDS = 5;
 var RANGE_MERGE_TOLERANCE_SECONDS = 0.5;
-var assertValidObjectId6 = (value, fieldName) => {
-  if (!Types26.ObjectId.isValid(value)) {
+var assertValidObjectId8 = (value, fieldName) => {
+  if (!Types28.ObjectId.isValid(value)) {
     throwServiceError_default(`${fieldName} is invalid`, 400);
   }
 };
-var isDuplicateKeyError4 = (error) => {
+var isDuplicateKeyError5 = (error) => {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
 };
 var roundToTwoDecimalPlaces = (value) => {
   return Math.round(value * 100) / 100;
 };
-var clamp = (value, minimum, maximum) => {
+var clamp2 = (value, minimum, maximum) => {
   return Math.min(Math.max(value, minimum), maximum);
 };
 var mergeWatchedRanges = (existingRanges, newRange) => {
@@ -17492,7 +18945,7 @@ var calculateWatchPercent = (totalWatchedSeconds, durationSeconds) => {
   );
 };
 var ensureVideoIsAvailable = async (videoId) => {
-  assertValidObjectId6(videoId, "Module video ID");
+  assertValidObjectId8(videoId, "Module video ID");
   const video = await ModuleVideo.findById(videoId).select(
     [
       "_id",
@@ -17545,8 +18998,8 @@ var validateHeartbeatAgainstVideo = (payload, durationSeconds) => {
   if (payload.segmentStartSeconds > durationSeconds + VIDEO_DURATION_TOLERANCE_SECONDS || payload.segmentEndSeconds > durationSeconds + VIDEO_DURATION_TOLERANCE_SECONDS || payload.currentPositionSeconds > durationSeconds + VIDEO_DURATION_TOLERANCE_SECONDS) {
     throwServiceError_default("Heartbeat position exceeds video duration", 400);
   }
-  const startSeconds = clamp(payload.segmentStartSeconds, 0, durationSeconds);
-  const endSeconds = clamp(payload.segmentEndSeconds, 0, durationSeconds);
+  const startSeconds = clamp2(payload.segmentStartSeconds, 0, durationSeconds);
+  const endSeconds = clamp2(payload.segmentEndSeconds, 0, durationSeconds);
   if (endSeconds <= startSeconds) {
     throwServiceError_default("Heartbeat contains no valid watched duration", 400);
   }
@@ -17583,8 +19036,25 @@ var populateVideoProgress = async (progress) => {
   ]);
 };
 var recordVideoHeartbeat = async (userId, videoId, payload) => {
-  assertValidObjectId6(userId, "User ID");
+  assertValidObjectId8(userId, "User ID");
   const { video, courseModule } = await ensureVideoIsAvailable(videoId);
+  if (courseModule.pillar) {
+    const pillar = await ChallengePillar.findById(courseModule.pillar).select(
+      "isPaid status"
+    );
+    if (pillar?.isPaid || video.isPaid) {
+      const access = await userEntitlementService.checkPillarAccess(
+        userId,
+        String(courseModule.pillar)
+      );
+      if (!access.hasAccess) {
+        throwServiceError_default(
+          "Active pillar access required to track video progress",
+          403
+        );
+      }
+    }
+  }
   const durationSeconds = video.durationSeconds;
   const requiredWatchPercent = video.requiredWatchPercent ?? 80;
   const newWatchedRange = validateHeartbeatAgainstVideo(
@@ -17592,8 +19062,8 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
     durationSeconds
   );
   const progressFilter = {
-    user: new Types26.ObjectId(userId),
-    video: new Types26.ObjectId(videoId)
+    user: new Types28.ObjectId(userId),
+    video: new Types28.ObjectId(videoId)
   };
   let progress = await VideoProgress.findOne(progressFilter);
   const now = /* @__PURE__ */ new Date();
@@ -17606,15 +19076,15 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
     );
     const isCompleted = watchPercent2 >= requiredWatchPercent;
     const createData = {
-      user: new Types26.ObjectId(userId),
-      video: new Types26.ObjectId(videoId),
+      user: new Types28.ObjectId(userId),
+      video: new Types28.ObjectId(videoId),
       module: courseModule._id,
       durationSecondsSnapshot: durationSeconds,
       requiredWatchPercentSnapshot: requiredWatchPercent,
       watchedRanges,
       totalWatchedSeconds: totalWatchedSeconds2,
       watchPercent: watchPercent2,
-      lastPositionSeconds: clamp(
+      lastPositionSeconds: clamp2(
         payload.currentPositionSeconds,
         0,
         durationSeconds
@@ -17630,7 +19100,7 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
       progress = await VideoProgress.create(createData);
       return populateVideoProgress(progress);
     } catch (error) {
-      if (!isDuplicateKeyError4(error)) {
+      if (!isDuplicateKeyError5(error)) {
         throw error;
       }
       progress = await VideoProgress.findOne(progressFilter);
@@ -17655,7 +19125,7 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
   progress.set("watchedRanges", mergedRanges);
   progress.totalWatchedSeconds = totalWatchedSeconds;
   progress.watchPercent = watchPercent;
-  progress.lastPositionSeconds = clamp(
+  progress.lastPositionSeconds = clamp2(
     payload.currentPositionSeconds,
     0,
     durationSeconds
@@ -17666,14 +19136,23 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
     progress.completedAt = now;
   }
   await progress.save();
+  try {
+    const { moduleProgressService: moduleProgressService2 } = await Promise.resolve().then(() => (init_module_progress_service(), module_progress_service_exports));
+    await moduleProgressService2.refreshModuleProgress(
+      userId,
+      courseModule._id.toString()
+    );
+  } catch (syncError) {
+    console.error("Auto sync module progress failed on heartbeat:", syncError);
+  }
   return populateVideoProgress(progress);
 };
 var getMyVideoProgress = async (userId, videoId) => {
-  assertValidObjectId6(userId, "User ID");
+  assertValidObjectId8(userId, "User ID");
   const { video, courseModule } = await ensureVideoIsAvailable(videoId);
   const filter = {
-    user: new Types26.ObjectId(userId),
-    video: new Types26.ObjectId(videoId)
+    user: new Types28.ObjectId(userId),
+    video: new Types28.ObjectId(videoId)
   };
   const progress = await VideoProgress.findOne(filter);
   return {
@@ -17715,8 +19194,8 @@ var getMyVideoProgress = async (userId, videoId) => {
   };
 };
 var getMyModuleVideoProgress = async (userId, moduleId) => {
-  assertValidObjectId6(userId, "User ID");
-  assertValidObjectId6(moduleId, "Course module ID");
+  assertValidObjectId8(userId, "User ID");
+  assertValidObjectId8(moduleId, "Course module ID");
   const courseModule = await CourseModule.findById(moduleId).select(
     [
       "_id",
@@ -17733,7 +19212,7 @@ var getMyModuleVideoProgress = async (userId, moduleId) => {
     throwServiceError_default("Course module is not published", 403);
   }
   const videos = await ModuleVideo.find({
-    module: new Types26.ObjectId(moduleId),
+    module: new Types28.ObjectId(moduleId),
     status: "published"
   }).select(
     [
@@ -17751,8 +19230,8 @@ var getMyModuleVideoProgress = async (userId, moduleId) => {
   ).sort({ order: 1 }).lean();
   const videoIds = videos.map((video) => video._id);
   const progressFilter = {
-    user: new Types26.ObjectId(userId),
-    module: new Types26.ObjectId(moduleId),
+    user: new Types28.ObjectId(userId),
+    module: new Types28.ObjectId(moduleId),
     video: {
       $in: videoIds
     }
@@ -17803,9 +19282,9 @@ var getMyModuleVideoProgress = async (userId, moduleId) => {
   };
 };
 var getMyAllVideoProgress = async (userId) => {
-  assertValidObjectId6(userId, "User ID");
+  assertValidObjectId8(userId, "User ID");
   const filter = {
-    user: new Types26.ObjectId(userId)
+    user: new Types28.ObjectId(userId)
   };
   return VideoProgress.find(filter).sort({
     lastWatchedAt: -1
@@ -17835,16 +19314,16 @@ var getMyAllVideoProgress = async (userId) => {
 var getAllVideoProgress = async (query) => {
   const filter = {};
   if (query.userId) {
-    assertValidObjectId6(query.userId, "User ID");
-    filter.user = new Types26.ObjectId(query.userId);
+    assertValidObjectId8(query.userId, "User ID");
+    filter.user = new Types28.ObjectId(query.userId);
   }
   if (query.videoId) {
-    assertValidObjectId6(query.videoId, "Module video ID");
-    filter.video = new Types26.ObjectId(query.videoId);
+    assertValidObjectId8(query.videoId, "Module video ID");
+    filter.video = new Types28.ObjectId(query.videoId);
   }
   if (query.moduleId) {
-    assertValidObjectId6(query.moduleId, "Course module ID");
-    filter.module = new Types26.ObjectId(query.moduleId);
+    assertValidObjectId8(query.moduleId, "Course module ID");
+    filter.module = new Types28.ObjectId(query.moduleId);
   }
   if (query.isCompleted !== void 0) {
     filter.isCompleted = query.isCompleted;
@@ -17905,14 +19384,14 @@ var throwControllerError6 = (message, statusCode) => {
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound12 = (value, message, statusCode) => {
+var assertFound13 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
     throwControllerError6(message, statusCode);
   }
 };
 var getAuthUser11 = (req) => {
   const user = req.user;
-  assertFound12(user, "Authentication required", 401);
+  assertFound13(user, "Authentication required", 401);
   return {
     id: user.id,
     role: user.role
@@ -18119,7 +19598,7 @@ router24.get(
 router24.get(
   "/",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(getAllVideoProgressValidation),
   videoProgressController.getAllVideoProgress
 );
@@ -18128,584 +19607,8 @@ var videoProgressRoutes = router24;
 // src/modules/moduleProgress/module.progress.route.ts
 import { Router as Router25 } from "express";
 
-// src/modules/moduleProgress/module.progress.service.ts
-import { Types as Types27 } from "mongoose";
-
-// src/modules/moduleProgress/module.progress.model.schema.ts
-import { model as model27, Schema as Schema27 } from "mongoose";
-
-// src/modules/moduleProgress/module.progress.interface.ts
-var QUIZ_PROGRESS_STATUSES = [
-  "locked",
-  "unlocked",
-  "in_progress",
-  "passed",
-  "failed"
-];
-
-// src/modules/moduleProgress/module.progress.model.schema.ts
-var requirementSummarySchema = new Schema27(
-  {
-    totalRequired: {
-      type: Number,
-      default: 0,
-      min: 0,
-      required: true
-    },
-    completedRequired: {
-      type: Number,
-      default: 0,
-      min: 0,
-      required: true
-    },
-    completionPercent: {
-      type: Number,
-      default: 100,
-      min: 0,
-      max: 100,
-      required: true
-    },
-    completed: {
-      type: Boolean,
-      default: true,
-      required: true
-    }
-  },
-  {
-    _id: false
-  }
-);
-var quizSummarySchema = new Schema27(
-  {
-    status: {
-      type: String,
-      enum: QUIZ_PROGRESS_STATUSES,
-      default: "locked",
-      required: true
-    },
-    attemptsUsed: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 2,
-      required: true
-    },
-    maximumAttempts: {
-      type: Number,
-      default: 2,
-      min: 2,
-      max: 2,
-      required: true
-    },
-    bestScore: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
-      required: true
-    },
-    passScore: {
-      type: Number,
-      default: 70,
-      min: 70,
-      max: 70,
-      required: true
-    },
-    passed: {
-      type: Boolean,
-      default: false,
-      required: true
-    },
-    lastAttemptAt: {
-      type: Date
-    }
-  },
-  {
-    _id: false
-  }
-);
-var moduleProgressSchema = new Schema27(
-  {
-    user: {
-      type: Schema27.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    module: {
-      type: Schema27.Types.ObjectId,
-      ref: "CourseModule",
-      required: true,
-      index: true
-    },
-    videoSummary: {
-      type: requirementSummarySchema,
-      default: () => ({
-        totalRequired: 0,
-        completedRequired: 0,
-        completionPercent: 100,
-        completed: true
-      })
-    },
-    resourceSummary: {
-      type: requirementSummarySchema,
-      default: () => ({
-        totalRequired: 0,
-        completedRequired: 0,
-        completionPercent: 100,
-        completed: true
-      })
-    },
-    actionSummary: {
-      type: requirementSummarySchema,
-      default: () => ({
-        totalRequired: 0,
-        completedRequired: 0,
-        completionPercent: 100,
-        completed: true
-      })
-    },
-    quizSummary: {
-      type: quizSummarySchema,
-      default: () => ({
-        status: "locked",
-        attemptsUsed: 0,
-        maximumAttempts: 2,
-        bestScore: 0,
-        passScore: 70,
-        passed: false
-      })
-    },
-    actionsUnlocked: {
-      type: Boolean,
-      default: false,
-      required: true
-    },
-    quizUnlocked: {
-      type: Boolean,
-      default: false,
-      required: true,
-      index: true
-    },
-    overallCompletionPercent: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
-      required: true
-    },
-    isCompleted: {
-      type: Boolean,
-      default: false,
-      required: true,
-      index: true
-    },
-    completedAt: {
-      type: Date
-    },
-    lastCalculatedAt: {
-      type: Date,
-      default: Date.now,
-      required: true
-    }
-  },
-  {
-    timestamps: true,
-    collection: "moduleprogress",
-    optimisticConcurrency: true
-  }
-);
-moduleProgressSchema.index(
-  {
-    user: 1,
-    module: 1
-  },
-  {
-    unique: true
-  }
-);
-moduleProgressSchema.index({
-  user: 1,
-  isCompleted: 1,
-  updatedAt: -1
-});
-moduleProgressSchema.index({
-  module: 1,
-  isCompleted: 1
-});
-var ModuleProgress = model27(
-  "ModuleProgress",
-  moduleProgressSchema
-);
-
-// src/modules/moduleProgress/module.progress.service.ts
-var ACTION_COMPLETION_REQUIREMENT = 80;
-var QUIZ_PASS_SCORE = 70;
-var MAXIMUM_QUIZ_ATTEMPTS = 2;
-var throwServiceError13 = (message, statusCode) => {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  throw error;
-};
-var assertFound13 = (value, message, statusCode) => {
-  if (value === null || value === void 0) {
-    throwServiceError13(message, statusCode);
-  }
-};
-var assertValidObjectId7 = (value, fieldName) => {
-  if (!Types27.ObjectId.isValid(value)) {
-    throwServiceError13(`${fieldName} is invalid`, 400);
-  }
-};
-var isDuplicateKeyError5 = (error) => {
-  return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
-};
-var roundToTwoDecimals = (value) => {
-  return Math.round(value * 100) / 100;
-};
-var clamp2 = (value, minimum, maximum) => {
-  return Math.min(Math.max(value, minimum), maximum);
-};
-var calculateCompletionPercent = (completed, total) => {
-  if (total === 0) {
-    return 100;
-  }
-  return roundToTwoDecimals(clamp2(completed / total * 100, 0, 100));
-};
-var ensureCourseModuleExists5 = async (moduleId) => {
-  assertValidObjectId7(moduleId, "Course module ID");
-  const courseModule = await CourseModule.findById(moduleId).select(
-    "_id pillar title slug moduleNumber status"
-  );
-  assertFound13(courseModule, "Course module not found", 404);
-  if (courseModule.status === "archived") {
-    throwServiceError13("Archived module progress cannot be managed", 400);
-  }
-  return courseModule;
-};
-var createDefaultProgressData = (userId, moduleId) => {
-  return {
-    user: new Types27.ObjectId(userId),
-    module: new Types27.ObjectId(moduleId),
-    videoSummary: {
-      totalRequired: 0,
-      completedRequired: 0,
-      completionPercent: 100,
-      completed: true
-    },
-    resourceSummary: {
-      totalRequired: 0,
-      completedRequired: 0,
-      completionPercent: 100,
-      completed: true
-    },
-    actionSummary: {
-      totalRequired: 0,
-      completedRequired: 0,
-      completionPercent: 100,
-      completed: true
-    },
-    quizSummary: {
-      status: "locked",
-      attemptsUsed: 0,
-      maximumAttempts: MAXIMUM_QUIZ_ATTEMPTS,
-      bestScore: 0,
-      passScore: QUIZ_PASS_SCORE,
-      passed: false
-    },
-    actionsUnlocked: false,
-    quizUnlocked: false,
-    overallCompletionPercent: 0,
-    isCompleted: false,
-    lastCalculatedAt: /* @__PURE__ */ new Date()
-  };
-};
-var getOrCreateModuleProgress = async (userId, moduleId) => {
-  assertValidObjectId7(userId, "User ID");
-  await ensureCourseModuleExists5(moduleId);
-  const filter = {
-    user: new Types27.ObjectId(userId),
-    module: new Types27.ObjectId(moduleId)
-  };
-  const existingProgress = await ModuleProgress.findOne(filter);
-  if (existingProgress) {
-    return existingProgress;
-  }
-  try {
-    return await ModuleProgress.create(
-      createDefaultProgressData(userId, moduleId)
-    );
-  } catch (error) {
-    if (!isDuplicateKeyError5(error)) {
-      throw error;
-    }
-    const progress = await ModuleProgress.findOne(filter);
-    assertFound13(progress, "Module progress could not be created", 500);
-    return progress;
-  }
-};
-var recalculateDerivedFields = (progress) => {
-  progress.actionsUnlocked = progress.videoSummary.completed && progress.resourceSummary.completed;
-  const requiredActionsCompleted = progress.actionSummary.totalRequired === 0 || progress.actionSummary.completionPercent >= ACTION_COMPLETION_REQUIREMENT;
-  progress.actionSummary.completed = requiredActionsCompleted;
-  progress.quizUnlocked = progress.actionsUnlocked && requiredActionsCompleted;
-  if (progress.quizSummary.passed) {
-    progress.quizSummary.status = "passed";
-  } else if (!progress.quizUnlocked) {
-    progress.quizSummary.status = "locked";
-  } else if (progress.quizSummary.attemptsUsed === 0) {
-    progress.quizSummary.status = "unlocked";
-  } else if (progress.quizSummary.attemptsUsed < MAXIMUM_QUIZ_ATTEMPTS) {
-    progress.quizSummary.status = "in_progress";
-  } else {
-    progress.quizSummary.status = "failed";
-  }
-  const videoStagePercent = progress.videoSummary.completionPercent;
-  const resourceStagePercent = progress.resourceSummary.completionPercent;
-  const actionStagePercent = progress.actionSummary.totalRequired === 0 ? 100 : clamp2(
-    progress.actionSummary.completionPercent / ACTION_COMPLETION_REQUIREMENT * 100,
-    0,
-    100
-  );
-  const quizStagePercent = progress.quizSummary.passed ? 100 : 0;
-  progress.overallCompletionPercent = roundToTwoDecimals(
-    (videoStagePercent + resourceStagePercent + actionStagePercent + quizStagePercent) / 4
-  );
-  const moduleCompleted = progress.videoSummary.completed && progress.resourceSummary.completed && requiredActionsCompleted && progress.quizSummary.passed;
-  const newlyCompleted = !progress.isCompleted && moduleCompleted;
-  progress.isCompleted = moduleCompleted;
-  if (newlyCompleted) {
-    progress.completedAt = /* @__PURE__ */ new Date();
-  }
-  if (!moduleCompleted) {
-    progress.set("completedAt", void 0);
-  }
-  progress.lastCalculatedAt = /* @__PURE__ */ new Date();
-};
-var refreshModuleProgress = async (userId, moduleId) => {
-  const progress = await getOrCreateModuleProgress(userId, moduleId);
-  const moduleObjectId = new Types27.ObjectId(moduleId);
-  const userObjectId = new Types27.ObjectId(userId);
-  const requiredVideos = await ModuleVideo.find({
-    module: moduleObjectId,
-    status: "published",
-    isRequired: true
-  }).select("_id").lean();
-  const requiredVideoIds = requiredVideos.map((video) => video._id);
-  const [
-    completedRequiredVideos,
-    totalRequiredResources,
-    totalRequiredActions
-  ] = await Promise.all([
-    requiredVideoIds.length === 0 ? Promise.resolve(0) : VideoProgress.countDocuments({
-      user: userObjectId,
-      video: {
-        $in: requiredVideoIds
-      },
-      isCompleted: true
-    }),
-    ModuleResource.countDocuments({
-      module: moduleObjectId,
-      status: "published",
-      isRequired: true
-    }),
-    ModuleAction.countDocuments({
-      module: moduleObjectId,
-      status: "published",
-      isRequired: true
-    })
-  ]);
-  const totalRequiredVideos = requiredVideoIds.length;
-  progress.set("videoSummary", {
-    totalRequired: totalRequiredVideos,
-    completedRequired: completedRequiredVideos,
-    completionPercent: calculateCompletionPercent(
-      completedRequiredVideos,
-      totalRequiredVideos
-    ),
-    completed: totalRequiredVideos === 0 || completedRequiredVideos >= totalRequiredVideos
-  });
-  const completedResources = Math.min(
-    progress.resourceSummary.completedRequired,
-    totalRequiredResources
-  );
-  progress.set("resourceSummary", {
-    totalRequired: totalRequiredResources,
-    completedRequired: completedResources,
-    completionPercent: calculateCompletionPercent(
-      completedResources,
-      totalRequiredResources
-    ),
-    completed: totalRequiredResources === 0 || completedResources >= totalRequiredResources
-  });
-  const completedActions = Math.min(
-    progress.actionSummary.completedRequired,
-    totalRequiredActions
-  );
-  const actionCompletionPercent = calculateCompletionPercent(
-    completedActions,
-    totalRequiredActions
-  );
-  progress.set("actionSummary", {
-    totalRequired: totalRequiredActions,
-    completedRequired: completedActions,
-    completionPercent: actionCompletionPercent,
-    completed: totalRequiredActions === 0 || actionCompletionPercent >= ACTION_COMPLETION_REQUIREMENT
-  });
-  recalculateDerivedFields(progress);
-  await progress.save();
-  return progress.populate([
-    {
-      path: "module",
-      select: "title slug moduleNumber pillar status",
-      populate: {
-        path: "pillar",
-        model: "ChallengePillar",
-        select: "name title slug status"
-      }
-    }
-  ]);
-};
-var syncResourceSummary = async (input) => {
-  const progress = await getOrCreateModuleProgress(
-    input.userId,
-    input.moduleId
-  );
-  const totalRequired = Math.max(0, input.totalRequired);
-  const completedRequired = clamp2(input.completedRequired, 0, totalRequired);
-  const completionPercent = calculateCompletionPercent(
-    completedRequired,
-    totalRequired
-  );
-  progress.set("resourceSummary", {
-    totalRequired,
-    completedRequired,
-    completionPercent,
-    completed: totalRequired === 0 || completedRequired >= totalRequired
-  });
-  recalculateDerivedFields(progress);
-  await progress.save();
-  return progress;
-};
-var syncActionSummary = async (input) => {
-  const progress = await getOrCreateModuleProgress(
-    input.userId,
-    input.moduleId
-  );
-  const totalRequired = Math.max(0, input.totalRequired);
-  const completedRequired = clamp2(input.completedRequired, 0, totalRequired);
-  const completionPercent = calculateCompletionPercent(
-    completedRequired,
-    totalRequired
-  );
-  progress.set("actionSummary", {
-    totalRequired,
-    completedRequired,
-    completionPercent,
-    completed: totalRequired === 0 || completionPercent >= ACTION_COMPLETION_REQUIREMENT
-  });
-  recalculateDerivedFields(progress);
-  await progress.save();
-  return progress;
-};
-var syncQuizSummary = async (input) => {
-  const progress = await getOrCreateModuleProgress(
-    input.userId,
-    input.moduleId
-  );
-  const attemptsUsed = clamp2(input.attemptsUsed, 0, MAXIMUM_QUIZ_ATTEMPTS);
-  const bestScore = clamp2(
-    Math.max(progress.quizSummary.bestScore, input.bestScore),
-    0,
-    100
-  );
-  progress.quizSummary.attemptsUsed = attemptsUsed;
-  progress.quizSummary.maximumAttempts = MAXIMUM_QUIZ_ATTEMPTS;
-  progress.quizSummary.bestScore = bestScore;
-  progress.quizSummary.passScore = QUIZ_PASS_SCORE;
-  progress.quizSummary.passed = progress.quizSummary.passed || input.passed || bestScore >= QUIZ_PASS_SCORE;
-  if (input.lastAttemptAt !== void 0) {
-    progress.quizSummary.lastAttemptAt = input.lastAttemptAt;
-  }
-  recalculateDerivedFields(progress);
-  await progress.save();
-  return progress;
-};
-var getMyModuleProgress = async (userId, moduleId) => {
-  return refreshModuleProgress(userId, moduleId);
-};
-var getMyAllModuleProgress = async (userId) => {
-  assertValidObjectId7(userId, "User ID");
-  const filter = {
-    user: new Types27.ObjectId(userId)
-  };
-  return ModuleProgress.find(filter).sort({
-    updatedAt: -1
-  }).populate({
-    path: "module",
-    select: "title slug moduleNumber pillar status",
-    populate: {
-      path: "pillar",
-      model: "ChallengePillar",
-      select: "name title slug status"
-    }
-  });
-};
-var getUserModuleProgress = async (userId, moduleId) => {
-  return refreshModuleProgress(userId, moduleId);
-};
-var getAllModuleProgress = async (query) => {
-  const filter = {};
-  if (query.userId) {
-    assertValidObjectId7(query.userId, "User ID");
-    filter.user = new Types27.ObjectId(query.userId);
-  }
-  if (query.moduleId) {
-    assertValidObjectId7(query.moduleId, "Course module ID");
-    filter.module = new Types27.ObjectId(query.moduleId);
-  }
-  if (query.isCompleted !== void 0) {
-    filter.isCompleted = query.isCompleted;
-  }
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
-  const skip = (page - 1) * limit;
-  const [records, total] = await Promise.all([
-    ModuleProgress.find(filter).sort({
-      updatedAt: -1
-    }).skip(skip).limit(limit).populate("user", "fullName email role profileImage").populate({
-      path: "module",
-      select: "title slug moduleNumber pillar status",
-      populate: {
-        path: "pillar",
-        model: "ChallengePillar",
-        select: "name title slug status"
-      }
-    }),
-    ModuleProgress.countDocuments(filter)
-  ]);
-  return {
-    meta: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit)
-    },
-    data: records
-  };
-};
-var moduleProgressService = {
-  refreshModuleProgress,
-  syncResourceSummary,
-  syncActionSummary,
-  syncQuizSummary,
-  getMyModuleProgress,
-  getMyAllModuleProgress,
-  getUserModuleProgress,
-  getAllModuleProgress
-};
-
 // src/modules/moduleProgress/module.progress.controller.ts
+init_module_progress_service();
 var getAuthUser12 = (req) => {
   const user = req.user;
   assertFound_default(user, "Authentication required", 401);
@@ -18868,14 +19771,14 @@ router25.get(
 router25.get(
   "/user/:userId/module/:moduleId",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(adminModuleProgressValidation),
   moduleProgressController.getUserModuleProgress
 );
 router25.get(
   "/",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(getAllModuleProgressValidation),
   moduleProgressController.getAllModuleProgress
 );
@@ -18885,14 +19788,16 @@ var moduleProgressRoutes = router25;
 import { Router as Router26 } from "express";
 
 // src/modules/quizAttempts/quiz.attempt.service.ts
-import { Types as Types28 } from "mongoose";
+init_course_module_model_schema();
+init_module_progress_service();
+import { Types as Types29 } from "mongoose";
 
 // src/modules/quizAttempts/quiz.attempt.model.schema.ts
-import { model as model28, Schema as Schema28 } from "mongoose";
-var quizAttemptAnswerSchema = new Schema28(
+import { model as model30, Schema as Schema30 } from "mongoose";
+var quizAttemptAnswerSchema = new Schema30(
   {
     question: {
-      type: Schema28.Types.ObjectId,
+      type: Schema30.Types.ObjectId,
       ref: "QuizQuestion",
       required: true
     },
@@ -18917,16 +19822,16 @@ var quizAttemptAnswerSchema = new Schema28(
     _id: false
   }
 );
-var quizAttemptSchema = new Schema28(
+var quizAttemptSchema = new Schema30(
   {
     user: {
-      type: Schema28.Types.ObjectId,
+      type: Schema30.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     module: {
-      type: Schema28.Types.ObjectId,
+      type: Schema30.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
@@ -18992,7 +19897,7 @@ quizAttemptSchema.index({
   module: 1,
   passed: 1
 });
-var QuizAttempt = model28(
+var QuizAttempt = model30(
   "QuizAttempt",
   quizAttemptSchema
 );
@@ -19010,8 +19915,8 @@ var assertFound14 = (value, message, statusCode) => {
     throwServiceError14(message, statusCode);
   }
 };
-var assertValidObjectId8 = (value, fieldName) => {
-  if (!Types28.ObjectId.isValid(value)) {
+var assertValidObjectId9 = (value, fieldName) => {
+  if (!Types29.ObjectId.isValid(value)) {
     throwServiceError14(`${fieldName} is invalid`, 400);
   }
 };
@@ -19045,7 +19950,7 @@ var validateSelectedIndexes = (selectedIndexes, optionCount) => {
   }
 };
 var ensureModuleIsAvailable = async (moduleId) => {
-  assertValidObjectId8(moduleId, "Course module ID");
+  assertValidObjectId9(moduleId, "Course module ID");
   const courseModule = await CourseModule.findById(moduleId).select(
     "_id pillar title slug moduleNumber status"
   );
@@ -19056,7 +19961,7 @@ var ensureModuleIsAvailable = async (moduleId) => {
   return courseModule;
 };
 var submitQuizAttempt = async (userId, moduleId, payload) => {
-  assertValidObjectId8(userId, "User ID");
+  assertValidObjectId9(userId, "User ID");
   await ensureModuleIsAvailable(moduleId);
   const moduleProgress = await moduleProgressService.refreshModuleProgress(
     userId,
@@ -19069,8 +19974,8 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     );
   }
   const previousAttempts = await QuizAttempt.find({
-    user: new Types28.ObjectId(userId),
-    module: new Types28.ObjectId(moduleId)
+    user: new Types29.ObjectId(userId),
+    module: new Types29.ObjectId(moduleId)
   }).sort({
     attemptNumber: 1
   }).select("attemptNumber score passed submittedAt").lean();
@@ -19081,7 +19986,7 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     throwServiceError14("Maximum two quiz attempts have already been used", 400);
   }
   const questions = await QuizQuestion.find({
-    module: new Types28.ObjectId(moduleId),
+    module: new Types29.ObjectId(moduleId),
     status: "published"
   }).sort({
     order: 1
@@ -19208,8 +20113,8 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
   let attempt;
   try {
     attempt = await QuizAttempt.create({
-      user: new Types28.ObjectId(userId),
-      module: new Types28.ObjectId(moduleId),
+      user: new Types29.ObjectId(userId),
+      module: new Types29.ObjectId(moduleId),
       attemptNumber,
       answers: calculatedAnswers,
       totalQuestions,
@@ -19228,8 +20133,8 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     throw error;
   }
   const allAttempts = await QuizAttempt.find({
-    user: new Types28.ObjectId(userId),
-    module: new Types28.ObjectId(moduleId)
+    user: new Types29.ObjectId(userId),
+    module: new Types29.ObjectId(moduleId)
   }).select("score passed submittedAt").lean();
   const bestScore = allAttempts.reduce(
     (highestScore, item) => Math.max(highestScore, item.score),
@@ -19278,11 +20183,11 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
   ]);
 };
 var getMyModuleAttempts = async (userId, moduleId) => {
-  assertValidObjectId8(userId, "User ID");
-  assertValidObjectId8(moduleId, "Course module ID");
+  assertValidObjectId9(userId, "User ID");
+  assertValidObjectId9(moduleId, "Course module ID");
   return QuizAttempt.find({
-    user: new Types28.ObjectId(userId),
-    module: new Types28.ObjectId(moduleId)
+    user: new Types29.ObjectId(userId),
+    module: new Types29.ObjectId(moduleId)
   }).sort({
     attemptNumber: 1
   }).populate(
@@ -19291,11 +20196,11 @@ var getMyModuleAttempts = async (userId, moduleId) => {
   );
 };
 var getMySingleAttempt = async (userId, attemptId) => {
-  assertValidObjectId8(userId, "User ID");
-  assertValidObjectId8(attemptId, "Quiz attempt ID");
+  assertValidObjectId9(userId, "User ID");
+  assertValidObjectId9(attemptId, "Quiz attempt ID");
   const filter = {
-    _id: new Types28.ObjectId(attemptId),
-    user: new Types28.ObjectId(userId)
+    _id: new Types29.ObjectId(attemptId),
+    user: new Types29.ObjectId(userId)
   };
   const attempt = await QuizAttempt.findOne(filter).populate({
     path: "module",
@@ -19313,7 +20218,7 @@ var getMySingleAttempt = async (userId, attemptId) => {
   return attempt;
 };
 var getSingleAttemptAdmin = async (attemptId) => {
-  assertValidObjectId8(attemptId, "Quiz attempt ID");
+  assertValidObjectId9(attemptId, "Quiz attempt ID");
   const attempt = await QuizAttempt.findById(attemptId).populate("user", "fullName email role profileImage").populate({
     path: "module",
     select: "title slug moduleNumber pillar status",
@@ -19340,12 +20245,12 @@ var getSingleAttemptAdmin = async (attemptId) => {
 var getAllQuizAttempts = async (query) => {
   const filter = {};
   if (query.userId) {
-    assertValidObjectId8(query.userId, "User ID");
-    filter.user = new Types28.ObjectId(query.userId);
+    assertValidObjectId9(query.userId, "User ID");
+    filter.user = new Types29.ObjectId(query.userId);
   }
   if (query.moduleId) {
-    assertValidObjectId8(query.moduleId, "Course module ID");
-    filter.module = new Types28.ObjectId(query.moduleId);
+    assertValidObjectId9(query.moduleId, "Course module ID");
+    filter.module = new Types29.ObjectId(query.moduleId);
   }
   if (query.passed !== void 0) {
     filter.passed = query.passed;
@@ -19591,14 +20496,14 @@ router26.get(
 router26.get(
   "/",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(getAllQuizAttemptsValidation),
   quizAttemptController.getAllQuizAttempts
 );
 router26.get(
   "/:id",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(adminQuizAttemptIdValidation),
   quizAttemptController.getSingleAttemptAdmin
 );
@@ -19608,37 +20513,39 @@ var quizAttemptRoutes = router26;
 import { Router as Router27 } from "express";
 
 // src/modules/quizCertificates/quiz.certificate.service.ts
-import { Types as Types29 } from "mongoose";
+init_course_module_model_schema();
+init_module_progress_model_schema();
+import { Types as Types30 } from "mongoose";
 
 // src/modules/quizCertificates/quiz.certificate.model.schema.ts
-import { model as model29, Schema as Schema29 } from "mongoose";
+import { model as model31, Schema as Schema31 } from "mongoose";
 
 // src/modules/quizCertificates/quiz.certificate.interface.ts
 var CERTIFICATE_STATUSES = ["issued", "revoked"];
 
 // src/modules/quizCertificates/quiz.certificate.model.schema.ts
-var quizCertificateSchema = new Schema29(
+var quizCertificateSchema = new Schema31(
   {
     user: {
-      type: Schema29.Types.ObjectId,
+      type: Schema31.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
+    // Pillar-level certificates do not have a module — field is optional and NOT indexed
     module: {
-      type: Schema29.Types.ObjectId,
+      type: Schema31.Types.ObjectId,
       ref: "CourseModule",
-      required: true,
-      index: true
+      required: false
     },
     pillar: {
-      type: Schema29.Types.ObjectId,
+      type: Schema31.Types.ObjectId,
       ref: "ChallengePillar",
       required: true,
       index: true
     },
     quizAttempt: {
-      type: Schema29.Types.ObjectId,
+      type: Schema31.Types.ObjectId,
       ref: "QuizAttempt"
     },
     certificateNumber: {
@@ -19678,7 +20585,7 @@ var quizCertificateSchema = new Schema29(
       maxlength: 500
     },
     revokedBy: {
-      type: Schema29.Types.ObjectId,
+      type: Schema31.Types.ObjectId,
       ref: "User"
     }
   },
@@ -19690,24 +20597,35 @@ var quizCertificateSchema = new Schema29(
 quizCertificateSchema.index(
   {
     user: 1,
-    module: 1
+    pillar: 1
   },
   {
     unique: true
   }
 );
 quizCertificateSchema.index({
-  user: 1,
-  pillar: 1
-});
-quizCertificateSchema.index({
   status: 1,
   issuedAt: -1
 });
-var QuizCertificate = model29(
+var QuizCertificate = model31(
   "QuizCertificate",
   quizCertificateSchema
 );
+var dropLegacyQuizCertificateIndexes = async () => {
+  try {
+    const existingIndexes = await QuizCertificate.collection.listIndexes().toArray();
+    const legacyIndex = existingIndexes.find(
+      (idx) => idx.name === "user_1_module_1"
+    );
+    if (legacyIndex) {
+      await QuizCertificate.collection.dropIndex("user_1_module_1");
+      console.info(
+        "[QuizCertificate] Dropped legacy index: user_1_module_1"
+      );
+    }
+  } catch {
+  }
+};
 
 // src/modules/quizCertificates/quiz.certificate.service.ts
 var throwServiceError15 = (message, statusCode) => {
@@ -19720,8 +20638,8 @@ var assertFound15 = (value, message, statusCode) => {
     throwServiceError15(message, statusCode);
   }
 };
-var assertValidObjectId9 = (value, fieldName) => {
-  if (!Types29.ObjectId.isValid(value)) {
+var assertValidObjectId10 = (value, fieldName) => {
+  if (!Types30.ObjectId.isValid(value)) {
     throwServiceError15(`${fieldName} is invalid`, 400);
   }
 };
@@ -19764,76 +20682,88 @@ var randomAlphaNumeric = (length) => {
   }
   return result;
 };
-var buildCertificateNumber = (pillarSlug, moduleNumber) => {
-  return [
-    "INV",
-    pillarSlug.toUpperCase(),
-    `M${moduleNumber}`,
-    randomAlphaNumeric(6)
-  ].join("-");
+var buildCertificateNumber = (pillarSlug) => {
+  return ["INV", pillarSlug.toUpperCase(), randomAlphaNumeric(6)].join("-");
 };
-var issueCertificateIfEligible = async (userId, moduleId) => {
-  assertValidObjectId9(userId, "User ID");
-  assertValidObjectId9(moduleId, "Course module ID");
+var issueCertificateIfEligible = async (userId, pillarId) => {
+  assertValidObjectId10(userId, "User ID");
+  assertValidObjectId10(pillarId, "Pillar ID");
   const existingCertificate = await QuizCertificate.findOne({
-    user: new Types29.ObjectId(userId),
-    module: new Types29.ObjectId(moduleId)
+    user: new Types30.ObjectId(userId),
+    pillar: new Types30.ObjectId(pillarId)
   }).populate(CERTIFICATE_POPULATE);
   if (existingCertificate) {
     return existingCertificate;
   }
-  const moduleProgress = await ModuleProgress.findOne({
-    user: new Types29.ObjectId(userId),
-    module: new Types29.ObjectId(moduleId)
-  }).lean();
-  assertFound15(
-    moduleProgress,
-    "Module progress not found. Complete the module requirements first",
-    404
-  );
-  if (!moduleProgress.quizSummary?.passed) {
+  const pillarModules = await CourseModule.find({
+    pillar: new Types30.ObjectId(pillarId),
+    status: "published"
+  }).select("_id title moduleNumber").lean();
+  if (pillarModules.length === 0) {
     throwServiceError15(
-      "Quiz must be passed before a certificate can be issued",
-      403
+      "No published modules found for this pillar",
+      404
     );
   }
-  const courseModule = await CourseModule.findById(moduleId).populate(
-    "pillar",
-    "name slug title status"
+  const moduleIds = pillarModules.map((m) => m._id);
+  const progressDocs = await ModuleProgress.find({
+    user: new Types30.ObjectId(userId),
+    module: { $in: moduleIds }
+  }).select("module quizSummary").lean();
+  const progressByModuleId = {};
+  for (const p of progressDocs) {
+    progressByModuleId[String(p.module)] = p;
+  }
+  for (const mod of pillarModules) {
+    const progress = progressByModuleId[String(mod._id)];
+    if (!progress || !progress.quizSummary?.passed) {
+      throwServiceError15(
+        `You must pass the quiz for every module in this pillar before claiming the certificate. Module "${mod.title}" is not yet passed.`,
+        403
+      );
+    }
+  }
+  const totalScore = progressDocs.reduce(
+    (sum, p) => sum + (p.quizSummary?.bestScore ?? 0),
+    0
   );
-  assertFound15(courseModule, "Course module not found", 404);
-  const pillar = courseModule.pillar;
-  assertFound15(pillar, "Parent challenge pillar not found", 404);
+  const averageScore = Math.round(totalScore / pillarModules.length);
+  const { ChallengePillar: ChallengePillar2 } = await Promise.resolve().then(() => (init_challenge_pillar_model_schema(), challenge_pillar_model_schema_exports));
+  const pillarDoc = await ChallengePillar2.findById(pillarId).select("slug").lean();
+  assertFound15(pillarDoc, "Challenge pillar not found", 404);
   const createData = {
-    user: new Types29.ObjectId(userId),
-    module: new Types29.ObjectId(moduleId),
-    pillar: pillar._id,
-    certificateNumber: buildCertificateNumber(
-      pillar.slug,
-      courseModule.moduleNumber
-    ),
+    user: new Types30.ObjectId(userId),
+    pillar: new Types30.ObjectId(pillarId),
     status: "issued",
-    score: moduleProgress.quizSummary.bestScore,
+    score: averageScore,
     issuedAt: /* @__PURE__ */ new Date()
   };
-  const MAX_ATTEMPTS = 5;
+  const MAX_ATTEMPTS = 3;
   let lastError;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     try {
       const certificate = await QuizCertificate.create({
         ...createData,
-        certificateNumber: buildCertificateNumber(
-          pillar.slug,
-          courseModule.moduleNumber
-        )
+        certificateNumber: buildCertificateNumber(pillarDoc.slug)
+      });
+      notificationService.safeCreateFromTemplateOrFallback({
+        templateKey: "quiz_certificate_issued",
+        fallbackTitle: `Certificate Earned: ${pillarDoc.title || pillarDoc.slug.toUpperCase()}`,
+        fallbackBody: `Congratulations! You have completed all modules and earned your official certificate.`,
+        recipient: userId,
+        relatedEntityType: "QuizCertificate",
+        relatedEntityId: String(certificate._id),
+        actionUrl: `/invictus/my-profile`,
+        dedupeKey: `quiz_certificate_issued:${certificate._id}`
+      }).catch(() => {
       });
       return certificate.populate(CERTIFICATE_POPULATE);
     } catch (error) {
       lastError = error;
       if (isDuplicateKeyError7(error)) {
         const raceCertificate = await QuizCertificate.findOne({
-          user: new Types29.ObjectId(userId),
-          module: new Types29.ObjectId(moduleId)
+          user: new Types30.ObjectId(userId),
+          pillar: new Types30.ObjectId(pillarId)
         }).populate(CERTIFICATE_POPULATE);
         if (raceCertificate) {
           return raceCertificate;
@@ -19846,17 +20776,17 @@ var issueCertificateIfEligible = async (userId, moduleId) => {
   throw lastError;
 };
 var getMyCertificates = async (userId) => {
-  assertValidObjectId9(userId, "User ID");
+  assertValidObjectId10(userId, "User ID");
   return QuizCertificate.find({
-    user: new Types29.ObjectId(userId)
+    user: new Types30.ObjectId(userId)
   }).sort({ issuedAt: -1 }).populate(CERTIFICATE_POPULATE);
 };
 var getMySingleCertificate = async (userId, certificateId) => {
-  assertValidObjectId9(userId, "User ID");
-  assertValidObjectId9(certificateId, "Certificate ID");
+  assertValidObjectId10(userId, "User ID");
+  assertValidObjectId10(certificateId, "Certificate ID");
   const certificate = await QuizCertificate.findOne({
     _id: certificateId,
-    user: new Types29.ObjectId(userId)
+    user: new Types30.ObjectId(userId)
   }).populate(CERTIFICATE_POPULATE);
   assertFound15(certificate, "Certificate not found", 404);
   return certificate;
@@ -19872,7 +20802,7 @@ var verifyCertificateByNumber = async (certificateNumber) => {
   };
 };
 var getSingleCertificateAdmin = async (certificateId) => {
-  assertValidObjectId9(certificateId, "Certificate ID");
+  assertValidObjectId10(certificateId, "Certificate ID");
   const certificate = await QuizCertificate.findById(
     certificateId
   ).populate(CERTIFICATE_POPULATE);
@@ -19882,16 +20812,16 @@ var getSingleCertificateAdmin = async (certificateId) => {
 var getAllCertificatesAdmin = async (query) => {
   const filter = {};
   if (query.userId) {
-    assertValidObjectId9(query.userId, "User ID");
-    filter.user = new Types29.ObjectId(query.userId);
+    assertValidObjectId10(query.userId, "User ID");
+    filter.user = new Types30.ObjectId(query.userId);
   }
   if (query.moduleId) {
-    assertValidObjectId9(query.moduleId, "Course module ID");
-    filter.module = new Types29.ObjectId(query.moduleId);
+    assertValidObjectId10(query.moduleId, "Course module ID");
+    filter.module = new Types30.ObjectId(query.moduleId);
   }
   if (query.pillarId) {
-    assertValidObjectId9(query.pillarId, "Challenge pillar ID");
-    filter.pillar = new Types29.ObjectId(query.pillarId);
+    assertValidObjectId10(query.pillarId, "Challenge pillar ID");
+    filter.pillar = new Types30.ObjectId(query.pillarId);
   }
   if (query.status) {
     filter.status = query.status;
@@ -19914,7 +20844,7 @@ var getAllCertificatesAdmin = async (query) => {
   };
 };
 var attachCertificateUrl = async (certificateId, payload) => {
-  assertValidObjectId9(certificateId, "Certificate ID");
+  assertValidObjectId10(certificateId, "Certificate ID");
   const certificate = await QuizCertificate.findById(certificateId);
   assertFound15(certificate, "Certificate not found", 404);
   certificate.certificateUrl = payload.certificateUrl;
@@ -19922,8 +20852,8 @@ var attachCertificateUrl = async (certificateId, payload) => {
   return certificate.populate(CERTIFICATE_POPULATE);
 };
 var revokeCertificate = async (certificateId, actorId, reason) => {
-  assertValidObjectId9(certificateId, "Certificate ID");
-  assertValidObjectId9(actorId, "Actor ID");
+  assertValidObjectId10(certificateId, "Certificate ID");
+  assertValidObjectId10(actorId, "Actor ID");
   const certificate = await QuizCertificate.findById(certificateId);
   assertFound15(certificate, "Certificate not found", 404);
   if (certificate.status === "revoked") {
@@ -19931,7 +20861,7 @@ var revokeCertificate = async (certificateId, actorId, reason) => {
   }
   certificate.status = "revoked";
   certificate.revokedAt = /* @__PURE__ */ new Date();
-  certificate.revokedBy = new Types29.ObjectId(actorId);
+  certificate.revokedBy = new Types30.ObjectId(actorId);
   if (reason !== void 0) {
     certificate.revokedReason = reason;
   }
@@ -19964,7 +20894,7 @@ var issueMyCertificate = async (req, res, next) => {
     const authUser = getAuthUser14(req);
     const certificate = await quizCertificateService.issueCertificateIfEligible(
       authUser.id,
-      String(req.params.moduleId)
+      String(req.params.pillarId)
     );
     sendResponse_default(res, {
       statusCode: 201,
@@ -20126,7 +21056,7 @@ import { z as z19 } from "zod";
 var mongoObjectIdSchema11 = z19.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
 var issueCertificateValidation = z19.object({
   params: z19.object({
-    moduleId: mongoObjectIdSchema11
+    pillarId: mongoObjectIdSchema11
   })
 });
 var certificateIdValidation = z19.object({
@@ -20179,7 +21109,7 @@ router27.get(
   quizCertificateController.verifyCertificate
 );
 router27.post(
-  "/module/:moduleId/issue",
+  "/pillar/:pillarId/issue",
   verifyToken,
   requireInvictusAccess,
   validateRequest_default(issueCertificateValidation),
@@ -20201,28 +21131,28 @@ router27.get(
 router27.get(
   "/",
   verifyToken,
-  authorizeRoles("founder", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(getAllCertificatesValidation),
   quizCertificateController.getAllCertificatesAdmin
 );
 router27.get(
   "/:id",
   verifyToken,
-  authorizeRoles("founder", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(adminCertificateIdValidation),
   quizCertificateController.getSingleCertificateAdmin
 );
 router27.patch(
   "/:id/attach-url",
   verifyToken,
-  authorizeRoles("founder", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(attachCertificateUrlValidation),
   quizCertificateController.attachCertificateUrl
 );
 router27.patch(
   "/:id/revoke",
   verifyToken,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(revokeCertificateValidation),
   quizCertificateController.revokeCertificate
 );
@@ -20232,10 +21162,10 @@ var quizCertificateRoutes = router27;
 import { Router as Router28 } from "express";
 
 // src/modules/mentorshipProfiles/mentorship.profile.service.ts
-import { Types as Types30 } from "mongoose";
+import { Types as Types31 } from "mongoose";
 
 // src/modules/mentorshipProfiles/mentorship.profile.model.schema.ts
-import { model as model30, Schema as Schema30 } from "mongoose";
+import { model as model32, Schema as Schema32 } from "mongoose";
 
 // src/modules/mentorshipProfiles/mentorship.profile.interface.ts
 var MENTORSHIP_PROFILE_STATUSES = [
@@ -20254,7 +21184,7 @@ var AVAILABILITY_DAYS = [
 ];
 
 // src/modules/mentorshipProfiles/mentorship.profile.model.schema.ts
-var availabilitySlotSchema = new Schema30(
+var availabilitySlotSchema = new Schema32(
   {
     day: {
       type: String,
@@ -20283,10 +21213,10 @@ var availabilitySlotSchema = new Schema30(
     _id: false
   }
 );
-var mentorshipProfileSchema = new Schema30(
+var mentorshipProfileSchema = new Schema32(
   {
     mentor: {
-      type: Schema30.Types.ObjectId,
+      type: Schema32.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
@@ -20354,12 +21284,12 @@ var mentorshipProfileSchema = new Schema30(
       type: Date
     },
     createdBy: {
-      type: Schema30.Types.ObjectId,
+      type: Schema32.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema30.Types.ObjectId,
+      type: Schema32.Types.ObjectId,
       ref: "User"
     }
   },
@@ -20377,7 +21307,7 @@ mentorshipProfileSchema.index({
   isPrimaryMentor: 1,
   isActive: 1
 });
-var MentorshipProfile = model30(
+var MentorshipProfile = model32(
   "MentorshipProfile",
   mentorshipProfileSchema
 );
@@ -20393,8 +21323,8 @@ var assertFound16 = (value, message, statusCode) => {
     throwServiceError16(message, statusCode);
   }
 };
-var assertValidObjectId10 = (value, fieldName) => {
-  if (!Types30.ObjectId.isValid(value)) {
+var assertValidObjectId11 = (value, fieldName) => {
+  if (!Types31.ObjectId.isValid(value)) {
     throwServiceError16(`${fieldName} is invalid`, 400);
   }
 };
@@ -20419,7 +21349,7 @@ var PROFILE_POPULATE = [
   }
 ];
 var ensureMentorUserExists = async (mentorId) => {
-  assertValidObjectId10(mentorId, "Mentor user ID");
+  assertValidObjectId11(mentorId, "Mentor user ID");
   const mentorUser = await User.findById(mentorId).select("_id fullName email role");
   assertFound16(mentorUser, "Mentor user not found", 404);
   return mentorUser;
@@ -20447,7 +21377,7 @@ var createMentorshipProfile = async (payload, actorId) => {
     );
   }
   const createData = {
-    mentor: new Types30.ObjectId(payload.mentor),
+    mentor: new Types31.ObjectId(payload.mentor),
     bio: payload.bio,
     expertise: payload.expertise ?? [],
     availability: payload.availability ?? [],
@@ -20455,7 +21385,7 @@ var createMentorshipProfile = async (payload, actorId) => {
     sessionDurationMinutes: payload.sessionDurationMinutes ?? 60,
     order: payload.order ?? 0,
     status: "draft",
-    createdBy: new Types30.ObjectId(actorId)
+    createdBy: new Types31.ObjectId(actorId)
   };
   if (payload.profileImage !== void 0) {
     createData.profileImage = payload.profileImage;
@@ -20490,19 +21420,19 @@ var getAllMentorshipProfiles = async ({
   } else if (isActive !== void 0) {
     filter.isActive = isActive;
   }
-  return MentorshipProfile.find(filter).sort({ isPrimaryMentor: -1, order: 1, createdAt: 1 }).populate(PROFILE_POPULATE);
+  return MentorshipProfile.find(filter).sort({ isPrimaryMentor: -1, order: 1, createdAt: 1 }).populate(PROFILE_POPULATE).lean();
 };
 var getPrimaryMentor = async () => {
   const profile = await MentorshipProfile.findOne({
     isPrimaryMentor: true,
     isActive: true,
     status: "published"
-  }).populate(PROFILE_POPULATE);
+  }).populate(PROFILE_POPULATE).lean();
   assertFound16(profile, "No primary mentor is currently configured", 404);
   return profile;
 };
 var getSingleMentorshipProfile = async (profileId, actorRole) => {
-  assertValidObjectId10(profileId, "Mentorship profile ID");
+  assertValidObjectId11(profileId, "Mentorship profile ID");
   const filter = {
     _id: profileId
   };
@@ -20512,12 +21442,12 @@ var getSingleMentorshipProfile = async (profileId, actorRole) => {
   }
   const profile = await MentorshipProfile.findOne(filter).populate(
     PROFILE_POPULATE
-  );
+  ).lean();
   assertFound16(profile, "Mentorship profile not found", 404);
   return profile;
 };
 var updateMentorshipProfile = async (profileId, payload, actorId) => {
-  assertValidObjectId10(profileId, "Mentorship profile ID");
+  assertValidObjectId11(profileId, "Mentorship profile ID");
   const profile = await MentorshipProfile.findById(profileId);
   assertFound16(profile, "Mentorship profile not found", 404);
   if (payload.bio !== void 0) {
@@ -20549,7 +21479,7 @@ var updateMentorshipProfile = async (profileId, payload, actorId) => {
   if (payload.isPrimaryMentor !== void 0) {
     profile.isPrimaryMentor = payload.isPrimaryMentor;
   }
-  profile.updatedBy = new Types30.ObjectId(actorId);
+  profile.updatedBy = new Types31.ObjectId(actorId);
   await profile.save();
   if (profile.isPrimaryMentor) {
     await clearOtherPrimaryMentors(profile._id);
@@ -20557,7 +21487,7 @@ var updateMentorshipProfile = async (profileId, payload, actorId) => {
   return profile.populate(PROFILE_POPULATE);
 };
 var publishMentorshipProfile = async (profileId, actorId) => {
-  assertValidObjectId10(profileId, "Mentorship profile ID");
+  assertValidObjectId11(profileId, "Mentorship profile ID");
   const profile = await MentorshipProfile.findById(profileId);
   assertFound16(profile, "Mentorship profile not found", 404);
   if (profile.status === "archived") {
@@ -20566,12 +21496,12 @@ var publishMentorshipProfile = async (profileId, actorId) => {
   profile.status = "published";
   profile.publishedAt = /* @__PURE__ */ new Date();
   profile.set("archivedAt", void 0);
-  profile.updatedBy = new Types30.ObjectId(actorId);
+  profile.updatedBy = new Types31.ObjectId(actorId);
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
 };
 var moveMentorshipProfileToDraft = async (profileId, actorId) => {
-  assertValidObjectId10(profileId, "Mentorship profile ID");
+  assertValidObjectId11(profileId, "Mentorship profile ID");
   const profile = await MentorshipProfile.findById(profileId);
   assertFound16(profile, "Mentorship profile not found", 404);
   if (profile.status === "archived") {
@@ -20582,12 +21512,12 @@ var moveMentorshipProfileToDraft = async (profileId, actorId) => {
   }
   profile.status = "draft";
   profile.set("publishedAt", void 0);
-  profile.updatedBy = new Types30.ObjectId(actorId);
+  profile.updatedBy = new Types31.ObjectId(actorId);
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
 };
 var archiveMentorshipProfile = async (profileId, actorId) => {
-  assertValidObjectId10(profileId, "Mentorship profile ID");
+  assertValidObjectId11(profileId, "Mentorship profile ID");
   const profile = await MentorshipProfile.findById(profileId);
   assertFound16(profile, "Mentorship profile not found", 404);
   profile.status = "archived";
@@ -20595,9 +21525,66 @@ var archiveMentorshipProfile = async (profileId, actorId) => {
   profile.isActive = false;
   profile.isPrimaryMentor = false;
   profile.set("publishedAt", void 0);
-  profile.updatedBy = new Types30.ObjectId(actorId);
+  profile.updatedBy = new Types31.ObjectId(actorId);
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
+};
+var MENTOR_FIELD_POPULATE = {
+  path: "mentor",
+  select: "fullName email role profileImage"
+};
+var selectMyCoMentor = async (memberUserId, mentorshipProfileId) => {
+  assertValidObjectId11(memberUserId, "Member user ID");
+  assertValidObjectId11(mentorshipProfileId, "Mentorship profile ID");
+  const member = await User.findById(memberUserId).select("_id fullName email role").lean();
+  assertFound16(member, "Member not found", 404);
+  const profile = await MentorshipProfile.findOne({
+    _id: mentorshipProfileId,
+    status: "published",
+    isActive: true
+  }).populate(MENTOR_FIELD_POPULATE).lean();
+  assertFound16(
+    profile,
+    "Mentorship profile not found or not available for selection",
+    404
+  );
+  if (profile.isPrimaryMentor) {
+    throwServiceError16(
+      "The primary mentor is assigned automatically and cannot be selected as a co-mentor",
+      400
+    );
+  }
+  if (!profile.mentor) {
+    throwServiceError16(
+      "This mentorship profile is not assigned to a mentor",
+      400
+    );
+  }
+  if (String(profile.mentor._id) === memberUserId) {
+    throwServiceError16(
+      "You cannot select yourself as your own co-mentor",
+      400
+    );
+  }
+  await User.findByIdAndUpdate(
+    memberUserId,
+    {
+      assignedCoMentorProfile: profile._id,
+      coMentorAssignedAt: /* @__PURE__ */ new Date(),
+      coMentorAssignedBy: new Types31.ObjectId(memberUserId)
+    },
+    { new: true }
+  );
+  return profile;
+};
+var getMyCoMentor = async (memberUserId) => {
+  assertValidObjectId11(memberUserId, "Member user ID");
+  const member = await User.findById(memberUserId).select("_id assignedCoMentorProfile coMentorAssignedAt").populate({
+    path: "assignedCoMentorProfile",
+    populate: MENTOR_FIELD_POPULATE
+  }).lean();
+  assertFound16(member, "Member not found", 404);
+  return member;
 };
 var mentorshipProfileService = {
   createMentorshipProfile,
@@ -20607,7 +21594,9 @@ var mentorshipProfileService = {
   updateMentorshipProfile,
   publishMentorshipProfile,
   moveMentorshipProfileToDraft,
-  archiveMentorshipProfile
+  archiveMentorshipProfile,
+  selectMyCoMentor,
+  getMyCoMentor
 };
 
 // src/modules/mentorshipProfiles/mentorship.profile.controller.ts
@@ -20755,6 +21744,37 @@ var archiveMentorshipProfile2 = async (req, res, next) => {
     next(error);
   }
 };
+var selectCoMentor = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser15(req);
+    const member = await mentorshipProfileService.selectMyCoMentor(
+      authUser.id,
+      String(req.body.mentorshipProfileId)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Co-mentor selected successfully",
+      data: member
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyCoMentor2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser15(req);
+    const member = await mentorshipProfileService.getMyCoMentor(authUser.id);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Co-mentor retrieved successfully",
+      data: member
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var mentorshipProfileController = {
   createMentorshipProfile: createMentorshipProfile2,
   getAllMentorshipProfiles: getAllMentorshipProfiles2,
@@ -20763,7 +21783,9 @@ var mentorshipProfileController = {
   updateMentorshipProfile: updateMentorshipProfile2,
   publishMentorshipProfile: publishMentorshipProfile2,
   moveMentorshipProfileToDraft: moveMentorshipProfileToDraft2,
-  archiveMentorshipProfile: archiveMentorshipProfile2
+  archiveMentorshipProfile: archiveMentorshipProfile2,
+  selectCoMentor,
+  getMyCoMentor: getMyCoMentor2
 };
 
 // src/modules/mentorshipProfiles/mentorship.profile.validation.ts
@@ -20809,11 +21831,27 @@ var mentorshipProfileIdValidation = z20.object({
     id: mongoObjectIdSchema12
   })
 });
+var selectCoMentorValidation = z20.object({
+  body: z20.object({
+    mentorshipProfileId: mongoObjectIdSchema12
+  }).strict()
+});
 
 // src/modules/mentorshipProfiles/mentorship.profile.route.ts
 var router28 = Router28();
 router28.get("/", mentorshipProfileController.getAllMentorshipProfiles);
 router28.get("/primary", mentorshipProfileController.getPrimaryMentor);
+router28.get(
+  "/me/co-mentor",
+  verifyToken,
+  mentorshipProfileController.getMyCoMentor
+);
+router28.patch(
+  "/me/co-mentor",
+  verifyToken,
+  validateRequest_default(selectCoMentorValidation),
+  mentorshipProfileController.selectCoMentor
+);
 router28.get(
   "/:id",
   validateRequest_default(mentorshipProfileIdValidation),
@@ -20860,10 +21898,10 @@ var mentorshipProfileRoutes = router28;
 import { Router as Router29 } from "express";
 
 // src/modules/mentorshipReviews/mentorship.review.service.ts
-import mongoose3, { Types as Types31 } from "mongoose";
+import mongoose3, { Types as Types32 } from "mongoose";
 
 // src/modules/mentorshipReviews/mentorship.review.model.schema.ts
-import { model as model31, Schema as Schema31 } from "mongoose";
+import { model as model33, Schema as Schema33 } from "mongoose";
 
 // src/modules/mentorshipReviews/mentorship.review.interface.ts
 var MENTORSHIP_REVIEW_STATUSES = [
@@ -20873,29 +21911,29 @@ var MENTORSHIP_REVIEW_STATUSES = [
 ];
 
 // src/modules/mentorshipReviews/mentorship.review.model.schema.ts
-var mentorshipReviewSchema = new Schema31(
+var mentorshipReviewSchema = new Schema33(
   {
     booking: {
-      type: Schema31.Types.ObjectId,
+      type: Schema33.Types.ObjectId,
       ref: "MentorBooking",
       required: true,
       unique: true,
       index: true
     },
     user: {
-      type: Schema31.Types.ObjectId,
+      type: Schema33.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     mentor: {
-      type: Schema31.Types.ObjectId,
+      type: Schema33.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     mentorshipProfile: {
-      type: Schema31.Types.ObjectId,
+      type: Schema33.Types.ObjectId,
       ref: "MentorshipProfile",
       index: true
     },
@@ -20931,7 +21969,7 @@ var mentorshipReviewSchema = new Schema31(
       maxlength: 1e3
     },
     moderatedBy: {
-      type: Schema31.Types.ObjectId,
+      type: Schema33.Types.ObjectId,
       ref: "User"
     },
     moderatedAt: {
@@ -20960,7 +21998,7 @@ mentorshipReviewSchema.index({
   rating: 1,
   status: 1
 });
-var MentorshipReview = model31(
+var MentorshipReview = model33(
   "MentorshipReview",
   mentorshipReviewSchema
 );
@@ -20976,8 +22014,8 @@ var assertFound17 = (value, message, statusCode) => {
     throwServiceError17(message, statusCode);
   }
 };
-var assertValidObjectId11 = (value, fieldName) => {
-  if (!Types31.ObjectId.isValid(value)) {
+var assertValidObjectId12 = (value, fieldName) => {
+  if (!Types32.ObjectId.isValid(value)) {
     throwServiceError17(`${fieldName} is invalid`, 400);
   }
 };
@@ -21012,15 +22050,15 @@ var getReviewPopulate = () => {
   return populateList;
 };
 var ensureMentorUserExists2 = async (mentorId) => {
-  assertValidObjectId11(mentorId, "Mentor ID");
+  assertValidObjectId12(mentorId, "Mentor ID");
   const mentor = await User.findById(mentorId).select(
     "_id fullName email role profileImage"
-  );
+  ).lean();
   assertFound17(mentor, "Mentor user not found", 404);
   return mentor;
 };
 var verifyBookingForReview = async (bookingId, userId, mentorId) => {
-  assertValidObjectId11(bookingId, "Booking ID");
+  assertValidObjectId12(bookingId, "Booking ID");
   if (mongoose3.models.MentorBooking) {
     const booking = await mongoose3.model("MentorBooking").findById(bookingId).lean();
     assertFound17(booking, "Mentorship booking not found", 404);
@@ -21047,16 +22085,16 @@ var verifyBookingForReview = async (bookingId, userId, mentorId) => {
   }
 };
 var createReview = async (payload, userId) => {
-  assertValidObjectId11(payload.booking, "Booking ID");
-  assertValidObjectId11(payload.mentor, "Mentor ID");
+  assertValidObjectId12(payload.booking, "Booking ID");
+  assertValidObjectId12(payload.mentor, "Mentor ID");
   if (payload.mentor === userId) {
     throwServiceError17("Mentors cannot submit reviews for themselves", 400);
   }
   await ensureMentorUserExists2(payload.mentor);
   await verifyBookingForReview(payload.booking, userId, payload.mentor);
   const existingReview = await MentorshipReview.findOne({
-    booking: new Types31.ObjectId(payload.booking)
-  });
+    booking: new Types32.ObjectId(payload.booking)
+  }).lean();
   if (existingReview) {
     throwServiceError17(
       "A review has already been submitted for this mentorship booking",
@@ -21066,24 +22104,24 @@ var createReview = async (payload, userId) => {
   let mentorshipProfileId = payload.mentorshipProfile;
   if (!mentorshipProfileId) {
     const profile = await MentorshipProfile.findOne({
-      mentor: new Types31.ObjectId(payload.mentor)
-    }).select("_id");
+      mentor: new Types32.ObjectId(payload.mentor)
+    }).select("_id").lean();
     if (profile) {
       mentorshipProfileId = profile._id.toString();
     }
   }
   const createData = {
-    booking: new Types31.ObjectId(payload.booking),
-    user: new Types31.ObjectId(userId),
-    mentor: new Types31.ObjectId(payload.mentor),
+    booking: new Types32.ObjectId(payload.booking),
+    user: new Types32.ObjectId(userId),
+    mentor: new Types32.ObjectId(payload.mentor),
     rating: payload.rating,
     status: "published",
     isAnonymous: payload.isAnonymous ?? false,
     helpfulCount: 0
   };
   if (mentorshipProfileId) {
-    assertValidObjectId11(mentorshipProfileId, "Mentorship profile ID");
-    createData.mentorshipProfile = new Types31.ObjectId(mentorshipProfileId);
+    assertValidObjectId12(mentorshipProfileId, "Mentorship profile ID");
+    createData.mentorshipProfile = new Types32.ObjectId(mentorshipProfileId);
   }
   if (payload.comment) {
     createData.comment = payload.comment.trim();
@@ -21102,26 +22140,26 @@ var createReview = async (payload, userId) => {
   }
 };
 var getReviewsForMentor = async (mentorId, options2) => {
-  assertValidObjectId11(mentorId, "Mentor ID");
+  assertValidObjectId12(mentorId, "Mentor ID");
   const page = Math.max(1, options2?.page ?? 1);
   const limit = Math.max(1, Math.min(50, options2?.limit ?? 10));
   const skip = (page - 1) * limit;
   let filter = {
     $or: [
-      { mentor: new Types31.ObjectId(mentorId) },
-      { mentorshipProfile: new Types31.ObjectId(mentorId) }
+      { mentor: new Types32.ObjectId(mentorId) },
+      { mentorshipProfile: new Types32.ObjectId(mentorId) }
     ],
     status: "published"
   };
   const [reviews, total, aggregateStats] = await Promise.all([
-    MentorshipReview.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(getReviewPopulate()),
+    MentorshipReview.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(getReviewPopulate()).lean(),
     MentorshipReview.countDocuments(filter),
     MentorshipReview.aggregate([
       {
         $match: {
           $or: [
-            { mentor: new Types31.ObjectId(mentorId) },
-            { mentorshipProfile: new Types31.ObjectId(mentorId) }
+            { mentor: new Types32.ObjectId(mentorId) },
+            { mentorshipProfile: new Types32.ObjectId(mentorId) }
           ],
           status: "published"
         }
@@ -21158,14 +22196,10 @@ var getReviewsForMentor = async (mentorId, options2) => {
     ratingBreakdown
   };
   const sanitizedReviews = reviews.map((rev) => {
-    const doc = rev.toObject();
-    if (doc.isAnonymous) {
-      doc.user = {
-        fullName: "Anonymous Member",
-        role: "we_club_member"
-      };
+    if (rev.isAnonymous) {
+      return { ...rev, user: { fullName: "Anonymous Member", role: "we_club_member" } };
     }
-    return doc;
+    return rev;
   });
   return {
     stats,
@@ -21179,13 +22213,13 @@ var getReviewsForMentor = async (mentorId, options2) => {
   };
 };
 var getMyReviews = async (userId, options2) => {
-  assertValidObjectId11(userId, "User ID");
+  assertValidObjectId12(userId, "User ID");
   const page = Math.max(1, options2?.page ?? 1);
   const limit = Math.max(1, Math.min(50, options2?.limit ?? 10));
   const skip = (page - 1) * limit;
-  const filter = { user: new Types31.ObjectId(userId) };
+  const filter = { user: new Types32.ObjectId(userId) };
   const [reviews, total] = await Promise.all([
-    MentorshipReview.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(getReviewPopulate()),
+    MentorshipReview.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(getReviewPopulate()).lean(),
     MentorshipReview.countDocuments(filter)
   ]);
   return {
@@ -21199,17 +22233,17 @@ var getMyReviews = async (userId, options2) => {
   };
 };
 var getSingleReview = async (reviewId, actorUserId, actorRole) => {
-  assertValidObjectId11(reviewId, "Review ID");
+  assertValidObjectId12(reviewId, "Review ID");
   const review = await MentorshipReview.findById(reviewId).populate(
     getReviewPopulate()
-  );
+  ).lean();
   assertFound17(review, "Mentorship review not found", 404);
   const isOwner = actorUserId && review.user.toString() === actorUserId;
   const isAdmin = actorRole === "founder" || actorRole === "manager" || actorRole === "admin" || actorRole === "super_admin";
   if (review.status !== "published" && !isOwner && !isAdmin) {
     throwServiceError17("Mentorship review not found", 404);
   }
-  const doc = review.toObject();
+  const doc = review;
   if (doc.isAnonymous && !isOwner && !isAdmin) {
     doc.user = {
       fullName: "Anonymous Member",
@@ -21219,7 +22253,7 @@ var getSingleReview = async (reviewId, actorUserId, actorRole) => {
   return doc;
 };
 var updateReview = async (reviewId, payload, userId) => {
-  assertValidObjectId11(reviewId, "Review ID");
+  assertValidObjectId12(reviewId, "Review ID");
   const review = await MentorshipReview.findById(reviewId);
   assertFound17(review, "Mentorship review not found", 404);
   if (review.user.toString() !== userId) {
@@ -21243,7 +22277,7 @@ var updateReview = async (reviewId, payload, userId) => {
   return review.populate(getReviewPopulate());
 };
 var deleteReview = async (reviewId, userId) => {
-  assertValidObjectId11(reviewId, "Review ID");
+  assertValidObjectId12(reviewId, "Review ID");
   const review = await MentorshipReview.findById(reviewId);
   assertFound17(review, "Mentorship review not found", 404);
   if (review.user.toString() !== userId) {
@@ -21261,20 +22295,20 @@ var getAllReviewsAdmin = async (query) => {
   const skip = (page - 1) * limit;
   const filter = {};
   if (query.mentor) {
-    assertValidObjectId11(query.mentor, "Mentor ID");
-    filter.mentor = new Types31.ObjectId(query.mentor);
+    assertValidObjectId12(query.mentor, "Mentor ID");
+    filter.mentor = new Types32.ObjectId(query.mentor);
   }
   if (query.user) {
-    assertValidObjectId11(query.user, "User ID");
-    filter.user = new Types31.ObjectId(query.user);
+    assertValidObjectId12(query.user, "User ID");
+    filter.user = new Types32.ObjectId(query.user);
   }
   if (query.booking) {
-    assertValidObjectId11(query.booking, "Booking ID");
-    filter.booking = new Types31.ObjectId(query.booking);
+    assertValidObjectId12(query.booking, "Booking ID");
+    filter.booking = new Types32.ObjectId(query.booking);
   }
   if (query.mentorshipProfile) {
-    assertValidObjectId11(query.mentorshipProfile, "Mentorship Profile ID");
-    filter.mentorshipProfile = new Types31.ObjectId(query.mentorshipProfile);
+    assertValidObjectId12(query.mentorshipProfile, "Mentorship Profile ID");
+    filter.mentorshipProfile = new Types32.ObjectId(query.mentorshipProfile);
   }
   if (query.status) {
     filter.status = query.status;
@@ -21285,7 +22319,7 @@ var getAllReviewsAdmin = async (query) => {
   const sortField = query.sortBy || "createdAt";
   const sortDirection = query.sortOrder === "asc" ? 1 : -1;
   const [reviews, total] = await Promise.all([
-    MentorshipReview.find(filter).sort({ [sortField]: sortDirection }).skip(skip).limit(limit).populate(getReviewPopulate()),
+    MentorshipReview.find(filter).sort({ [sortField]: sortDirection }).skip(skip).limit(limit).populate(getReviewPopulate()).lean(),
     MentorshipReview.countDocuments(filter)
   ]);
   return {
@@ -21299,11 +22333,11 @@ var getAllReviewsAdmin = async (query) => {
   };
 };
 var moderateReview = async (reviewId, payload, adminId) => {
-  assertValidObjectId11(reviewId, "Review ID");
+  assertValidObjectId12(reviewId, "Review ID");
   const review = await MentorshipReview.findById(reviewId);
   assertFound17(review, "Mentorship review not found", 404);
   review.status = payload.status;
-  review.moderatedBy = new Types31.ObjectId(adminId);
+  review.moderatedBy = new Types32.ObjectId(adminId);
   review.moderatedAt = /* @__PURE__ */ new Date();
   if (payload.adminNotes !== void 0) {
     review.adminNotes = payload.adminNotes;
@@ -21312,7 +22346,7 @@ var moderateReview = async (reviewId, payload, adminId) => {
   return review.populate(getReviewPopulate());
 };
 var deleteReviewAdmin = async (reviewId) => {
-  assertValidObjectId11(reviewId, "Review ID");
+  assertValidObjectId12(reviewId, "Review ID");
   const review = await MentorshipReview.findByIdAndDelete(reviewId);
   assertFound17(review, "Mentorship review not found", 404);
   return { id: reviewId, deleted: true };
@@ -21627,10 +22661,10 @@ var mentorshipReviewRoutes = router29;
 import { Router as Router30 } from "express";
 
 // src/modules/retreatLocations/retreat.location.service.ts
-import { Types as Types32 } from "mongoose";
+import { Types as Types33 } from "mongoose";
 
 // src/modules/retreatLocations/retreat.location.model.schema.ts
-import { model as model32, Schema as Schema32 } from "mongoose";
+import { model as model34, Schema as Schema34 } from "mongoose";
 
 // src/modules/retreatLocations/retreat.location.interface.ts
 var RETREAT_LOCATION_STATUSES = [
@@ -21640,7 +22674,7 @@ var RETREAT_LOCATION_STATUSES = [
 ];
 
 // src/modules/retreatLocations/retreat.location.model.schema.ts
-var retreatLocationSchema = new Schema32(
+var retreatLocationSchema = new Schema34(
   {
     title: {
       type: String,
@@ -21716,12 +22750,12 @@ var retreatLocationSchema = new Schema32(
       default: 0
     },
     createdBy: {
-      type: Schema32.Types.ObjectId,
+      type: Schema34.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema32.Types.ObjectId,
+      type: Schema34.Types.ObjectId,
       ref: "User"
     }
   },
@@ -21735,7 +22769,7 @@ retreatLocationSchema.index({
   status: 1,
   order: 1
 });
-var RetreatLocation = model32(
+var RetreatLocation = model34(
   "RetreatLocation",
   retreatLocationSchema
 );
@@ -21751,8 +22785,8 @@ var assertFound18 = (value, message, statusCode) => {
     throwServiceError18(message, statusCode);
   }
 };
-var assertValidObjectId12 = (value, fieldName) => {
-  if (!Types32.ObjectId.isValid(value)) {
+var assertValidObjectId13 = (value, fieldName) => {
+  if (!Types33.ObjectId.isValid(value)) {
     throwServiceError18(`${fieldName} is invalid`, 400);
   }
 };
@@ -21787,7 +22821,7 @@ var createRetreatLocation = async (payload, actorId) => {
     isActive: payload.isActive ?? true,
     status: payload.status ?? "published",
     order: payload.order ?? 0,
-    createdBy: new Types32.ObjectId(actorId)
+    createdBy: new Types33.ObjectId(actorId)
   };
   if (payload.tagline !== void 0) {
     createData.tagline = payload.tagline;
@@ -21825,7 +22859,7 @@ var getAllRetreatLocations = async (query = {}, isPublicOnly = false) => {
   const limit = query.limit ?? 20;
   const skip = (page - 1) * limit;
   const [locations, total] = await Promise.all([
-    RetreatLocation.find(filter).sort({ isFeatured: -1, order: 1, createdAt: -1 }).skip(skip).limit(limit).populate(LOCATION_POPULATE),
+    RetreatLocation.find(filter).sort({ isFeatured: -1, order: 1, createdAt: -1 }).skip(skip).limit(limit).populate(LOCATION_POPULATE).lean(),
     RetreatLocation.countDocuments(filter)
   ]);
   return {
@@ -21840,8 +22874,8 @@ var getAllRetreatLocations = async (query = {}, isPublicOnly = false) => {
 };
 var getSingleRetreatLocation = async (idOrSlug, isPublicOnly = false) => {
   const filter = {};
-  if (Types32.ObjectId.isValid(idOrSlug)) {
-    filter._id = new Types32.ObjectId(idOrSlug);
+  if (Types33.ObjectId.isValid(idOrSlug)) {
+    filter._id = new Types33.ObjectId(idOrSlug);
   } else {
     filter.slug = idOrSlug.toLowerCase();
   }
@@ -21851,12 +22885,12 @@ var getSingleRetreatLocation = async (idOrSlug, isPublicOnly = false) => {
   }
   const location = await RetreatLocation.findOne(filter).populate(
     LOCATION_POPULATE
-  );
+  ).lean();
   assertFound18(location, "Retreat location not found", 404);
   return location;
 };
 var updateRetreatLocation = async (locationId, payload, actorId) => {
-  assertValidObjectId12(locationId, "Retreat location ID");
+  assertValidObjectId13(locationId, "Retreat location ID");
   const location = await RetreatLocation.findById(locationId);
   assertFound18(location, "Retreat location not found", 404);
   if (payload.title !== void 0) {
@@ -21913,12 +22947,12 @@ var updateRetreatLocation = async (locationId, payload, actorId) => {
   if (payload.order !== void 0) {
     location.order = payload.order;
   }
-  location.updatedBy = new Types32.ObjectId(actorId);
+  location.updatedBy = new Types33.ObjectId(actorId);
   await location.save();
   return location.populate(LOCATION_POPULATE);
 };
 var deleteRetreatLocation = async (locationId) => {
-  assertValidObjectId12(locationId, "Retreat location ID");
+  assertValidObjectId13(locationId, "Retreat location ID");
   const location = await RetreatLocation.findById(locationId);
   assertFound18(location, "Retreat location not found", 404);
   await location.deleteOne();
@@ -22129,20 +23163,20 @@ var retreatLocationRoutes = router30;
 import { Router as Router31 } from "express";
 
 // src/modules/leaderboardEntries/leaderboard.entry.service.ts
-import mongoose5, { Types as Types34 } from "mongoose";
+import mongoose5, { Types as Types35 } from "mongoose";
 
 // src/modules/leaderboardEntries/leaderboard.entry.model.schema.ts
-import { model as model33, Schema as Schema33 } from "mongoose";
-var leaderboardEntrySchema = new Schema33(
+import { model as model35, Schema as Schema35 } from "mongoose";
+var leaderboardEntrySchema = new Schema35(
   {
     leaderboard: {
-      type: Schema33.Types.ObjectId,
+      type: Schema35.Types.ObjectId,
       ref: "Leaderboard",
       required: true,
       index: true
     },
     user: {
-      type: Schema33.Types.ObjectId,
+      type: Schema35.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
@@ -22158,7 +23192,7 @@ var leaderboardEntrySchema = new Schema33(
       default: null
     },
     breakdown: {
-      type: Schema33.Types.Mixed,
+      type: Schema35.Types.Mixed,
       default: {}
     },
     lastUpdatedAt: {
@@ -22190,13 +23224,13 @@ leaderboardEntrySchema.index({
   leaderboard: 1,
   rank: 1
 });
-var LeaderboardEntry = model33(
+var LeaderboardEntry = model35(
   "LeaderboardEntry",
   leaderboardEntrySchema
 );
 
 // src/modules/leaderboards/leaderboard.model.schema.ts
-import { model as model34, Schema as Schema34 } from "mongoose";
+import { model as model36, Schema as Schema36 } from "mongoose";
 
 // src/modules/leaderboards/leaderboard.interface.ts
 var LEADERBOARD_TYPES = [
@@ -22221,7 +23255,7 @@ var LEADERBOARD_STATUSES = [
 ];
 
 // src/modules/leaderboards/leaderboard.model.schema.ts
-var leaderboardSchema = new Schema34(
+var leaderboardSchema = new Schema36(
   {
     title: {
       type: String,
@@ -22260,12 +23294,12 @@ var leaderboardSchema = new Schema34(
       trim: true
     },
     createdBy: {
-      type: Schema34.Types.ObjectId,
+      type: Schema36.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema34.Types.ObjectId,
+      type: Schema36.Types.ObjectId,
       ref: "User",
       required: true
     }
@@ -22293,12 +23327,12 @@ leaderboardSchema.index({
   status: 1,
   createdAt: -1
 });
-var Leaderboard = model34("Leaderboard", leaderboardSchema);
+var Leaderboard = model36("Leaderboard", leaderboardSchema);
 
 // src/modules/leaderboards/leaderboard.service.ts
-import mongoose4, { Types as Types33 } from "mongoose";
-var assertValidObjectId13 = (value, fieldName) => {
-  if (!Types33.ObjectId.isValid(value)) {
+import mongoose4, { Types as Types34 } from "mongoose";
+var assertValidObjectId14 = (value, fieldName) => {
+  if (!Types34.ObjectId.isValid(value)) {
     throwServiceError_default(`${fieldName} is invalid`, 400);
   }
 };
@@ -22306,7 +23340,7 @@ var isDuplicateKeyError10 = (error) => {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
 };
 var createLeaderboard = async (payload, createdByUserId) => {
-  assertValidObjectId13(createdByUserId, "User ID");
+  assertValidObjectId14(createdByUserId, "User ID");
   if (new Date(payload.startAt) >= new Date(payload.endAt)) {
     throwServiceError_default("startAt must be before endAt", 400);
   }
@@ -22319,8 +23353,8 @@ var createLeaderboard = async (payload, createdByUserId) => {
       endAt: payload.endAt,
       description: payload.description,
       status: "draft",
-      createdBy: new Types33.ObjectId(createdByUserId),
-      updatedBy: new Types33.ObjectId(createdByUserId)
+      createdBy: new Types34.ObjectId(createdByUserId),
+      updatedBy: new Types34.ObjectId(createdByUserId)
     });
     return leaderboard;
   } catch (error) {
@@ -22334,7 +23368,7 @@ var createLeaderboard = async (payload, createdByUserId) => {
   }
 };
 var getSingleLeaderboard = async (leaderboardId) => {
-  assertValidObjectId13(leaderboardId, "Leaderboard ID");
+  assertValidObjectId14(leaderboardId, "Leaderboard ID");
   const leaderboard = await Leaderboard.findById(leaderboardId);
   assertFound_default(leaderboard, "Leaderboard not found", 404);
   return leaderboard;
@@ -22351,10 +23385,10 @@ var getAllLeaderboards = async (query) => {
     filter.status = query.status;
   }
   const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
+  const limit = Math.min(query.limit ?? 20, 100);
   const skip = (page - 1) * limit;
   const [records, total] = await Promise.all([
-    Leaderboard.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("createdBy", "fullName email role").populate("updatedBy", "fullName email role"),
+    Leaderboard.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate("createdBy", "fullName email role").populate("updatedBy", "fullName email role").lean(),
     Leaderboard.countDocuments(filter)
   ]);
   return {
@@ -22368,8 +23402,8 @@ var getAllLeaderboards = async (query) => {
   };
 };
 var updateLeaderboard = async (leaderboardId, payload, updatedByUserId) => {
-  assertValidObjectId13(leaderboardId, "Leaderboard ID");
-  assertValidObjectId13(updatedByUserId, "User ID");
+  assertValidObjectId14(leaderboardId, "Leaderboard ID");
+  assertValidObjectId14(updatedByUserId, "User ID");
   const leaderboard = await Leaderboard.findById(leaderboardId);
   assertFound_default(leaderboard, "Leaderboard not found", 404);
   if (leaderboard.status === "finalized") {
@@ -22392,13 +23426,13 @@ var updateLeaderboard = async (leaderboardId, payload, updatedByUserId) => {
   if (payload.endAt !== void 0) {
     leaderboard.endAt = payload.endAt;
   }
-  leaderboard.updatedBy = new Types33.ObjectId(updatedByUserId);
+  leaderboard.updatedBy = new Types34.ObjectId(updatedByUserId);
   await leaderboard.save();
   return leaderboard;
 };
 var activateLeaderboard = async (leaderboardId, updatedByUserId) => {
-  assertValidObjectId13(leaderboardId, "Leaderboard ID");
-  assertValidObjectId13(updatedByUserId, "User ID");
+  assertValidObjectId14(leaderboardId, "Leaderboard ID");
+  assertValidObjectId14(updatedByUserId, "User ID");
   const leaderboard = await Leaderboard.findById(leaderboardId);
   assertFound_default(leaderboard, "Leaderboard not found", 404);
   if (leaderboard.status === "finalized") {
@@ -22420,7 +23454,7 @@ var activateLeaderboard = async (leaderboardId, updatedByUserId) => {
     );
   }
   leaderboard.status = "active";
-  leaderboard.updatedBy = new Types33.ObjectId(updatedByUserId);
+  leaderboard.updatedBy = new Types34.ObjectId(updatedByUserId);
   try {
     await leaderboard.save();
   } catch (error) {
@@ -22458,8 +23492,8 @@ var recalculateLeaderboardRanks = async (leaderboardId) => {
   }
 };
 var finalizeLeaderboard = async (leaderboardId, updatedByUserId) => {
-  assertValidObjectId13(leaderboardId, "Leaderboard ID");
-  assertValidObjectId13(updatedByUserId, "User ID");
+  assertValidObjectId14(leaderboardId, "Leaderboard ID");
+  assertValidObjectId14(updatedByUserId, "User ID");
   const leaderboard = await Leaderboard.findById(leaderboardId);
   assertFound_default(leaderboard, "Leaderboard not found", 404);
   if (leaderboard.status === "finalized") {
@@ -22467,9 +23501,30 @@ var finalizeLeaderboard = async (leaderboardId, updatedByUserId) => {
   }
   await recalculateLeaderboardRanks(leaderboardId);
   leaderboard.status = "finalized";
-  leaderboard.updatedBy = new Types33.ObjectId(updatedByUserId);
+  leaderboard.updatedBy = new Types34.ObjectId(updatedByUserId);
   await leaderboard.save();
   return leaderboard;
+};
+var getLeaderboardEntries = async (leaderboardId, query) => {
+  assertValidObjectId14(leaderboardId, "Leaderboard ID");
+  const leaderboard = await Leaderboard.findById(leaderboardId);
+  assertFound_default(leaderboard, "Leaderboard not found", 404);
+  const page = query.page ?? 1;
+  const limit = Math.min(query.limit ?? 20, 100);
+  const skip = (page - 1) * limit;
+  const [entries, total] = await Promise.all([
+    LeaderboardEntry.find({ leaderboard: leaderboardId }).sort({ rank: 1, points: -1 }).skip(skip).limit(limit).populate("user", "fullName profileImage country").lean(),
+    LeaderboardEntry.countDocuments({ leaderboard: leaderboardId })
+  ]);
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    },
+    data: entries
+  };
 };
 var leaderboardService = {
   createLeaderboard,
@@ -22478,17 +23533,18 @@ var leaderboardService = {
   updateLeaderboard,
   activateLeaderboard,
   finalizeLeaderboard,
+  getLeaderboardEntries,
   recalculateLeaderboardRanks
 };
 
 // src/modules/leaderboardEntries/leaderboard.entry.service.ts
-var assertValidObjectId14 = (value, fieldName) => {
-  if (!Types34.ObjectId.isValid(value)) {
+var assertValidObjectId15 = (value, fieldName) => {
+  if (!Types35.ObjectId.isValid(value)) {
     throwServiceError_default(`${fieldName} is invalid`, 400);
   }
 };
 var ensureEditableLeaderboard = async (leaderboardId) => {
-  assertValidObjectId14(leaderboardId, "Leaderboard ID");
+  assertValidObjectId15(leaderboardId, "Leaderboard ID");
   const leaderboard = await Leaderboard.findById(leaderboardId);
   assertFound_default(leaderboard, "Leaderboard not found", 404);
   if (leaderboard.status === "finalized") {
@@ -22498,7 +23554,7 @@ var ensureEditableLeaderboard = async (leaderboardId) => {
 };
 var upsertPoints = async (leaderboardId, payload) => {
   await ensureEditableLeaderboard(leaderboardId);
-  assertValidObjectId14(payload.userId, "User ID");
+  assertValidObjectId15(payload.userId, "User ID");
   const session = await mongoose5.startSession();
   try {
     session.startTransaction();
@@ -22533,13 +23589,13 @@ var upsertPoints = async (leaderboardId, payload) => {
     session.endSession();
   }
 };
-var getLeaderboardEntries = async (leaderboardId, query) => {
-  assertValidObjectId14(leaderboardId, "Leaderboard ID");
+var getLeaderboardEntries2 = async (leaderboardId, query) => {
+  assertValidObjectId15(leaderboardId, "Leaderboard ID");
   const page = query.page ?? 1;
   const limit = query.limit ?? 50;
   const skip = (page - 1) * limit;
   const [records, total] = await Promise.all([
-    LeaderboardEntry.find({ leaderboard: leaderboardId }).sort({ rank: 1, points: -1 }).skip(skip).limit(limit).populate("user", "fullName email role profileImage"),
+    LeaderboardEntry.find({ leaderboard: leaderboardId }).sort({ rank: 1, points: -1 }).skip(skip).limit(limit).populate("user", "fullName email role profileImage country").lean(),
     LeaderboardEntry.countDocuments({ leaderboard: leaderboardId })
   ]);
   return {
@@ -22553,12 +23609,12 @@ var getLeaderboardEntries = async (leaderboardId, query) => {
   };
 };
 var getSingleUserEntry = async (leaderboardId, userId) => {
-  assertValidObjectId14(leaderboardId, "Leaderboard ID");
-  assertValidObjectId14(userId, "User ID");
+  assertValidObjectId15(leaderboardId, "Leaderboard ID");
+  assertValidObjectId15(userId, "User ID");
   const entry = await LeaderboardEntry.findOne({
     leaderboard: leaderboardId,
     user: userId
-  }).populate("user", "fullName email role profileImage");
+  }).populate("user", "fullName email role profileImage country").lean();
   assertFound_default(entry, "Entry not found for this user in this leaderboard", 404);
   return entry;
 };
@@ -22567,7 +23623,7 @@ var getMyEntry = async (leaderboardId, userId) => {
 };
 var removeEntry = async (leaderboardId, userId) => {
   await ensureEditableLeaderboard(leaderboardId);
-  assertValidObjectId14(userId, "User ID");
+  assertValidObjectId15(userId, "User ID");
   const entry = await LeaderboardEntry.findOneAndDelete({
     leaderboard: leaderboardId,
     user: userId
@@ -22582,7 +23638,7 @@ var recalculateRanks = async (leaderboardId) => {
 };
 var leaderboardEntryService = {
   upsertPoints,
-  getLeaderboardEntries,
+  getLeaderboardEntries: getLeaderboardEntries2,
   getSingleUserEntry,
   getMyEntry,
   removeEntry,
@@ -22615,7 +23671,7 @@ var upsertPoints2 = async (req, res, next) => {
     next(error);
   }
 };
-var getLeaderboardEntries2 = async (req, res, next) => {
+var getLeaderboardEntries3 = async (req, res, next) => {
   try {
     getAuthUser18(req);
     const query = {};
@@ -22708,7 +23764,7 @@ var recalculateRanks2 = async (req, res, next) => {
 };
 var leaderboardEntryController = {
   upsertPoints: upsertPoints2,
-  getLeaderboardEntries: getLeaderboardEntries2,
+  getLeaderboardEntries: getLeaderboardEntries3,
   getMyEntry: getMyEntry2,
   getSingleUserEntry: getSingleUserEntry2,
   removeEntry: removeEntry2,
@@ -22863,7 +23919,7 @@ var getSingleLeaderboard2 = async (req, res, next) => {
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-      message: "Leaderboard retrieved successfully",
+      message: "Leaderboard retrieved2 successfully",
       data: result
     });
   } catch (error) {
@@ -22922,11 +23978,30 @@ var finalizeLeaderboard2 = async (req, res, next) => {
     next(error);
   }
 };
+var getLeaderboardEntries4 = async (req, res, next) => {
+  try {
+    const page = Number(req.query.page);
+    const limit = Number(req.query.limit);
+    const result = await leaderboardService.getLeaderboardEntries(
+      String(req.params.id),
+      { page, limit }
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Leaderboard finalized successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var leaderboardController = {
   createLeaderboard: createLeaderboard2,
   getAllLeaderboards: getAllLeaderboards2,
   getSingleLeaderboard: getSingleLeaderboard2,
   updateLeaderboard: updateLeaderboard2,
+  getLeaderboardEntries: getLeaderboardEntries4,
   activateLeaderboard: activateLeaderboard2,
   finalizeLeaderboard: finalizeLeaderboard2
 };
@@ -22995,6 +24070,12 @@ router32.get(
   validateRequest_default(leaderboardIdValidation),
   leaderboardController.getSingleLeaderboard
 );
+router32.get(
+  "/:id/entries",
+  verifyToken,
+  requireInvictusAccess,
+  leaderboardController.getLeaderboardEntries
+);
 router32.patch(
   "/:id",
   verifyToken,
@@ -23008,6 +24089,12 @@ router32.post(
   authorizeRoles("founder", "manager"),
   validateRequest_default(leaderboardIdValidation),
   leaderboardController.activateLeaderboard
+);
+router32.get(
+  "/:id/entries",
+  verifyToken,
+  requireInvictusAccess,
+  leaderboardController.getLeaderboardEntries
 );
 router32.post(
   "/:id/finalize",
@@ -23072,7 +24159,9 @@ var confirmMentorBookingValidation = z25.object({
     id: mongoObjectIdSchema17
   }),
   body: z25.object({
-    meetingUrl: z25.string().trim().url().optional()
+    sessionTopic: z25.string().trim().min(3, "Session title must be at least 3 characters").max(500),
+    meetingUrl: z25.string().trim().url(),
+    notes: z25.string().trim().max(2e3).optional()
   }).strict()
 });
 var cancelMentorBookingValidation = z25.object({
@@ -23088,6 +24177,7 @@ var completeMentorBookingValidation = z25.object({
     id: mongoObjectIdSchema17
   }),
   body: z25.object({
+    recordingTitle: z25.string().trim().min(3, "Recording title must be at least 3 characters").max(200),
     mentorFeedback: z25.string().trim().max(3e3).optional()
   }).strict()
 });
@@ -23122,732 +24212,53 @@ var queryMentorBookingValidation = z25.object({
 // src/modules/mentorBookings/mentor.booking.service.ts
 import { Types as Types36 } from "mongoose";
 
-// src/modules/notifications/notification.service.ts
-import { Types as Types35 } from "mongoose";
-
-// src/socket/socket.ts
-import { Server } from "socket.io";
-import jwt4 from "jsonwebtoken";
-var io;
-var getUserRoom = (userId) => `user:${userId}`;
-var emitNotificationToUser = (userId, payload) => {
-  if (!io) {
-    return;
-  }
-  io.to(getUserRoom(userId)).emit("notification:new", payload);
-};
-var onlineUsers = /* @__PURE__ */ new Map();
-var initSocket = (httpServer) => {
-  io = new Server(httpServer, {
-    cors: {
-      origin: true,
-      credentials: true
-    }
-  });
-  io.use((socket, next) => {
-    const token = socket.handshake.auth?.token;
-    if (!token) {
-      return next(new Error("Authentication token is required"));
-    }
-    try {
-      const decoded = jwt4.verify(
-        token,
-        config_default.JWT_ACCESS_SECRET
-      );
-      if (!decoded || !decoded.id) {
-        return next(new Error("Invalid token payload"));
-      }
-      socket.data.user = {
-        id: decoded.id,
-        email: decoded.email,
-        role: decoded.role
-      };
-      return next();
-    } catch (error) {
-      return next(new Error("Invalid or expired token"));
-    }
-  });
-  io.on("connection", async (socket) => {
-    try {
-      const userId = socket.data.user.id;
-      const userDoc = await User.findById(userId).select(
-        "fullName profileImage country"
-      );
-      socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
-      socket.data.user.profileImage = userDoc?.profileImage ?? null;
-      const countryName = userDoc?.country?.trim();
-      const isPrivilegedRole = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager";
-      let country = countryName ? resolveCountry(countryName) : null;
-      if (!country && !isPrivilegedRole) {
-        socket.emit(
-          "error",
-          countryName ? "Invalid country on your profile" : "No country set on your profile"
-        );
-        return socket.disconnect();
-      }
-      if (!country) {
-        country = resolveCountry("United States");
-      }
-      if (!country) {
-        socket.emit("error", "No default community room is configured");
-        return socket.disconnect();
-      }
-      const room = await getOrCreateCountryRoom(country.name, userId);
-      let roomId = room._id.toString();
-      socket.data.roomId = roomId;
-      socket.join(roomId);
-      socket.emit("room:joined", {
-        roomId,
-        countryCode: room.countryCode,
-        countryName: room.countryName
-      });
-      socket.on("room:join", async (requestedCountryName) => {
-        try {
-          const canSwitchRooms = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager";
-          if (!canSwitchRooms) {
-            socket.emit(
-              "error",
-              "Only founders, admins, and managers can change community rooms"
-            );
-            return;
-          }
-          const requestedCountry = resolveCountry(requestedCountryName);
-          if (!requestedCountry) {
-            socket.emit("error", "Invalid country name");
-            return;
-          }
-          const nextRoom = await getOrCreateCountryRoom(
-            requestedCountry.name,
-            userId
-          );
-          const nextRoomId = nextRoom._id.toString();
-          if (roomId !== nextRoomId) {
-            socket.leave(roomId);
-            socket.to(roomId).emit("presence:update", {
-              userId,
-              online: false
-            });
-            socket.join(nextRoomId);
-            roomId = nextRoomId;
-            socket.data.roomId = nextRoomId;
-          }
-          socket.emit("room:joined", {
-            roomId: nextRoomId,
-            countryCode: nextRoom.countryCode,
-            countryName: nextRoom.countryName
-          });
-        } catch (error) {
-          console.error("room:join error:", error);
-          socket.emit("error", error.message || "Failed to join room");
-        }
-      });
-      const isFirstConnectionForUser = !onlineUsers.has(userId);
-      if (isFirstConnectionForUser) {
-        onlineUsers.set(userId, /* @__PURE__ */ new Set());
-      }
-      onlineUsers.get(userId).add(socket.id);
-      if (isFirstConnectionForUser) {
-        socket.to(roomId).emit("presence:update", { userId, online: true });
-      }
-      socket.emit("presence:list", Array.from(onlineUsers.keys()));
-      socket.on(
-        "message:send",
-        async (payload) => {
-          try {
-            const content = payload?.content;
-            if (!content || !content.trim()) return;
-            const message = await createMessage(
-              roomId,
-              userId,
-              content.trim(),
-              payload?.replyTo ?? null
-            );
-            io.to(roomId).emit("message:new", message);
-          } catch (error) {
-            console.error("message:send error:", error);
-            socket.emit("error", error.message || "Failed to send message");
-          }
-        }
-      );
-      socket.on("message:delete", async (messageId) => {
-        try {
-          if (!messageId) return;
-          const deleted = await deleteMessage(messageId, userId);
-          io.to(roomId).emit("message:deleted", {
-            messageId: deleted._id.toString(),
-            content: deleted.content
-            // "This message was deleted"
-          });
-        } catch (error) {
-          console.error("message:delete error:", error);
-          socket.emit("error", error.message || "Failed to delete message");
-        }
-      });
-      socket.on("typing:start", () => {
-        socket.to(roomId).emit("typing:update", {
-          userId,
-          fullName: socket.data.user.fullName,
-          typing: true
-        });
-      });
-      socket.on("typing:stop", () => {
-        socket.to(roomId).emit("typing:update", {
-          userId,
-          fullName: socket.data.user.fullName,
-          typing: false
-        });
-      });
-      socket.on("disconnect", () => {
-        const userSockets = onlineUsers.get(userId);
-        userSockets?.delete(socket.id);
-        if (userSockets && userSockets.size === 0) {
-          onlineUsers.delete(userId);
-          socket.to(roomId).emit("presence:update", { userId, online: false });
-        }
-        console.log(`Socket disconnected: ${socket.id}`);
-      });
-    } catch (error) {
-      console.error("Socket connection error:", error);
-      socket.disconnect();
-    }
-  });
-  return io;
-};
-
-// src/modules/notificationTemplates/notification.template.model.schema.ts
-import { model as model35, Schema as Schema35 } from "mongoose";
-
-// src/modules/notifications/notification.interface.ts
-var NOTIFICATION_CHANNELS = ["in_app", "email", "push"];
-
-// src/modules/notificationTemplates/notification.template.model.schema.ts
-var notificationTemplateSchema = new Schema35(
-  {
-    key: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      lowercase: true,
-      maxlength: 120,
-      index: true
-    },
-    titleTemplate: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 200
-    },
-    bodyTemplate: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 2e3
-    },
-    channels: {
-      type: [String],
-      enum: NOTIFICATION_CHANNELS,
-      default: ["in_app"],
-      required: true
-    },
-    actionUrlTemplate: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    description: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    enabled: {
-      type: Boolean,
-      default: true,
-      required: true,
-      index: true
-    },
-    createdBy: {
-      type: Schema35.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema35.Types.ObjectId,
-      ref: "User",
-      required: true
-    }
-  },
-  {
-    timestamps: true,
-    collection: "notificationtemplates"
-  }
-);
-notificationTemplateSchema.index({
-  enabled: 1,
-  createdAt: -1
-});
-var NotificationTemplate = model35(
-  "NotificationTemplate",
-  notificationTemplateSchema
-);
-
-// src/modules/notifications/notification.model.schema.ts
-import { model as model36, Schema as Schema36 } from "mongoose";
-var notificationSchema = new Schema36(
-  {
-    recipient: {
-      type: Schema36.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    actor: {
-      type: Schema36.Types.ObjectId,
-      ref: "User"
-    },
-    template: {
-      type: Schema36.Types.ObjectId,
-      ref: "NotificationTemplate"
-    },
-    type: {
-      type: String,
-      required: true,
-      trim: true,
-      index: true,
-      maxlength: 120
-    },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 200
-    },
-    body: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 2e3
-    },
-    channels: {
-      type: [String],
-      enum: NOTIFICATION_CHANNELS,
-      default: ["in_app"],
-      required: true
-    },
-    relatedEntityType: {
-      type: String,
-      trim: true,
-      maxlength: 120
-    },
-    relatedEntityId: {
-      type: Schema36.Types.ObjectId
-    },
-    actionUrl: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    metadata: {
-      type: Schema36.Types.Mixed
-    },
-    isRead: {
-      type: Boolean,
-      default: false,
-      required: true,
-      index: true
-    },
-    readAt: {
-      type: Date
-    },
-    dedupeKey: {
-      type: String,
-      trim: true
-    }
-  },
-  {
-    timestamps: true,
-    collection: "notifications"
-  }
-);
-notificationSchema.index({
-  recipient: 1,
-  isRead: 1,
-  createdAt: -1
-});
-notificationSchema.index({
-  recipient: 1,
-  createdAt: -1
-});
-notificationSchema.index({
-  type: 1,
-  createdAt: -1
-});
-notificationSchema.index(
-  { dedupeKey: 1 },
-  {
-    unique: true,
-    sparse: true
-  }
-);
-var Notification = model36(
-  "Notification",
-  notificationSchema
-);
-
-// src/modules/notifications/notification.service.ts
-var NOTIFICATION_POPULATE = [
-  {
-    path: "recipient",
-    select: "fullName email role profileImage accessTo"
-  },
-  {
-    path: "actor",
-    select: "fullName email role profileImage"
-  },
-  {
-    path: "template",
-    select: "key titleTemplate bodyTemplate channels enabled"
-  }
-];
-var assertValidObjectId15 = (value, fieldName) => {
-  if (!Types35.ObjectId.isValid(value)) {
-    throwServiceError_default(`${fieldName} is invalid`, 400);
-  }
-};
-var escapeRegex2 = (value) => {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-};
-var renderPlaceholders = (source, variables = {}) => {
-  return source.replace(
-    /{{\s*([a-zA-Z0-9_.-]+)\s*}}/g,
-    (_match, key) => {
-      const value = variables[key];
-      if (value === void 0 || value === null) {
-        return "";
-      }
-      return String(value);
-    }
-  );
-};
-var getExistingByDedupeKey = async (dedupeKey) => {
-  if (!dedupeKey) {
-    return null;
-  }
-  return Notification.findOne({ dedupeKey }).populate(NOTIFICATION_POPULATE);
-};
-var createNotificationRecord = async (payload, templateId) => {
-  assertValidObjectId15(payload.recipient, "Recipient user ID");
-  if (payload.actor) {
-    assertValidObjectId15(payload.actor, "Actor user ID");
-  }
-  if (payload.relatedEntityId) {
-    assertValidObjectId15(payload.relatedEntityId, "Related entity ID");
-  }
-  const existing = await getExistingByDedupeKey(payload.dedupeKey);
-  if (existing) {
-    return existing;
-  }
-  const recipient = await User.findById(payload.recipient).select("_id");
-  assertFound_default(recipient, "Notification recipient user not found", 404);
-  const createData = {
-    recipient: new Types35.ObjectId(payload.recipient),
-    type: payload.type.trim(),
-    title: payload.title.trim(),
-    body: payload.body.trim(),
-    channels: payload.channels ?? ["in_app"],
-    isRead: false
-  };
-  if (payload.actor) {
-    createData.actor = new Types35.ObjectId(payload.actor);
-  }
-  if (templateId) {
-    createData.template = templateId;
-  }
-  if (payload.relatedEntityType) {
-    createData.relatedEntityType = payload.relatedEntityType;
-  }
-  if (payload.relatedEntityId) {
-    createData.relatedEntityId = new Types35.ObjectId(payload.relatedEntityId);
-  }
-  if (payload.actionUrl) {
-    createData.actionUrl = payload.actionUrl;
-  }
-  if (payload.metadata !== void 0) {
-    createData.metadata = payload.metadata;
-  }
-  if (payload.dedupeKey) {
-    createData.dedupeKey = payload.dedupeKey;
-  }
-  try {
-    const notification = await Notification.create(createData);
-    await notification.populate(NOTIFICATION_POPULATE);
-    if (notification.channels.includes("in_app")) {
-      emitNotificationToUser(
-        payload.recipient,
-        notification.toObject()
-      );
-    }
-    return notification;
-  } catch (error) {
-    const maybeMongoError = error;
-    if (maybeMongoError.code === 11e3 && payload.dedupeKey) {
-      const duplicate = await getExistingByDedupeKey(payload.dedupeKey);
-      if (duplicate) {
-        return duplicate;
-      }
-    }
-    throw error;
-  }
-};
-var createNotification = async (payload) => {
-  return createNotificationRecord(payload);
-};
-var createNotificationFromTemplate = async (payload) => {
-  const template = await NotificationTemplate.findOne({
-    key: payload.templateKey.trim().toLowerCase()
-  });
-  assertFound_default(
-    template,
-    `Notification template "${payload.templateKey}" not found`,
-    404
-  );
-  if (!template.enabled) {
-    throwServiceError_default(
-      `Notification template "${template.key}" is disabled`,
-      400
-    );
-  }
-  const variables = payload.variables ?? {};
-  const actionUrl = payload.actionUrl ?? (template.actionUrlTemplate ? renderPlaceholders(template.actionUrlTemplate, variables) : void 0);
-  const notificationPayload = {
-    recipient: payload.recipient,
-    type: template.key,
-    title: renderPlaceholders(template.titleTemplate, variables),
-    body: renderPlaceholders(template.bodyTemplate, variables),
-    channels: payload.channels ?? template.channels,
-    ...payload.actor ? { actor: payload.actor } : {},
-    ...payload.relatedEntityType ? { relatedEntityType: payload.relatedEntityType } : {},
-    ...payload.relatedEntityId ? { relatedEntityId: payload.relatedEntityId } : {},
-    ...actionUrl ? { actionUrl } : {},
-    ...payload.metadata !== void 0 ? { metadata: payload.metadata } : {},
-    ...payload.dedupeKey ? { dedupeKey: payload.dedupeKey } : {}
-  };
-  return createNotificationRecord(
-    notificationPayload,
-    template._id
-  );
-};
-var safeCreateNotification = async (payload) => {
-  try {
-    return await createNotification(payload);
-  } catch (error) {
-    console.error("Notification create failed:", error);
-    return null;
-  }
-};
-var safeCreateFromTemplateOrFallback = async (payload) => {
-  try {
-    const template = await NotificationTemplate.findOne({
-      key: payload.templateKey.trim().toLowerCase()
-    });
-    if (template && !template.enabled) {
-      return null;
-    }
-    if (template) {
-      const fromTemplatePayload = {
-        recipient: payload.recipient,
-        templateKey: template.key,
-        variables: payload.variables ?? {},
-        ...payload.actor ? { actor: payload.actor } : {},
-        ...payload.channels ? { channels: payload.channels } : {},
-        ...payload.relatedEntityType ? { relatedEntityType: payload.relatedEntityType } : {},
-        ...payload.relatedEntityId ? { relatedEntityId: payload.relatedEntityId } : {},
-        ...payload.actionUrl ? { actionUrl: payload.actionUrl } : {},
-        ...payload.metadata !== void 0 ? { metadata: payload.metadata } : {},
-        ...payload.dedupeKey ? { dedupeKey: payload.dedupeKey } : {}
-      };
-      return await createNotificationFromTemplate(fromTemplatePayload);
-    }
-    const fallbackPayload = {
-      recipient: payload.recipient,
-      type: payload.templateKey.trim().toLowerCase(),
-      title: payload.fallbackTitle,
-      body: payload.fallbackBody,
-      channels: payload.channels ?? ["in_app"],
-      ...payload.actor ? { actor: payload.actor } : {},
-      ...payload.relatedEntityType ? { relatedEntityType: payload.relatedEntityType } : {},
-      ...payload.relatedEntityId ? { relatedEntityId: payload.relatedEntityId } : {},
-      ...payload.actionUrl ? { actionUrl: payload.actionUrl } : {},
-      ...payload.metadata !== void 0 ? { metadata: payload.metadata } : {},
-      ...payload.dedupeKey ? { dedupeKey: payload.dedupeKey } : {}
-    };
-    return await createNotification(fallbackPayload);
-  } catch (error) {
-    console.error(
-      `Notification dispatch failed for "${payload.templateKey}":`,
-      error
-    );
-    return null;
-  }
-};
-var buildNotificationFilter = (query, recipientId) => {
-  const filter = {};
-  if (recipientId) {
-    assertValidObjectId15(recipientId, "Recipient user ID");
-    filter.recipient = new Types35.ObjectId(recipientId);
-  }
-  if (query.isRead !== void 0) {
-    filter.isRead = query.isRead;
-  }
-  if (query.type) {
-    filter.type = query.type;
-  }
-  if (query.search) {
-    const regex = new RegExp(escapeRegex2(query.search), "i");
-    filter.$or = [
-      { title: regex },
-      { body: regex },
-      { type: regex }
-    ];
-  }
-  return filter;
-};
-var getMyNotifications = async (userId, query = {}) => {
-  const filter = buildNotificationFilter(query, userId);
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
-  const skip = (page - 1) * limit;
-  const [data, total, unreadCount] = await Promise.all([
-    Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(NOTIFICATION_POPULATE),
-    Notification.countDocuments(filter),
-    Notification.countDocuments({
-      recipient: new Types35.ObjectId(userId),
-      isRead: false
-    })
-  ]);
-  return {
-    meta: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-      unreadCount
-    },
-    data
-  };
-};
-var getUnreadCount = async (userId) => {
-  assertValidObjectId15(userId, "User ID");
-  const unreadCount = await Notification.countDocuments({
-    recipient: new Types35.ObjectId(userId),
-    isRead: false
-  });
-  return {
-    unreadCount
-  };
-};
-var markOneAsRead = async (notificationId, userId) => {
-  assertValidObjectId15(notificationId, "Notification ID");
-  assertValidObjectId15(userId, "User ID");
-  const notification = await Notification.findOneAndUpdate(
-    {
-      _id: new Types35.ObjectId(notificationId),
-      recipient: new Types35.ObjectId(userId)
-    },
-    {
-      $set: {
-        isRead: true,
-        readAt: /* @__PURE__ */ new Date()
-      }
-    },
-    {
-      new: true
-    }
-  ).populate(NOTIFICATION_POPULATE);
-  assertFound_default(notification, "Notification not found", 404);
-  return notification;
-};
-var markOneAsUnread = async (notificationId, userId) => {
-  assertValidObjectId15(notificationId, "Notification ID");
-  assertValidObjectId15(userId, "User ID");
-  const notification = await Notification.findOneAndUpdate(
-    {
-      _id: new Types35.ObjectId(notificationId),
-      recipient: new Types35.ObjectId(userId)
-    },
-    {
-      $set: {
-        isRead: false
-      },
-      $unset: {
-        readAt: 1
-      }
-    },
-    {
-      new: true
-    }
-  ).populate(NOTIFICATION_POPULATE);
-  assertFound_default(notification, "Notification not found", 404);
-  return notification;
-};
-var markAllAsRead = async (userId) => {
-  assertValidObjectId15(userId, "User ID");
-  const now = /* @__PURE__ */ new Date();
-  const result = await Notification.updateMany(
-    {
-      recipient: new Types35.ObjectId(userId),
-      isRead: false
-    },
-    {
-      $set: {
-        isRead: true,
-        readAt: now
-      }
-    }
-  );
-  return {
-    modifiedCount: result.modifiedCount,
-    readAt: now
-  };
-};
-var getAllNotificationsAdmin = async (query = {}) => {
-  const filter = buildNotificationFilter(query, query.recipientId);
-  if (query.actorId) {
-    assertValidObjectId15(query.actorId, "Actor user ID");
-    filter.actor = new Types35.ObjectId(query.actorId);
-  }
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
-  const skip = (page - 1) * limit;
-  const [data, total] = await Promise.all([
-    Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(NOTIFICATION_POPULATE),
-    Notification.countDocuments(filter)
-  ]);
-  return {
-    meta: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit)
-    },
-    data
-  };
-};
-var notificationService = {
-  createNotification,
-  createNotificationFromTemplate,
-  safeCreateNotification,
-  safeCreateFromTemplateOrFallback,
-  getMyNotifications,
-  getUnreadCount,
-  markOneAsRead,
-  markOneAsUnread,
-  markAllAsRead,
-  getAllNotificationsAdmin
-};
-
 // src/modules/mentorBookings/mentor.booking.model.schema.ts
 import { model as model37, Schema as Schema37 } from "mongoose";
+var mentorBookingRecordingSchema = new Schema37(
+  {
+    provider: {
+      type: String,
+      enum: ["cloudinary"],
+      default: "cloudinary",
+      required: true
+    },
+    cloudinaryPublicId: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    cloudinaryAssetId: {
+      type: String,
+      trim: true
+    },
+    secureUrl: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    playbackUrl: {
+      type: String,
+      trim: true
+    },
+    thumbnailUrl: {
+      type: String,
+      trim: true
+    },
+    durationSeconds: {
+      type: Number,
+      min: 0
+    },
+    format: {
+      type: String,
+      trim: true
+    },
+    bytes: {
+      type: Number,
+      min: 0
+    }
+  },
+  { _id: false }
+);
 var mentorBookingSchema = new Schema37(
   {
     member: {
@@ -23934,6 +24345,14 @@ var mentorBookingSchema = new Schema37(
     },
     completedAt: {
       type: Date
+    },
+    recordingTitle: {
+      type: String,
+      trim: true,
+      maxlength: 200
+    },
+    recording: {
+      type: mentorBookingRecordingSchema
     },
     noShowAt: {
       type: Date
@@ -24047,14 +24466,14 @@ var BOOKING_POPULATE = [
 ];
 var checkUserExists = async (userId, label) => {
   assertValidObjectId16(userId, label);
-  const user = await User.findById(userId).select("_id fullName email role");
+  const user = await User.findById(userId).select("_id fullName email role").lean();
   assertFound19(user, `${label} not found`, 404);
   return user;
 };
 var resolveMentorshipProfileId = async (mentorUserId, explicitProfileId) => {
   if (explicitProfileId) {
     assertValidObjectId16(explicitProfileId, "Mentorship profile ID");
-    const profile2 = await MentorshipProfile.findById(explicitProfileId);
+    const profile2 = await MentorshipProfile.findById(explicitProfileId).lean();
     assertFound19(profile2, "Mentorship profile not found", 404);
     if (String(profile2.mentor) !== mentorUserId) {
       throwServiceError19(
@@ -24067,7 +24486,7 @@ var resolveMentorshipProfileId = async (mentorUserId, explicitProfileId) => {
   const profile = await MentorshipProfile.findOne({
     mentor: new Types36.ObjectId(mentorUserId),
     isActive: true
-  });
+  }).lean();
   return profile ? profile._id : void 0;
 };
 var checkSchedulingConflicts = async ({
@@ -24251,7 +24670,7 @@ var getMyMemberBookings = async (memberUserId, query = {}) => {
   const limit = query.limit ?? 20;
   const skip = (page - 1) * limit;
   const [bookings, total] = await Promise.all([
-    MentorBooking.find(filter).sort({ scheduledStartTime: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
+    MentorBooking.find(filter).sort({ scheduledStartTime: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE).lean(),
     MentorBooking.countDocuments(filter)
   ]);
   return {
@@ -24270,9 +24689,64 @@ var getMyMemberSingleBooking = async (bookingId, memberUserId) => {
   const booking = await MentorBooking.findOne({
     _id: new Types36.ObjectId(bookingId),
     member: new Types36.ObjectId(memberUserId)
-  }).populate(BOOKING_POPULATE);
+  }).populate(BOOKING_POPULATE).lean();
   assertFound19(booking, "Mentor booking not found", 404);
   return booking;
+};
+var MENTOR_FIELD_POPULATE2 = {
+  path: "mentor",
+  select: "fullName email role profileImage"
+};
+var ACTIVE_BOOKING_STATUSES = [
+  "confirmed",
+  "completed",
+  "requested"
+];
+var resolveNextSession = async (memberObjectId) => {
+  const now = /* @__PURE__ */ new Date();
+  const upcomingBooking = await MentorBooking.findOne({
+    member: memberObjectId,
+    status: "confirmed",
+    scheduledStartTime: { $gte: now }
+  }).sort({ scheduledStartTime: 1 }).populate(BOOKING_POPULATE).lean();
+  if (upcomingBooking) return upcomingBooking;
+  return MentorBooking.findOne({
+    member: memberObjectId,
+    status: { $in: ACTIVE_BOOKING_STATUSES }
+  }).sort({ scheduledStartTime: -1 }).populate(BOOKING_POPULATE).lean();
+};
+var getMyMentor = async (memberUserId) => {
+  assertValidObjectId16(memberUserId, "Member user ID");
+  const memberObjectId = new Types36.ObjectId(memberUserId);
+  const [primaryProfile, member, nextSession] = await Promise.all([
+    MentorshipProfile.findOne({
+      isPrimaryMentor: true,
+      isActive: true,
+      status: "published"
+    }).populate(MENTOR_FIELD_POPULATE2).lean(),
+    User.findById(memberObjectId).select("_id assignedCoMentorProfile coMentorAssignedAt").populate({
+      path: "assignedCoMentorProfile",
+      populate: MENTOR_FIELD_POPULATE2
+    }).lean(),
+    resolveNextSession(memberObjectId)
+  ]);
+  assertFound19(
+    primaryProfile,
+    "No primary mentor is currently configured",
+    404
+  );
+  const coMentorProfile = member?.assignedCoMentorProfile ?? null;
+  return {
+    primaryMentor: {
+      mentor: primaryProfile.mentor,
+      mentorProfile: primaryProfile
+    },
+    coMentor: coMentorProfile ? {
+      mentor: coMentorProfile.mentor,
+      mentorProfile: coMentorProfile
+    } : null,
+    nextSession: nextSession ?? null
+  };
 };
 var getMyMentorBookings = async (mentorUserId, query = {}) => {
   assertValidObjectId16(mentorUserId, "Mentor user ID");
@@ -24297,7 +24771,7 @@ var getMyMentorBookings = async (mentorUserId, query = {}) => {
   const limit = query.limit ?? 20;
   const skip = (page - 1) * limit;
   const [bookings, total] = await Promise.all([
-    MentorBooking.find(filter).sort({ scheduledStartTime: 1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
+    MentorBooking.find(filter).sort({ scheduledStartTime: 1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE).lean(),
     MentorBooking.countDocuments(filter)
   ]);
   return {
@@ -24317,7 +24791,7 @@ var getMyMentorSingleBooking = async (bookingId, mentorUserId) => {
   const booking = await MentorBooking.findOne({
     _id: new Types36.ObjectId(bookingId),
     $or: [{ leadMentor: mentorObjectId }, { coMentor: mentorObjectId }]
-  }).populate(BOOKING_POPULATE);
+  }).populate(BOOKING_POPULATE).lean();
   assertFound19(booking, "Mentor booking not found", 404);
   return booking;
 };
@@ -24357,7 +24831,7 @@ var getAllBookingsAdmin = async (query = {}) => {
   const limit = query.limit ?? 20;
   const skip = (page - 1) * limit;
   const [bookings, total] = await Promise.all([
-    MentorBooking.find(filter).sort({ scheduledStartTime: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE),
+    MentorBooking.find(filter).sort({ scheduledStartTime: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE).lean(),
     MentorBooking.countDocuments(filter)
   ]);
   return {
@@ -24374,7 +24848,7 @@ var getSingleBookingAdmin = async (bookingId) => {
   assertValidObjectId16(bookingId, "Booking ID");
   const booking = await MentorBooking.findById(bookingId).populate(
     BOOKING_POPULATE
-  );
+  ).lean();
   assertFound19(booking, "Mentor booking not found", 404);
   return booking;
 };
@@ -24535,12 +25009,13 @@ var confirmBooking = async ({
     throwServiceError19("Only assigned mentors or administrators can confirm bookings", 403);
   }
   if (booking.status === "confirmed") {
-    if (payload.meetingUrl) {
-      booking.meetingUrl = payload.meetingUrl;
-      booking.updatedBy = new Types36.ObjectId(actorId);
-      await booking.save();
-      return booking.populate(BOOKING_POPULATE);
+    booking.sessionTopic = payload.sessionTopic;
+    booking.meetingUrl = payload.meetingUrl;
+    if (payload.notes !== void 0) {
+      booking.notes = payload.notes;
     }
+    booking.updatedBy = new Types36.ObjectId(actorId);
+    await booking.save();
     return booking.populate(BOOKING_POPULATE);
   }
   if (booking.status !== "requested") {
@@ -24555,8 +25030,10 @@ var confirmBooking = async ({
     excludeBookingId: String(booking._id)
   });
   booking.status = "confirmed";
-  if (payload.meetingUrl !== void 0) {
-    booking.meetingUrl = payload.meetingUrl;
+  booking.sessionTopic = payload.sessionTopic;
+  booking.meetingUrl = payload.meetingUrl;
+  if (payload.notes !== void 0) {
+    booking.notes = payload.notes;
   }
   booking.updatedBy = new Types36.ObjectId(actorId);
   await booking.save();
@@ -24645,10 +25122,23 @@ var cancelBooking = async ({
 var completeBooking = async ({
   bookingId,
   payload,
+  recording,
   actorId,
   actorRole
 }) => {
   assertValidObjectId16(bookingId, "Booking ID");
+  if (!payload.recordingTitle || !payload.recordingTitle.trim()) {
+    throwServiceError19(
+      "A title for the session recording is required",
+      400
+    );
+  }
+  if (!recording || !recording.secureUrl || !recording.cloudinaryPublicId) {
+    throwServiceError19(
+      "A recording of the session is required to mark it as completed",
+      400
+    );
+  }
   const booking = await MentorBooking.findById(bookingId);
   assertFound19(booking, "Mentor booking not found", 404);
   const isLead = String(booking.leadMentor) === actorId;
@@ -24665,6 +25155,25 @@ var completeBooking = async ({
   }
   booking.status = "completed";
   booking.completedAt = /* @__PURE__ */ new Date();
+  booking.recordingTitle = payload.recordingTitle.trim();
+  const recordingData = {
+    provider: "cloudinary",
+    cloudinaryPublicId: recording.cloudinaryPublicId,
+    secureUrl: recording.secureUrl,
+    playbackUrl: recording.playbackUrl,
+    thumbnailUrl: recording.thumbnailUrl,
+    durationSeconds: recording.durationSeconds
+  };
+  if (recording.cloudinaryAssetId !== void 0) {
+    recordingData.cloudinaryAssetId = recording.cloudinaryAssetId;
+  }
+  if (recording.format !== void 0) {
+    recordingData.format = recording.format;
+  }
+  if (recording.bytes !== void 0) {
+    recordingData.bytes = recording.bytes;
+  }
+  booking.recording = recordingData;
   if (payload.mentorFeedback !== void 0) {
     booking.mentorFeedback = payload.mentorFeedback;
   }
@@ -24756,6 +25265,7 @@ var mentorBookingService = {
   createBooking,
   getMyMemberBookings,
   getMyMemberSingleBooking,
+  getMyMentor,
   getMyMentorBookings,
   getMyMentorSingleBooking,
   getAllBookingsAdmin,
@@ -24774,6 +25284,11 @@ var getAuthUser20 = (req) => {
     id: req.user.id,
     role: req.user.role
   };
+};
+var throwControllerError7 = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  throw error;
 };
 var createBooking2 = async (req, res, next) => {
   try {
@@ -24822,6 +25337,20 @@ var getMyMemberSingleBooking2 = async (req, res, next) => {
       success: true,
       message: "Member booking retrieved successfully",
       data: booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyMentor2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser20(req);
+    const result = await mentorBookingService.getMyMentor(authUser.id);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Current mentor retrieved successfully",
+      data: result
     });
   } catch (error) {
     next(error);
@@ -24951,9 +25480,22 @@ var cancelBooking2 = async (req, res, next) => {
 var completeBooking2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser20(req);
+    const bookingId = String(req.params.id);
+    const recordingFile = req.file;
+    if (!recordingFile) {
+      throwControllerError7(
+        'Session recording is required in multipart field "recording"',
+        400
+      );
+    }
+    const uploadedRecording = await uploadVideoToCloudinary(
+      recordingFile,
+      `invictus/mentor-bookings/${bookingId}/recordings`
+    );
     const booking = await mentorBookingService.completeBooking({
-      bookingId: String(req.params.id),
+      bookingId,
       payload: req.body,
+      recording: uploadedRecording,
       actorId: authUser.id,
       actorRole: authUser.role
     });
@@ -24990,6 +25532,7 @@ var mentorBookingController = {
   createBooking: createBooking2,
   getMyMemberBookings: getMyMemberBookings2,
   getMyMemberSingleBooking: getMyMemberSingleBooking2,
+  getMyMentor: getMyMentor2,
   getMyMentorBookings: getMyMentorBookings2,
   getMyMentorSingleBooking: getMyMentorSingleBooking2,
   getAllBookingsAdmin: getAllBookingsAdmin2,
@@ -25000,6 +25543,98 @@ var mentorBookingController = {
   completeBooking: completeBooking2,
   markNoShowBooking: markNoShowBooking2
 };
+
+// src/middleware/membershipMiddleware.ts
+import multer3 from "multer";
+var memoryStorage2 = multer3.memoryStorage();
+var allowedVideoTypes2 = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-m4v",
+  "video/mpeg"
+];
+var allowedImageTypes2 = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp"
+];
+var allowedResourceTypes2 = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/csv",
+  ...allowedImageTypes2
+];
+var uploadModuleVideo2 = multer3({
+  storage: memoryStorage2,
+  limits: {
+    fileSize: 150 * 1024 * 1024,
+    files: 1
+  },
+  fileFilter: (_req, file, callback) => {
+    if (!allowedVideoTypes2.includes(file.mimetype)) {
+      return callback(
+        new Error("Only MP4, WEBM, MOV, M4V, and MPEG video files are allowed")
+      );
+    }
+    return callback(null, true);
+  }
+});
+var uploadMentorBookingRecording = multer3({
+  storage: memoryStorage2,
+  limits: {
+    // Session recordings run longer than course videos, so allow up to 1GB
+    fileSize: 1024 * 1024 * 1024,
+    files: 1
+  },
+  fileFilter: (_req, file, callback) => {
+    if (!allowedVideoTypes2.includes(file.mimetype)) {
+      return callback(
+        new Error("Only MP4, WEBM, MOV, M4V, and MPEG video files are allowed")
+      );
+    }
+    return callback(null, true);
+  }
+});
+var uploadModuleResource2 = multer3({
+  storage: memoryStorage2,
+  limits: {
+    fileSize: 30 * 1024 * 1024,
+    files: 2
+  },
+  fileFilter: (_req, file, callback) => {
+    if (file.fieldname === "thumbnail") {
+      if (!allowedImageTypes2.includes(file.mimetype)) {
+        return callback(
+          new Error("Thumbnail must be JPG, JPEG, PNG, or WEBP")
+        );
+      }
+      return callback(null, true);
+    }
+    if (file.fieldname === "resource") {
+      if (!allowedResourceTypes2.includes(file.mimetype)) {
+        return callback(
+          new Error(
+            "Unsupported resource type. Upload PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, CSV, JPG, PNG, or WEBP"
+          )
+        );
+      }
+      return callback(null, true);
+    }
+    return callback(new Error(`Unexpected upload field: ${file.fieldname}`));
+  }
+});
+var uploadModuleResourceFields2 = uploadModuleResource2.fields([
+  { name: "resource", maxCount: 1 },
+  { name: "thumbnail", maxCount: 1 }
+]);
 
 // src/modules/mentorBookings/mentor.booking.route.ts
 var router33 = Router33();
@@ -25016,6 +25651,12 @@ router33.get(
   requireInvictusAccess,
   validateRequest_default(queryMentorBookingValidation),
   mentorBookingController.getMyMemberBookings
+);
+router33.get(
+  "/me/my-mentor",
+  verifyToken,
+  requireInvictusAccess,
+  mentorBookingController.getMyMentor
 );
 router33.get(
   "/me/:id",
@@ -25059,6 +25700,7 @@ router33.patch(
 router33.patch(
   "/:id/complete",
   verifyToken,
+  uploadMentorBookingRecording.single("recording"),
   validateRequest_default(completeMentorBookingValidation),
   mentorBookingController.completeBooking
 );
@@ -25187,9 +25829,15 @@ var getAllRetreatBatches = async (query = {}, isPublicOnly = false) => {
   if (query.locationId) {
     assertValidObjectId17(query.locationId, "Retreat location ID");
     filter.retreatLocation = new Types37.ObjectId(query.locationId);
+  } else if (query.locationIds) {
+    const ids = query.locationIds.split(",").map((id3) => id3.trim()).filter(Boolean);
+    ids.forEach((id3) => assertValidObjectId17(id3, "Retreat location ID"));
+    filter.retreatLocation = {
+      $in: ids.map((id3) => new Types37.ObjectId(id3))
+    };
   }
   if (isPublicOnly) {
-    filter.status = { $in: ["upcoming", "open", "sold_out"] };
+    filter.status = query.includePast ? { $in: ["upcoming", "open", "sold_out", "in_progress", "completed"] } : { $in: ["upcoming", "open", "sold_out"] };
     filter.isActive = true;
   } else {
     if (query.status) {
@@ -25217,10 +25865,10 @@ var getAllRetreatBatches = async (query = {}, isPublicOnly = false) => {
     filter.$or = [{ batchName: regex }, { description: regex }];
   }
   const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
+  const limit = query.limit ?? (query.locationIds ? 200 : 20);
   const skip = (page - 1) * limit;
   const [batches, total] = await Promise.all([
-    RetreatBatch.find(filter).sort({ startDate: 1 }).skip(skip).limit(limit).populate(BATCH_POPULATE),
+    RetreatBatch.find(filter).sort({ startDate: 1 }).skip(skip).limit(limit).populate(BATCH_POPULATE).lean(),
     RetreatBatch.countDocuments(filter)
   ]);
   return {
@@ -25243,7 +25891,7 @@ var getSingleRetreatBatch = async (idOrSlug, isPublicOnly = false) => {
   if (isPublicOnly) {
     filter.isActive = true;
   }
-  const batch = await RetreatBatch.findOne(filter).populate(BATCH_POPULATE);
+  const batch = await RetreatBatch.findOne(filter).populate(BATCH_POPULATE).lean();
   assertFound20(batch, "Retreat batch not found", 404);
   return batch;
 };
@@ -25498,9 +26146,15 @@ var retreatBatchIdValidation = z26.object({
     id: mongoObjectIdSchema18
   })
 });
+var commaSeparatedObjectIdsSchema = z26.string().trim().refine(
+  (value) => value.split(",").map((id3) => id3.trim()).filter(Boolean).every((id3) => /^[0-9a-fA-F]{24}$/.test(id3)),
+  { message: "locationIds must be a comma-separated list of valid MongoDB ObjectIds" }
+);
 var queryRetreatBatchValidation = z26.object({
   query: z26.object({
     locationId: mongoObjectIdSchema18.optional(),
+    locationIds: commaSeparatedObjectIdsSchema.optional(),
+    includePast: z26.coerce.boolean().optional(),
     status: z26.enum(RETREAT_BATCH_STATUSES).optional(),
     isActive: z26.coerce.boolean().optional(),
     isFeatured: z26.coerce.boolean().optional(),
@@ -25508,8 +26162,11 @@ var queryRetreatBatchValidation = z26.object({
     startDateTo: z26.string().optional(),
     search: z26.string().trim().optional(),
     page: z26.coerce.number().int().min(1).optional(),
-    limit: z26.coerce.number().int().min(1).max(100).optional()
-  }).optional()
+    limit: z26.coerce.number().int().min(1).max(500).optional()
+  }).refine(
+    (data) => !(data.locationId && data.locationIds),
+    { message: "Provide either locationId or locationIds, not both" }
+  ).optional()
 });
 
 // src/modules/retreatBatches/retreat.batch.route.ts
@@ -25876,8 +26533,8 @@ var createRetreatBookingCheckoutSession = async ({
   }
   const stripeClient = getStripeClient3();
   const user = booking.user;
-  const defaultSuccessUrl = `${config_default.FRONTEND_URL || "http://localhost:5173"}/retreats/payment-success?session_id={CHECKOUT_SESSION_ID}&booking_id=${booking._id}`;
-  const defaultCancelUrl = `${config_default.FRONTEND_URL || "http://localhost:5173"}/retreats/payment-cancelled?booking_id=${booking._id}`;
+  const defaultSuccessUrl = `${config_default.FRONTEND_URL || "http://localhost:5173"}/invictus/retreats/payment-success?session_id={CHECKOUT_SESSION_ID}&booking_id=${booking._id}`;
+  const defaultCancelUrl = `${config_default.FRONTEND_URL || "http://localhost:5173"}/invictus/retreats/payment-cancelled?booking_id=${booking._id}`;
   const session = await stripeClient.checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
@@ -26001,6 +26658,7 @@ var verifyRetreatBookingPayment = async (sessionId) => {
     },
     dedupeKey: `retreat_booking_confirmed:${paidBookingId}`
   });
+  console.log("this is booking updated", booking);
   return {
     paid: true,
     message: "Retreat booking confirmed and payment verified successfully",
@@ -26263,7 +26921,7 @@ var getMyRetreatBookings = async (userId, query = {}) => {
   const limit = query.limit ?? 20;
   const skip = (page - 1) * limit;
   const [bookings, total] = await Promise.all([
-    RetreatBooking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE2),
+    RetreatBooking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE2).lean(),
     RetreatBooking.countDocuments(filter)
   ]);
   return {
@@ -26282,7 +26940,7 @@ var getMySingleRetreatBooking = async (bookingId, userId) => {
   const booking = await RetreatBooking.findOne({
     _id: new Types38.ObjectId(bookingId),
     user: new Types38.ObjectId(userId)
-  }).populate(BOOKING_POPULATE2);
+  }).populate(BOOKING_POPULATE2).lean();
   assertFound21(booking, "Retreat booking not found", 404);
   return booking;
 };
@@ -26307,7 +26965,7 @@ var getAllRetreatBookingsAdmin = async (query = {}) => {
   const limit = query.limit ?? 20;
   const skip = (page - 1) * limit;
   const [bookings, total] = await Promise.all([
-    RetreatBooking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE2),
+    RetreatBooking.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(BOOKING_POPULATE2).lean(),
     RetreatBooking.countDocuments(filter)
   ]);
   return {
@@ -26324,7 +26982,7 @@ var getSingleRetreatBookingAdmin = async (bookingId) => {
   assertValidObjectId18(bookingId, "Retreat booking ID");
   const booking = await RetreatBooking.findById(bookingId).populate(
     BOOKING_POPULATE2
-  );
+  ).lean();
   assertFound21(booking, "Retreat booking not found", 404);
   return booking;
 };
@@ -26394,8 +27052,9 @@ var verifyPayment = async (req, res, next) => {
     const result = await retreatBookingService.verifyRetreatBookingPayment(sessionId);
     sendResponse_default(res, {
       statusCode: 200,
-      success: result.paid,
+      success: true,
       message: result.message,
+      paid: result.paid,
       data: result.booking ?? null
     });
   } catch (error) {
@@ -26752,6 +27411,7 @@ var retreatBookingRoutes = router35;
 import { Router as Router36 } from "express";
 
 // src/modules/paymentPlans/payment.plan.service.ts
+init_challenge_pillar_model_schema();
 import {
   Types as Types39
 } from "mongoose";
@@ -27174,7 +27834,7 @@ var paymentPlanService = {
 };
 
 // src/modules/paymentPlans/payment.plan.controller.ts
-var throwControllerError7 = (message, status) => {
+var throwControllerError8 = (message, status) => {
   const error = new Error(message);
   error.status = status;
   throw error;
@@ -27182,7 +27842,7 @@ var throwControllerError7 = (message, status) => {
 var getAuthUser23 = (req) => {
   const user = req.user;
   if (!user) {
-    return throwControllerError7("Authentication required", 401);
+    return throwControllerError8("Authentication required", 401);
   }
   return {
     id: user.id,
@@ -27515,7 +28175,7 @@ var paymentPlanRoutes = router36;
 import { Router as Router37 } from "express";
 
 // src/modules/invictus-payments/invictus.payment.controller.ts
-var throwControllerError8 = (message, status) => {
+var throwControllerError9 = (message, status) => {
   const error = new Error(
     message
   );
@@ -27525,7 +28185,7 @@ var throwControllerError8 = (message, status) => {
 var getAuthUser24 = (req) => {
   const user = req.user;
   if (!user) {
-    return throwControllerError8(
+    return throwControllerError9(
       "Authentication required",
       401
     );
@@ -27586,8 +28246,11 @@ var mongoObjectIdSchema21 = z29.string().regex(
 );
 var createInvictusCheckoutValidation = z29.object({
   body: z29.object({
-    paymentPlanId: mongoObjectIdSchema21,
+    paymentPlanId: mongoObjectIdSchema21.optional(),
+    pillarId: mongoObjectIdSchema21.optional(),
     discountCode: z29.string().trim().optional()
+  }).refine((data) => Boolean(data.paymentPlanId || data.pillarId), {
+    message: "Either paymentPlanId or pillarId must be provided"
   })
 });
 
@@ -28256,14 +28919,14 @@ var notificationTemplateRoutes = router39;
 import { Router as Router40 } from "express";
 
 // src/modules/entitlementLogs/entitlementlog.controller.ts
-var throwControllerError9 = (message, status) => {
+var throwControllerError10 = (message, status) => {
   const error = new Error(message);
   error.status = status;
   throw error;
 };
 var assertFound23 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwControllerError9(message, statusCode);
+    throwControllerError10(message, statusCode);
   }
 };
 var getAuthUser27 = (req) => {
@@ -28429,14 +29092,14 @@ var entitlementLogRoutes = router40;
 import { Router as Router41 } from "express";
 
 // src/modules/activitylogs/activitylog.controller.ts
-var throwControllerError10 = (message, status) => {
+var throwControllerError11 = (message, status) => {
   const error = new Error(message);
   error.status = status;
   throw error;
 };
 var assertFound24 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwControllerError10(message, statusCode);
+    throwControllerError11(message, statusCode);
   }
 };
 var getAuthUser28 = (req) => {
@@ -28578,6 +29241,8 @@ import { Router as Router42 } from "express";
 
 // src/modules/sessionSchedules/sessionschedules.service.ts
 import { Types as Types41 } from "mongoose";
+init_challenge_pillar_model_schema();
+init_course_module_model_schema();
 
 // src/modules/sessionSchedules/sessionschedules.model.schema.ts
 import { model as model39, Schema as Schema39 } from "mongoose";
@@ -28870,7 +29535,7 @@ var getAllSessionSchedules = async (options2) => {
   const [data, total] = await Promise.all([
     SessionSchedule.find(filter).sort({
       startTime: 1
-    }).skip(skip).limit(limit).populate("host", "fullName email role").populate("pillar", "name slug title").populate("courseModule", "title slug"),
+    }).skip(skip).limit(limit).populate("host", "fullName email role").populate("pillar", "name slug title").populate("courseModule", "title slug").lean(),
     SessionSchedule.countDocuments(filter)
   ]);
   return {
@@ -29023,14 +29688,14 @@ var sessionScheduleService = {
 };
 
 // src/modules/sessionSchedules/sessionschedules.controller.ts
-var throwControllerError11 = (message, status) => {
+var throwControllerError12 = (message, status) => {
   const error = new Error(message);
   error.status = status;
   throw error;
 };
 var assertFound26 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwControllerError11(message, statusCode);
+    throwControllerError12(message, statusCode);
   }
 };
 var getAuthUserId3 = (req) => {
@@ -29566,14 +30231,14 @@ var sessionAttendanceService = {
 };
 
 // src/modules/sessionattendances/sessionattendances.controller.ts
-var throwControllerError12 = (message, status) => {
+var throwControllerError13 = (message, status) => {
   const error = new Error(message);
   error.status = status;
   throw error;
 };
 var assertFound28 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwControllerError12(message, statusCode);
+    throwControllerError13(message, statusCode);
   }
 };
 var getAuthUserId4 = (req) => {
@@ -29829,7 +30494,7 @@ var list = async (filter, query) => {
   const page = query.page ?? 1;
   const limit = query.limit ?? 20;
   const [data, total] = await Promise.all([
-    SupportTicket.find(filter).populate(populate).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+    SupportTicket.find(filter).populate(populate).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
     SupportTicket.countDocuments(filter)
   ]);
   return { data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
@@ -29855,7 +30520,7 @@ var supportTicketService = {
   },
   async getById(id3, requester, isAdmin) {
     const filter = isAdmin ? { _id: id3 } : { _id: id3, requester };
-    const ticket = await SupportTicket.findOne(filter).populate(populate);
+    const ticket = await SupportTicket.findOne(filter).populate(populate).lean();
     assertFound_default(ticket, "Support ticket not found", 404);
     return ticket;
   },
@@ -30363,7 +31028,7 @@ var getStreakLogs = async (query) => {
     }
   }
   const [data, total] = await Promise.all([
-    StreakLog.find(filter).populate("user", "fullName email role").populate("academyProfile", "fullName companyName").sort({ normalizedDate: -1 }).skip(skip).limit(limit),
+    StreakLog.find(filter).populate("user", "fullName email role").populate("academyProfile", "fullName companyName").sort({ normalizedDate: -1 }).skip(skip).limit(limit).lean(),
     StreakLog.countDocuments(filter)
   ]);
   return {
@@ -30377,7 +31042,7 @@ var getStreakLogs = async (query) => {
   };
 };
 var getSingleStreakLog = async (streakLogId) => {
-  const log = await StreakLog.findById(streakLogId).populate("user", "fullName email role").populate("academyProfile", "fullName companyName");
+  const log = await StreakLog.findById(streakLogId).populate("user", "fullName email role").populate("academyProfile", "fullName companyName").lean();
   assertFound_default(log, "Streak log not found", 404);
   return log;
 };
@@ -30869,7 +31534,7 @@ var createPointsLedgerValidation = z39.object({
     action: mongoObjectIdSchema29.optional(),
     quiz: mongoObjectIdSchema29.optional(),
     session: mongoObjectIdSchema29.optional(),
-    metadata: z39.record(z39.unknown()).optional()
+    metadata: z39.record(z39.string(), z39.unknown()).optional()
   })
 });
 var getPointsLedgerValidation = z39.object({
@@ -30909,356 +31574,80 @@ router47.get(
 );
 var pointsLedgerRoutes = router47;
 
+// src/middleware/rateLimiter.ts
+import { rateLimit } from "express-rate-limit";
+var authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1e3,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: "Too many attempts, please try again later."
+});
+var paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1e3,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: "Too many requests, please try again later."
+});
+
 // src/routes/index.ts
 var router48 = Router48();
 var moduleRoutes = [
-  {
-    path: "/admin",
-    route: adminRoutes
-  },
-  {
-    path: "/users",
-    route: userRoutes
-  },
-  {
-    path: "/auth",
-    route: authRoutes
-  },
-  {
-    path: "/listings",
-    route: listingsRoutes
-  },
-  {
-    path: "/listings/promote-request",
-    route: listingPromoteRequestRoutes
-  },
-  {
-    path: "/commission",
-    route: commissionLedgerRoutes
-  },
-  {
-    path: "/listing-assets",
-    route: listingAssetsRoutes
-  },
-  {
-    path: "/payments",
-    route: paymentRoutes
-  },
-  {
-    path: "/profile",
-    route: profileRoutes
-  },
-  {
-    path: "/discounts",
-    route: discountRoutes
-  },
-  {
-    path: "/promoters",
-    route: promoterRoutes
-  },
-  {
-    path: "/dashboard",
-    route: dashboardAnalyticsRoutes
-  },
-  {
-    path: "/invictus/challenge-pillars",
-    route: challengePillarRoutes
-  },
-  {
-    path: "/invictus/course-modules",
-    route: courseModuleRoutes
-  },
-  {
-    path: "/invictus/module-videos",
-    route: moduleVideoRoutes
-  },
-  {
-    path: "/invictus/module-resources",
-    route: moduleResourceRoutes
-  },
-  {
-    path: "/invictus/quiz-questions",
-    route: quizQuestionRoutes
-  },
-  {
-    path: "/invictus/module-actions",
-    route: moduleActionRoutes
-  },
-  {
-    path: "/rooms",
-    route: room_route_default
-  },
-  {
-    path: "/messages",
-    route: message_route_default
-  },
-  {
-    path: "/logo",
-    route: LogoRoutes
-  },
-  {
-    path: "/invictus/academy-profile",
-    route: academyProfileRoutes
-  },
-  {
-    path: "/invictus/user-entitlements",
-    route: userEntitlementRoutes
-  },
-  {
-    path: "/invictus/video-progress",
-    route: videoProgressRoutes
-  },
-  {
-    path: "/invictus/module-progress",
-    route: moduleProgressRoutes
-  },
-  {
-    path: "/invictus/quiz-attempts",
-    route: quizAttemptRoutes
-  },
-  {
-    path: "/invictus/quiz-certificates",
-    route: quizCertificateRoutes
-  },
-  {
-    path: "/invictus/mentorship-profiles",
-    route: mentorshipProfileRoutes
-  },
-  {
-    path: "/invictus/mentorship-reviews",
-    route: mentorshipReviewRoutes
-  },
-  {
-    path: "/invictus",
-    route: leaderboardEntryRoutes
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardRoutes
-  },
-  {
-    path: "/invictus/course-modules",
-    route: courseModuleRoutes
-  },
-  {
-    path: "/invictus/module-videos",
-    route: moduleVideoRoutes
-  },
-  {
-    path: "/invictus/module-resources",
-    route: moduleResourceRoutes
-  },
-  {
-    path: "/invictus/quiz-questions",
-    route: quizQuestionRoutes
-  },
-  {
-    path: "/invictus/module-actions",
-    route: moduleActionRoutes
-  },
-  {
-    path: "/rooms",
-    route: room_route_default
-  },
-  {
-    path: "/messages",
-    route: message_route_default
-  },
-  {
-    path: "/logo",
-    route: LogoRoutes
-  },
-  {
-    path: "/invictus/academy-profile",
-    route: academyProfileRoutes
-  },
-  {
-    path: "/invictus/user-entitlements",
-    route: userEntitlementRoutes
-  },
-  {
-    path: "/invictus/video-progress",
-    route: videoProgressRoutes
-  },
-  {
-    path: "/invictus/module-progress",
-    route: moduleProgressRoutes
-  },
-  {
-    path: "/invictus/quiz-attempts",
-    route: quizAttemptRoutes
-  },
-  {
-    path: "/invictus/quiz-certificates",
-    route: quizCertificateRoutes
-  },
-  {
-    path: "/invictus/mentorship-profiles",
-    route: mentorshipProfileRoutes
-  },
-  {
-    path: "/invictus/mentor-bookings",
-    route: mentorBookingRoutes
-  },
-  {
-    path: "/invictus/retreat-locations",
-    route: retreatLocationRoutes
-  },
-  {
-    path: "/invictus/retreat-batches",
-    route: retreatBatchRoutes
-  },
-  {
-    path: "/invictus/retreat-bookings",
-    route: retreatBookingRoutes
-  },
-  {
-    path: "/invictus/payment-plans",
-    route: paymentPlanRoutes
-  },
-  {
-    path: "/invictus/payments",
-    route: invictusPaymentRoutes
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardEntryRoutes
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardRoutes
-  },
-  {
-    path: "/invictus/course-modules",
-    route: courseModuleRoutes
-  },
-  {
-    path: "/invictus/module-videos",
-    route: moduleVideoRoutes
-  },
-  {
-    path: "/invictus/module-resources",
-    route: moduleResourceRoutes
-  },
-  {
-    path: "/invictus/quiz-questions",
-    route: quizQuestionRoutes
-  },
-  {
-    path: "/invictus/module-actions",
-    route: moduleActionRoutes
-  },
-  {
-    path: "/rooms",
-    route: room_route_default
-  },
-  {
-    path: "/messages",
-    route: message_route_default
-  },
-  {
-    path: "/logo",
-    route: LogoRoutes
-  },
-  {
-    path: "/invictus/academy-profile",
-    route: academyProfileRoutes
-  },
-  {
-    path: "/invictus/user-entitlements",
-    route: userEntitlementRoutes
-  },
-  {
-    path: "/invictus/video-progress",
-    route: videoProgressRoutes
-  },
-  {
-    path: "/invictus/module-progress",
-    route: moduleProgressRoutes
-  },
-  {
-    path: "/invictus/quiz-attempts",
-    route: quizAttemptRoutes
-  },
-  {
-    path: "/invictus/quiz-certificates",
-    route: quizCertificateRoutes
-  },
-  {
-    path: "/invictus/mentorship-profiles",
-    route: mentorshipProfileRoutes
-  },
-  {
-    path: "/invictus/mentor-bookings",
-    route: mentorBookingRoutes
-  },
-  {
-    path: "/invictus/retreat-locations",
-    route: retreatLocationRoutes
-  },
-  {
-    path: "/invictus/retreat-batches",
-    route: retreatBatchRoutes
-  },
-  {
-    path: "/invictus/retreat-bookings",
-    route: retreatBookingRoutes
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardEntryRoutes
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardRoutes
-  },
-  {
-    path: "/invictus/leaderboards",
-    route: leaderboardRoutes
-  },
-  {
-    path: "/invictus/notifications",
-    route: notificationRoutes
-  },
-  {
-    path: "/invictus/notification-templates",
-    route: notificationTemplateRoutes
-  },
-  {
-    path: "/invictus/entitlement-logs",
-    route: entitlementLogRoutes
-  },
-  {
-    path: "/invictus/activity-logs",
-    route: activityLogRoutes
-  },
-  {
-    path: "/invictus/session-schedules",
-    route: sessionScheduleRoutes
-  },
-  {
-    path: "/invictus/session-attendances",
-    route: sessionAttendanceRoutes
-  },
-  {
-    path: "/support-tickets",
-    route: supportTicketRoutes
-  },
-  {
-    path: "/user-devices",
-    route: userDeviceRoutes
-  },
-  {
-    path: "/invictus/streak-logs",
-    route: streakLogRoutes
-  },
-  {
-    path: "/invictus/points-ledger",
-    route: pointsLedgerRoutes
-  }
+  { path: "/admin", route: adminRoutes },
+  { path: "/users", route: userRoutes },
+  { path: "/auth", route: authRoutes, limiter: authLimiter },
+  { path: "/listings", route: listingsRoutes },
+  { path: "/listings/promote-request", route: listingPromoteRequestRoutes },
+  { path: "/commission", route: commissionLedgerRoutes },
+  { path: "/listing-assets", route: listingAssetsRoutes },
+  { path: "/payments", route: paymentRoutes, limiter: paymentLimiter },
+  { path: "/profile", route: profileRoutes },
+  { path: "/discounts", route: discountRoutes },
+  { path: "/promoters", route: promoterRoutes },
+  { path: "/dashboard", route: dashboardAnalyticsRoutes },
+  { path: "/invictus/challenge-pillars", route: challengePillarRoutes },
+  { path: "/invictus/course-modules", route: courseModuleRoutes },
+  { path: "/invictus/module-videos", route: moduleVideoRoutes },
+  { path: "/invictus/module-resources", route: moduleResourceRoutes },
+  { path: "/invictus/quiz-questions", route: quizQuestionRoutes },
+  { path: "/invictus/module-actions", route: moduleActionRoutes },
+  { path: "/rooms", route: room_route_default },
+  { path: "/messages", route: message_route_default },
+  { path: "/logo", route: LogoRoutes },
+  { path: "/invictus/academy-profile", route: academyProfileRoutes },
+  { path: "/invictus/user-entitlements", route: userEntitlementRoutes },
+  { path: "/invictus/video-progress", route: videoProgressRoutes },
+  { path: "/invictus/module-progress", route: moduleProgressRoutes },
+  { path: "/invictus/quiz-attempts", route: quizAttemptRoutes },
+  { path: "/invictus/quiz-certificates", route: quizCertificateRoutes },
+  { path: "/invictus/mentorship-profiles", route: mentorshipProfileRoutes },
+  { path: "/invictus/mentorship-reviews", route: mentorshipReviewRoutes },
+  { path: "/invictus", route: leaderboardEntryRoutes },
+  { path: "/invictus/leaderboards", route: leaderboardRoutes },
+  { path: "/invictus/mentor-bookings", route: mentorBookingRoutes },
+  { path: "/invictus/retreat-locations", route: retreatLocationRoutes },
+  { path: "/invictus/retreat-batches", route: retreatBatchRoutes },
+  { path: "/invictus/retreat-bookings", route: retreatBookingRoutes },
+  { path: "/invictus/payment-plans", route: paymentPlanRoutes },
+  { path: "/invictus/payments", route: invictusPaymentRoutes, limiter: paymentLimiter },
+  { path: "/invictus/notifications", route: notificationRoutes },
+  { path: "/invictus/notification-templates", route: notificationTemplateRoutes },
+  { path: "/invictus/entitlement-logs", route: entitlementLogRoutes },
+  { path: "/invictus/activity-logs", route: activityLogRoutes },
+  { path: "/invictus/session-schedules", route: sessionScheduleRoutes },
+  { path: "/invictus/session-attendances", route: sessionAttendanceRoutes },
+  { path: "/support-tickets", route: supportTicketRoutes },
+  { path: "/user-devices", route: userDeviceRoutes },
+  { path: "/invictus/streak-logs", route: streakLogRoutes },
+  { path: "/invictus/points-ledger", route: pointsLedgerRoutes }
 ];
-moduleRoutes.forEach((route) => {
-  router48.use(route.path, route.route);
+moduleRoutes.forEach(({ path: path3, route, limiter: limiter2 }) => {
+  if (limiter2) {
+    router48.use(path3, limiter2, route);
+  } else {
+    router48.use(path3, route);
+  }
 });
 var routes_default = router48;
 
@@ -31713,23 +32102,44 @@ var options = {
 var swaggerSpec = swaggerJSDoc(options);
 
 // src/app.ts
+import { rateLimit as rateLimit2 } from "express-rate-limit";
+import helmet from "helmet";
+import compression from "compression";
 var app = express();
+app.set("trust proxy", 1);
+var limiter = rateLimit2({
+  windowMs: 5 * 60 * 1e3,
+  // 5 minutes
+  limit: 1e5,
+  // Limit each IP to 100000 requests per `window` (here, per 5 minutes)
+  standardHeaders: true,
+  // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false,
+  // Disable the `X-RateLimit-*` headers
+  ipv6Subnet: 60
+  // Set to 60 or 64 to be less aggressive, or 52 or 48 to be more aggressive
+});
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
 app.use(cors({
   origin: true,
   credentials: true
 }));
+app.use(compression());
 app.post(
   "/api/v1/payments/webhook",
   express.raw({ type: "application/json" }),
   paymentController.stripeWebhook
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.get("/", (req, res) => {
-  res.send("Hello World Bro!");
-});
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", time: (/* @__PURE__ */ new Date()).toISOString() });
+});
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(limiter);
+app.get("/", (req, res) => {
+  res.send("Hello World Bro!");
 });
 app.use(
   "/api-docs",
@@ -31753,6 +32163,7 @@ var port = process.env.PORT || 3e3;
 var main = async () => {
   try {
     await mongoose6.connect(config_default.MONGO_URI);
+    await dropLegacyQuizCertificateIndexes();
     const httpServer = http.createServer(app_default);
     initSocket(httpServer);
     httpServer.listen(port, () => {

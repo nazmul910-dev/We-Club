@@ -55,7 +55,7 @@ router.get(
 
   verifyToken,
 
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager","founder"),
 
   validateRequest(adminModuleProgressValidation),
 
@@ -67,7 +67,7 @@ router.get(
 
   verifyToken,
 
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin", "manager",'founder'),
 
   validateRequest(getAllModuleProgressValidation),
 

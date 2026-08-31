@@ -2,6 +2,8 @@ import { QueryFilter, Types } from "mongoose";
 
 import { CourseModule } from "../courseModules/course.module.model.schema";
 import { ModuleVideo } from "../moduleVideos/module.video.model.schema";
+import { ChallengePillar } from "../challengePillars/challenge.pillar.model.schema";
+import { userEntitlementService } from "../userEntitlements/userEntitlements.service";
 
 import {
   IRecordVideoHeartbeat,
@@ -131,6 +133,7 @@ const ensureVideoIsAvailable = async (videoId: string) => {
       "thumbnailUrl",
       "durationSeconds",
       "requiredWatchPercent",
+      "pointsReward",
       "isRequired",
       "isPaid",
       "order",
@@ -245,6 +248,34 @@ const populateVideoProgress = async (
   ]);
 };
 
+/**
+ * Awards ModuleVideo.pointsReward the moment a video is first
+ * completed. Uses pointsLedgerService.awardPoints, which is
+ * idempotent (unique per user+video+reason), so this is safe to
+ * call defensively from both the "first heartbeat" and
+ * "later heartbeat" code paths below.
+ */
+const awardVideoCompletionPoints = async (
+  userId: string,
+  video: { _id: Types.ObjectId; title?: string; pointsReward?: number },
+  moduleId: string,
+) => {
+  const { pointsLedgerService } = await import(
+    "../pointsLedger/pointsledger.service"
+  );
+
+  await pointsLedgerService.awardPoints({
+    user: userId,
+    points: video.pointsReward ?? 5,
+    reason: "video_completion",
+    sourceType: "video",
+    sourceId: video._id.toString(),
+    module: moduleId,
+    video: video._id.toString(),
+    description: video.title ? `Completed video: ${video.title}` : undefined,
+  });
+};
+
 const recordVideoHeartbeat = async (
   userId: string,
   videoId: string,
@@ -253,6 +284,24 @@ const recordVideoHeartbeat = async (
   assertValidObjectId(userId, "User ID");
 
   const { video, courseModule } = await ensureVideoIsAvailable(videoId);
+
+  if (courseModule.pillar) {
+    const pillar = await ChallengePillar.findById(courseModule.pillar).select(
+      "isPaid status"
+    );
+    if (pillar?.isPaid || video.isPaid) {
+      const access = await userEntitlementService.checkPillarAccess(
+        userId,
+        String(courseModule.pillar)
+      );
+      if (!access.hasAccess) {
+        throwServiceError(
+          "Active pillar access required to track video progress",
+          403
+        );
+      }
+    }
+  }
 
   const durationSeconds = video.durationSeconds;
 
@@ -322,6 +371,10 @@ const recordVideoHeartbeat = async (
     try {
       progress = await VideoProgress.create(createData);
 
+      if (isCompleted) {
+        await awardVideoCompletionPoints(userId, video, courseModule._id.toString());
+      }
+
       return populateVideoProgress(progress);
     } catch (error) {
       /**
@@ -389,6 +442,23 @@ const recordVideoHeartbeat = async (
   }
 
   await progress.save();
+
+  if (newlyCompleted) {
+    await awardVideoCompletionPoints(userId, video, courseModule._id.toString());
+  }
+
+  try {
+    const { moduleProgressService } = await import(
+      "../moduleProgress/module.progress.service"
+    );
+    await moduleProgressService.refreshModuleProgress(
+      userId,
+      courseModule._id.toString(),
+    );
+  } catch (syncError) {
+    // eslint-disable-next-line no-console
+    console.error("Auto sync module progress failed on heartbeat:", syncError);
+  }
 
   return populateVideoProgress(progress);
 };

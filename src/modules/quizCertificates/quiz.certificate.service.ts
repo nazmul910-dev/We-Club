@@ -2,6 +2,7 @@ import { QueryFilter, Types } from "mongoose";
 
 import { CourseModule } from "../courseModules/course.module.model.schema";
 import { ModuleProgress } from "../moduleProgress/module.progress.model.schema";
+import { notificationService } from "../notifications/notification.service";
 
 import {
   IAttachCertificateUrl,
@@ -89,109 +90,128 @@ const randomAlphaNumeric = (length: number): string => {
   return result;
 };
 
-const buildCertificateNumber = (
-  pillarSlug: string,
-  moduleNumber: number,
-): string => {
-  return [
-    "INV",
-    pillarSlug.toUpperCase(),
-    `M${moduleNumber}`,
-    randomAlphaNumeric(6),
-  ].join("-");
+const buildCertificateNumber = (pillarSlug: string): string => {
+  return ["INV", pillarSlug.toUpperCase(), randomAlphaNumeric(6)].join("-");
 };
 
-
+/**
+ * Issue a pillar certificate when the user has passed the quiz
+ * for EVERY published module in the given pillar.
+ */
 const issueCertificateIfEligible = async (
   userId: string,
-  moduleId: string,
+  pillarId: string,
 ) => {
   assertValidObjectId(userId, "User ID");
-  assertValidObjectId(moduleId, "Course module ID");
+  assertValidObjectId(pillarId, "Pillar ID");
 
+  // 1. Already has a certificate for this pillar?
   const existingCertificate = await QuizCertificate.findOne({
     user: new Types.ObjectId(userId),
-    module: new Types.ObjectId(moduleId),
+    pillar: new Types.ObjectId(pillarId),
   }).populate(CERTIFICATE_POPULATE);
 
   if (existingCertificate) {
     return existingCertificate;
   }
 
-  const moduleProgress = await ModuleProgress.findOne({
-    user: new Types.ObjectId(userId),
-    module: new Types.ObjectId(moduleId),
-  }).lean();
+  // 2. Find all published modules for this pillar
+  const pillarModules = await CourseModule.find({
+    pillar: new Types.ObjectId(pillarId),
+    status: "published",
+  })
+    .select("_id title moduleNumber")
+    .lean();
 
-  assertFound(
-    moduleProgress,
-    "Module progress not found. Complete the module requirements first",
-    404,
-  );
-
-  if (!moduleProgress.quizSummary?.passed) {
+  if (pillarModules.length === 0) {
     throwServiceError(
-      "Quiz must be passed before a certificate can be issued",
-      403,
+      "No published modules found for this pillar",
+      404,
     );
   }
 
-  const courseModule = await CourseModule.findById(moduleId).populate(
-    "pillar",
-    "name slug title status",
-  );
+  const moduleIds = pillarModules.map((m) => m._id);
 
-  assertFound(courseModule, "Course module not found", 404);
-
-  const pillar = courseModule.pillar as unknown as {
-    _id: Types.ObjectId;
-    slug: string;
-  };
-
-  assertFound(pillar, "Parent challenge pillar not found", 404);
-
-  const createData: Record<string, unknown> = {
+  // 3. Fetch user progress for all those modules
+  const progressDocs = await ModuleProgress.find({
     user: new Types.ObjectId(userId),
-    module: new Types.ObjectId(moduleId),
-    pillar: pillar._id,
+    module: { $in: moduleIds },
+  })
+    .select("module quizSummary")
+    .lean();
 
-    certificateNumber: buildCertificateNumber(
-      pillar.slug,
-      courseModule.moduleNumber,
-    ),
+  // 4. Check that EVERY module has been passed
+  const progressByModuleId: Record<string, typeof progressDocs[number]> = {};
+  for (const p of progressDocs) {
+    progressByModuleId[String(p.module)] = p;
+  }
 
-    status: "issued",
+  for (const mod of pillarModules) {
+    const progress = progressByModuleId[String(mod._id)];
+    if (!progress || !progress.quizSummary?.passed) {
+      throwServiceError(
+        `You must pass the quiz for every module in this pillar before claiming the certificate. Module "${mod.title}" is not yet passed.`,
+        403,
+      );
+    }
+  }
 
-    score: moduleProgress.quizSummary.bestScore,
+  // 5. Compute average best score across all modules
+  const totalScore = progressDocs.reduce(
+    (sum, p) => sum + (p.quizSummary?.bestScore ?? 0),
+    0,
+  );
+  const averageScore = Math.round(totalScore / pillarModules.length);
 
+  // 6. Resolve pillar slug for certificate number
+  const { ChallengePillar } = await import(
+    "../challengePillars/challenge.pillar.model.schema"
+  );
+  const pillarDoc = await ChallengePillar.findById(pillarId)
+    .select("slug")
+    .lean();
+
+  assertFound(pillarDoc, "Challenge pillar not found", 404);
+
+  const createData = {
+    user: new Types.ObjectId(userId),
+    pillar: new Types.ObjectId(pillarId),
+    status: "issued" as const,
+    score: averageScore,
     issuedAt: new Date(),
   };
 
-
-  const MAX_ATTEMPTS = 5;
-
+  // 7. Issue with duplicate-safe retry loop (handles race conditions)
+  const MAX_ATTEMPTS = 3;
   let lastError: unknown;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     try {
       const certificate = await QuizCertificate.create({
         ...createData,
-
-        certificateNumber: buildCertificateNumber(
-          pillar.slug,
-          courseModule.moduleNumber,
-        ),
+        certificateNumber: buildCertificateNumber(pillarDoc.slug),
       });
 
+      notificationService.safeCreateFromTemplateOrFallback({
+        templateKey: "quiz_certificate_issued",
+        fallbackTitle: `Certificate Earned: ${pillarDoc.title || pillarDoc.slug.toUpperCase()}`,
+        fallbackBody: `Congratulations! You have completed all modules and earned your official certificate.`,
+        recipient: userId,
+        relatedEntityType: "QuizCertificate",
+        relatedEntityId: String(certificate._id),
+        actionUrl: `/invictus/my-profile`,
+        dedupeKey: `quiz_certificate_issued:${certificate._id}`,
+      }).catch(() => {});
+
       return certificate.populate(CERTIFICATE_POPULATE);
-    } catch (error) {
+    } catch (error: any) {
       lastError = error;
 
       if (isDuplicateKeyError(error)) {
-
+        // Race condition: another request created it concurrently — return the existing one
         const raceCertificate = await QuizCertificate.findOne({
           user: new Types.ObjectId(userId),
-          module: new Types.ObjectId(moduleId),
+          pillar: new Types.ObjectId(pillarId),
         }).populate(CERTIFICATE_POPULATE);
 
         if (raceCertificate) {

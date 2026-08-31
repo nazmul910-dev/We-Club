@@ -6,7 +6,7 @@ export type CertificateStatus = (typeof CERTIFICATE_STATUSES)[number];
 
 export interface IQuizCertificate {
   user: Types.ObjectId;
-  module: Types.ObjectId;
+  module?: Types.ObjectId | undefined;
   pillar: Types.ObjectId;
 
   quizAttempt?: Types.ObjectId | undefined;
@@ -30,7 +30,7 @@ export interface IQuizCertificate {
 }
 
 export interface IIssueQuizCertificate {
-  moduleId: string;
+  pillarId: string;
 }
 
 export interface IRevokeQuizCertificate {

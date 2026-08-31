@@ -163,7 +163,7 @@ const getAllModuleVideos = async ({
     filter.status = { $ne: "archived" };
   }
 
-  const query = ModuleVideo.find()
+  const query = ModuleVideo.find(filter)
     .sort({ module: 1, order: 1 })
     .populate({
       path: "module",
@@ -215,7 +215,7 @@ const getVideosByModule = async (
     filter.status = { $ne: "archived" };
   }
 
-  const query = ModuleVideo.find()
+  const query = ModuleVideo.find(filter)
     .sort({ order: 1 })
     .populate("uploadedBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage");
@@ -249,7 +249,7 @@ const getSingleModuleVideo = async (
     filter.status = "published";
   }
 
-  const query = ModuleVideo.findOne()
+  const query = ModuleVideo.findOne(filter)
     .populate({
       path: "module",
       select: "title slug moduleNumber pillar status",
@@ -286,7 +286,30 @@ const checkVideoAccess = async (videoId: string, userId: string) => {
 
   assertFound(video, "Module video not found", 404);
 
-  if (!video.isPaid) {
+  const moduleData = video.module as unknown as {
+    _id: Types.ObjectId;
+    pillar?: {
+      _id: Types.ObjectId;
+      name: string;
+      slug: string;
+      title: string;
+      isPaid: boolean;
+      priceCents: number;
+      currency: string;
+      status: string;
+    } | string;
+  };
+
+  const pillarObj =
+    typeof moduleData?.pillar === "object" && moduleData?.pillar !== null
+      ? moduleData.pillar
+      : null;
+
+  const isPillarPaid = pillarObj?.isPaid === true;
+  const isVideoPaid = video.isPaid === true;
+
+  // If neither the pillar nor the video is marked as paid, it is free
+  if (!isPillarPaid && !isVideoPaid) {
     return {
       canWatch: true,
       isLocked: false,
@@ -295,15 +318,26 @@ const checkVideoAccess = async (videoId: string, userId: string) => {
     };
   }
 
-  const moduleData = video.module as unknown as {
-    pillar: {
-      _id: Types.ObjectId;
+  const pillarId = pillarObj?._id
+    ? String(pillarObj._id)
+    : typeof moduleData?.pillar === "string"
+      ? moduleData.pillar
+      : undefined;
+
+  if (!pillarId) {
+    return {
+      canWatch: false,
+      isLocked: true,
+      paymentRequired: true,
+      reason: "pillar_purchase_required",
+      playbackUrl: null,
+      secureUrl: null,
     };
-  };
+  }
 
   const access = await userEntitlementService.checkPillarAccess(
     userId,
-    String(moduleData.pillar._id),
+    pillarId,
   );
 
   if (!access.hasAccess) {
@@ -314,7 +348,7 @@ const checkVideoAccess = async (videoId: string, userId: string) => {
       reason: "pillar_purchase_required",
       playbackUrl: null,
       secureUrl: null,
-      pillar: access.pillar,
+      pillar: access.pillar ?? pillarObj,
     };
   }
 

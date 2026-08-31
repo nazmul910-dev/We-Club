@@ -249,7 +249,7 @@ const redeemDiscountCodeAfterPayment = async ({
     return existingUserRedemption;
   }
 
-  console.log("user1;");
+
   const updatedDiscount =
     await DiscountCode.findOneAndUpdate(
       {
@@ -309,7 +309,7 @@ const redeemDiscountCodeAfterPayment = async ({
         },
       },
     );
-    console.log("user3;")
+
 
     if (error?.code === 11000) {
       const existing =
@@ -317,7 +317,7 @@ const redeemDiscountCodeAfterPayment = async ({
           discountCode: discount._id,
           user: userObjectId,
         });
-        console.log("user4");
+
       if (existing) {
         return existing;
       }

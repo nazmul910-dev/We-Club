@@ -14,11 +14,11 @@ const quizCertificateSchema = new Schema<IQuizCertificate>(
       index: true,
     },
 
+    // Pillar-level certificates do not have a module — field is optional and NOT indexed
     module: {
       type: Schema.Types.ObjectId,
       ref: "CourseModule",
-      required: true,
-      index: true,
+      required: false,
     },
 
     pillar: {
@@ -87,21 +87,16 @@ const quizCertificateSchema = new Schema<IQuizCertificate>(
   },
 );
 
-
+// One certificate per user per pillar (pillar-level certificates)
 quizCertificateSchema.index(
   {
     user: 1,
-    module: 1,
+    pillar: 1,
   },
   {
     unique: true,
   },
 );
-
-quizCertificateSchema.index({
-  user: 1,
-  pillar: 1,
-});
 
 quizCertificateSchema.index({
   status: 1,
@@ -112,3 +107,30 @@ export const QuizCertificate = model<IQuizCertificate>(
   "QuizCertificate",
   quizCertificateSchema,
 );
+
+/**
+ * Drop the legacy `user_1_module_1` index that was left over from the old
+ * module-level certificate design.  Safe to call multiple times — it is a
+ * no-op once the index no longer exists.
+ */
+export const dropLegacyQuizCertificateIndexes = async (): Promise<void> => {
+  try {
+    const existingIndexes = await QuizCertificate.collection
+      .listIndexes()
+      .toArray();
+
+    const legacyIndex = existingIndexes.find(
+      (idx) => idx.name === "user_1_module_1",
+    );
+
+    if (legacyIndex) {
+      await QuizCertificate.collection.dropIndex("user_1_module_1");
+      // eslint-disable-next-line no-console
+      console.info(
+        "[QuizCertificate] Dropped legacy index: user_1_module_1",
+      );
+    }
+  } catch {
+    // Ignore — index may already be gone
+  }
+};

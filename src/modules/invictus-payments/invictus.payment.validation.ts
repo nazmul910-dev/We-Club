@@ -7,15 +7,14 @@ const mongoObjectIdSchema = z
     "Invalid MongoDB ObjectId"
   );
 
-export const createInvictusCheckoutValidation =
-  z.object({
-    body: z.object({
-      paymentPlanId:
-        mongoObjectIdSchema,
-
-      discountCode: z
-        .string()
-        .trim()
-        .optional(),
+export const createInvictusCheckoutValidation = z.object({
+  body: z
+    .object({
+      paymentPlanId: mongoObjectIdSchema.optional(),
+      pillarId: mongoObjectIdSchema.optional(),
+      discountCode: z.string().trim().optional(),
+    })
+    .refine((data) => Boolean(data.paymentPlanId || data.pillarId), {
+      message: "Either paymentPlanId or pillarId must be provided",
     }),
-  });
+});

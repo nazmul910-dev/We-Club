@@ -331,6 +331,31 @@ const archiveModuleVideo = async (
   }
 };
 
+
+const checkVideoAccess = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authUser = getAuthUser(req);
+ 
+    const result = await moduleVideoService.checkVideoAccess(
+      String(req.params.id),
+      authUser.id
+    );
+ 
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Video access checked successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const moduleVideoController = {
   createModuleVideo,
   getAllModuleVideos,
@@ -340,4 +365,5 @@ export const moduleVideoController = {
   publishModuleVideo,
   moveModuleVideoToDraft,
   archiveModuleVideo,
+  checkVideoAccess
 };

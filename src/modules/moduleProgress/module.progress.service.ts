@@ -103,8 +103,8 @@ const createDefaultProgressData = (
     videoSummary: {
       totalRequired: 0,
       completedRequired: 0,
-      completionPercent: 100,
-      completed: true,
+      completionPercent: 0,
+      completed: false,
     },
 
     resourceSummary: {
@@ -179,23 +179,12 @@ const getOrCreateModuleProgress = async (
 };
 
 const recalculateDerivedFields = (progress: ModuleProgressDocument): void => {
-  /**
-   * Resources are part of the required
-   * progression after videos.
-   */
-  progress.actionsUnlocked =
-    progress.videoSummary.completed && progress.resourceSummary.completed;
+  // Videos completion unlocks quiz and actions
+  const videosCompleted = progress.videoSummary.completed;
 
-  /**
-   * Required action threshold is 80%.
-   */
-  const requiredActionsCompleted =
-    progress.actionSummary.totalRequired === 0 ||
-    progress.actionSummary.completionPercent >= ACTION_COMPLETION_REQUIREMENT;
-
-  progress.actionSummary.completed = requiredActionsCompleted;
-
-  progress.quizUnlocked = progress.actionsUnlocked && requiredActionsCompleted;
+  progress.actionsUnlocked = videosCompleted;
+  progress.actionSummary.completed = true;
+  progress.quizUnlocked = videosCompleted;
 
   if (progress.quizSummary.passed) {
     progress.quizSummary.status = "passed";
@@ -209,40 +198,15 @@ const recalculateDerivedFields = (progress: ModuleProgressDocument): void => {
     progress.quizSummary.status = "failed";
   }
 
-  const videoStagePercent = progress.videoSummary.completionPercent;
-
-  const resourceStagePercent = progress.resourceSummary.completionPercent;
-
-  /**
-   * 80% required action completion means
-   * the action stage is 100% complete.
-   */
-  const actionStagePercent =
-    progress.actionSummary.totalRequired === 0
-      ? 100
-      : clamp(
-          (progress.actionSummary.completionPercent /
-            ACTION_COMPLETION_REQUIREMENT) *
-            100,
-          0,
-          100,
-        );
-
-  const quizStagePercent = progress.quizSummary.passed ? 100 : 0;
-
-  progress.overallCompletionPercent = roundToTwoDecimals(
-    (videoStagePercent +
-      resourceStagePercent +
-      actionStagePercent +
-      quizStagePercent) /
-      4,
-  );
+  // Progress is 100% when quiz is passed, or proportional to video completion
+  if (progress.quizSummary.passed) {
+    progress.overallCompletionPercent = 100;
+  } else {
+    progress.overallCompletionPercent = progress.videoSummary.completionPercent;
+  }
 
   const moduleCompleted =
-    progress.videoSummary.completed &&
-    progress.resourceSummary.completed &&
-    requiredActionsCompleted &&
-    progress.quizSummary.passed;
+    progress.videoSummary.completed && progress.quizSummary.passed;
 
   const newlyCompleted = !progress.isCompleted && moduleCompleted;
 
@@ -259,6 +223,167 @@ const recalculateDerivedFields = (progress: ModuleProgressDocument): void => {
   progress.lastCalculatedAt = new Date();
 };
 
+/**
+ * Awards CourseModule.completionPoints the moment a module becomes
+ * fully complete (all required videos watched + quiz passed).
+ * Idempotent via pointsLedgerService.awardPoints (unique per
+ * user+module+reason), so a re-computed/duplicate call is a no-op.
+ */
+const awardModuleCompletionPoints = async (userId: string, moduleId: string) => {
+  const courseModule = await CourseModule.findById(moduleId).select(
+    "title completionPoints",
+  );
+
+  if (!courseModule || !courseModule.completionPoints) {
+    return;
+  }
+
+  const { pointsLedgerService } = await import(
+    "../pointsLedger/pointsledger.service"
+  );
+
+  await pointsLedgerService.awardPoints({
+    user: userId,
+    points: courseModule.completionPoints,
+    reason: "module_completion",
+    sourceType: "module",
+    sourceId: moduleId,
+    module: moduleId,
+    description: `Completed module: ${courseModule.title}`,
+  });
+};
+
+/**
+ * Writes the real "MODULES" column shown on the live INVICTUS
+ * leaderboard (see LeaderboardTable "modules" column on the
+ * frontend) — a plain COUNT of fully completed modules, not a
+ * points total. This is intentionally separate from
+ * awardModuleCompletionPoints (which deals with the points ledger)
+ * so the column stays accurate even for modules worth 0 points.
+ *
+ * Uses setBreakdownField (SET, not $inc) because the count must
+ * always reflect the true current total, and this can be called
+ * more than once safely.
+ */
+const syncModulesBreakdownForUser = async (userId: string) => {
+  try {
+    const completedModulesCount = await ModuleProgress.countDocuments({
+      user: new Types.ObjectId(userId),
+      isCompleted: true,
+    });
+
+    const { Leaderboard } = await import(
+      "../leaderboards/leaderboard.model.schema"
+    );
+    const { leaderboardEntryService } = await import(
+      "../leaderboardEntries/leaderboard.entry.service"
+    );
+
+    const activeLeaderboards = await Leaderboard.find({
+      type: "points",
+      status: "active",
+    })
+      .select("_id")
+      .lean();
+
+    await Promise.all(
+      activeLeaderboards.map((leaderboard) =>
+        leaderboardEntryService.setBreakdownField(leaderboard._id.toString(), {
+          userId,
+          breakdownKey: "modules",
+          value: completedModulesCount,
+        }),
+      ),
+    );
+  } catch {
+    // A leaderboard snapshot issue must never break module progress.
+  }
+};
+
+/**
+ * Writes the real "SUCCESS" (%) column shown on the live INVICTUS
+ * leaderboard — the user's quiz pass-rate across every module
+ * they've attempted a quiz on (passed modules / attempted modules).
+ * Recalculated after every quiz attempt (pass or fail) so the
+ * percentage always reflects the current state.
+ */
+const syncQuizSuccessBreakdownForUser = async (userId: string) => {
+  try {
+    const userObjectId = new Types.ObjectId(userId);
+
+    const [attemptedCount, passedCount] = await Promise.all([
+      ModuleProgress.countDocuments({
+        user: userObjectId,
+        "quizSummary.attemptsUsed": { $gt: 0 },
+      }),
+      ModuleProgress.countDocuments({
+        user: userObjectId,
+        "quizSummary.passed": true,
+      }),
+    ]);
+
+    const successPercent =
+      attemptedCount === 0
+        ? 0
+        : Math.round((passedCount / attemptedCount) * 100);
+
+    const { Leaderboard } = await import(
+      "../leaderboards/leaderboard.model.schema"
+    );
+    const { leaderboardEntryService } = await import(
+      "../leaderboardEntries/leaderboard.entry.service"
+    );
+
+    const activeLeaderboards = await Leaderboard.find({
+      type: "points",
+      status: "active",
+    })
+      .select("_id")
+      .lean();
+
+    await Promise.all(
+      activeLeaderboards.map((leaderboard) =>
+        leaderboardEntryService.setBreakdownField(leaderboard._id.toString(), {
+          userId,
+          breakdownKey: "success",
+          value: successPercent,
+        }),
+      ),
+    );
+  } catch {
+    // A leaderboard snapshot issue must never break quiz progress.
+  }
+};
+
+/**
+ * Awards a small, one-time points bonus the moment a user first
+ * passes a module's quiz (independent of full module completion,
+ * which is rewarded separately by awardModuleCompletionPoints).
+ * Idempotent via pointsLedgerService.awardPoints's unique
+ * (user, sourceType, sourceId, reason) index.
+ */
+const QUIZ_PASS_POINTS = 10;
+
+const awardQuizPassPoints = async (userId: string, moduleId: string) => {
+  const courseModule = await CourseModule.findById(moduleId).select("title");
+
+  const { pointsLedgerService } = await import(
+    "../pointsLedger/pointsledger.service"
+  );
+
+  await pointsLedgerService.awardPoints({
+    user: userId,
+    points: QUIZ_PASS_POINTS,
+    reason: "quiz_pass",
+    sourceType: "quiz",
+    sourceId: moduleId,
+    module: moduleId,
+    description: courseModule
+      ? `Passed quiz: ${courseModule.title}`
+      : "Passed module quiz",
+  });
+};
+
 const refreshModuleProgress = async (userId: string, moduleId: string) => {
   const progress = await getOrCreateModuleProgress(userId, moduleId);
 
@@ -266,103 +391,71 @@ const refreshModuleProgress = async (userId: string, moduleId: string) => {
 
   const userObjectId = new Types.ObjectId(userId);
 
-  const requiredVideos = await ModuleVideo.find({
+  const publishedVideos = await ModuleVideo.find({
     module: moduleObjectId,
     status: "published",
-    isRequired: true,
   })
-    .select("_id")
+    .select("_id isRequired")
     .lean();
 
-  const requiredVideoIds = requiredVideos.map((video) => video._id);
+  const requiredVideos = publishedVideos.filter(
+    (video) => video.isRequired !== false,
+  );
+  const targetVideos =
+    requiredVideos.length > 0 ? requiredVideos : publishedVideos;
+  const targetVideoIds = targetVideos.map((video) => video._id);
 
-  const [
-    completedRequiredVideos,
-    totalRequiredResources,
-    totalRequiredActions,
-  ] = await Promise.all([
-    requiredVideoIds.length === 0
-      ? Promise.resolve(0)
-      : VideoProgress.countDocuments({
+  const completedVideosCount =
+    targetVideoIds.length === 0
+      ? 0
+      : await VideoProgress.countDocuments({
           user: userObjectId,
-
           video: {
-            $in: requiredVideoIds,
+            $in: targetVideoIds,
           },
-
           isCompleted: true,
-        }),
+        });
 
-    ModuleResource.countDocuments({
-      module: moduleObjectId,
-      status: "published",
-      isRequired: true,
-    }),
-
-    ModuleAction.countDocuments({
-      module: moduleObjectId,
-      status: "published",
-      isRequired: true,
-    }),
-  ]);
-
-  const totalRequiredVideos = requiredVideoIds.length;
+  const totalRequiredVideos = targetVideoIds.length;
+  const isVideoCompleted =
+    totalRequiredVideos === 0 || completedVideosCount >= totalRequiredVideos;
+  const videoPercent =
+    totalRequiredVideos === 0
+      ? 100
+      : calculateCompletionPercent(
+          completedVideosCount,
+          totalRequiredVideos,
+        );
 
   progress.set("videoSummary", {
     totalRequired: totalRequiredVideos,
-
-    completedRequired: completedRequiredVideos,
-
-    completionPercent: calculateCompletionPercent(
-      completedRequiredVideos,
-      totalRequiredVideos,
-    ),
-
-    completed:
-      totalRequiredVideos === 0 ||
-      completedRequiredVideos >= totalRequiredVideos,
+    completedRequired: completedVideosCount,
+    completionPercent: videoPercent,
+    completed: isVideoCompleted,
   });
 
-  const completedResources = Math.min(
-    progress.resourceSummary.completedRequired,
-    totalRequiredResources,
-  );
+  const totalRequiredResources = await ModuleResource.countDocuments({
+    module: moduleObjectId,
+    status: "published",
+  });
 
   progress.set("resourceSummary", {
     totalRequired: totalRequiredResources,
-
-    completedRequired: completedResources,
-
-    completionPercent: calculateCompletionPercent(
-      completedResources,
-      totalRequiredResources,
-    ),
-
-    completed:
-      totalRequiredResources === 0 ||
-      completedResources >= totalRequiredResources,
+    completedRequired: totalRequiredResources,
+    completionPercent: 100,
+    completed: true,
   });
 
-  const completedActions = Math.min(
-    progress.actionSummary.completedRequired,
-    totalRequiredActions,
-  );
-
-  const actionCompletionPercent = calculateCompletionPercent(
-    completedActions,
-    totalRequiredActions,
-  );
+  const totalRequiredActions = await ModuleAction.countDocuments({
+    module: moduleObjectId,
+    status: "published",
+  });
 
   progress.set("actionSummary", {
     totalRequired: totalRequiredActions,
-
-    completedRequired: completedActions,
-
-    completionPercent: actionCompletionPercent,
-
-    completed:
-      totalRequiredActions === 0 ||
-      actionCompletionPercent >= ACTION_COMPLETION_REQUIREMENT,
+    completedRequired: totalRequiredActions,
+    completionPercent: 100,
+    completed: true,
   });
 
   recalculateDerivedFields(progress);
@@ -468,6 +561,8 @@ const syncQuizSummary = async (input: ISyncQuizSummary) => {
     input.moduleId,
   );
 
+  const quizWasPassedBefore = progress.quizSummary.passed;
+
   const attemptsUsed = clamp(input.attemptsUsed, 0, MAXIMUM_QUIZ_ATTEMPTS);
 
   const bestScore = clamp(
@@ -491,9 +586,25 @@ const syncQuizSummary = async (input: ISyncQuizSummary) => {
     progress.quizSummary.lastAttemptAt = input.lastAttemptAt;
   }
 
+  const wasCompletedBeforeThisAttempt = progress.isCompleted;
+
   recalculateDerivedFields(progress);
 
   await progress.save();
+
+  const quizNewlyPassed = !quizWasPassedBefore && progress.quizSummary.passed;
+
+  if (quizNewlyPassed) {
+    await awardQuizPassPoints(input.userId, input.moduleId);
+  }
+
+  if (!wasCompletedBeforeThisAttempt && progress.isCompleted) {
+    await awardModuleCompletionPoints(input.userId, input.moduleId);
+    await syncModulesBreakdownForUser(input.userId);
+  }
+
+  // Success % reflects every attempt (pass or fail), not just passes.
+  await syncQuizSuccessBreakdownForUser(input.userId);
 
   return progress;
 };
@@ -605,4 +716,7 @@ export const moduleProgressService = {
 
   getUserModuleProgress,
   getAllModuleProgress,
+
+  syncModulesBreakdownForUser,
+  syncQuizSuccessBreakdownForUser,
 };
