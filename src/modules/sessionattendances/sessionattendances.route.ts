@@ -24,11 +24,10 @@ router.post(
   sessionAttendanceController.registerSessionAttendance,
 );
 
-
 router.post(
   "/mark",
   verifyToken,
-  authorizeRoles( "manager", "founder"),
+  authorizeRoles("founder", "manager", "admin", "super_admin"),
   validateRequest(markSessionAttendanceValidation),
   sessionAttendanceController.markSessionAttendance,
 );
@@ -36,11 +35,9 @@ router.post(
 router.post(
   "/cancel",
   verifyToken,
-  authorizeRoles("manager", "founder"),
   validateRequest(cancelSessionAttendanceValidation),
   sessionAttendanceController.cancelSessionAttendance,
 );
-
 
 router.get(
   "/me",
@@ -48,11 +45,10 @@ router.get(
   sessionAttendanceController.getMySessionAttendances,
 );
 
-
 router.get(
   "/",
   verifyToken,
-  authorizeRoles( "manager", "founder"),
+  authorizeRoles("founder", "manager", "admin", "super_admin"),
   validateRequest(getAllSessionAttendancesValidation),
   sessionAttendanceController.getAllSessionAttendances,
 );
@@ -60,7 +56,7 @@ router.get(
 router.get(
   "/:id",
   verifyToken,
-  authorizeRoles("manager", "founder"),
+  authorizeRoles("founder", "manager", "admin", "super_admin"),
   validateRequest(sessionAttendanceIdValidation),
   sessionAttendanceController.getSingleSessionAttendance,
 );
