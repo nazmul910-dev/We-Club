@@ -154,6 +154,12 @@ const createPointsLedger = async (payload: ICreatePointsLedgerInput) => {
   const user = await User.findById(payload.user).select("_id");
   assertFound(user, "User not found", 404);
 
+ const founderOrManager = user.role === "founder" || user.role === "manager";
+
+
+
+  if(founderOrManager) return
+
   const sourceFilter = payload.sourceType && payload.sourceId
     ? {
         user: new Types.ObjectId(payload.user),
@@ -188,6 +194,8 @@ const createPointsLedger = async (payload: ICreatePointsLedgerInput) => {
     session: payload.session ? new Types.ObjectId(payload.session) : undefined,
     metadata: payload.metadata ?? {},
   });
+
+
 
   return entry;
 };

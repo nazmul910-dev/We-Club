@@ -212,9 +212,10 @@ const getLeaderboardEntries = async (req: Request,
 
     const page = Number(req.query.page)
     const limit = Number(req.query.limit)
+    const userRole = req.user?.role
 
     const result = await leaderboardService.getLeaderboardEntries(
-      String(req.params.id), { page, limit }
+      String(req.params.id), { page, limit }, userRole!
     );
 
     sendResponse(res, {

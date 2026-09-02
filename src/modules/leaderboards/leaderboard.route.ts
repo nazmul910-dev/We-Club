@@ -87,13 +87,6 @@ router.post(
   leaderboardController.activateLeaderboard,
 );
 
-router.get(
-     "/:id/entries",
-     verifyToken,
-     requireInvictusAccess,
-     leaderboardController.getLeaderboardEntries,
-   );
-
 
 router.post(
   "/:id/finalize",

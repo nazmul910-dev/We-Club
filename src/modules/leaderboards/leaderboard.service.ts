@@ -20,6 +20,8 @@ const assertValidObjectId = (value: string, fieldName: string): void => {
   }
 };
 
+
+
 const isDuplicateKeyError = (error: unknown): boolean => {
   return (
     typeof error === "object" &&
@@ -288,10 +290,15 @@ const finalizeLeaderboard = async (
 const getLeaderboardEntries = async (
   leaderboardId: string,
   query: { page?: number; limit?: number },
+  role : string
 ) => {
   assertValidObjectId(leaderboardId, "Leaderboard ID");
 
+
+  const isAdminOrManager = role === "founder" || role === "manager"
+
   const leaderboard = await Leaderboard.findById(leaderboardId);
+
 
   assertFound(leaderboard, "Leaderboard not found", 404);
 
@@ -306,11 +313,13 @@ const getLeaderboardEntries = async (
       .sort({ rank: 1, points: -1 })
       .skip(skip)
       .limit(limit)
-      .populate("user", "fullName profileImage country")
+      .populate("user", "fullName role profileImage country ")
       .lean(),
 
     LeaderboardEntry.countDocuments({ leaderboard: leaderboardId }),
   ]);
+
+  console.log("entries", entries)
 
   return {
     meta: {
