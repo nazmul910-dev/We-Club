@@ -183,7 +183,7 @@ const checkSchedulingConflicts = async ({
     );
   }
 
-  // 3. Check co-mentor conflicts if specified
+  // 3. Check co_mentor conflicts if specified
   if (coMentorId) {
     const coMentorConflict = await MentorBooking.findOne({
       ...baseOverlapFilter,
@@ -196,7 +196,7 @@ const checkSchedulingConflicts = async ({
 
     if (coMentorConflict) {
       throwServiceError(
-        "The co-mentor already has a scheduled session during this time slot",
+        "The co_mentor already has a scheduled session during this time slot",
         409,
       );
     }
@@ -218,17 +218,17 @@ const createBooking = async (
   }
 
   if (payload.coMentor) {
-    assertValidObjectId(payload.coMentor, "Co-mentor ID");
+    assertValidObjectId(payload.coMentor, "co_mentor ID");
 
     if (memberUserId === payload.coMentor) {
-      throwServiceError("A member cannot add themselves as co-mentor", 400);
+      throwServiceError("A member cannot add themselves as co_mentor", 400);
     }
 
     if (payload.leadMentor === payload.coMentor) {
-      throwServiceError("Lead mentor and co-mentor cannot be the same user", 400);
+      throwServiceError("Lead mentor and co_mentor cannot be the same user", 400);
     }
 
-    await checkUserExists(payload.coMentor, "Co-mentor user");
+    await checkUserExists(payload.coMentor, "co_mentor user");
   }
 
   await checkUserExists(payload.leadMentor, "Lead mentor user");
@@ -456,7 +456,7 @@ const resolveNextSession = async (memberObjectId: Types.ObjectId) => {
  *    User.assignedCoMentorProfile. Null if they haven't picked one yet.
  *  - `nextSession`: the member's soonest upcoming confirmed booking (or
  *    most recent active booking as a fallback), for the "book / join" card.
- *    This is informational only and does not affect who the mentor/co-mentor
+ *    This is informational only and does not affect who the mentor/co_mentor
  *    are — that's driven purely by the assignment above.
  */
 const getMyMentor = async (memberUserId: string) => {
@@ -597,7 +597,7 @@ const getAllBookingsAdmin = async (query: IMentorBookingQuery = {}) => {
   }
 
   if (query.coMentorId) {
-    assertValidObjectId(query.coMentorId, "Co-mentor ID");
+    assertValidObjectId(query.coMentorId, "co_mentor ID");
     filter.coMentor = new Types.ObjectId(query.coMentorId);
   }
 
@@ -712,11 +712,11 @@ const updateBooking = async ({
   }
 
   if (newCoMentorId && String(booking.member) === newCoMentorId) {
-    throwServiceError("A member cannot add themselves as co-mentor", 400);
+    throwServiceError("A member cannot add themselves as co_mentor", 400);
   }
 
   if (newCoMentorId && newLeadMentorId === newCoMentorId) {
-    throwServiceError("Lead mentor and co-mentor cannot be the same user", 400);
+    throwServiceError("Lead mentor and co_mentor cannot be the same user", 400);
   }
 
   if (payload.leadMentor && payload.leadMentor !== String(booking.leadMentor)) {
@@ -729,7 +729,7 @@ const updateBooking = async ({
       booking.set("coMentor", undefined);
       booking.set("coMentorProfile", undefined);
     } else {
-      await checkUserExists(payload.coMentor, "Co-mentor user");
+      await checkUserExists(payload.coMentor, "co_mentor user");
       booking.coMentor = new Types.ObjectId(payload.coMentor);
     }
   }

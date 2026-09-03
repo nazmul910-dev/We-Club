@@ -7,8 +7,8 @@ import { hashPassword } from "../../utility/passwordUtil";
 
 
 const CREATABLE_ROLES_BY_ROLE: Record<string, UserRole[]> = {
-  founder: ["manager", "super_admin", "community_manager"],
-  manager: ["super_admin", "community_manager"],
+  founder: ["manager", "super_admin", "co_mentor"],
+  manager: ["super_admin", "co_mentor"],
 };
 
 
@@ -116,7 +116,7 @@ const activateManagerByAdmin = async (id: string) => {
     throw new Error("User not found.");
   }
 
-  if (!["manager", "super_admin", "community_manager"].includes(user.role)) {
+  if (!["manager", "super_admin", "co_mentor"].includes(user.role)) {
     throw new Error("Only admin accounts can be activated.");
   }
 
@@ -145,7 +145,7 @@ const suspendManagerByAdmin = async (id: string) => {
     throw new Error("User not found.");
   }
 
-  if (!["manager", "super_admin", "community_manager"].includes(user.role)) {
+  if (!["manager", "super_admin", "co_mentor"].includes(user.role)) {
     throw new Error("Only admin accounts can be suspended.");
   }
 

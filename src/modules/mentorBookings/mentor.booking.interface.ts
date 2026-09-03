@@ -171,10 +171,10 @@ export interface IMentorPairing {
  *   Same for every member, always present.
  * - coMentor: the non-primary mentor this member selected for themselves
  *   (User.assignedCoMentorProfile). Null until they've picked one via
- *   PATCH /invictus/mentorship-profiles/me/co-mentor.
+ *   PATCH /invictus/mentorship-profiles/me/co_mentor.
  * - nextSession: the member's soonest upcoming confirmed booking, or most
  *   recent active booking as a fallback. Informational only — does not
- *   determine who the mentor/co-mentor are.
+ *   determine who the mentor/co_mentor are.
  */
 export interface IMyMentorResponse {
   primaryMentor: IMentorPairing;

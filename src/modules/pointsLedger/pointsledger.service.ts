@@ -85,10 +85,25 @@ const awardPoints = async (payload: {
     return null;
   }
 
+  // console.log("user", payload.user)
+
+  const user = await User.findById(payload.user).select("role").lean();
+  assertFound(user, "User not found", 404);
+
+  console.log("user role", user.role)
+
+  if (user.role === "founder" || user.role === "manager") {
+    return null;
+  }
+
+
+
   const balanceBefore = await getUserTotalPoints(payload.user);
   const balanceAfter = balanceBefore + payload.points;
 
   let entry;
+
+
 
   try {
     entry = await PointsLedger.create({
@@ -154,19 +169,19 @@ const createPointsLedger = async (payload: ICreatePointsLedgerInput) => {
   const user = await User.findById(payload.user).select("_id");
   assertFound(user, "User not found", 404);
 
- const founderOrManager = user.role === "founder" || user.role === "manager";
+  const founderOrManager = user.role === "founder" || user.role === "manager";
 
 
 
-  if(founderOrManager) return
+  if (founderOrManager) return
 
   const sourceFilter = payload.sourceType && payload.sourceId
     ? {
-        user: new Types.ObjectId(payload.user),
-        sourceType: payload.sourceType,
-        sourceId: new Types.ObjectId(payload.sourceId),
-        reason: payload.reason,
-      }
+      user: new Types.ObjectId(payload.user),
+      sourceType: payload.sourceType,
+      sourceId: new Types.ObjectId(payload.sourceId),
+      reason: payload.reason,
+    }
     : null;
 
   if (sourceFilter) {
