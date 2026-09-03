@@ -20,15 +20,15 @@ router.get("/", mentorshipProfileController.getAllMentorshipProfiles);
 
 router.get("/primary", mentorshipProfileController.getPrimaryMentor);
 
-// Member co-mentor selection — must be declared before "/:id" routes
+// Member co_mentor selection — must be declared before "/:id" routes
 router.get(
-  "/me/co-mentor",
+  "/me/co_mentor",
   verifyToken,
   mentorshipProfileController.getMyCoMentor,
 );
 
 router.patch(
-  "/me/co-mentor",
+  "/me/co_mentor",
   verifyToken,
   validateRequest(selectCoMentorValidation),
   mentorshipProfileController.selectCoMentor,

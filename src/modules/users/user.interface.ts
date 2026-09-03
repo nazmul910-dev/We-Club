@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 export const USER_ROLES = [
     'founder',
     'super_admin',
-    'community_manager',
+    'co_mentor',
     'admin',
     'manager',
     'ceo',
@@ -130,7 +130,7 @@ export interface IUser {
     approvedAt?: Date | undefined;
     rejectedReason?: string | undefined;
 
-    // The member's selected co-mentor (a non-primary MentorshipProfile),
+    // The member's selected co_mentor (a non-primary MentorshipProfile),
     // chosen at purchase/onboarding time. Paired with the platform's single
     // primary mentor on the accountability page.
     assignedCoMentorProfile?: Types.ObjectId | undefined;

@@ -20,7 +20,7 @@ var init_user_interface = __esm({
     USER_ROLES = [
       "founder",
       "super_admin",
-      "community_manager",
+      "co_mentor",
       "admin",
       "manager",
       "ceo",
@@ -3562,7 +3562,7 @@ var registerValidation = z.object({
     role: z.enum([
       "founder",
       "manager",
-      "community_manager",
+      "co_mentor",
       "super_admin",
       "admin",
       "associate",
@@ -3627,7 +3627,7 @@ var createAdminAccountValidation = z.object({
     password: passwordSchema,
     // ekhane sob possible creatable role rakhlam,
     // kon requester kon role banate parbe seta service e check hobe
-    role: z.enum(["manager", "super_admin", "community_manager"]),
+    role: z.enum(["manager", "super_admin", "co_mentor"]),
     accessTo: z.enum(["we_command_center", "invictus", "both"])
   })
 });
@@ -3730,8 +3730,8 @@ var comparePassword = async (password, hashedPassword) => {
 
 // src/modules/users/auth.service.ts
 var CREATABLE_ROLES_BY_ROLE = {
-  founder: ["manager", "super_admin", "community_manager"],
-  manager: ["super_admin", "community_manager"]
+  founder: ["manager", "super_admin", "co_mentor"],
+  manager: ["super_admin", "co_mentor"]
 };
 var getAllUsersFromDB = async (query) => {
   const { role, ...restQuery } = query;
@@ -3797,7 +3797,7 @@ var activateManagerByAdmin = async (id3) => {
   if (!user) {
     throw new Error("User not found.");
   }
-  if (!["manager", "super_admin", "community_manager"].includes(user.role)) {
+  if (!["manager", "super_admin", "co_mentor"].includes(user.role)) {
     throw new Error("Only admin accounts can be activated.");
   }
   if (user.accountStatus === "active") {
@@ -3818,7 +3818,7 @@ var suspendManagerByAdmin = async (id3) => {
   if (!user) {
     throw new Error("User not found.");
   }
-  if (!["manager", "super_admin", "community_manager"].includes(user.role)) {
+  if (!["manager", "super_admin", "co_mentor"].includes(user.role)) {
     throw new Error("Only admin accounts can be suspended.");
   }
   if (user.accountStatus === "suspended") {
@@ -23249,7 +23249,7 @@ var selectMyCoMentor = async (memberUserId, mentorshipProfileId) => {
   );
   if (profile.isPrimaryMentor) {
     throwServiceError16(
-      "The primary mentor is assigned automatically and cannot be selected as a co-mentor",
+      "The primary mentor is assigned automatically and cannot be selected as a co_mentor",
       400
     );
   }
@@ -23261,7 +23261,7 @@ var selectMyCoMentor = async (memberUserId, mentorshipProfileId) => {
   }
   if (String(profile.mentor._id) === memberUserId) {
     throwServiceError16(
-      "You cannot select yourself as your own co-mentor",
+      "You cannot select yourself as your own co_mentor",
       400
     );
   }
@@ -23453,7 +23453,7 @@ var selectCoMentor = async (req, res, next) => {
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-      message: "Co-mentor selected successfully",
+      message: "co_mentor selected successfully",
       data: member
     });
   } catch (error) {
@@ -23467,7 +23467,7 @@ var getMyCoMentor2 = async (req, res, next) => {
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
-      message: "Co-mentor retrieved successfully",
+      message: "co_mentor retrieved successfully",
       data: member
     });
   } catch (error) {
@@ -23541,12 +23541,12 @@ var router28 = Router28();
 router28.get("/", mentorshipProfileController.getAllMentorshipProfiles);
 router28.get("/primary", mentorshipProfileController.getPrimaryMentor);
 router28.get(
-  "/me/co-mentor",
+  "/me/co_mentor",
   verifyToken,
   mentorshipProfileController.getMyCoMentor
 );
 router28.patch(
-  "/me/co-mentor",
+  "/me/co_mentor",
   verifyToken,
   validateRequest_default(selectCoMentorValidation),
   mentorshipProfileController.selectCoMentor
@@ -25773,7 +25773,7 @@ var checkSchedulingConflicts = async ({
     });
     if (coMentorConflict) {
       throwServiceError19(
-        "The co-mentor already has a scheduled session during this time slot",
+        "The co_mentor already has a scheduled session during this time slot",
         409
       );
     }
@@ -25787,14 +25787,14 @@ var createBooking = async (payload, memberUserId, actorId) => {
     throwServiceError19("A member cannot book a mentorship session with themselves", 400);
   }
   if (payload.coMentor) {
-    assertValidObjectId17(payload.coMentor, "Co-mentor ID");
+    assertValidObjectId17(payload.coMentor, "co_mentor ID");
     if (memberUserId === payload.coMentor) {
-      throwServiceError19("A member cannot add themselves as co-mentor", 400);
+      throwServiceError19("A member cannot add themselves as co_mentor", 400);
     }
     if (payload.leadMentor === payload.coMentor) {
-      throwServiceError19("Lead mentor and co-mentor cannot be the same user", 400);
+      throwServiceError19("Lead mentor and co_mentor cannot be the same user", 400);
     }
-    await checkUserExists(payload.coMentor, "Co-mentor user");
+    await checkUserExists(payload.coMentor, "co_mentor user");
   }
   await checkUserExists(payload.leadMentor, "Lead mentor user");
   const startTime = new Date(payload.scheduledStartTime);
@@ -26038,7 +26038,7 @@ var getAllBookingsAdmin = async (query = {}) => {
     filter.leadMentor = new Types39.ObjectId(query.leadMentorId);
   }
   if (query.coMentorId) {
-    assertValidObjectId17(query.coMentorId, "Co-mentor ID");
+    assertValidObjectId17(query.coMentorId, "co_mentor ID");
     filter.coMentor = new Types39.ObjectId(query.coMentorId);
   }
   if (query.mentorId) {
@@ -26117,10 +26117,10 @@ var updateBooking = async ({
     throwServiceError19("A member cannot book a mentorship session with themselves", 400);
   }
   if (newCoMentorId && String(booking.member) === newCoMentorId) {
-    throwServiceError19("A member cannot add themselves as co-mentor", 400);
+    throwServiceError19("A member cannot add themselves as co_mentor", 400);
   }
   if (newCoMentorId && newLeadMentorId === newCoMentorId) {
-    throwServiceError19("Lead mentor and co-mentor cannot be the same user", 400);
+    throwServiceError19("Lead mentor and co_mentor cannot be the same user", 400);
   }
   if (payload.leadMentor && payload.leadMentor !== String(booking.leadMentor)) {
     await checkUserExists(payload.leadMentor, "Lead mentor user");
@@ -26131,7 +26131,7 @@ var updateBooking = async ({
       booking.set("coMentor", void 0);
       booking.set("coMentorProfile", void 0);
     } else {
-      await checkUserExists(payload.coMentor, "Co-mentor user");
+      await checkUserExists(payload.coMentor, "co_mentor user");
       booking.coMentor = new Types39.ObjectId(payload.coMentor);
     }
   }

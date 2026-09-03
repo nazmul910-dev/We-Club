@@ -354,7 +354,7 @@ const MENTOR_FIELD_POPULATE = {
 };
 
 /**
- * Member self-selects their co-mentor from the published, non-primary
+ * Member self-selects their co_mentor from the published, non-primary
  * mentorship profiles (e.g. at purchase/onboarding time). The primary
  * mentor is global and not selectable here.
  */
@@ -387,7 +387,7 @@ const selectMyCoMentor = async (
 
   if (profile.isPrimaryMentor) {
     throwServiceError(
-      "The primary mentor is assigned automatically and cannot be selected as a co-mentor",
+      "The primary mentor is assigned automatically and cannot be selected as a co_mentor",
       400,
     );
   }
@@ -401,7 +401,7 @@ const selectMyCoMentor = async (
 
   if (String(profile.mentor._id) === memberUserId) {
     throwServiceError(
-      "You cannot select yourself as your own co-mentor",
+      "You cannot select yourself as your own co_mentor",
       400,
     );
   }
@@ -419,7 +419,7 @@ const selectMyCoMentor = async (
   return profile;
 };
 /**
- * Fetch the member's currently selected co-mentor (if any).
+ * Fetch the member's currently selected co_mentor (if any).
  */
 const getMyCoMentor = async (memberUserId: string) => {
   assertValidObjectId(memberUserId, "Member user ID");

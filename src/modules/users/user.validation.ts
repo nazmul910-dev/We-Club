@@ -30,7 +30,7 @@ export const registerValidation = z.object({
     role: z.enum([
       'founder',
       'manager',
-      'community_manager',
+      'co_mentor',
       'super_admin',
       'admin',
       'associate',
@@ -112,7 +112,7 @@ export const createAdminAccountValidation = z.object({
 
     // ekhane sob possible creatable role rakhlam,
     // kon requester kon role banate parbe seta service e check hobe
-    role: z.enum(["manager", "super_admin", "community_manager"]),
+    role: z.enum(["manager", "super_admin", "co_mentor"]),
 
     accessTo: z.enum(["we_command_center", "invictus", "both"]),
     

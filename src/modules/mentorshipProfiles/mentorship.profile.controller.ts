@@ -237,7 +237,7 @@ const selectCoMentor = async (
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: "Co-mentor selected successfully",
+      message: "co_mentor selected successfully",
       data: member,
     });
   } catch (error) {
@@ -258,7 +258,7 @@ const getMyCoMentor = async (
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: "Co-mentor retrieved successfully",
+      message: "co_mentor retrieved successfully",
       data: member,
     });
   } catch (error) {
