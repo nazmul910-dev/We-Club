@@ -172,6 +172,52 @@ const getAllModuleProgress = async (
   }
 };
 
+const getAllModuleProgressGroupedByUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    getAuthUser(req);
+
+    const query: IModuleProgressAdminQuery = {};
+
+    if (typeof req.query.userId === "string") {
+      query.userId = req.query.userId;
+    }
+
+    if (typeof req.query.moduleId === "string") {
+      query.moduleId = req.query.moduleId;
+    }
+
+    if (req.query.isCompleted === "true" || req.query.isCompleted === "false") {
+      query.isCompleted = req.query.isCompleted === "true";
+    }
+
+    if (typeof req.query.page === "string") {
+      query.page = Number(req.query.page);
+    }
+
+    if (typeof req.query.limit === "string") {
+      query.limit = Number(req.query.limit);
+    }
+
+    const result =
+      await moduleProgressService.getAllModuleProgressGroupedByUser(query);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+
+      message: "Member progress overview retrieved successfully",
+
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const moduleProgressController = {
   getMyModuleProgress,
 
@@ -182,4 +228,5 @@ export const moduleProgressController = {
   getUserModuleProgress,
 
   getAllModuleProgress,
+  getAllModuleProgressGroupedByUser,
 };
