@@ -1462,6 +1462,12 @@ var init_pointsledger_service = __esm({
       if (!payload.points || payload.points <= 0) {
         return null;
       }
+      const user = await User.findById(payload.user).select("role").lean();
+      assertFound_default(user, "User not found", 404);
+      console.log("user role", user.role);
+      if (user.role === "founder" || user.role === "manager") {
+        return null;
+      }
       const balanceBefore = await getUserTotalPoints(payload.user);
       const balanceAfter = balanceBefore + payload.points;
       let entry;
