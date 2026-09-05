@@ -11,6 +11,7 @@ import {
   IModuleProgressAdminQuery,
   ISyncQuizSummary,
   ISyncRequirementSummary,
+  IUserModuleProgressGroup,
 } from "./module.progress.interface";
 
 import { ModuleProgress } from "./module.progress.model.schema";
@@ -704,6 +705,141 @@ const getAllModuleProgress = async (query: IModuleProgressAdminQuery) => {
   };
 };
 
+/**
+ * Admin/founder/manager overview: ONE row per member instead of
+ * one row per (member, module) — collapses every module-progress
+ * record for a user into a single summary row (total modules
+ * touched, how many are fully completed, average completion %),
+ * while still keeping every individual module record around so the
+ * UI can show a full per-module breakdown when the row is expanded.
+ */
+const getAllModuleProgressGroupedByUser = async (
+  query: IModuleProgressAdminQuery,
+) => {
+  const filter: QueryFilter<IModuleProgress> = {};
+
+  if (query.userId) {
+    assertValidObjectId(query.userId, "User ID");
+
+    filter.user = new Types.ObjectId(query.userId);
+  }
+
+  if (query.moduleId) {
+    assertValidObjectId(query.moduleId, "Course module ID");
+
+    filter.module = new Types.ObjectId(query.moduleId);
+  }
+
+  if (query.isCompleted !== undefined) {
+    filter.isCompleted = query.isCompleted;
+  }
+
+  const page = query.page ?? 1;
+
+  const limit = query.limit ?? 20;
+
+  // All matching records are pulled first (sorted newest-first) so
+  // grouping-by-user is correct regardless of which page a record
+  // would otherwise have landed on.
+  const records = await ModuleProgress.find(filter)
+    .sort({
+      updatedAt: -1,
+    })
+    .populate("user", "fullName email role profileImage")
+    .populate({
+      path: "module",
+
+      select: "title slug moduleNumber pillar status",
+
+      populate: {
+        path: "pillar",
+        model: "ChallengePillar",
+
+        select: "name title slug status",
+      },
+    });
+
+  const groupsByUserId = new Map<string, IUserModuleProgressGroup>();
+
+  for (const record of records) {
+    const userId = record.user
+      ? String(
+          (record.user as unknown as { _id?: Types.ObjectId })._id ??
+            record.user,
+        )
+      : "unknown";
+
+    const existingGroup = groupsByUserId.get(userId);
+
+    if (!existingGroup) {
+      groupsByUserId.set(userId, {
+        user: record.user as unknown as Record<string, unknown>,
+
+        totalModules: 1,
+        completedModules: record.isCompleted ? 1 : 0,
+        avgCompletionPercent: record.overallCompletionPercent,
+        isFullyCompleted: record.isCompleted,
+
+        // Records are already sorted newest-first, so the first
+        // record seen for a user is their most recently updated one.
+        lastUpdatedAt: record.updatedAt,
+
+        records: [record],
+      });
+
+      continue;
+    }
+
+    existingGroup.totalModules += 1;
+
+    if (record.isCompleted) {
+      existingGroup.completedModules += 1;
+    }
+
+    existingGroup.records.push(record);
+  }
+
+  const groups = Array.from(groupsByUserId.values()).map((group) => {
+    const totalPercent = group.records.reduce(
+      (sum, record) => sum + record.overallCompletionPercent,
+      0,
+    );
+
+    return {
+      ...group,
+
+      avgCompletionPercent: roundToTwoDecimals(
+        totalPercent / group.records.length,
+      ),
+
+      isFullyCompleted:
+        group.totalModules > 0 &&
+        group.completedModules === group.totalModules,
+    };
+  });
+
+  // Groups were built while walking newest-first records, so this
+  // ordering already reflects each user's most recent activity.
+  const total = groups.length;
+
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  const skip = (page - 1) * limit;
+
+  const paginatedGroups = groups.slice(skip, skip + limit);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages,
+    },
+
+    data: paginatedGroups,
+  };
+};
+
 export const moduleProgressService = {
   refreshModuleProgress,
 
@@ -716,6 +852,7 @@ export const moduleProgressService = {
 
   getUserModuleProgress,
   getAllModuleProgress,
+  getAllModuleProgressGroupedByUser,
 
   syncModulesBreakdownForUser,
   syncQuizSuccessBreakdownForUser,

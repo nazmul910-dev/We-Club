@@ -63,6 +63,18 @@ router.get(
 );
 
 router.get(
+  "/by-user",
+
+  verifyToken,
+
+  authorizeRoles("admin", "manager", "founder"),
+
+  validateRequest(getAllModuleProgressValidation),
+
+  moduleProgressController.getAllModuleProgressGroupedByUser,
+);
+
+router.get(
   "/",
 
   verifyToken,

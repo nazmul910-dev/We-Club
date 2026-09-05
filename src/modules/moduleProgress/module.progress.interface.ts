@@ -81,3 +81,16 @@ export interface IModuleProgressAdminQuery {
   page?: number | undefined;
   limit?: number | undefined;
 }
+
+export interface IUserModuleProgressGroup {
+  user: Types.ObjectId | Record<string, unknown> | null;
+
+  totalModules: number;
+  completedModules: number;
+  avgCompletionPercent: number;
+  isFullyCompleted: boolean;
+
+  lastUpdatedAt: Date | undefined;
+
+  records: IModuleProgress[];
+}

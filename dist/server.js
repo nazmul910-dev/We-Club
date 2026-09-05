@@ -765,17 +765,19 @@ var init_leaderboard_service = __esm({
       await leaderboard.save();
       return leaderboard;
     };
-    getLeaderboardEntries = async (leaderboardId, query) => {
+    getLeaderboardEntries = async (leaderboardId, query, role) => {
       assertValidObjectId(leaderboardId, "Leaderboard ID");
+      const isAdminOrManager15 = role === "founder" || role === "manager";
       const leaderboard = await Leaderboard.findById(leaderboardId);
       assertFound_default(leaderboard, "Leaderboard not found", 404);
       const page = query.page ?? 1;
       const limit = Math.min(query.limit ?? 20, 100);
       const skip = (page - 1) * limit;
       const [entries, total] = await Promise.all([
-        LeaderboardEntry.find({ leaderboard: leaderboardId }).sort({ rank: 1, points: -1 }).skip(skip).limit(limit).populate("user", "fullName profileImage country").lean(),
+        LeaderboardEntry.find({ leaderboard: leaderboardId }).sort({ rank: 1, points: -1 }).skip(skip).limit(limit).populate("user", "fullName role profileImage country ").lean(),
         LeaderboardEntry.countDocuments({ leaderboard: leaderboardId })
       ]);
+      console.log("entries", entries);
       return {
         meta: {
           page,
@@ -1460,6 +1462,12 @@ var init_pointsledger_service = __esm({
       if (!payload.points || payload.points <= 0) {
         return null;
       }
+      const user = await User.findById(payload.user).select("role").lean();
+      assertFound_default(user, "User not found", 404);
+      console.log("user role", user.role);
+      if (user.role === "founder" || user.role === "manager") {
+        return null;
+      }
       const balanceBefore = await getUserTotalPoints(payload.user);
       const balanceAfter = balanceBefore + payload.points;
       let entry;
@@ -1512,6 +1520,8 @@ var init_pointsledger_service = __esm({
     createPointsLedger = async (payload) => {
       const user = await User.findById(payload.user).select("_id");
       assertFound_default(user, "User not found", 404);
+      const founderOrManager = user.role === "founder" || user.role === "manager";
+      if (founderOrManager) return;
       const sourceFilter = payload.sourceType && payload.sourceId ? {
         user: new Types4.ObjectId(payload.user),
         sourceType: payload.sourceType,
@@ -2974,7 +2984,7 @@ __export(module_progress_service_exports, {
   moduleProgressService: () => moduleProgressService
 });
 import { Types as Types32 } from "mongoose";
-var ACTION_COMPLETION_REQUIREMENT, QUIZ_PASS_SCORE, MAXIMUM_QUIZ_ATTEMPTS, throwServiceError13, assertFound12, assertValidObjectId10, isDuplicateKeyError7, roundToTwoDecimals, clamp, calculateCompletionPercent, ensureCourseModuleExists5, createDefaultProgressData, getOrCreateModuleProgress, recalculateDerivedFields, awardModuleCompletionPoints, syncModulesBreakdownForUser, syncQuizSuccessBreakdownForUser, QUIZ_PASS_POINTS, awardQuizPassPoints, refreshModuleProgress, syncResourceSummary, syncActionSummary, syncQuizSummary, getMyModuleProgress, getMyAllModuleProgress, getUserModuleProgress, getAllModuleProgress, moduleProgressService;
+var ACTION_COMPLETION_REQUIREMENT, QUIZ_PASS_SCORE, MAXIMUM_QUIZ_ATTEMPTS, throwServiceError13, assertFound12, assertValidObjectId10, isDuplicateKeyError7, roundToTwoDecimals, clamp, calculateCompletionPercent, ensureCourseModuleExists5, createDefaultProgressData, getOrCreateModuleProgress, recalculateDerivedFields, awardModuleCompletionPoints, syncModulesBreakdownForUser, syncQuizSuccessBreakdownForUser, QUIZ_PASS_POINTS, awardQuizPassPoints, refreshModuleProgress, syncResourceSummary, syncActionSummary, syncQuizSummary, getMyModuleProgress, getMyAllModuleProgress, getUserModuleProgress, getAllModuleProgress, getAllModuleProgressGroupedByUser, moduleProgressService;
 var init_module_progress_service = __esm({
   "src/modules/moduleProgress/module.progress.service.ts"() {
     "use strict";
@@ -3414,6 +3424,85 @@ var init_module_progress_service = __esm({
         data: records
       };
     };
+    getAllModuleProgressGroupedByUser = async (query) => {
+      const filter = {};
+      if (query.userId) {
+        assertValidObjectId10(query.userId, "User ID");
+        filter.user = new Types32.ObjectId(query.userId);
+      }
+      if (query.moduleId) {
+        assertValidObjectId10(query.moduleId, "Course module ID");
+        filter.module = new Types32.ObjectId(query.moduleId);
+      }
+      if (query.isCompleted !== void 0) {
+        filter.isCompleted = query.isCompleted;
+      }
+      const page = query.page ?? 1;
+      const limit = query.limit ?? 20;
+      const records = await ModuleProgress.find(filter).sort({
+        updatedAt: -1
+      }).populate("user", "fullName email role profileImage").populate({
+        path: "module",
+        select: "title slug moduleNumber pillar status",
+        populate: {
+          path: "pillar",
+          model: "ChallengePillar",
+          select: "name title slug status"
+        }
+      });
+      const groupsByUserId = /* @__PURE__ */ new Map();
+      for (const record of records) {
+        const userId = record.user ? String(
+          record.user._id ?? record.user
+        ) : "unknown";
+        const existingGroup = groupsByUserId.get(userId);
+        if (!existingGroup) {
+          groupsByUserId.set(userId, {
+            user: record.user,
+            totalModules: 1,
+            completedModules: record.isCompleted ? 1 : 0,
+            avgCompletionPercent: record.overallCompletionPercent,
+            isFullyCompleted: record.isCompleted,
+            // Records are already sorted newest-first, so the first
+            // record seen for a user is their most recently updated one.
+            lastUpdatedAt: record.updatedAt,
+            records: [record]
+          });
+          continue;
+        }
+        existingGroup.totalModules += 1;
+        if (record.isCompleted) {
+          existingGroup.completedModules += 1;
+        }
+        existingGroup.records.push(record);
+      }
+      const groups = Array.from(groupsByUserId.values()).map((group) => {
+        const totalPercent = group.records.reduce(
+          (sum, record) => sum + record.overallCompletionPercent,
+          0
+        );
+        return {
+          ...group,
+          avgCompletionPercent: roundToTwoDecimals(
+            totalPercent / group.records.length
+          ),
+          isFullyCompleted: group.totalModules > 0 && group.completedModules === group.totalModules
+        };
+      });
+      const total = groups.length;
+      const totalPages = Math.ceil(total / limit) || 1;
+      const skip = (page - 1) * limit;
+      const paginatedGroups = groups.slice(skip, skip + limit);
+      return {
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages
+        },
+        data: paginatedGroups
+      };
+    };
     moduleProgressService = {
       refreshModuleProgress,
       syncResourceSummary,
@@ -3423,6 +3512,7 @@ var init_module_progress_service = __esm({
       getMyAllModuleProgress,
       getUserModuleProgress,
       getAllModuleProgress,
+      getAllModuleProgressGroupedByUser,
       syncModulesBreakdownForUser,
       syncQuizSuccessBreakdownForUser
     };
@@ -5467,8 +5557,184 @@ var listingsService = {
 };
 
 // src/utility/cloudinaryUpload.ts
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary2 } from "cloudinary";
+
+// src/utility/cloudinaryMedia.ts
+import { Readable } from "stream";
+import {
+  v2 as cloudinary
+} from "cloudinary";
 cloudinary.config({
+  cloud_name: config_default.CLOUDINARY_CLOUD_NAME,
+  api_key: config_default.CLOUDINARY_API_KEY,
+  api_secret: config_default.CLOUDINARY_API_SECRET,
+  secure: true
+});
+var uploadBufferToCloudinary = async (file, options2) => {
+  if (!file) {
+    throw new Error("No file provided for upload");
+  }
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      options2,
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        if (!result) {
+          reject(new Error("Cloudinary did not return an upload result"));
+          return;
+        }
+        resolve(result);
+      }
+    );
+    Readable.from(file.buffer).pipe(uploadStream);
+  });
+};
+var buildVideoPlaybackUrl = (publicId) => {
+  return cloudinary.url(publicId, {
+    resource_type: "video",
+    secure: true,
+    transformation: [
+      {
+        quality: "auto",
+        fetch_format: "auto"
+      }
+    ]
+  });
+};
+var buildVideoThumbnailUrl = (publicId) => {
+  return cloudinary.url(publicId, {
+    resource_type: "video",
+    secure: true,
+    format: "jpg",
+    transformation: [
+      {
+        start_offset: "2",
+        width: 1280,
+        height: 720,
+        crop: "fill",
+        gravity: "auto",
+        quality: "auto"
+      }
+    ]
+  });
+};
+var buildPdfThumbnailUrl = (publicId) => {
+  return cloudinary.url(publicId, {
+    resource_type: "image",
+    secure: true,
+    format: "jpg",
+    page: 1,
+    transformation: [
+      {
+        width: 1200,
+        height: 1600,
+        crop: "fit",
+        quality: "auto"
+      }
+    ]
+  });
+};
+var uploadVideoToCloudinary = async (file, folder) => {
+  const result = await uploadBufferToCloudinary(file, {
+    folder,
+    resource_type: "video",
+    use_filename: true,
+    unique_filename: true,
+    overwrite: false,
+    eager_async: true,
+    eager: [
+      {
+        quality: "auto",
+        fetch_format: "auto"
+      }
+    ]
+  });
+  const data = {
+    cloudinaryPublicId: result.public_id,
+    secureUrl: result.secure_url,
+    playbackUrl: buildVideoPlaybackUrl(result.public_id),
+    thumbnailUrl: buildVideoThumbnailUrl(result.public_id),
+    durationSeconds: typeof result.duration === "number" ? result.duration : 0
+  };
+  if (typeof result.asset_id === "string") {
+    data.cloudinaryAssetId = result.asset_id;
+  }
+  if (typeof result.folder === "string") {
+    data.folder = result.folder;
+  }
+  if (typeof result.format === "string") {
+    data.format = result.format;
+  }
+  if (typeof result.bytes === "number") {
+    data.bytes = result.bytes;
+  }
+  if (typeof result.width === "number") {
+    data.width = result.width;
+  }
+  if (typeof result.height === "number") {
+    data.height = result.height;
+  }
+  return data;
+};
+var uploadResourceToCloudinary = async (file, folder) => {
+  if (!file) {
+    throw new Error("No file provided for upload");
+  }
+  const result = await uploadBufferToCloudinary(file, {
+    folder,
+    resource_type: "auto",
+    use_filename: true,
+    unique_filename: true,
+    overwrite: false
+  });
+  const resourceType = result.resource_type === "raw" || result.resource_type === "video" ? result.resource_type : "image";
+  const data = {
+    cloudinaryPublicId: result.public_id,
+    secureUrl: result.secure_url,
+    fileName: file.originalname,
+    mimeType: file.mimetype,
+    cloudinaryResourceType: resourceType
+  };
+  if (typeof result.asset_id === "string") {
+    data.cloudinaryAssetId = result.asset_id;
+  }
+  if (typeof result.format === "string") {
+    data.format = result.format;
+  }
+  if (typeof result.bytes === "number") {
+    data.bytes = result.bytes;
+  }
+  if (file.mimetype === "application/pdf" && resourceType === "image") {
+    data.thumbnailUrl = buildPdfThumbnailUrl(result.public_id);
+  }
+  return data;
+};
+var uploadThumbnailToCloudinary = async (file, folder) => {
+  const result = await uploadBufferToCloudinary(file, {
+    folder,
+    resource_type: "image",
+    use_filename: true,
+    unique_filename: true,
+    overwrite: false,
+    transformation: [
+      {
+        width: 1200,
+        height: 675,
+        crop: "fill",
+        gravity: "auto",
+        quality: "auto",
+        fetch_format: "auto"
+      }
+    ]
+  });
+  return result.secure_url;
+};
+
+// src/utility/cloudinaryUpload.ts
+cloudinary2.config({
   cloud_name: config_default.CLOUDINARY_CLOUD_NAME,
   api_key: config_default.CLOUDINARY_API_KEY,
   api_secret: config_default.CLOUDINARY_API_SECRET
@@ -5477,7 +5743,7 @@ var uploadImageToCloudinary = async (file, folder = "adam/profile-images") => {
   const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
     "base64"
   )}`;
-  const result = await cloudinary.uploader.upload(base64Image, {
+  const result = await cloudinary2.uploader.upload(base64Image, {
     folder,
     resource_type: "image",
     transformation: [
@@ -5497,11 +5763,50 @@ var uploadLogoToCloudinary = async (file, folder = "adam/logo") => {
   const base64Image = `data:${file.mimetype};base64,${file.buffer.toString(
     "base64"
   )}`;
-  const result = await cloudinary.uploader.upload(base64Image, {
+  const result = await cloudinary2.uploader.upload(base64Image, {
     folder,
     resource_type: "image"
   });
   return result.secure_url;
+};
+var uploadRetreatCoverToCloudinary = async (file, folder = "invictus/retreat-locations/cover") => {
+  const base64Image = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+  const result = await cloudinary2.uploader.upload(base64Image, {
+    folder,
+    resource_type: "image",
+    transformation: [
+      {
+        width: 1600,
+        height: 900,
+        crop: "fill",
+        gravity: "auto",
+        quality: "auto",
+        fetch_format: "auto"
+      }
+    ]
+  });
+  return result.secure_url;
+};
+var uploadRetreatGalleryToCloudinary = async (file, folder = "invictus/retreat-locations/gallery") => {
+  const base64Image = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+  const result = await cloudinary2.uploader.upload(base64Image, {
+    folder,
+    resource_type: "image",
+    transformation: [
+      {
+        width: 1400,
+        height: 1400,
+        crop: "limit",
+        quality: "auto",
+        fetch_format: "auto"
+      }
+    ]
+  });
+  return result.secure_url;
+};
+var uploadRetreatPromoVideoToCloudinary = async (file, folder = "invictus/retreat-locations/promo-video") => {
+  const result = await uploadVideoToCloudinary(file, folder);
+  return result.playbackUrl || result.secureUrl;
 };
 
 // src/utility/parseIfString.ts
@@ -5771,21 +6076,39 @@ var listingController = {
 import multer from "multer";
 import path2 from "path";
 var storage = multer.memoryStorage();
-var allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-var allowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+var allowedImageMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+var allowedImageExts = [".jpg", ".jpeg", ".png", ".webp"];
+var allowedVideoMimes = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  // .mov
+  "video/x-m4v",
+  "video/mpeg"
+];
+var allowedVideoExts = [".mp4", ".webm", ".mov", ".m4v", ".mpeg", ".mpg"];
 var upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024
+    // 150MB so a promo video can fit; images stay small in practice
+    fileSize: 150 * 1024 * 1024
   },
   fileFilter: (_req, file, cb) => {
     const ext = path2.extname(file.originalname).toLowerCase();
-    const isMimeValid = allowedMimeTypes.includes(file.mimetype);
-    const isExtValid = allowedExtensions.includes(ext);
-    if (!isMimeValid && !isExtValid) {
+    if (file.fieldname === "promoVideo") {
+      const ok2 = allowedVideoMimes.includes(file.mimetype) || allowedVideoExts.includes(ext);
+      if (!ok2) {
+        return cb(
+          new Error("Promo video must be MP4, WEBM, MOV, M4V, or MPEG")
+        );
+      }
+      return cb(null, true);
+    }
+    const ok = allowedImageMimes.includes(file.mimetype) || allowedImageExts.includes(ext);
+    if (!ok) {
       return cb(new Error("Only JPG, JPEG, PNG, and WEBP images are allowed"));
     }
-    cb(null, true);
+    return cb(null, true);
   }
 });
 var uploadListingImages = upload.fields([
@@ -5794,7 +6117,8 @@ var uploadListingImages = upload.fields([
 ]);
 var uploadRetreatImages = upload.fields([
   { name: "coverImage", maxCount: 1 },
-  { name: "gallery", maxCount: 10 }
+  { name: "gallery", maxCount: 10 },
+  { name: "promoVideo", maxCount: 1 }
 ]);
 
 // src/modules/listings/listings.route.ts
@@ -15766,180 +16090,6 @@ var courseModuleService = {
   archiveCourseModule
 };
 
-// src/utility/cloudinaryMedia.ts
-import { Readable } from "stream";
-import {
-  v2 as cloudinary2
-} from "cloudinary";
-cloudinary2.config({
-  cloud_name: config_default.CLOUDINARY_CLOUD_NAME,
-  api_key: config_default.CLOUDINARY_API_KEY,
-  api_secret: config_default.CLOUDINARY_API_SECRET,
-  secure: true
-});
-var uploadBufferToCloudinary = async (file, options2) => {
-  if (!file) {
-    throw new Error("No file provided for upload");
-  }
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary2.uploader.upload_stream(
-      options2,
-      (error, result) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        if (!result) {
-          reject(new Error("Cloudinary did not return an upload result"));
-          return;
-        }
-        resolve(result);
-      }
-    );
-    Readable.from(file.buffer).pipe(uploadStream);
-  });
-};
-var buildVideoPlaybackUrl = (publicId) => {
-  return cloudinary2.url(publicId, {
-    resource_type: "video",
-    secure: true,
-    transformation: [
-      {
-        quality: "auto",
-        fetch_format: "auto"
-      }
-    ]
-  });
-};
-var buildVideoThumbnailUrl = (publicId) => {
-  return cloudinary2.url(publicId, {
-    resource_type: "video",
-    secure: true,
-    format: "jpg",
-    transformation: [
-      {
-        start_offset: "2",
-        width: 1280,
-        height: 720,
-        crop: "fill",
-        gravity: "auto",
-        quality: "auto"
-      }
-    ]
-  });
-};
-var buildPdfThumbnailUrl = (publicId) => {
-  return cloudinary2.url(publicId, {
-    resource_type: "image",
-    secure: true,
-    format: "jpg",
-    page: 1,
-    transformation: [
-      {
-        width: 1200,
-        height: 1600,
-        crop: "fit",
-        quality: "auto"
-      }
-    ]
-  });
-};
-var uploadVideoToCloudinary = async (file, folder) => {
-  const result = await uploadBufferToCloudinary(file, {
-    folder,
-    resource_type: "video",
-    use_filename: true,
-    unique_filename: true,
-    overwrite: false,
-    eager_async: true,
-    eager: [
-      {
-        quality: "auto",
-        fetch_format: "auto"
-      }
-    ]
-  });
-  const data = {
-    cloudinaryPublicId: result.public_id,
-    secureUrl: result.secure_url,
-    playbackUrl: buildVideoPlaybackUrl(result.public_id),
-    thumbnailUrl: buildVideoThumbnailUrl(result.public_id),
-    durationSeconds: typeof result.duration === "number" ? result.duration : 0
-  };
-  if (typeof result.asset_id === "string") {
-    data.cloudinaryAssetId = result.asset_id;
-  }
-  if (typeof result.folder === "string") {
-    data.folder = result.folder;
-  }
-  if (typeof result.format === "string") {
-    data.format = result.format;
-  }
-  if (typeof result.bytes === "number") {
-    data.bytes = result.bytes;
-  }
-  if (typeof result.width === "number") {
-    data.width = result.width;
-  }
-  if (typeof result.height === "number") {
-    data.height = result.height;
-  }
-  return data;
-};
-var uploadResourceToCloudinary = async (file, folder) => {
-  if (!file) {
-    throw new Error("No file provided for upload");
-  }
-  const result = await uploadBufferToCloudinary(file, {
-    folder,
-    resource_type: "auto",
-    use_filename: true,
-    unique_filename: true,
-    overwrite: false
-  });
-  const resourceType = result.resource_type === "raw" || result.resource_type === "video" ? result.resource_type : "image";
-  const data = {
-    cloudinaryPublicId: result.public_id,
-    secureUrl: result.secure_url,
-    fileName: file.originalname,
-    mimeType: file.mimetype,
-    cloudinaryResourceType: resourceType
-  };
-  if (typeof result.asset_id === "string") {
-    data.cloudinaryAssetId = result.asset_id;
-  }
-  if (typeof result.format === "string") {
-    data.format = result.format;
-  }
-  if (typeof result.bytes === "number") {
-    data.bytes = result.bytes;
-  }
-  if (file.mimetype === "application/pdf" && resourceType === "image") {
-    data.thumbnailUrl = buildPdfThumbnailUrl(result.public_id);
-  }
-  return data;
-};
-var uploadThumbnailToCloudinary = async (file, folder) => {
-  const result = await uploadBufferToCloudinary(file, {
-    folder,
-    resource_type: "image",
-    use_filename: true,
-    unique_filename: true,
-    overwrite: false,
-    transformation: [
-      {
-        width: 1200,
-        height: 675,
-        crop: "fill",
-        gravity: "auto",
-        quality: "auto",
-        fetch_format: "auto"
-      }
-    ]
-  });
-  return result.secure_url;
-};
-
 // src/modules/courseModules/course.module.controller.ts
 var getAuthUser4 = (req) => {
   if (!req.user) {
@@ -21405,12 +21555,43 @@ var getAllModuleProgress2 = async (req, res, next) => {
     next(error);
   }
 };
+var getAllModuleProgressGroupedByUser2 = async (req, res, next) => {
+  try {
+    getAuthUser12(req);
+    const query = {};
+    if (typeof req.query.userId === "string") {
+      query.userId = req.query.userId;
+    }
+    if (typeof req.query.moduleId === "string") {
+      query.moduleId = req.query.moduleId;
+    }
+    if (req.query.isCompleted === "true" || req.query.isCompleted === "false") {
+      query.isCompleted = req.query.isCompleted === "true";
+    }
+    if (typeof req.query.page === "string") {
+      query.page = Number(req.query.page);
+    }
+    if (typeof req.query.limit === "string") {
+      query.limit = Number(req.query.limit);
+    }
+    const result = await moduleProgressService.getAllModuleProgressGroupedByUser(query);
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Member progress overview retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var moduleProgressController = {
   getMyModuleProgress: getMyModuleProgress2,
   recalculateMyModuleProgress,
   getMyAllModuleProgress: getMyAllModuleProgress2,
   getUserModuleProgress: getUserModuleProgress2,
-  getAllModuleProgress: getAllModuleProgress2
+  getAllModuleProgress: getAllModuleProgress2,
+  getAllModuleProgressGroupedByUser: getAllModuleProgressGroupedByUser2
 };
 
 // src/modules/moduleProgress/module.progress.validation.ts
@@ -21465,6 +21646,13 @@ router25.get(
   authorizeRoles("admin", "manager", "founder"),
   validateRequest_default(adminModuleProgressValidation),
   moduleProgressController.getUserModuleProgress
+);
+router25.get(
+  "/by-user",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  validateRequest_default(getAllModuleProgressValidation),
+  moduleProgressController.getAllModuleProgressGroupedByUser
 );
 router25.get(
   "/",
@@ -24683,8 +24871,26 @@ var getAuthUser17 = (req) => {
 var createRetreatLocation2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser17(req);
+    const files = req.files;
+    const payload = { ...req.body };
+    if (files?.coverImage?.[0]) {
+      payload.coverImage = await uploadRetreatCoverToCloudinary(
+        files.coverImage[0]
+      );
+    }
+    if (files?.gallery?.length) {
+      const uploaded = await Promise.all(
+        files.gallery.map((file) => uploadRetreatGalleryToCloudinary(file))
+      );
+      payload.galleryImages = [...payload.galleryImages ?? [], ...uploaded];
+    }
+    if (files?.promoVideo?.[0]) {
+      payload.promoVideoUrl = await uploadRetreatPromoVideoToCloudinary(
+        files.promoVideo[0]
+      );
+    }
     const location = await retreatLocationService.createRetreatLocation(
-      req.body,
+      payload,
       authUser.id
     );
     sendResponse_default(res, {
@@ -24699,7 +24905,7 @@ var createRetreatLocation2 = async (req, res, next) => {
 };
 var getAllRetreatLocations2 = async (req, res, next) => {
   try {
-    const isPublicOnly = !req.user || req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager";
+    const isPublicOnly = !req.user || req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager" && req.user.role !== "super_admin";
     const result = await retreatLocationService.getAllRetreatLocations(
       req.query,
       isPublicOnly
@@ -24716,7 +24922,7 @@ var getAllRetreatLocations2 = async (req, res, next) => {
 };
 var getSingleRetreatLocation2 = async (req, res, next) => {
   try {
-    const isPublicOnly = !req.user || req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager";
+    const isPublicOnly = !req.user || req.user.role !== "founder" && req.user.role !== "admin" && req.user.role !== "manager" && req.user.role !== "super_admin";
     const location = await retreatLocationService.getSingleRetreatLocation(
       String(req.params.idOrSlug),
       isPublicOnly
@@ -24734,9 +24940,35 @@ var getSingleRetreatLocation2 = async (req, res, next) => {
 var updateRetreatLocation2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser17(req);
+    const files = req.files;
+    const payload = { ...req.body };
+    if (files?.coverImage?.[0]) {
+      payload.coverImage = await uploadRetreatCoverToCloudinary(
+        files.coverImage[0]
+      );
+    }
+    if (files?.gallery?.length) {
+      const uploaded = await Promise.all(
+        files.gallery.map((file) => uploadRetreatGalleryToCloudinary(file))
+      );
+      const replace = req.body.replaceGallery === true;
+      if (replace) {
+        payload.galleryImages = uploaded;
+      } else {
+        payload.galleryImages = [
+          ...payload.galleryImages ?? [],
+          ...uploaded
+        ];
+      }
+    }
+    if (files?.promoVideo?.[0]) {
+      payload.promoVideoUrl = await uploadRetreatPromoVideoToCloudinary(
+        files.promoVideo[0]
+      );
+    }
     const location = await retreatLocationService.updateRetreatLocation(
       String(req.params.id),
-      req.body,
+      payload,
       authUser.id
     );
     sendResponse_default(res, {
@@ -24776,6 +25008,33 @@ var retreatLocationController = {
 // src/modules/retreatLocations/retreat.location.validation.ts
 import { z as z22 } from "zod";
 var mongoObjectIdSchema14 = z22.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
+var booleanFromMultipart = z22.preprocess((val) => {
+  if (val === true || val === "true") return true;
+  if (val === false || val === "false") return false;
+  return val;
+}, z22.boolean());
+var stringArrayFromMultipart = z22.preprocess((val) => {
+  if (val === void 0 || val === null || val === "") return void 0;
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return val.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return val;
+}, z22.array(z22.string().trim().min(1).max(300)).max(30).optional());
+var orderFromMultipart = z22.preprocess((val) => {
+  if (val === void 0 || val === null || val === "") return void 0;
+  if (typeof val === "number") return val;
+  if (typeof val === "string") {
+    const n = Number(val);
+    return Number.isNaN(n) ? val : n;
+  }
+  return val;
+}, z22.number().int().min(0).optional());
 var createRetreatLocationValidation = z22.object({
   body: z22.object({
     title: z22.string().trim().min(2).max(200),
@@ -24784,14 +25043,30 @@ var createRetreatLocationValidation = z22.object({
     city: z22.string().trim().min(2).max(100),
     tagline: z22.string().trim().max(300).optional(),
     description: z22.string().trim().min(10).max(5e3),
+    // Optional: only if client still sends a URL (e.g. keep existing)
     coverImage: z22.string().trim().url().optional(),
-    promoVideoUrl: z22.string().trim().url().optional(),
-    galleryImages: z22.array(z22.string().trim().url()).max(20).optional(),
-    whatsIncluded: z22.array(z22.string().trim().min(1).max(300)).max(30).optional(),
-    isFeatured: z22.boolean().optional(),
-    isActive: z22.boolean().optional(),
+    promoVideoUrl: z22.preprocess((val) => {
+      if (val === "null" || val === null) return null;
+      return val;
+    }, z22.string().trim().url().nullable().optional()),
+    // Optional existing gallery URLs as JSON array string
+    galleryImages: z22.preprocess((val) => {
+      if (val === void 0 || val === null || val === "") return void 0;
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string") {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return val;
+        }
+      }
+      return val;
+    }, z22.array(z22.string().trim().url()).max(20).optional()),
+    whatsIncluded: stringArrayFromMultipart,
+    isFeatured: booleanFromMultipart.optional(),
+    isActive: booleanFromMultipart.optional(),
     status: z22.enum(RETREAT_LOCATION_STATUSES).optional(),
-    order: z22.number().int().min(0).optional()
+    order: orderFromMultipart
   }).strict()
 });
 var updateRetreatLocationValidation = z22.object({
@@ -24805,14 +25080,34 @@ var updateRetreatLocationValidation = z22.object({
     city: z22.string().trim().min(2).max(100).optional(),
     tagline: z22.string().trim().max(300).optional(),
     description: z22.string().trim().min(10).max(5e3).optional(),
-    coverImage: z22.string().trim().url().nullable().optional(),
-    promoVideoUrl: z22.string().trim().url().nullable().optional(),
-    galleryImages: z22.array(z22.string().trim().url()).max(20).optional(),
-    whatsIncluded: z22.array(z22.string().trim().min(1).max(300)).max(30).optional(),
-    isFeatured: z22.boolean().optional(),
-    isActive: z22.boolean().optional(),
+    // null / "null" = clear cover
+    coverImage: z22.preprocess((val) => {
+      if (val === "null" || val === null) return null;
+      return val;
+    }, z22.string().trim().url().nullable().optional()),
+    promoVideoUrl: z22.preprocess((val) => {
+      if (val === "null" || val === null) return null;
+      return val;
+    }, z22.string().trim().url().nullable().optional()),
+    galleryImages: z22.preprocess((val) => {
+      if (val === void 0 || val === null || val === "") return void 0;
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string") {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return val;
+        }
+      }
+      return val;
+    }, z22.array(z22.string().trim().url()).max(20).optional()),
+    whatsIncluded: stringArrayFromMultipart,
+    isFeatured: booleanFromMultipart.optional(),
+    isActive: booleanFromMultipart.optional(),
     status: z22.enum(RETREAT_LOCATION_STATUSES).optional(),
-    order: z22.number().int().min(0).optional()
+    order: orderFromMultipart,
+    /** set to "true" to replace gallery entirely with uploaded files only */
+    replaceGallery: booleanFromMultipart.optional()
   }).strict()
 });
 var retreatLocationIdValidation = z22.object({
@@ -24846,6 +25141,7 @@ router30.post(
   "/",
   verifyToken,
   authorizeRoles("founder", "super_admin", "admin", "manager"),
+  uploadRetreatImages,
   validateRequest_default(createRetreatLocationValidation),
   retreatLocationController.createRetreatLocation
 );
@@ -24853,6 +25149,7 @@ router30.patch(
   "/:id",
   verifyToken,
   authorizeRoles("founder", "super_admin", "admin", "manager"),
+  uploadRetreatImages,
   validateRequest_default(updateRetreatLocationValidation),
   retreatLocationController.updateRetreatLocation
 );
@@ -25209,9 +25506,11 @@ var getLeaderboardEntries4 = async (req, res, next) => {
   try {
     const page = Number(req.query.page);
     const limit = Number(req.query.limit);
+    const userRole = req.user?.role;
     const result = await leaderboardService.getLeaderboardEntries(
       String(req.params.id),
-      { page, limit }
+      { page, limit },
+      userRole
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -25317,12 +25616,6 @@ router32.post(
   authorizeRoles("founder", "manager"),
   validateRequest_default(leaderboardIdValidation),
   leaderboardController.activateLeaderboard
-);
-router32.get(
-  "/:id/entries",
-  verifyToken,
-  requireInvictusAccess,
-  leaderboardController.getLeaderboardEntries
 );
 router32.post(
   "/:id/finalize",
@@ -28070,9 +28363,41 @@ var refundRetreatBooking = async (bookingId, payload, actorId) => {
   if (booking.status !== "confirmed") {
     throwServiceError21("Only confirmed retreat bookings can be refunded", 400);
   }
+  const refundAmount = payload.refundAmount ?? booking.amountPaid ?? booking.amount;
+  if (booking.stripePaymentIntentId) {
+    if (!stripe3) {
+      throwServiceError21(
+        "Stripe is not configured. Cannot process refund.",
+        500
+      );
+    }
+    const stripeClient = getStripeClient3();
+    try {
+      await stripeClient.refunds.create({
+        payment_intent: booking.stripePaymentIntentId,
+        amount: Math.round(refundAmount * 100),
+        reason: "requested_by_customer",
+        metadata: {
+          bookingId: String(booking._id),
+          refundedBy: actorId,
+          reason: payload.reason ?? "Customer requested"
+        }
+      });
+    } catch (err) {
+      throwServiceError21(
+        err?.message || "Failed to process refund with Stripe",
+        400
+      );
+    }
+  } else {
+    throwServiceError21(
+      "This booking has no Stripe payment intent. Cannot process a real refund.",
+      400
+    );
+  }
   booking.status = "refunded";
   booking.refundedAt = /* @__PURE__ */ new Date();
-  booking.refundAmount = payload.refundAmount ?? booking.amountPaid ?? booking.amount;
+  booking.refundAmount = refundAmount;
   if (payload.reason !== void 0) {
     booking.refundReason = payload.reason;
   }
@@ -33153,8 +33478,8 @@ app.set("trust proxy", 1);
 var limiter = rateLimit2({
   windowMs: 5 * 60 * 1e3,
   // 5 minutes
-  limit: 1e5,
-  // Limit each IP to 100000 requests per `window` (here, per 5 minutes)
+  limit: 1e4,
+  // Limit each IP to 100 requests per `window` (here, per 5 minutes)
   standardHeaders: true,
   // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false,
