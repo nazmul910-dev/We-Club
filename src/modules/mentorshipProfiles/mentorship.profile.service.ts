@@ -1,14 +1,24 @@
-import { QueryFilter, Types } from "mongoose";
+import { ClientSession, QueryFilter, Types } from "mongoose";
 
 import { User } from "../users/users.model.schema";
 
 import {
+  ICreateMentorInput,
   ICreateMentorshipProfile,
   IMentorshipProfile,
   IUpdateMentorshipProfile,
 } from "./mentorship.profile.interface";
 
 import { MentorshipProfile } from "./mentorship.profile.model.schema";
+
+interface MentorUserDoc {
+  _id: Types.ObjectId;
+  fullName: string;
+  email: string;
+  role: string;
+  save: (options?: { session?: ClientSession }) => Promise<MentorUserDoc>;
+}
+
 
 const throwServiceError = (message: string, statusCode: number): never => {
   const error = new Error(message) as Error & {
@@ -19,6 +29,8 @@ const throwServiceError = (message: string, statusCode: number): never => {
 
   throw error;
 };
+
+
 
 const assertFound: <T>(
   value: T | null | undefined,
@@ -37,7 +49,12 @@ const assertValidObjectId = (value: string, fieldName: string): void => {
 };
 
 const isAdminOrManager = (role?: string | undefined): boolean => {
-  return role === "admin" || role === "manager";
+  return (
+    role === "founder" ||
+    role === "super_admin" ||
+    role === "admin" ||
+    role === "manager"
+  );
 };
 
 const isDuplicateKeyError = (error: unknown): boolean => {
@@ -75,7 +92,22 @@ const ensureMentorUserExists = async (mentorId: string) => {
 };
 
 
-const clearOtherPrimaryMentors = async (excludeId?: Types.ObjectId) => {
+type MentorshipProfilePayload = Pick<
+  ICreateMentorshipProfile,
+  | "bio"
+  | "expertise"
+  | "availability"
+  | "profileImage"
+  | "isPrimaryMentor"
+  | "yearsOfExperience"
+  | "sessionDurationMinutes"
+  | "order"
+>;
+
+const clearOtherPrimaryMentors = async (
+  excludeId?: Types.ObjectId,
+  session?: ClientSession,
+) => {
   const filter: Record<string, unknown> = {
     isPrimaryMentor: true,
   };
@@ -84,9 +116,53 @@ const clearOtherPrimaryMentors = async (excludeId?: Types.ObjectId) => {
     filter._id = { $ne: excludeId };
   }
 
-  await MentorshipProfile.updateMany(filter, {
-    $set: { isPrimaryMentor: false },
-  });
+  await MentorshipProfile.updateMany(
+    filter,
+    { $set: { isPrimaryMentor: false } },
+    session ? { session } : undefined,
+  );
+};
+
+const createMentorshipProfileRecord = async (
+  payload: MentorshipProfilePayload,
+  mentorId: Types.ObjectId,
+  actorId: string,
+  session?: ClientSession,
+) => {
+  const nextOrder =
+    payload.order ??
+    (((await MentorshipProfile.findOne({}, { order: 1 })
+      .sort({ order: -1 })
+      .session(session ?? null)
+      .lean())?.order ?? -1) + 1);
+
+  const createData = {
+    mentor: mentorId,
+    bio: payload.bio,
+    expertise: payload.expertise ?? [],
+    availability: payload.availability ?? [],
+    profileImage: payload.profileImage,
+    isPrimaryMentor: payload.isPrimaryMentor ?? false,
+    yearsOfExperience: payload.yearsOfExperience,
+    sessionDurationMinutes: payload.sessionDurationMinutes ?? 60,
+    order: nextOrder,
+    status: "draft" as const,
+    isActive: true,
+    createdBy: new Types.ObjectId(actorId),
+  };
+
+  if (createData.isPrimaryMentor) {
+    await clearOtherPrimaryMentors(undefined, session);
+  }
+
+  const [profile] = await MentorshipProfile.create(
+    [createData],
+    session ? { session } : undefined,
+  );
+
+  assertFound(profile, "Failed to create mentorship profile", 500);
+
+  return profile;
 };
 
 const createMentorshipProfile = async (
@@ -106,40 +182,12 @@ const createMentorshipProfile = async (
     );
   }
 
-  const createData: Record<string, unknown> = {
-    mentor: new Types.ObjectId(payload.mentor),
-
-    bio: payload.bio,
-
-    expertise: payload.expertise ?? [],
-
-    availability: payload.availability ?? [],
-
-    isPrimaryMentor: payload.isPrimaryMentor ?? false,
-
-    sessionDurationMinutes: payload.sessionDurationMinutes ?? 60,
-
-    order: payload.order ?? 0,
-
-    status: "draft",
-
-    createdBy: new Types.ObjectId(actorId),
-  };
-
-  if (payload.profileImage !== undefined) {
-    createData.profileImage = payload.profileImage;
-  }
-
-  if (payload.yearsOfExperience !== undefined) {
-    createData.yearsOfExperience = payload.yearsOfExperience;
-  }
-
   try {
-    const profile = await MentorshipProfile.create(createData);
-
-    if (profile.isPrimaryMentor) {
-      await clearOtherPrimaryMentors(profile._id as Types.ObjectId);
-    }
+    const profile = await createMentorshipProfileRecord(
+      payload,
+      new Types.ObjectId(payload.mentor),
+      actorId,
+    );
 
     return profile.populate(PROFILE_POPULATE);
   } catch (error) {
@@ -257,6 +305,10 @@ const updateMentorshipProfile = async (
     profile.order = payload.order;
   }
 
+  if (payload.isPrimaryMentor === true) {
+    await clearOtherPrimaryMentors(profile._id as Types.ObjectId);
+  }
+
   if (payload.isPrimaryMentor !== undefined) {
     profile.isPrimaryMentor = payload.isPrimaryMentor;
   }
@@ -264,10 +316,6 @@ const updateMentorshipProfile = async (
   profile.updatedBy = new Types.ObjectId(actorId);
 
   await profile.save();
-
-  if (profile.isPrimaryMentor) {
-    await clearOtherPrimaryMentors(profile._id as Types.ObjectId);
-  }
 
   return profile.populate(PROFILE_POPULATE);
 };
@@ -366,10 +414,17 @@ const selectMyCoMentor = async (
   assertValidObjectId(mentorshipProfileId, "Mentorship profile ID");
 
   const member = await User.findById(memberUserId)
-    .select("_id fullName email role")
+    .select("_id fullName email role assignedCoMentorProfile coMentorAssignedAt")
     .lean();
 
   assertFound(member, "Member not found", 404);
+
+  if (member.assignedCoMentorProfile) {
+    throwServiceError(
+      "Your co_mentor has already been selected and cannot be changed",
+      409,
+    );
+  }
 
   const profile = await MentorshipProfile.findOne({
     _id: mentorshipProfileId,
@@ -406,8 +461,11 @@ const selectMyCoMentor = async (
     );
   }
 
-  await User.findByIdAndUpdate(
-    memberUserId,
+  const updatedMember = await User.findOneAndUpdate(
+    {
+      _id: memberUserId,
+      assignedCoMentorProfile: { $exists: false },
+    },
     {
       assignedCoMentorProfile: profile._id,
       coMentorAssignedAt: new Date(),
@@ -415,6 +473,13 @@ const selectMyCoMentor = async (
     },
     { new: true },
   );
+
+  if (!updatedMember) {
+    throwServiceError(
+      "Your co_mentor has already been selected and cannot be changed",
+      409,
+    );
+  }
 
   return profile;
 };
@@ -437,8 +502,180 @@ const getMyCoMentor = async (memberUserId: string) => {
   return member;
 };
 
+const getAvailabilityForProfileOwner = async (
+  userId: string,
+  actorRole?: string,
+) => {
+  assertValidObjectId(userId, "User ID");
+
+  const profile =
+    actorRole === "founder"
+      ? await MentorshipProfile.findOne({ isPrimaryMentor: true })
+      : await MentorshipProfile.findOne({
+          mentor: new Types.ObjectId(userId),
+          isPrimaryMentor: true,
+        });
+
+  assertFound(
+    profile,
+    actorRole === "founder"
+      ? "No primary mentor profile is configured"
+      : "You are not the primary mentor",
+    404,
+  );
+
+  return {
+    profileId: profile._id,
+    mentor: profile.mentor,
+    availability: profile.availability,
+  };
+};
+
+const updatePrimaryMentorAvailability = async (
+  userId: string,
+  actorRole: string | undefined,
+  availability: ICreateMentorshipProfile["availability"],
+) => {
+  const current = await getAvailabilityForProfileOwner(userId, actorRole);
+
+  const profile = await MentorshipProfile.findByIdAndUpdate(
+    current.profileId,
+    { $set: { availability: availability ?? [] } },
+    { new: true, runValidators: true },
+  );
+
+  assertFound(profile, "Primary mentor profile not found", 404);
+
+  return profile.availability;
+};
+
+
+import { hashPassword } from "../../utility/passwordUtil";
+
+const createMentor = async (
+  payload: ICreateMentorInput,
+  actorId: string,
+) => {
+  assertValidObjectId(actorId, "Actor user ID");
+
+  const session = await MentorshipProfile.startSession();
+
+  try {
+    let createdProfileId: Types.ObjectId | null = null;
+
+    await session.withTransaction(async () => {
+      let mentorUser: MentorUserDoc | undefined;
+
+      if (payload.mode === "create") {
+
+
+        const email = payload.email.toLowerCase().trim();
+        const fullName = payload.fullName.trim();
+
+        const existingUser = await User.findOne({ email })
+          .select("_id")
+          .session(session)
+          .lean();
+
+        if (existingUser) {
+          throwServiceError("A user with this email already exists", 409);
+        }
+
+        const hashedPassword = await hashPassword(payload.password);
+
+        const [createdUser] = await User.create(
+          [
+            {
+              fullName,
+              email,
+              password: hashedPassword,
+              role: "co_mentor",
+              accessTo: "both",
+              paymentStatus: "paid",
+              subscriptionStatus: "active",
+              approvalStatus: "approved",
+              accountStatus: "active",
+              licenseVerificationStatus: "verified",
+              approvedBy: new Types.ObjectId(actorId),
+            },
+          ],
+          { session },
+        );
+
+        mentorUser = createdUser as MentorUserDoc;
+      } else if (payload.mode === "existing") {
+        const userId = payload.userId;
+        assertValidObjectId(userId, "User ID");
+
+        const foundUser = await User.findById(userId)
+          .select("_id fullName email role")
+          .session(session);
+
+        assertFound(foundUser, "User not found", 404);
+
+        mentorUser = foundUser as MentorUserDoc;
+
+        // Give the existing user mentor role
+        mentorUser.role = "co_mentor";
+        await mentorUser.save({ session });
+      }
+
+      assertFound(mentorUser, "Failed to resolve mentor user", 500);
+
+      /**
+       * =========================================================
+       * CHECK EXISTING MENTORSHIP PROFILE
+       * =========================================================
+       */
+      const existingProfile = await MentorshipProfile.findOne({
+        mentor: mentorUser._id,
+      })
+        .session(session)
+        .lean();
+
+      if (existingProfile) {
+        throwServiceError("This user already has a mentorship profile", 409);
+      }
+
+      const profile = await createMentorshipProfileRecord(
+        payload,
+        mentorUser._id,
+        actorId,
+        session,
+      );
+      createdProfileId = profile._id as Types.ObjectId;
+    });
+
+    /**
+     * =========================================================
+     * FETCH FINAL RESULT
+     * =========================================================
+     */
+    assertFound(createdProfileId, "Failed to create mentor", 500);
+
+    const result = await MentorshipProfile.findById(createdProfileId)
+      .populate(PROFILE_POPULATE)
+      .lean();
+
+    assertFound(result, "Mentor profile not found after creation", 500);
+
+    return result;
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      throwServiceError(
+        "A user or mentorship profile with the provided information already exists",
+        409,
+      );
+    }
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+};
+
 export const mentorshipProfileService = {
   createMentorshipProfile,
+  createMentor,
 
   getAllMentorshipProfiles,
   getPrimaryMentor,
@@ -452,4 +689,6 @@ export const mentorshipProfileService = {
 
   selectMyCoMentor,
   getMyCoMentor,
+  getAvailabilityForProfileOwner,
+  updatePrimaryMentorAvailability,
 };

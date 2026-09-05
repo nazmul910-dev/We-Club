@@ -7,9 +7,11 @@ import validateRequest from "../../utility/validateRequest";
 import { mentorshipProfileController } from "./mentorship.profile.controller";
 
 import {
+  createMentorValidation,
   createMentorshipProfileValidation,
   mentorshipProfileIdValidation,
   selectCoMentorValidation,
+  updateAvailabilityValidation,
   updateMentorshipProfileValidation,
 } from "./mentorship.profile.validation";
 
@@ -19,6 +21,13 @@ const router = Router();
 router.get("/", mentorshipProfileController.getAllMentorshipProfiles);
 
 router.get("/primary", mentorshipProfileController.getPrimaryMentor);
+
+router.get(
+  "/management",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  mentorshipProfileController.getAllMentorshipProfiles,
+);
 
 // Member co_mentor selection — must be declared before "/:id" routes
 router.get(
@@ -32,6 +41,19 @@ router.patch(
   verifyToken,
   validateRequest(selectCoMentorValidation),
   mentorshipProfileController.selectCoMentor,
+);
+
+router.get(
+  "/me/availability",
+  verifyToken,
+  mentorshipProfileController.getMyPrimaryMentorAvailability,
+);
+
+router.patch(
+  "/me/availability",
+  verifyToken,
+  validateRequest(updateAvailabilityValidation),
+  mentorshipProfileController.updateMyPrimaryMentorAvailability,
 );
 
 router.get(
@@ -52,6 +74,14 @@ router.post(
   validateRequest(createMentorshipProfileValidation),
 
   mentorshipProfileController.createMentorshipProfile,
+);
+
+router.post(
+  "/create-mentor",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest(createMentorValidation),
+  mentorshipProfileController.createMentor,
 );
 
 router.patch(

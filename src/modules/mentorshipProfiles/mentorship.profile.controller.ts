@@ -5,6 +5,7 @@ import assertFound from "../../utility/assertFound";
 
 import {
   ICreateMentorshipProfile,
+  ICreateMentorInput,
   IUpdateMentorshipProfile,
 } from "./mentorship.profile.interface";
 
@@ -22,6 +23,29 @@ const getAuthUser = (
     id: req.user.id as string,
     role: req.user.role as string,
   };
+};
+
+const createMentor = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+    const profile = await mentorshipProfileService.createMentor(
+      req.body as ICreateMentorInput,
+      authUser.id,
+    );
+
+    sendResponse(res, {
+      statusCode: 201,
+      success: true,
+      message: "Mentor created successfully",
+      data: profile,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 const createMentorshipProfile = async (
@@ -68,7 +92,6 @@ const getAllMentorshipProfiles = async (
       actorRole: authUser?.role,
       isActive,
     });
-
     sendResponse(res, {
       statusCode: 200,
       success: true,
@@ -266,6 +289,55 @@ const getMyCoMentor = async (
   }
 };
 
+const getMyPrimaryMentorAvailability = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+    const result =
+      await mentorshipProfileService.getAvailabilityForProfileOwner(
+        authUser.id,
+        authUser.role,
+      );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Primary mentor availability retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateMyPrimaryMentorAvailability = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+    const result =
+      await mentorshipProfileService.updatePrimaryMentorAvailability(
+        authUser.id,
+        authUser.role,
+        req.body.availability,
+      );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Primary mentor availability updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const mentorshipProfileController = {
   createMentorshipProfile,
 
@@ -281,4 +353,7 @@ export const mentorshipProfileController = {
 
   selectCoMentor,
   getMyCoMentor,
+  getMyPrimaryMentorAvailability,
+  updateMyPrimaryMentorAvailability,
+  createMentor,
 };

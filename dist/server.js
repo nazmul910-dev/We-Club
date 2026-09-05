@@ -23194,6 +23194,14 @@ mentorshipProfileSchema.index({
   isPrimaryMentor: 1,
   isActive: 1
 });
+mentorshipProfileSchema.index(
+  { isPrimaryMentor: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isPrimaryMentor: true },
+    name: "one_primary_mentor"
+  }
+);
 var MentorshipProfile = model37(
   "MentorshipProfile",
   mentorshipProfileSchema
@@ -23216,7 +23224,7 @@ var assertValidObjectId14 = (value, fieldName) => {
   }
 };
 var isAdminOrManager13 = (role) => {
-  return role === "admin" || role === "manager";
+  return role === "founder" || role === "super_admin" || role === "admin" || role === "manager";
 };
 var isDuplicateKeyError11 = (error) => {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
@@ -23241,16 +23249,44 @@ var ensureMentorUserExists = async (mentorId) => {
   assertFound16(mentorUser, "Mentor user not found", 404);
   return mentorUser;
 };
-var clearOtherPrimaryMentors = async (excludeId) => {
+var clearOtherPrimaryMentors = async (excludeId, session) => {
   const filter = {
     isPrimaryMentor: true
   };
   if (excludeId) {
     filter._id = { $ne: excludeId };
   }
-  await MentorshipProfile.updateMany(filter, {
-    $set: { isPrimaryMentor: false }
-  });
+  await MentorshipProfile.updateMany(
+    filter,
+    { $set: { isPrimaryMentor: false } },
+    session ? { session } : void 0
+  );
+};
+var createMentorshipProfileRecord = async (payload, mentorId, actorId, session) => {
+  const nextOrder = payload.order ?? ((await MentorshipProfile.findOne({}, { order: 1 }).sort({ order: -1 }).session(session ?? null).lean())?.order ?? -1) + 1;
+  const createData = {
+    mentor: mentorId,
+    bio: payload.bio,
+    expertise: payload.expertise ?? [],
+    availability: payload.availability ?? [],
+    profileImage: payload.profileImage,
+    isPrimaryMentor: payload.isPrimaryMentor ?? false,
+    yearsOfExperience: payload.yearsOfExperience,
+    sessionDurationMinutes: payload.sessionDurationMinutes ?? 60,
+    order: nextOrder,
+    status: "draft",
+    isActive: true,
+    createdBy: new Types36.ObjectId(actorId)
+  };
+  if (createData.isPrimaryMentor) {
+    await clearOtherPrimaryMentors(void 0, session);
+  }
+  const [profile] = await MentorshipProfile.create(
+    [createData],
+    session ? { session } : void 0
+  );
+  assertFound16(profile, "Failed to create mentorship profile", 500);
+  return profile;
 };
 var createMentorshipProfile = async (payload, actorId) => {
   await ensureMentorUserExists(payload.mentor);
@@ -23263,28 +23299,12 @@ var createMentorshipProfile = async (payload, actorId) => {
       409
     );
   }
-  const createData = {
-    mentor: new Types36.ObjectId(payload.mentor),
-    bio: payload.bio,
-    expertise: payload.expertise ?? [],
-    availability: payload.availability ?? [],
-    isPrimaryMentor: payload.isPrimaryMentor ?? false,
-    sessionDurationMinutes: payload.sessionDurationMinutes ?? 60,
-    order: payload.order ?? 0,
-    status: "draft",
-    createdBy: new Types36.ObjectId(actorId)
-  };
-  if (payload.profileImage !== void 0) {
-    createData.profileImage = payload.profileImage;
-  }
-  if (payload.yearsOfExperience !== void 0) {
-    createData.yearsOfExperience = payload.yearsOfExperience;
-  }
   try {
-    const profile = await MentorshipProfile.create(createData);
-    if (profile.isPrimaryMentor) {
-      await clearOtherPrimaryMentors(profile._id);
-    }
+    const profile = await createMentorshipProfileRecord(
+      payload,
+      new Types36.ObjectId(payload.mentor),
+      actorId
+    );
     return profile.populate(PROFILE_POPULATE);
   } catch (error) {
     if (isDuplicateKeyError11(error)) {
@@ -23363,14 +23383,14 @@ var updateMentorshipProfile = async (profileId, payload, actorId) => {
   if (payload.order !== void 0) {
     profile.order = payload.order;
   }
+  if (payload.isPrimaryMentor === true) {
+    await clearOtherPrimaryMentors(profile._id);
+  }
   if (payload.isPrimaryMentor !== void 0) {
     profile.isPrimaryMentor = payload.isPrimaryMentor;
   }
   profile.updatedBy = new Types36.ObjectId(actorId);
   await profile.save();
-  if (profile.isPrimaryMentor) {
-    await clearOtherPrimaryMentors(profile._id);
-  }
   return profile.populate(PROFILE_POPULATE);
 };
 var publishMentorshipProfile = async (profileId, actorId) => {
@@ -23423,8 +23443,14 @@ var MENTOR_FIELD_POPULATE = {
 var selectMyCoMentor = async (memberUserId, mentorshipProfileId) => {
   assertValidObjectId14(memberUserId, "Member user ID");
   assertValidObjectId14(mentorshipProfileId, "Mentorship profile ID");
-  const member = await User.findById(memberUserId).select("_id fullName email role").lean();
+  const member = await User.findById(memberUserId).select("_id fullName email role assignedCoMentorProfile coMentorAssignedAt").lean();
   assertFound16(member, "Member not found", 404);
+  if (member.assignedCoMentorProfile) {
+    throwServiceError16(
+      "Your co_mentor has already been selected and cannot be changed",
+      409
+    );
+  }
   const profile = await MentorshipProfile.findOne({
     _id: mentorshipProfileId,
     status: "published",
@@ -23453,8 +23479,11 @@ var selectMyCoMentor = async (memberUserId, mentorshipProfileId) => {
       400
     );
   }
-  await User.findByIdAndUpdate(
-    memberUserId,
+  const updatedMember = await User.findOneAndUpdate(
+    {
+      _id: memberUserId,
+      assignedCoMentorProfile: { $exists: false }
+    },
     {
       assignedCoMentorProfile: profile._id,
       coMentorAssignedAt: /* @__PURE__ */ new Date(),
@@ -23462,6 +23491,12 @@ var selectMyCoMentor = async (memberUserId, mentorshipProfileId) => {
     },
     { new: true }
   );
+  if (!updatedMember) {
+    throwServiceError16(
+      "Your co_mentor has already been selected and cannot be changed",
+      409
+    );
+  }
   return profile;
 };
 var getMyCoMentor = async (memberUserId) => {
@@ -23473,8 +23508,110 @@ var getMyCoMentor = async (memberUserId) => {
   assertFound16(member, "Member not found", 404);
   return member;
 };
+var getAvailabilityForProfileOwner = async (userId, actorRole) => {
+  assertValidObjectId14(userId, "User ID");
+  const profile = actorRole === "founder" ? await MentorshipProfile.findOne({ isPrimaryMentor: true }) : await MentorshipProfile.findOne({
+    mentor: new Types36.ObjectId(userId),
+    isPrimaryMentor: true
+  });
+  assertFound16(
+    profile,
+    actorRole === "founder" ? "No primary mentor profile is configured" : "You are not the primary mentor",
+    404
+  );
+  return {
+    profileId: profile._id,
+    mentor: profile.mentor,
+    availability: profile.availability
+  };
+};
+var updatePrimaryMentorAvailability = async (userId, actorRole, availability) => {
+  const current = await getAvailabilityForProfileOwner(userId, actorRole);
+  const profile = await MentorshipProfile.findByIdAndUpdate(
+    current.profileId,
+    { $set: { availability: availability ?? [] } },
+    { new: true, runValidators: true }
+  );
+  assertFound16(profile, "Primary mentor profile not found", 404);
+  return profile.availability;
+};
+var createMentor = async (payload, actorId) => {
+  assertValidObjectId14(actorId, "Actor user ID");
+  const session = await MentorshipProfile.startSession();
+  try {
+    let createdProfileId = null;
+    await session.withTransaction(async () => {
+      let mentorUser;
+      if (payload.mode === "create") {
+        const email = payload.email.toLowerCase().trim();
+        const fullName = payload.fullName.trim();
+        const existingUser = await User.findOne({ email }).select("_id").session(session).lean();
+        if (existingUser) {
+          throwServiceError16("A user with this email already exists", 409);
+        }
+        const hashedPassword = await hashPassword(payload.password);
+        const [createdUser] = await User.create(
+          [
+            {
+              fullName,
+              email,
+              password: hashedPassword,
+              role: "co_mentor",
+              accessTo: "both",
+              paymentStatus: "paid",
+              subscriptionStatus: "active",
+              approvalStatus: "approved",
+              accountStatus: "active",
+              licenseVerificationStatus: "verified",
+              approvedBy: new Types36.ObjectId(actorId)
+            }
+          ],
+          { session }
+        );
+        mentorUser = createdUser;
+      } else if (payload.mode === "existing") {
+        const userId = payload.userId;
+        assertValidObjectId14(userId, "User ID");
+        const foundUser = await User.findById(userId).select("_id fullName email role").session(session);
+        assertFound16(foundUser, "User not found", 404);
+        mentorUser = foundUser;
+        mentorUser.role = "co_mentor";
+        await mentorUser.save({ session });
+      }
+      assertFound16(mentorUser, "Failed to resolve mentor user", 500);
+      const existingProfile = await MentorshipProfile.findOne({
+        mentor: mentorUser._id
+      }).session(session).lean();
+      if (existingProfile) {
+        throwServiceError16("This user already has a mentorship profile", 409);
+      }
+      const profile = await createMentorshipProfileRecord(
+        payload,
+        mentorUser._id,
+        actorId,
+        session
+      );
+      createdProfileId = profile._id;
+    });
+    assertFound16(createdProfileId, "Failed to create mentor", 500);
+    const result = await MentorshipProfile.findById(createdProfileId).populate(PROFILE_POPULATE).lean();
+    assertFound16(result, "Mentor profile not found after creation", 500);
+    return result;
+  } catch (error) {
+    if (isDuplicateKeyError11(error)) {
+      throwServiceError16(
+        "A user or mentorship profile with the provided information already exists",
+        409
+      );
+    }
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+};
 var mentorshipProfileService = {
   createMentorshipProfile,
+  createMentor,
   getAllMentorshipProfiles,
   getPrimaryMentor,
   getSingleMentorshipProfile,
@@ -23483,7 +23620,9 @@ var mentorshipProfileService = {
   moveMentorshipProfileToDraft,
   archiveMentorshipProfile,
   selectMyCoMentor,
-  getMyCoMentor
+  getMyCoMentor,
+  getAvailabilityForProfileOwner,
+  updatePrimaryMentorAvailability
 };
 
 // src/modules/mentorshipProfiles/mentorship.profile.controller.ts
@@ -23493,6 +23632,23 @@ var getAuthUser15 = (req) => {
     id: req.user.id,
     role: req.user.role
   };
+};
+var createMentor2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser15(req);
+    const profile = await mentorshipProfileService.createMentor(
+      req.body,
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 201,
+      success: true,
+      message: "Mentor created successfully",
+      data: profile
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 var createMentorshipProfile2 = async (req, res, next) => {
   try {
@@ -23662,6 +23818,41 @@ var getMyCoMentor2 = async (req, res, next) => {
     next(error);
   }
 };
+var getMyPrimaryMentorAvailability = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser15(req);
+    const result = await mentorshipProfileService.getAvailabilityForProfileOwner(
+      authUser.id,
+      authUser.role
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Primary mentor availability retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateMyPrimaryMentorAvailability = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser15(req);
+    const result = await mentorshipProfileService.updatePrimaryMentorAvailability(
+      authUser.id,
+      authUser.role,
+      req.body.availability
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Primary mentor availability updated successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var mentorshipProfileController = {
   createMentorshipProfile: createMentorshipProfile2,
   getAllMentorshipProfiles: getAllMentorshipProfiles2,
@@ -23672,7 +23863,10 @@ var mentorshipProfileController = {
   moveMentorshipProfileToDraft: moveMentorshipProfileToDraft2,
   archiveMentorshipProfile: archiveMentorshipProfile2,
   selectCoMentor,
-  getMyCoMentor: getMyCoMentor2
+  getMyCoMentor: getMyCoMentor2,
+  getMyPrimaryMentorAvailability,
+  updateMyPrimaryMentorAvailability,
+  createMentor: createMentor2
 };
 
 // src/modules/mentorshipProfiles/mentorship.profile.validation.ts
@@ -23723,11 +23917,48 @@ var selectCoMentorValidation = z20.object({
     mentorshipProfileId: mongoObjectIdSchema12
   }).strict()
 });
+var createMentorProfileFields = {
+  bio: z20.string().trim().min(10).max(3e3),
+  expertise: z20.array(z20.string().trim().min(1).max(100)).max(30).optional(),
+  availability: z20.array(availabilitySlotSchema2).max(14).optional(),
+  profileImage: z20.string().trim().url().optional(),
+  yearsOfExperience: z20.number().int().min(0).max(80).optional(),
+  sessionDurationMinutes: z20.number().int().min(15).max(180).optional(),
+  order: z20.number().int().min(0).optional(),
+  isPrimaryMentor: z20.boolean().optional()
+};
+var createMentorValidation = z20.object({
+  body: z20.discriminatedUnion("mode", [
+    z20.object({
+      mode: z20.literal("create"),
+      fullName: z20.string().trim().min(1).max(100),
+      email: z20.string().trim().email(),
+      password: z20.string().min(8).max(128),
+      ...createMentorProfileFields
+    }),
+    z20.object({
+      mode: z20.literal("existing"),
+      userId: mongoObjectIdSchema12,
+      ...createMentorProfileFields
+    })
+  ])
+});
+var updateAvailabilityValidation = z20.object({
+  body: z20.object({
+    availability: z20.array(availabilitySlotSchema2).max(14)
+  }).strict()
+});
 
 // src/modules/mentorshipProfiles/mentorship.profile.route.ts
 var router28 = Router28();
 router28.get("/", mentorshipProfileController.getAllMentorshipProfiles);
 router28.get("/primary", mentorshipProfileController.getPrimaryMentor);
+router28.get(
+  "/management",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  mentorshipProfileController.getAllMentorshipProfiles
+);
 router28.get(
   "/me/co_mentor",
   verifyToken,
@@ -23740,6 +23971,17 @@ router28.patch(
   mentorshipProfileController.selectCoMentor
 );
 router28.get(
+  "/me/availability",
+  verifyToken,
+  mentorshipProfileController.getMyPrimaryMentorAvailability
+);
+router28.patch(
+  "/me/availability",
+  verifyToken,
+  validateRequest_default(updateAvailabilityValidation),
+  mentorshipProfileController.updateMyPrimaryMentorAvailability
+);
+router28.get(
   "/:id",
   validateRequest_default(mentorshipProfileIdValidation),
   mentorshipProfileController.getSingleMentorshipProfile
@@ -23750,6 +23992,13 @@ router28.post(
   authorizeRoles("founder", "manager"),
   validateRequest_default(createMentorshipProfileValidation),
   mentorshipProfileController.createMentorshipProfile
+);
+router28.post(
+  "/create-mentor",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest_default(createMentorValidation),
+  mentorshipProfileController.createMentor
 );
 router28.patch(
   "/:id",
