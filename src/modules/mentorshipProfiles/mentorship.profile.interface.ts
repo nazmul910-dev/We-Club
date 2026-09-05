@@ -103,3 +103,28 @@ export interface IMentorshipProfileAdminQuery {
   page?: number | undefined;
   limit?: number | undefined;
 }
+
+interface ICreateMentorProfileFields {
+  bio: string;
+  expertise?: string[];
+  availability?: IMentorshipAvailabilitySlot[];
+  profileImage?: string;
+  yearsOfExperience?: number;
+  sessionDurationMinutes?: number;
+  order?: number;
+  isPrimaryMentor?: boolean;
+}
+
+export type ICreateMentorInput = ICreateMentorProfileFields &
+  (
+    | {
+        mode: "create";
+        fullName: string;
+        email: string;
+        password: string;
+      }
+    | {
+        mode: "existing";
+        userId: string;
+      }
+  );

@@ -151,6 +151,15 @@ mentorshipProfileSchema.index({
   isActive: 1,
 });
 
+mentorshipProfileSchema.index(
+  { isPrimaryMentor: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isPrimaryMentor: true },
+    name: "one_primary_mentor",
+  },
+);
+
 export const MentorshipProfile = model<IMentorshipProfile>(
   "MentorshipProfile",
   mentorshipProfileSchema,

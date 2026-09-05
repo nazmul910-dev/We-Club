@@ -86,3 +86,39 @@ export const selectCoMentorValidation = z.object({
     })
     .strict(),
 });
+
+const createMentorProfileFields = {
+  bio: z.string().trim().min(10).max(3000),
+  expertise: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
+  availability: z.array(availabilitySlotSchema).max(14).optional(),
+  profileImage: z.string().trim().url().optional(),
+  yearsOfExperience: z.number().int().min(0).max(80).optional(),
+  sessionDurationMinutes: z.number().int().min(15).max(180).optional(),
+  order: z.number().int().min(0).optional(),
+  isPrimaryMentor: z.boolean().optional(),
+};
+
+export const createMentorValidation = z.object({
+  body: z.discriminatedUnion("mode", [
+    z.object({
+      mode: z.literal("create"),
+      fullName: z.string().trim().min(1).max(100),
+      email: z.string().trim().email(),
+      password: z.string().min(8).max(128),
+      ...createMentorProfileFields,
+    }),
+    z.object({
+      mode: z.literal("existing"),
+      userId: mongoObjectIdSchema,
+      ...createMentorProfileFields,
+    }),
+  ]),
+});
+
+export const updateAvailabilityValidation = z.object({
+  body: z
+    .object({
+      availability: z.array(availabilitySlotSchema).max(14),
+    })
+    .strict(),
+});
