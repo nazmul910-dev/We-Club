@@ -158,12 +158,13 @@ const getAllModuleVideos = async ({
   const isPrivileged = isAdminOrManager(actorRole);
 
   if (!isPrivileged) {
-    filter.status = "published";
+    filter.status = "published" ;
+
   } else if (!includeArchived) {
     filter.status = { $ne: "archived" };
   }
 
-  const query = ModuleVideo.find(filter)
+  const query = ModuleVideo.find()
     .sort({ module: 1, order: 1 })
     .populate({
       path: "module",
