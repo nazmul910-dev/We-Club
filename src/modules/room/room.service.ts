@@ -32,8 +32,8 @@ export const ensurePrivateRooms = async (createdBy: string) => {
   );
 };
 
-const canAccessEveryPrivateRoom = (role?: string): boolean =>
-  role === "founder" || role === "manager";
+export const canAccessEveryPrivateRoom = (role?: string): boolean =>
+  role === "founder"  || role === "manager";
 
 export const getPrivateRoomsForUser = async (userId: string, role?: string) => {
   const rooms = await Room.find({ type: "private" })

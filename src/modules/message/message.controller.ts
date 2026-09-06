@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getMessageHistory } from './message.services';
 import { Room } from '../room/room.modal';
+import { canAccessEveryPrivateRoom } from '../room/room.service';
 
 
 export const getMessageHistoryHandler = async (
@@ -18,7 +19,12 @@ export const getMessageHistoryHandler = async (
       res.status(404).json({ success: false, message: 'Room not found' });
       return;
     }
-    if (room.type === 'private' && !room.members.some((member) => String(member) === String(req.user?.id))) {
+    const isPrivilegedPrivateRoomUser = canAccessEveryPrivateRoom(req.user?.role);
+    if (
+      room.type === 'private' &&
+      !isPrivilegedPrivateRoomUser &&
+      !room.members.some((member) => String(member) === String(req.user?.id))
+    ) {
       res.status(403).json({ success: false, message: 'You are not a member of this private room' });
       return;
     }
