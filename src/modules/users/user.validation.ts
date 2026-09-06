@@ -112,7 +112,7 @@ export const createAdminAccountValidation = z.object({
 
     // ekhane sob possible creatable role rakhlam,
     // kon requester kon role banate parbe seta service e check hobe
-    role: z.enum(["manager", "super_admin", "co_mentor"]),
+    role: z.enum(["manager", "super_admin", "co_mentor", "ceo"]),
 
     accessTo: z.enum(["we_command_center", "invictus", "both"]),
     

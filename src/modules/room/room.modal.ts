@@ -31,7 +31,15 @@ const roomSchema = new Schema<IRoom>(
     },
     type: {
       type: String,
-      enum: ["general", "country"], default: "general"
+      enum: ["general", "country", "private"], default: "general"
+    },
+    slug: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      unique: true,
+      sparse: true,
+      index: true,
     },
     countryName: String,
     countryCode: { type: String, unique: true, sparse: true }

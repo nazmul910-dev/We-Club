@@ -29,7 +29,12 @@ const resend = new Resend(config.RESEND_API_KEY);
 
 // export default sendMail
 
-const sendMail = async (to: string, html: string) => {
+const sendMail = async (
+  to: string,
+  html: string,
+  subject = "Change Password",
+  text = "Reset your Password within 10 minutes",
+) => {
   const fromEmail = config.MAIL_FROM_NAME
     ? `${config.MAIL_FROM_NAME} <onboarding@resend.dev>`
     : "onboarding@resend.dev";
@@ -37,8 +42,8 @@ const sendMail = async (to: string, html: string) => {
   const { error } = await resend.emails.send({
     from: fromEmail,
     to,
-    subject: "Change Password",
-    text: "Reset your Password within 10 minutes",
+    subject,
+    text,
     html,
   });
 
