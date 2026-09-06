@@ -4,7 +4,7 @@ import {
   MembershipDurationMonths,
 } from '../users/user.interface';
 
-export const PAYMENT_PURPOSES = ['registration', 'upgrade', 'invictus_purchase'] as const;
+export const PAYMENT_PURPOSES = ['registration', 'upgrade', 'invictus_purchase', 'access_upgrade'] as const;
 
 export const PAYMENT_SESSION_STATUSES = [
   'pending',

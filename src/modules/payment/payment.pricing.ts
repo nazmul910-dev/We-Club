@@ -29,7 +29,7 @@ export type RolePricingPlan = {
   totalFirstPaymentFormatted: string;
 };
 
-const parseDollarAmountToCents = (
+export const parseDollarAmountToCents = (
   value: string | undefined,
   envKey: string
 ): number => {
@@ -89,7 +89,7 @@ export const isPaidRole = (role: UserRole): boolean => {
   ].includes(role);
 };
 
-const getMemberAccessPrice = (accessTo: AccessTo): number => {
+export const getMemberAccessPrice = (accessTo: AccessTo): number => {
   if (accessTo === 'we_command_center') {
     return parseDollarAmountToCents(
       config.STRIPE_PRICE_WE_COMMAND_CENTER_MONTHLY,
@@ -100,7 +100,7 @@ const getMemberAccessPrice = (accessTo: AccessTo): number => {
   if (accessTo === 'invictus') {
     return parseDollarAmountToCents(
       config.STRIPE_PRICE_INVICTUS_MONTHLY,
-      ' '
+      'STRIPE_PRICE_INVICTUS_MONTHLY'
     );
   }
 

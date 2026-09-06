@@ -1,6 +1,7 @@
 import { QueryFilter, Types } from "mongoose";
 
 import { CourseModule } from "../courseModules/course.module.model.schema";
+import { ModuleProgress } from "../moduleProgress/module.progress.model.schema";
 import {
   ICreateModuleVideo,
   IModuleVideo,
@@ -63,7 +64,10 @@ const ensureCourseModuleExists = async (moduleId: string) => {
 };
 
 const syncModuleDuration = async (moduleId: Types.ObjectId) => {
-  const result = await ModuleVideo.aggregate<{ totalDurationSeconds: number }>([
+  const result = await ModuleVideo.aggregate<{
+    totalDurationSeconds: number;
+    count: number;
+  }>([
     {
       $match: {
         module: moduleId,
@@ -74,17 +78,40 @@ const syncModuleDuration = async (moduleId: Types.ObjectId) => {
       $group: {
         _id: null,
         totalDurationSeconds: { $sum: "$durationSeconds" },
+        count: { $sum: 1 },
       },
     },
   ]);
 
+  const publishedCount = result[0]?.count ?? 0;
+  const totalDurationSeconds = result[0]?.totalDurationSeconds ?? 0;
+
   await CourseModule.findByIdAndUpdate(moduleId, {
     $set: {
-      estimatedDurationMinutes: Math.ceil(
-        (result[0]?.totalDurationSeconds ?? 0) / 60,
-      ),
+      estimatedDurationMinutes: Math.ceil(totalDurationSeconds / 60),
     },
   });
+
+  if (publishedCount === 0) {
+    await ModuleProgress.updateMany(
+      { module: moduleId },
+      {
+        $set: {
+          "videoSummary.totalRequired": 0,
+          "videoSummary.completedRequired": 0,
+          "videoSummary.completionPercent": 0,
+          "videoSummary.completed": false,
+          actionsUnlocked: false,
+          quizUnlocked: false,
+          "quizSummary.status": "locked",
+          overallCompletionPercent: 0,
+          isCompleted: false,
+          completedAt: null,
+          lastCalculatedAt: new Date(),
+        },
+      },
+    );
+  }
 };
 
 const createModuleVideo = async (

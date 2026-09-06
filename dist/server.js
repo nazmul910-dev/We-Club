@@ -2987,16 +2987,16 @@ var init_course_module_interface = __esm({
 });
 
 // src/modules/courseModules/course.module.model.schema.ts
-import { Schema as Schema26, model as model26 } from "mongoose";
+import { Schema as Schema27, model as model27 } from "mongoose";
 var courseModuleSchema, CourseModule;
 var init_course_module_model_schema = __esm({
   "src/modules/courseModules/course.module.model.schema.ts"() {
     "use strict";
     init_course_module_interface();
-    courseModuleSchema = new Schema26(
+    courseModuleSchema = new Schema27(
       {
         pillar: {
-          type: Schema26.Types.ObjectId,
+          type: Schema27.Types.ObjectId,
           ref: "ChallengePillar",
           required: true,
           index: true
@@ -3081,12 +3081,12 @@ var init_course_module_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema26.Types.ObjectId,
+          type: Schema27.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema26.Types.ObjectId,
+          type: Schema27.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3118,7 +3118,7 @@ var init_course_module_model_schema = __esm({
       status: 1,
       moduleNumber: 1
     });
-    CourseModule = model26(
+    CourseModule = model27(
       "CourseModule",
       courseModuleSchema
     );
@@ -3144,16 +3144,16 @@ var init_module_video_interface = __esm({
 });
 
 // src/modules/moduleVideos/module.video.model.schema.ts
-import { model as model27, Schema as Schema27 } from "mongoose";
+import { model as model28, Schema as Schema28 } from "mongoose";
 var moduleVideoSchema, ModuleVideo;
 var init_module_video_model_schema = __esm({
   "src/modules/moduleVideos/module.video.model.schema.ts"() {
     "use strict";
     init_module_video_interface();
-    moduleVideoSchema = new Schema27(
+    moduleVideoSchema = new Schema28(
       {
         module: {
-          type: Schema27.Types.ObjectId,
+          type: Schema28.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3280,12 +3280,12 @@ var init_module_video_model_schema = __esm({
           type: Date
         },
         uploadedBy: {
-          type: Schema27.Types.ObjectId,
+          type: Schema28.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema27.Types.ObjectId,
+          type: Schema28.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3302,9 +3302,227 @@ var init_module_video_model_schema = __esm({
       status: 1,
       order: 1
     });
-    ModuleVideo = model27(
+    ModuleVideo = model28(
       "ModuleVideo",
       moduleVideoSchema
+    );
+  }
+});
+
+// src/modules/moduleProgress/module.progress.interface.ts
+var QUIZ_PROGRESS_STATUSES;
+var init_module_progress_interface = __esm({
+  "src/modules/moduleProgress/module.progress.interface.ts"() {
+    "use strict";
+    QUIZ_PROGRESS_STATUSES = [
+      "locked",
+      "unlocked",
+      "in_progress",
+      "passed",
+      "failed"
+    ];
+  }
+});
+
+// src/modules/moduleProgress/module.progress.model.schema.ts
+import { model as model29, Schema as Schema29 } from "mongoose";
+var requirementSummarySchema, quizSummarySchema, moduleProgressSchema, ModuleProgress;
+var init_module_progress_model_schema = __esm({
+  "src/modules/moduleProgress/module.progress.model.schema.ts"() {
+    "use strict";
+    init_module_progress_interface();
+    requirementSummarySchema = new Schema29(
+      {
+        totalRequired: {
+          type: Number,
+          default: 0,
+          min: 0,
+          required: true
+        },
+        completedRequired: {
+          type: Number,
+          default: 0,
+          min: 0,
+          required: true
+        },
+        completionPercent: {
+          type: Number,
+          default: 100,
+          min: 0,
+          max: 100,
+          required: true
+        },
+        completed: {
+          type: Boolean,
+          default: true,
+          required: true
+        }
+      },
+      {
+        _id: false
+      }
+    );
+    quizSummarySchema = new Schema29(
+      {
+        status: {
+          type: String,
+          enum: QUIZ_PROGRESS_STATUSES,
+          default: "locked",
+          required: true
+        },
+        attemptsUsed: {
+          type: Number,
+          default: 0,
+          min: 0,
+          max: 2,
+          required: true
+        },
+        maximumAttempts: {
+          type: Number,
+          default: 2,
+          min: 2,
+          max: 2,
+          required: true
+        },
+        bestScore: {
+          type: Number,
+          default: 0,
+          min: 0,
+          max: 100,
+          required: true
+        },
+        passScore: {
+          type: Number,
+          default: 70,
+          min: 70,
+          max: 70,
+          required: true
+        },
+        passed: {
+          type: Boolean,
+          default: false,
+          required: true
+        },
+        lastAttemptAt: {
+          type: Date
+        }
+      },
+      {
+        _id: false
+      }
+    );
+    moduleProgressSchema = new Schema29(
+      {
+        user: {
+          type: Schema29.Types.ObjectId,
+          ref: "User",
+          required: true,
+          index: true
+        },
+        module: {
+          type: Schema29.Types.ObjectId,
+          ref: "CourseModule",
+          required: true,
+          index: true
+        },
+        videoSummary: {
+          type: requirementSummarySchema,
+          default: () => ({
+            totalRequired: 0,
+            completedRequired: 0,
+            completionPercent: 100,
+            completed: true
+          })
+        },
+        resourceSummary: {
+          type: requirementSummarySchema,
+          default: () => ({
+            totalRequired: 0,
+            completedRequired: 0,
+            completionPercent: 100,
+            completed: true
+          })
+        },
+        actionSummary: {
+          type: requirementSummarySchema,
+          default: () => ({
+            totalRequired: 0,
+            completedRequired: 0,
+            completionPercent: 100,
+            completed: true
+          })
+        },
+        quizSummary: {
+          type: quizSummarySchema,
+          default: () => ({
+            status: "locked",
+            attemptsUsed: 0,
+            maximumAttempts: 2,
+            bestScore: 0,
+            passScore: 70,
+            passed: false
+          })
+        },
+        actionsUnlocked: {
+          type: Boolean,
+          default: false,
+          required: true
+        },
+        quizUnlocked: {
+          type: Boolean,
+          default: false,
+          required: true,
+          index: true
+        },
+        overallCompletionPercent: {
+          type: Number,
+          default: 0,
+          min: 0,
+          max: 100,
+          required: true
+        },
+        isCompleted: {
+          type: Boolean,
+          default: false,
+          required: true,
+          index: true
+        },
+        completedAt: {
+          type: Date
+        },
+        lastCalculatedAt: {
+          type: Date,
+          default: Date.now,
+          required: true
+        }
+      },
+      {
+        timestamps: true,
+        collection: "moduleprogress",
+        optimisticConcurrency: true
+      }
+    );
+    moduleProgressSchema.index(
+      {
+        user: 1,
+        module: 1
+      },
+      {
+        unique: true
+      }
+    );
+    moduleProgressSchema.index({
+      user: 1,
+      isCompleted: 1,
+      updatedAt: -1
+    });
+    moduleProgressSchema.index({
+      module: 1,
+      isCompleted: 1
+    });
+    ModuleProgress = model29(
+      "ModuleProgress",
+      moduleProgressSchema
     );
   }
 });
@@ -3339,16 +3557,16 @@ var init_module_resource_interface = __esm({
 });
 
 // src/modules/moduleResources/module.resource.model.schema.ts
-import { model as model28, Schema as Schema28 } from "mongoose";
+import { model as model30, Schema as Schema30 } from "mongoose";
 var moduleResourceSchema, ModuleResource;
 var init_module_resource_model_schema = __esm({
   "src/modules/moduleResources/module.resource.model.schema.ts"() {
     "use strict";
     init_module_resource_interface();
-    moduleResourceSchema = new Schema28(
+    moduleResourceSchema = new Schema30(
       {
         module: {
-          type: Schema28.Types.ObjectId,
+          type: Schema30.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3449,12 +3667,12 @@ var init_module_resource_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema28.Types.ObjectId,
+          type: Schema30.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema28.Types.ObjectId,
+          type: Schema30.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3483,7 +3701,7 @@ var init_module_resource_model_schema = __esm({
       status: 1,
       order: 1
     });
-    ModuleResource = model28(
+    ModuleResource = model30(
       "ModuleResource",
       moduleResourceSchema
     );
@@ -3510,18 +3728,18 @@ var init_quiz_question_interface = __esm({
 
 // src/modules/quizeQuestions/quiz.question.model.schema.ts
 import {
-  model as model29,
-  Schema as Schema29
+  model as model31,
+  Schema as Schema31
 } from "mongoose";
 var quizQuestionSchema, QuizQuestion;
 var init_quiz_question_model_schema = __esm({
   "src/modules/quizeQuestions/quiz.question.model.schema.ts"() {
     "use strict";
     init_quiz_question_interface();
-    quizQuestionSchema = new Schema29(
+    quizQuestionSchema = new Schema31(
       {
         module: {
-          type: Schema29.Types.ObjectId,
+          type: Schema31.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3581,12 +3799,12 @@ var init_quiz_question_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema29.Types.ObjectId,
+          type: Schema31.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema29.Types.ObjectId,
+          type: Schema31.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3609,7 +3827,7 @@ var init_quiz_question_model_schema = __esm({
       status: 1,
       order: 1
     });
-    QuizQuestion = model29(
+    QuizQuestion = model31(
       "QuizQuestion",
       quizQuestionSchema
     );
@@ -3631,18 +3849,18 @@ var init_module_action_interface = __esm({
 
 // src/modules/moduleActions/module.action.model.schema.ts
 import {
-  model as model30,
-  Schema as Schema30
+  model as model32,
+  Schema as Schema32
 } from "mongoose";
 var moduleActionSchema, ModuleAction;
 var init_module_action_model_schema = __esm({
   "src/modules/moduleActions/module.action.model.schema.ts"() {
     "use strict";
     init_module_action_interface();
-    moduleActionSchema = new Schema30(
+    moduleActionSchema = new Schema32(
       {
         module: {
-          type: Schema30.Types.ObjectId,
+          type: Schema32.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3686,12 +3904,12 @@ var init_module_action_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema30.Types.ObjectId,
+          type: Schema32.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema30.Types.ObjectId,
+          type: Schema32.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3719,7 +3937,7 @@ var init_module_action_model_schema = __esm({
       isRequired: 1,
       status: 1
     });
-    ModuleAction = model30(
+    ModuleAction = model32(
       "ModuleAction",
       moduleActionSchema
     );
@@ -3727,12 +3945,12 @@ var init_module_action_model_schema = __esm({
 });
 
 // src/modules/videoProgress/video.progress.model.schema.ts
-import { model as model33, Schema as Schema33 } from "mongoose";
+import { model as model35, Schema as Schema35 } from "mongoose";
 var watchedRangeSchema, videoProgressSchema, VideoProgress;
 var init_video_progress_model_schema = __esm({
   "src/modules/videoProgress/video.progress.model.schema.ts"() {
     "use strict";
-    watchedRangeSchema = new Schema33(
+    watchedRangeSchema = new Schema35(
       {
         startSeconds: {
           type: Number,
@@ -3749,22 +3967,22 @@ var init_video_progress_model_schema = __esm({
         _id: false
       }
     );
-    videoProgressSchema = new Schema33(
+    videoProgressSchema = new Schema35(
       {
         user: {
-          type: Schema33.Types.ObjectId,
+          type: Schema35.Types.ObjectId,
           ref: "User",
           required: true,
           index: true
         },
         video: {
-          type: Schema33.Types.ObjectId,
+          type: Schema35.Types.ObjectId,
           ref: "ModuleVideo",
           required: true,
           index: true
         },
         module: {
-          type: Schema33.Types.ObjectId,
+          type: Schema35.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3852,227 +4070,9 @@ var init_video_progress_model_schema = __esm({
       user: 1,
       lastWatchedAt: -1
     });
-    VideoProgress = model33(
+    VideoProgress = model35(
       "VideoProgress",
       videoProgressSchema
-    );
-  }
-});
-
-// src/modules/moduleProgress/module.progress.interface.ts
-var QUIZ_PROGRESS_STATUSES;
-var init_module_progress_interface = __esm({
-  "src/modules/moduleProgress/module.progress.interface.ts"() {
-    "use strict";
-    QUIZ_PROGRESS_STATUSES = [
-      "locked",
-      "unlocked",
-      "in_progress",
-      "passed",
-      "failed"
-    ];
-  }
-});
-
-// src/modules/moduleProgress/module.progress.model.schema.ts
-import { model as model34, Schema as Schema34 } from "mongoose";
-var requirementSummarySchema, quizSummarySchema, moduleProgressSchema, ModuleProgress;
-var init_module_progress_model_schema = __esm({
-  "src/modules/moduleProgress/module.progress.model.schema.ts"() {
-    "use strict";
-    init_module_progress_interface();
-    requirementSummarySchema = new Schema34(
-      {
-        totalRequired: {
-          type: Number,
-          default: 0,
-          min: 0,
-          required: true
-        },
-        completedRequired: {
-          type: Number,
-          default: 0,
-          min: 0,
-          required: true
-        },
-        completionPercent: {
-          type: Number,
-          default: 100,
-          min: 0,
-          max: 100,
-          required: true
-        },
-        completed: {
-          type: Boolean,
-          default: true,
-          required: true
-        }
-      },
-      {
-        _id: false
-      }
-    );
-    quizSummarySchema = new Schema34(
-      {
-        status: {
-          type: String,
-          enum: QUIZ_PROGRESS_STATUSES,
-          default: "locked",
-          required: true
-        },
-        attemptsUsed: {
-          type: Number,
-          default: 0,
-          min: 0,
-          max: 2,
-          required: true
-        },
-        maximumAttempts: {
-          type: Number,
-          default: 2,
-          min: 2,
-          max: 2,
-          required: true
-        },
-        bestScore: {
-          type: Number,
-          default: 0,
-          min: 0,
-          max: 100,
-          required: true
-        },
-        passScore: {
-          type: Number,
-          default: 70,
-          min: 70,
-          max: 70,
-          required: true
-        },
-        passed: {
-          type: Boolean,
-          default: false,
-          required: true
-        },
-        lastAttemptAt: {
-          type: Date
-        }
-      },
-      {
-        _id: false
-      }
-    );
-    moduleProgressSchema = new Schema34(
-      {
-        user: {
-          type: Schema34.Types.ObjectId,
-          ref: "User",
-          required: true,
-          index: true
-        },
-        module: {
-          type: Schema34.Types.ObjectId,
-          ref: "CourseModule",
-          required: true,
-          index: true
-        },
-        videoSummary: {
-          type: requirementSummarySchema,
-          default: () => ({
-            totalRequired: 0,
-            completedRequired: 0,
-            completionPercent: 100,
-            completed: true
-          })
-        },
-        resourceSummary: {
-          type: requirementSummarySchema,
-          default: () => ({
-            totalRequired: 0,
-            completedRequired: 0,
-            completionPercent: 100,
-            completed: true
-          })
-        },
-        actionSummary: {
-          type: requirementSummarySchema,
-          default: () => ({
-            totalRequired: 0,
-            completedRequired: 0,
-            completionPercent: 100,
-            completed: true
-          })
-        },
-        quizSummary: {
-          type: quizSummarySchema,
-          default: () => ({
-            status: "locked",
-            attemptsUsed: 0,
-            maximumAttempts: 2,
-            bestScore: 0,
-            passScore: 70,
-            passed: false
-          })
-        },
-        actionsUnlocked: {
-          type: Boolean,
-          default: false,
-          required: true
-        },
-        quizUnlocked: {
-          type: Boolean,
-          default: false,
-          required: true,
-          index: true
-        },
-        overallCompletionPercent: {
-          type: Number,
-          default: 0,
-          min: 0,
-          max: 100,
-          required: true
-        },
-        isCompleted: {
-          type: Boolean,
-          default: false,
-          required: true,
-          index: true
-        },
-        completedAt: {
-          type: Date
-        },
-        lastCalculatedAt: {
-          type: Date,
-          default: Date.now,
-          required: true
-        }
-      },
-      {
-        timestamps: true,
-        collection: "moduleprogress",
-        optimisticConcurrency: true
-      }
-    );
-    moduleProgressSchema.index(
-      {
-        user: 1,
-        module: 1
-      },
-      {
-        unique: true
-      }
-    );
-    moduleProgressSchema.index({
-      user: 1,
-      isCompleted: 1,
-      updatedAt: -1
-    });
-    moduleProgressSchema.index({
-      module: 1,
-      isCompleted: 1
-    });
-    ModuleProgress = model34(
-      "ModuleProgress",
-      moduleProgressSchema
     );
   }
 });
@@ -4082,7 +4082,7 @@ var module_progress_service_exports = {};
 __export(module_progress_service_exports, {
   moduleProgressService: () => moduleProgressService
 });
-import { Types as Types32 } from "mongoose";
+import { Types as Types33 } from "mongoose";
 var ACTION_COMPLETION_REQUIREMENT, QUIZ_PASS_SCORE, MAXIMUM_QUIZ_ATTEMPTS, throwServiceError13, assertFound12, assertValidObjectId10, isDuplicateKeyError7, roundToTwoDecimals, clamp, calculateCompletionPercent, ensureCourseModuleExists5, createDefaultProgressData, getOrCreateModuleProgress, recalculateDerivedFields, awardModuleCompletionPoints, syncModulesBreakdownForUser, syncQuizSuccessBreakdownForUser, QUIZ_PASS_POINTS, awardQuizPassPoints, refreshModuleProgress, syncResourceSummary, syncActionSummary, syncQuizSummary, getMyModuleProgress, getMyAllModuleProgress, getUserModuleProgress, getAllModuleProgress, getAllModuleProgressGroupedByUser, moduleProgressService;
 var init_module_progress_service = __esm({
   "src/modules/moduleProgress/module.progress.service.ts"() {
@@ -4109,7 +4109,7 @@ var init_module_progress_service = __esm({
       }
     };
     assertValidObjectId10 = (value, fieldName) => {
-      if (!Types32.ObjectId.isValid(value)) {
+      if (!Types33.ObjectId.isValid(value)) {
         throwServiceError13(`${fieldName} is invalid`, 400);
       }
     };
@@ -4141,8 +4141,8 @@ var init_module_progress_service = __esm({
     };
     createDefaultProgressData = (userId, moduleId) => {
       return {
-        user: new Types32.ObjectId(userId),
-        module: new Types32.ObjectId(moduleId),
+        user: new Types33.ObjectId(userId),
+        module: new Types33.ObjectId(moduleId),
         videoSummary: {
           totalRequired: 0,
           completedRequired: 0,
@@ -4180,8 +4180,8 @@ var init_module_progress_service = __esm({
       assertValidObjectId10(userId, "User ID");
       await ensureCourseModuleExists5(moduleId);
       const filter = {
-        user: new Types32.ObjectId(userId),
-        module: new Types32.ObjectId(moduleId)
+        user: new Types33.ObjectId(userId),
+        module: new Types33.ObjectId(moduleId)
       };
       const existingProgress = await ModuleProgress.findOne(filter);
       if (existingProgress) {
@@ -4206,6 +4206,14 @@ var init_module_progress_service = __esm({
       progress.actionsUnlocked = videosCompleted;
       progress.actionSummary.completed = true;
       progress.quizUnlocked = videosCompleted;
+      if (!hasPublishedVideos) {
+        progress.quizSummary.status = "locked";
+        progress.overallCompletionPercent = 0;
+        progress.isCompleted = false;
+        progress.set("completedAt", void 0);
+        progress.lastCalculatedAt = /* @__PURE__ */ new Date();
+        return;
+      }
       if (progress.quizSummary.passed) {
         progress.quizSummary.status = "passed";
       } else if (!progress.quizUnlocked) {
@@ -4217,12 +4225,12 @@ var init_module_progress_service = __esm({
       } else {
         progress.quizSummary.status = "failed";
       }
-      if (progress.quizSummary.passed) {
+      if (progress.quizSummary.passed && videosCompleted) {
         progress.overallCompletionPercent = 100;
       } else {
         progress.overallCompletionPercent = progress.videoSummary.completionPercent;
       }
-      const moduleCompleted = progress.videoSummary.completed && progress.quizSummary.passed;
+      const moduleCompleted = videosCompleted && progress.quizSummary.passed;
       const newlyCompleted = !progress.isCompleted && moduleCompleted;
       progress.isCompleted = moduleCompleted;
       if (newlyCompleted) {
@@ -4254,7 +4262,7 @@ var init_module_progress_service = __esm({
     syncModulesBreakdownForUser = async (userId) => {
       try {
         const completedModulesCount = await ModuleProgress.countDocuments({
-          user: new Types32.ObjectId(userId),
+          user: new Types33.ObjectId(userId),
           isCompleted: true
         });
         const { Leaderboard: Leaderboard2 } = await Promise.resolve().then(() => (init_leaderboard_model_schema(), leaderboard_model_schema_exports));
@@ -4277,7 +4285,7 @@ var init_module_progress_service = __esm({
     };
     syncQuizSuccessBreakdownForUser = async (userId) => {
       try {
-        const userObjectId = new Types32.ObjectId(userId);
+        const userObjectId = new Types33.ObjectId(userId);
         const [attemptedCount, passedCount] = await Promise.all([
           ModuleProgress.countDocuments({
             user: userObjectId,
@@ -4323,8 +4331,8 @@ var init_module_progress_service = __esm({
     };
     refreshModuleProgress = async (userId, moduleId) => {
       const progress = await getOrCreateModuleProgress(userId, moduleId);
-      const moduleObjectId = new Types32.ObjectId(moduleId);
-      const userObjectId = new Types32.ObjectId(userId);
+      const moduleObjectId = new Types33.ObjectId(moduleId);
+      const userObjectId = new Types33.ObjectId(userId);
       const courseModule = await CourseModule.findById(moduleObjectId).select("pillar updatedAt").populate("pillar", "isPaid").lean();
       const pillar = courseModule?.pillar;
       const pillarId = pillar && typeof pillar === "object" && "_id" in pillar ? String(pillar._id) : pillar ? String(pillar) : void 0;
@@ -4375,8 +4383,8 @@ var init_module_progress_service = __esm({
         isCompleted: true
       });
       const totalRequiredVideos = targetVideoIds.length;
-      const isVideoCompleted = totalRequiredVideos === 0 || completedVideosCount >= totalRequiredVideos;
-      const videoPercent = totalRequiredVideos === 0 ? 100 : calculateCompletionPercent(completedVideosCount, totalRequiredVideos);
+      const isVideoCompleted = totalRequiredVideos > 0 && completedVideosCount >= totalRequiredVideos;
+      const videoPercent = totalRequiredVideos === 0 ? 0 : calculateCompletionPercent(completedVideosCount, totalRequiredVideos);
       progress.set("videoSummary", {
         totalRequired: totalRequiredVideos,
         completedRequired: completedVideosCount,
@@ -4499,7 +4507,7 @@ var init_module_progress_service = __esm({
     getMyAllModuleProgress = async (userId) => {
       assertValidObjectId10(userId, "User ID");
       const progressRecords = await ModuleProgress.find({
-        user: new Types32.ObjectId(userId)
+        user: new Types33.ObjectId(userId)
       }).select("module").lean();
       const refreshed = await Promise.all(
         progressRecords.map(
@@ -4517,11 +4525,11 @@ var init_module_progress_service = __esm({
       const filter = {};
       if (query.userId) {
         assertValidObjectId10(query.userId, "User ID");
-        filter.user = new Types32.ObjectId(query.userId);
+        filter.user = new Types33.ObjectId(query.userId);
       }
       if (query.moduleId) {
         assertValidObjectId10(query.moduleId, "Course module ID");
-        filter.module = new Types32.ObjectId(query.moduleId);
+        filter.module = new Types33.ObjectId(query.moduleId);
       }
       if (query.isCompleted !== void 0) {
         filter.isCompleted = query.isCompleted;
@@ -4557,11 +4565,11 @@ var init_module_progress_service = __esm({
       const filter = {};
       if (query.userId) {
         assertValidObjectId10(query.userId, "User ID");
-        filter.user = new Types32.ObjectId(query.userId);
+        filter.user = new Types33.ObjectId(query.userId);
       }
       if (query.moduleId) {
         assertValidObjectId10(query.moduleId, "Course module ID");
-        filter.module = new Types32.ObjectId(query.moduleId);
+        filter.module = new Types33.ObjectId(query.moduleId);
       }
       if (query.isCompleted !== void 0) {
         filter.isCompleted = query.isCompleted;
@@ -4846,7 +4854,7 @@ var createAdminAccountValidation = z.object({
     password: passwordSchema,
     // ekhane sob possible creatable role rakhlam,
     // kon requester kon role banate parbe seta service e check hobe
-    role: z.enum(["manager", "super_admin", "co_mentor"]),
+    role: z.enum(["manager", "super_admin", "co_mentor", "ceo"]),
     accessTo: z.enum(["we_command_center", "invictus", "both"])
   })
 });
@@ -4949,7 +4957,7 @@ var comparePassword = async (password, hashedPassword) => {
 
 // src/modules/users/auth.service.ts
 var CREATABLE_ROLES_BY_ROLE = {
-  founder: ["manager", "super_admin", "co_mentor"],
+  founder: ["manager", "super_admin", "co_mentor", "ceo"],
   manager: ["super_admin", "co_mentor"]
 };
 var getAllUsersFromDB = async (query) => {
@@ -5016,7 +5024,7 @@ var activateManagerByAdmin = async (id3) => {
   if (!user) {
     throw new Error("User not found.");
   }
-  if (!["manager", "super_admin", "co_mentor"].includes(user.role)) {
+  if (!["manager", "super_admin", "co_mentor", "ceo"].includes(user.role)) {
     throw new Error("Only admin accounts can be activated.");
   }
   if (user.accountStatus === "active") {
@@ -5037,7 +5045,7 @@ var suspendManagerByAdmin = async (id3) => {
   if (!user) {
     throw new Error("User not found.");
   }
-  if (!["manager", "super_admin", "co_mentor"].includes(user.role)) {
+  if (!["manager", "super_admin", "co_mentor", "ceo"].includes(user.role)) {
     throw new Error("Only admin accounts can be suspended.");
   }
   if (user.accountStatus === "suspended") {
@@ -5311,13 +5319,13 @@ var verifyToken2 = (token, secret) => {
 // src/utility/SendMail.ts
 import { Resend } from "resend";
 var resend = new Resend(config_default.RESEND_API_KEY);
-var sendMail = async (to, html) => {
+var sendMail = async (to, html, subject = "Change Password", text = "Reset your Password within 10 minutes") => {
   const fromEmail = config_default.MAIL_FROM_NAME ? `${config_default.MAIL_FROM_NAME} <onboarding@resend.dev>` : "onboarding@resend.dev";
   const { error } = await resend.emails.send({
     from: fromEmail,
     to,
-    subject: "Change Password",
-    text: "Reset your Password within 10 minutes",
+    subject,
+    text,
     html
   });
   if (error) {
@@ -5525,7 +5533,7 @@ var getMemberAccessPrice = (accessTo) => {
   if (accessTo === "invictus") {
     return parseDollarAmountToCents(
       config_default.STRIPE_PRICE_INVICTUS_MONTHLY,
-      " "
+      "STRIPE_PRICE_INVICTUS_MONTHLY"
     );
   }
   return parseDollarAmountToCents(
@@ -10877,7 +10885,7 @@ init_users_model_schema();
 import { Schema as Schema15, model as model15 } from "mongoose";
 
 // src/modules/payment/payment.interface.ts
-var PAYMENT_PURPOSES = ["registration", "upgrade", "invictus_purchase"];
+var PAYMENT_PURPOSES = ["registration", "upgrade", "invictus_purchase", "access_upgrade"];
 var PAYMENT_SESSION_STATUSES = [
   "pending",
   "paid",
@@ -11604,7 +11612,7 @@ World Elite Team`,
 
 // src/modules/invictus-payments/invictus.payment.service.ts
 import Stripe from "stripe";
-import { Types as Types23 } from "mongoose";
+import { Types as Types24 } from "mongoose";
 init_challenge_pillar_model_schema();
 
 // src/modules/retreatBatches/retreat.batch.model.schema.ts
@@ -11917,7 +11925,7 @@ init_userEntitlements_service();
 // src/modules/notifications/notification.service.ts
 init_assertFound();
 init_throwServiceError();
-import { Types as Types22 } from "mongoose";
+import { Types as Types23 } from "mongoose";
 
 // src/socket/socket.ts
 import { Server } from "socket.io";
@@ -11952,8 +11960,16 @@ var roomSchema = new Schema22(
     },
     type: {
       type: String,
-      enum: ["general", "country"],
+      enum: ["general", "country", "private"],
       default: "general"
+    },
+    slug: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      unique: true,
+      sparse: true,
+      index: true
     },
     countryName: String,
     countryCode: { type: String, unique: true, sparse: true }
@@ -11983,6 +11999,103 @@ var resolveCountry = (rawName) => {
 };
 
 // src/modules/room/room.service.ts
+init_users_model_schema();
+import { Types as Types21 } from "mongoose";
+
+// src/modules/room/country.room.request.model.ts
+import { model as model23, Schema as Schema23 } from "mongoose";
+
+// src/modules/room/country.room.request.interface.ts
+var COUNTRY_ROOM_REQUEST_STATUSES = [
+  "pending",
+  "approved",
+  "rejected"
+];
+
+// src/modules/room/country.room.request.model.ts
+var countryRoomRequestSchema = new Schema23(
+  {
+    user: { type: Schema23.Types.ObjectId, ref: "User", required: true },
+    room: { type: Schema23.Types.ObjectId, ref: "Room", required: true },
+    countryName: { type: String, required: true, trim: true },
+    countryCode: { type: String, required: true, uppercase: true, trim: true },
+    status: {
+      type: String,
+      enum: COUNTRY_ROOM_REQUEST_STATUSES,
+      default: "pending",
+      required: true
+    },
+    reviewedBy: { type: Schema23.Types.ObjectId, ref: "User" },
+    reviewedAt: Date
+  },
+  { timestamps: true, collection: "countryroomrequests" }
+);
+countryRoomRequestSchema.index(
+  { user: 1, room: 1 },
+  { unique: true }
+);
+countryRoomRequestSchema.index({ status: 1, createdAt: -1 });
+var CountryRoomRequest = model23(
+  "CountryRoomRequest",
+  countryRoomRequestSchema
+);
+
+// src/modules/room/room.service.ts
+var PRIVATE_ROOM_DEFINITIONS = [
+  { slug: "ceos-council-club", name: "CEOs Council Club" },
+  { slug: "founders-council-club", name: "Founders Council Club" },
+  { slug: "vip-community", name: "VIP Community" },
+  { slug: "world-elite-inner-circle", name: "World Elite Inner Circle" }
+];
+var ensurePrivateRooms = async (createdBy) => {
+  await Promise.all(
+    PRIVATE_ROOM_DEFINITIONS.map(
+      ({ slug, name }) => Room.findOneAndUpdate(
+        { slug, type: "private" },
+        {
+          $setOnInsert: {
+            slug,
+            name,
+            type: "private",
+            members: [],
+            createdBy: new Types21.ObjectId(createdBy)
+          }
+        },
+        { upsert: true, new: true }
+      )
+    )
+  );
+};
+var canAccessEveryPrivateRoom = (role) => role === "founder" || role === "manager";
+var getPrivateRoomsForUser = async (userId, role) => {
+  const rooms = await Room.find({ type: "private" }).select("slug name members").lean();
+  const canAccessAll = canAccessEveryPrivateRoom(role);
+  return PRIVATE_ROOM_DEFINITIONS.map((definition2) => {
+    const room = rooms.find((item) => item.slug === definition2.slug);
+    return {
+      slug: definition2.slug,
+      name: room?.name ?? definition2.name,
+      canEnter: canAccessAll || Boolean(room?.members.some((member) => String(member) === userId))
+    };
+  });
+};
+var getPrivateRoom = async (slug, userId, role) => {
+  const room = await Room.findOne({ slug, type: "private" }).lean();
+  if (!room) throw new Error("Private community room not found");
+  if (!canAccessEveryPrivateRoom(role) && !room.members.some((member) => String(member) === userId)) {
+    throw new Error("You are not a member of this private community room");
+  }
+  return room;
+};
+var addPrivateRoomMember = async (slug, userId) => {
+  const room = await Room.findOneAndUpdate(
+    { slug, type: "private" },
+    { $addToSet: { members: new Types21.ObjectId(userId) } },
+    { new: true }
+  );
+  if (!room) throw new Error("Private community room not found");
+  return room;
+};
 var getGeneralRoom = async (createdBy) => {
   return Room.findOneAndUpdate(
     { type: "general" },
@@ -12015,22 +12128,93 @@ var getOrCreateCountryRoom = async (countryName, createdBy) => {
     { upsert: true, new: true }
   );
 };
+var isPrivilegedCountryRoomRole = (role) => role === "founder" || role === "manager";
+var resolveCountryRoom = async (countryName, createdBy) => {
+  const country = resolveCountry(countryName);
+  if (!country) throw new Error("Invalid country name");
+  const room = await getOrCreateCountryRoom(country.name, createdBy);
+  return { country, room };
+};
+var getCountryRoomAccess = async (userId, role, countryName) => {
+  const { country, room } = await resolveCountryRoom(countryName, userId);
+  const user = await User.findById(userId).select("country").lean();
+  const userCountry = user?.country ? resolveCountry(user.country) : null;
+  const canEnter = isPrivilegedCountryRoomRole(role) || userCountry?.code === country.code || room.members.some((member) => String(member) === userId);
+  const request = await CountryRoomRequest.findOne({
+    user: userId,
+    room: room._id
+  }).lean();
+  return {
+    countryName: country.name,
+    countryCode: country.code,
+    canEnter,
+    requestStatus: request?.status ?? null,
+    requestId: request?._id ?? null
+  };
+};
+var createCountryRoomRequest = async (userId, countryName) => {
+  const { country, room } = await resolveCountryRoom(countryName, userId);
+  const existingMembership = room.members.some(
+    (member) => String(member) === userId
+  );
+  if (existingMembership) throw new Error("You already have access to this room");
+  const existing = await CountryRoomRequest.findOne({
+    user: userId,
+    room: room._id
+  });
+  if (existing?.status === "pending") return existing;
+  if (existing?.status === "rejected") {
+    existing.status = "pending";
+    existing.set("reviewedBy", void 0);
+    existing.set("reviewedAt", void 0);
+    await existing.save();
+    return existing;
+  }
+  return CountryRoomRequest.create({
+    user: new Types21.ObjectId(userId),
+    room: room._id,
+    countryName: country.name,
+    countryCode: country.code,
+    status: "pending"
+  });
+};
+var getMyCountryRoomRequests = async (userId) => CountryRoomRequest.find({ user: userId }).sort({ createdAt: -1 }).lean();
+var getCountryRoomRequestsForReview = async () => CountryRoomRequest.find({ status: "pending" }).sort({ createdAt: 1 }).populate("user", "fullName email role country").populate("room", "name countryName countryCode").lean();
+var reviewCountryRoomRequest = async (requestId, reviewerId, status) => {
+  if (!Types21.ObjectId.isValid(requestId)) throw new Error("Invalid request ID");
+  const request = await CountryRoomRequest.findById(requestId);
+  if (!request) throw new Error("Country room request not found");
+  if (request.status !== "pending") throw new Error("This request was already reviewed");
+  request.status = status;
+  request.reviewedBy = new Types21.ObjectId(reviewerId);
+  request.reviewedAt = /* @__PURE__ */ new Date();
+  await request.save();
+  if (status === "approved") {
+    await Room.findByIdAndUpdate(request.room, {
+      $addToSet: { members: request.user }
+    });
+  }
+  return request.populate([
+    { path: "user", select: "fullName email role country" },
+    { path: "room", select: "name countryName countryCode" }
+  ]);
+};
 
 // src/modules/message/message.services.ts
-import { Types as Types21 } from "mongoose";
+import { Types as Types22 } from "mongoose";
 
 // src/modules/message/message.model.ts
-import { Schema as Schema23, model as model23 } from "mongoose";
-var messageSchema = new Schema23(
+import { Schema as Schema24, model as model24 } from "mongoose";
+var messageSchema = new Schema24(
   {
     room: {
-      type: Schema23.Types.ObjectId,
+      type: Schema24.Types.ObjectId,
       ref: "Room",
       required: true,
       index: true
     },
     sender: {
-      type: Schema23.Types.ObjectId,
+      type: Schema24.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -12042,7 +12226,7 @@ var messageSchema = new Schema23(
     },
     // NEW: reply support
     replyTo: {
-      type: Schema23.Types.ObjectId,
+      type: Schema24.Types.ObjectId,
       ref: "Message",
       default: null
     },
@@ -12054,7 +12238,7 @@ var messageSchema = new Schema23(
     timestamps: true
   }
 );
-var Message = model23("Message", messageSchema);
+var Message = model24("Message", messageSchema);
 
 // src/modules/message/message.services.ts
 var getMessageHistory = async (roomId, page, limit) => {
@@ -12089,7 +12273,7 @@ var createMessage = async (roomId, senderId, content, replyTo) => {
   ]);
 };
 var deleteMessage = async (messageId, userId) => {
-  if (!Types21.ObjectId.isValid(messageId)) {
+  if (!Types22.ObjectId.isValid(messageId)) {
     throw new Error("Invalid message id");
   }
   const message = await Message.findById(messageId);
@@ -12152,34 +12336,59 @@ var initSocket = (httpServer) => {
       socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
       socket.data.user.profileImage = userDoc?.profileImage ?? null;
       const countryName = userDoc?.country?.trim();
-      const isPrivilegedRole = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager";
-      let country = countryName ? resolveCountry(countryName) : null;
-      if (!country && !isPrivilegedRole) {
+      const requestedCountryName = socket.handshake.auth?.countryName;
+      const privateRoomSlug = socket.handshake.auth?.privateRoomSlug;
+      if (privateRoomSlug) {
+        const privateRoom = await getPrivateRoom(
+          privateRoomSlug,
+          userId,
+          socket.data.user.role
+        );
+        const privateRoomId = privateRoom._id.toString();
+        socket.data.roomId = privateRoomId;
+        socket.join(privateRoomId);
+        socket.emit("room:joined", { roomId: privateRoomId, name: privateRoom.name });
+      }
+      const isPrivilegedRole = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager" || socket.data.user.role === "ceo";
+      let country = privateRoomSlug ? null : requestedCountryName ? resolveCountry(requestedCountryName) : countryName ? resolveCountry(countryName) : null;
+      if (!privateRoomSlug && requestedCountryName && country) {
+        const access = await getCountryRoomAccess(
+          userId,
+          socket.data.user.role,
+          requestedCountryName
+        );
+        if (!access.canEnter) {
+          socket.emit("error", "You do not have access to this country room");
+          return socket.disconnect();
+        }
+      }
+      if (!privateRoomSlug && !country && !isPrivilegedRole) {
         socket.emit(
           "error",
           countryName ? "Invalid country on your profile" : "No country set on your profile"
         );
         return socket.disconnect();
       }
-      if (!country) {
+      if (!privateRoomSlug && !country) {
         country = resolveCountry("United States");
       }
-      if (!country) {
+      if (!privateRoomSlug && !country) {
         socket.emit("error", "No default community room is configured");
         return socket.disconnect();
       }
-      const room = await getOrCreateCountryRoom(country.name, userId);
+      const room = privateRoomSlug ? await getPrivateRoom(privateRoomSlug, userId, socket.data.user.role) : await getOrCreateCountryRoom(country.name, userId);
       let roomId = room._id.toString();
       socket.data.roomId = roomId;
       socket.join(roomId);
       socket.emit("room:joined", {
         roomId,
         countryCode: room.countryCode,
-        countryName: room.countryName
+        countryName: room.countryName,
+        name: room.name
       });
-      socket.on("room:join", async (requestedCountryName) => {
+      socket.on("room:join", async (requestedCountryName2) => {
         try {
-          const canSwitchRooms = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager";
+          const canSwitchRooms = !privateRoomSlug && (socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager");
           if (!canSwitchRooms) {
             socket.emit(
               "error",
@@ -12187,7 +12396,7 @@ var initSocket = (httpServer) => {
             );
             return;
           }
-          const requestedCountry = resolveCountry(requestedCountryName);
+          const requestedCountry = resolveCountry(requestedCountryName2);
           if (!requestedCountry) {
             socket.emit("error", "Invalid country name");
             return;
@@ -12291,13 +12500,13 @@ var initSocket = (httpServer) => {
 };
 
 // src/modules/notificationTemplates/notification.template.model.schema.ts
-import { model as model24, Schema as Schema24 } from "mongoose";
+import { model as model25, Schema as Schema25 } from "mongoose";
 
 // src/modules/notifications/notification.interface.ts
 var NOTIFICATION_CHANNELS = ["in_app", "email", "push"];
 
 // src/modules/notificationTemplates/notification.template.model.schema.ts
-var notificationTemplateSchema = new Schema24(
+var notificationTemplateSchema = new Schema25(
   {
     key: {
       type: String,
@@ -12343,12 +12552,12 @@ var notificationTemplateSchema = new Schema24(
       index: true
     },
     createdBy: {
-      type: Schema24.Types.ObjectId,
+      type: Schema25.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema24.Types.ObjectId,
+      type: Schema25.Types.ObjectId,
       ref: "User",
       required: true
     }
@@ -12362,7 +12571,7 @@ notificationTemplateSchema.index({
   enabled: 1,
   createdAt: -1
 });
-var NotificationTemplate = model24(
+var NotificationTemplate = model25(
   "NotificationTemplate",
   notificationTemplateSchema
 );
@@ -12371,21 +12580,21 @@ var NotificationTemplate = model24(
 init_users_model_schema();
 
 // src/modules/notifications/notification.model.schema.ts
-import { model as model25, Schema as Schema25 } from "mongoose";
-var notificationSchema = new Schema25(
+import { model as model26, Schema as Schema26 } from "mongoose";
+var notificationSchema = new Schema26(
   {
     recipient: {
-      type: Schema25.Types.ObjectId,
+      type: Schema26.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     actor: {
-      type: Schema25.Types.ObjectId,
+      type: Schema26.Types.ObjectId,
       ref: "User"
     },
     template: {
-      type: Schema25.Types.ObjectId,
+      type: Schema26.Types.ObjectId,
       ref: "NotificationTemplate"
     },
     type: {
@@ -12419,7 +12628,7 @@ var notificationSchema = new Schema25(
       maxlength: 120
     },
     relatedEntityId: {
-      type: Schema25.Types.ObjectId
+      type: Schema26.Types.ObjectId
     },
     actionUrl: {
       type: String,
@@ -12427,7 +12636,7 @@ var notificationSchema = new Schema25(
       maxlength: 1e3
     },
     metadata: {
-      type: Schema25.Types.Mixed
+      type: Schema26.Types.Mixed
     },
     isRead: {
       type: Boolean,
@@ -12468,7 +12677,7 @@ notificationSchema.index(
     sparse: true
   }
 );
-var Notification = model25(
+var Notification = model26(
   "Notification",
   notificationSchema
 );
@@ -12489,7 +12698,7 @@ var NOTIFICATION_POPULATE = [
   }
 ];
 var assertValidObjectId7 = (value, fieldName) => {
-  if (!Types22.ObjectId.isValid(value)) {
+  if (!Types23.ObjectId.isValid(value)) {
     throwServiceError_default(`${fieldName} is invalid`, 400);
   }
 };
@@ -12529,7 +12738,7 @@ var createNotificationRecord = async (payload, templateId) => {
   const recipient = await User.findById(payload.recipient).select("_id");
   assertFound_default(recipient, "Notification recipient user not found", 404);
   const createData = {
-    recipient: new Types22.ObjectId(payload.recipient),
+    recipient: new Types23.ObjectId(payload.recipient),
     type: payload.type.trim(),
     title: payload.title.trim(),
     body: payload.body.trim(),
@@ -12537,7 +12746,7 @@ var createNotificationRecord = async (payload, templateId) => {
     isRead: false
   };
   if (payload.actor) {
-    createData.actor = new Types22.ObjectId(payload.actor);
+    createData.actor = new Types23.ObjectId(payload.actor);
   }
   if (templateId) {
     createData.template = templateId;
@@ -12546,7 +12755,7 @@ var createNotificationRecord = async (payload, templateId) => {
     createData.relatedEntityType = payload.relatedEntityType;
   }
   if (payload.relatedEntityId) {
-    createData.relatedEntityId = new Types22.ObjectId(payload.relatedEntityId);
+    createData.relatedEntityId = new Types23.ObjectId(payload.relatedEntityId);
   }
   if (payload.actionUrl) {
     createData.actionUrl = payload.actionUrl;
@@ -12673,7 +12882,7 @@ var buildNotificationFilter = (query, recipientId) => {
   const filter = {};
   if (recipientId) {
     assertValidObjectId7(recipientId, "Recipient user ID");
-    filter.recipient = new Types22.ObjectId(recipientId);
+    filter.recipient = new Types23.ObjectId(recipientId);
   }
   if (query.isRead !== void 0) {
     filter.isRead = query.isRead;
@@ -12700,7 +12909,7 @@ var getMyNotifications = async (userId, query = {}) => {
     Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(NOTIFICATION_POPULATE),
     Notification.countDocuments(filter),
     Notification.countDocuments({
-      recipient: new Types22.ObjectId(userId),
+      recipient: new Types23.ObjectId(userId),
       isRead: false
     })
   ]);
@@ -12718,7 +12927,7 @@ var getMyNotifications = async (userId, query = {}) => {
 var getUnreadCount = async (userId) => {
   assertValidObjectId7(userId, "User ID");
   const unreadCount = await Notification.countDocuments({
-    recipient: new Types22.ObjectId(userId),
+    recipient: new Types23.ObjectId(userId),
     isRead: false
   });
   return {
@@ -12730,8 +12939,8 @@ var markOneAsRead = async (notificationId, userId) => {
   assertValidObjectId7(userId, "User ID");
   const notification = await Notification.findOneAndUpdate(
     {
-      _id: new Types22.ObjectId(notificationId),
-      recipient: new Types22.ObjectId(userId)
+      _id: new Types23.ObjectId(notificationId),
+      recipient: new Types23.ObjectId(userId)
     },
     {
       $set: {
@@ -12751,8 +12960,8 @@ var markOneAsUnread = async (notificationId, userId) => {
   assertValidObjectId7(userId, "User ID");
   const notification = await Notification.findOneAndUpdate(
     {
-      _id: new Types22.ObjectId(notificationId),
-      recipient: new Types22.ObjectId(userId)
+      _id: new Types23.ObjectId(notificationId),
+      recipient: new Types23.ObjectId(userId)
     },
     {
       $set: {
@@ -12774,7 +12983,7 @@ var markAllAsRead = async (userId) => {
   const now = /* @__PURE__ */ new Date();
   const result = await Notification.updateMany(
     {
-      recipient: new Types22.ObjectId(userId),
+      recipient: new Types23.ObjectId(userId),
       isRead: false
     },
     {
@@ -12793,7 +13002,7 @@ var getAllNotificationsAdmin = async (query = {}) => {
   const filter = buildNotificationFilter(query, query.recipientId);
   if (query.actorId) {
     assertValidObjectId7(query.actorId, "Actor user ID");
-    filter.actor = new Types22.ObjectId(query.actorId);
+    filter.actor = new Types23.ObjectId(query.actorId);
   }
   const page = query.page ?? 1;
   const limit = query.limit ?? 20;
@@ -12882,7 +13091,7 @@ var createInvictusCheckoutSession = async ({
 }) => {
   const stripeClient = getStripeClient();
   if (input.pillarId) {
-    if (!Types23.ObjectId.isValid(input.pillarId)) {
+    if (!Types24.ObjectId.isValid(input.pillarId)) {
       throwServiceError5("Pillar ID is invalid", 400);
     }
     const pillar = await ChallengePillar.findById(input.pillarId);
@@ -12951,7 +13160,7 @@ var createInvictusCheckoutSession = async ({
       sessionId: session2.id
     };
   }
-  if (!input.paymentPlanId || !Types23.ObjectId.isValid(input.paymentPlanId)) {
+  if (!input.paymentPlanId || !Types24.ObjectId.isValid(input.paymentPlanId)) {
     throwServiceError5("Payment plan ID is invalid", 400);
   }
   const plan = await PaymentPlan.findById(input.paymentPlanId);
@@ -13098,7 +13307,7 @@ var activateInvictusPurchase = async (session) => {
 };
 var getMyInvictusPurchases = async (userId) => {
   return PaymentSession.find({
-    user: new Types23.ObjectId(userId),
+    user: new Types24.ObjectId(userId),
     purpose: "invictus_purchase"
   }).sort({ createdAt: -1 }).populate(
     "paymentPlan",
@@ -13537,6 +13746,104 @@ var createUpgradeCheckoutSessionIntoStripe = async (userId, durationMonths, disc
     discount
   };
 };
+var getAccessUpgradePlan = async (userId) => {
+  const user = await User.findById(userId).select(
+    "role accessTo membershipAccessStatus subscriptionExpiresAt"
+  );
+  assertFound_default(user, "User not found", 404);
+  if (user.role === "admin" || user.accessTo === "both") {
+    return { hasBoth: true, currentAccessTo: user.accessTo };
+  }
+  const targetAccessTo = user.accessTo === "we_command_center" ? "invictus" : "we_command_center";
+  const amountCents = targetAccessTo === "invictus" ? 29500 : 19500;
+  return {
+    hasBoth: false,
+    currentAccessTo: user.accessTo,
+    targetAccessTo,
+    displayName: "W\xC9 Command Center + INVICTUS Academy",
+    addOnName: targetAccessTo === "invictus" ? "INVICTUS Academy add-on" : "W\xC9 Command Center add-on",
+    amountCents,
+    amount: amountCents / 100,
+    currency: "usd",
+    formattedAmount: `$${(amountCents / 100).toFixed(2)}`,
+    billingText: "One-time upgrade for the remainder of your current cycle",
+    subscriptionExpiresAt: user.subscriptionExpiresAt
+  };
+};
+var createAccessUpgradeCheckoutSession = async (userId, cancelPath = "/dashboard/academy", discountCode) => {
+  const user = await User.findById(userId).select("-password");
+  assertFound_default(user, "User not found", 404);
+  if (user.role === "admin" || user.accessTo === "both") {
+    throwError5("Your account already has access to both platforms.", 400);
+  }
+  if (user.membershipAccessStatus === "expired") {
+    throwError5("Renew your membership before upgrading platform access.", 400);
+  }
+  if (!isPaidRole(user.role)) {
+    throwError5("This role does not require an access upgrade payment.", 400);
+  }
+  const targetAccessTo = user.accessTo === "we_command_center" ? "invictus" : "we_command_center";
+  const originalAmountCents = targetAccessTo === "invictus" ? 29500 : 19500;
+  const discount = await discountService.validateDiscountCodeForCheckout({
+    code: discountCode,
+    role: user.role,
+    accessTo: user.accessTo,
+    userId: String(user._id)
+  });
+  const amountCents = discount ? Math.round(originalAmountCents * (1 - discount.discountPercent / 100)) : originalAmountCents;
+  const stripeClient = getStripeClient2();
+  const session = await stripeClient.checkout.sessions.create({
+    mode: "payment",
+    customer: user.stripeCustomerId || void 0,
+    customer_email: user.stripeCustomerId ? void 0 : user.email,
+    client_reference_id: String(user._id),
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: amountCents,
+          product_data: {
+            name: "W\xC9 Command Center + INVICTUS Academy access upgrade",
+            description: "Unlock the second platform for your current membership cycle."
+          }
+        }
+      }
+    ],
+    success_url: `${config_default.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config_default.FRONTEND_URL}${cancelPath}`,
+    metadata: {
+      userId: String(user._id),
+      role: user.role,
+      accessTo: user.accessTo,
+      targetAccessTo: "both",
+      purpose: "access_upgrade",
+      discountCode: discount?.code || "",
+      discountPercent: String(discount?.discountPercent ?? 0),
+      originalAmountCents: String(originalAmountCents),
+      finalAmountCents: String(amountCents)
+    }
+  });
+  if (!session.url)
+    throwError5("Stripe Checkout session could not be created.", 500);
+  await PaymentSession.create({
+    user: user._id,
+    role: user.role,
+    accessTo: "both",
+    purpose: "access_upgrade",
+    status: "pending",
+    stripeCheckoutSessionId: session.id,
+    stripeCustomerId: user.stripeCustomerId,
+    checkoutUrl: session.url,
+    amountTotal: amountCents,
+    originalAmountTotal: originalAmountCents,
+    discountAmountTotal: originalAmountCents - amountCents,
+    discountCode: discount?.code,
+    discountPercent: discount?.discountPercent,
+    currency: "usd"
+  });
+  return { checkoutUrl: session.url, sessionId: session.id };
+};
 var getSubscriptionPeriodEnd = (subscription) => {
   const subscriptionWithPeriod = subscription;
   if (!subscriptionWithPeriod.current_period_end) {
@@ -13703,6 +14010,42 @@ var activateUpgradePayment = async (session) => {
   }
   return User.findById(userId);
 };
+var activateAccessUpgradePayment = async (session) => {
+  const userId = session.metadata?.userId;
+  if (!userId) throwError5("User ID missing from payment metadata.", 400);
+  const payment = await PaymentSession.findOne({
+    stripeCheckoutSessionId: session.id
+  });
+  if (payment?.status === "paid") return User.findById(userId);
+  const user = await User.findById(userId);
+  assertFound_default(user, "User not found", 404);
+  await User.findByIdAndUpdate(userId, {
+    $set: { accessTo: "both" }
+  });
+  await PaymentSession.findOneAndUpdate(
+    { stripeCheckoutSessionId: session.id },
+    {
+      $set: {
+        status: "paid",
+        amountTotal: session.amount_total ?? void 0,
+        currency: session.currency ?? "usd"
+      }
+    }
+  );
+  const discountCode = session.metadata?.discountCode || void 0;
+  if (discountCode) {
+    await discountService.redeemDiscountCodeAfterPayment({
+      code: discountCode,
+      userId,
+      role: user.role,
+      accessTo: "both",
+      stripeCheckoutSessionId: session.id
+    }).catch(
+      (error) => console.error("[ACCESS UPGRADE DISCOUNT REDEEM FAILED]", error)
+    );
+  }
+  return User.findById(userId);
+};
 var getInvoiceSubscriptionId = (invoice) => {
   const invoiceWithSubscription = invoice;
   if (typeof invoiceWithSubscription.subscription === "string") {
@@ -13843,6 +14186,10 @@ var handleStripeWebhook = async (rawBody, signature) => {
         await activateUpgradePayment(session);
         break;
       }
+      if (purpose === "access_upgrade") {
+        await activateAccessUpgradePayment(session);
+        break;
+      }
       console.warn(
         `Unknown Stripe checkout purpose "${purpose}" for session ${session.id}`
       );
@@ -13876,6 +14223,8 @@ var verifyCheckoutSessionFromStripe = async (sessionId) => {
   const purpose = session.metadata?.purpose;
   if (purpose === "upgrade") {
     await activateUpgradePayment(session);
+  } else if (purpose === "access_upgrade") {
+    await activateAccessUpgradePayment(session);
   } else if (purpose === "invictus_purchase") {
     await invictusPaymentService.activateInvictusPurchase(session);
   } else {
@@ -13957,6 +14306,8 @@ var paymentService = {
   handleStripeWebhook,
   verifyCheckoutSessionFromStripe,
   getMyUpgradePlans,
+  getAccessUpgradePlan,
+  createAccessUpgradeCheckoutSession,
   getRegistrationPaymentDetails,
   createRegistrationCheckoutByToken,
   getPendingRegistrationPayments,
@@ -14087,9 +14438,7 @@ var getRegistrationPaymentDetails2 = async (req, res, next) => {
   try {
     const token = req.params.token;
     if (!token) {
-      throw new Error(
-        "Payment token is required"
-      );
+      throw new Error("Payment token is required");
     }
     const result = await paymentService.getRegistrationPaymentDetails(
       token
@@ -14108,9 +14457,7 @@ var createRegistrationCheckout = async (req, res, next) => {
   try {
     const token = req.params.token;
     if (!token) {
-      throw new Error(
-        "Payment token is required"
-      );
+      throw new Error("Payment token is required");
     }
     const result = await paymentService.createRegistrationCheckoutByToken(
       token,
@@ -14142,9 +14489,7 @@ var getPendingRegistrationPayments2 = async (_req, res, next) => {
 var getMyUpgradePlans2 = async (req, res, next) => {
   try {
     const userId = getAuthUserId(req);
-    const result = await paymentService.getMyUpgradePlans(
-      userId
-    );
+    const result = await paymentService.getMyUpgradePlans(userId);
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
@@ -14161,11 +14506,45 @@ var sendRegistrationPaymentLink = async (req, res, next) => {
     if (!linkId) {
       throw new Error("Payment link ID is required");
     }
-    const result = await paymentService.sendRegistrationPaymentLinkEmail(linkId);
+    const result = await paymentService.sendRegistrationPaymentLinkEmail(
+      linkId
+    );
     sendResponse_default(res, {
       statusCode: 200,
       success: true,
       message: "Payment link sent to user successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getAccessUpgradePlan2 = async (req, res, next) => {
+  try {
+    const result = await paymentService.getAccessUpgradePlan(
+      getAuthUserId(req)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Access upgrade plan retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var createAccessUpgradeCheckout = async (req, res, next) => {
+  try {
+    const result = await paymentService.createAccessUpgradeCheckoutSession(
+      getAuthUserId(req),
+      req.body?.cancelPath,
+      req.body?.discountCode
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Access upgrade checkout created successfully",
       data: result
     });
   } catch (error) {
@@ -14179,6 +14558,8 @@ var paymentController = {
   verifyCheckoutSession,
   stripeWebhook,
   getMyUpgradePlans: getMyUpgradePlans2,
+  getAccessUpgradePlan: getAccessUpgradePlan2,
+  createAccessUpgradeCheckout,
   getRegistrationPaymentDetails: getRegistrationPaymentDetails2,
   createRegistrationCheckout,
   getPendingRegistrationPayments: getPendingRegistrationPayments2,
@@ -14188,12 +14569,11 @@ var paymentController = {
 // src/modules/payment/payment.route.ts
 var router8 = Router8();
 router8.get("/pricing", paymentController.getAllPricingPlans);
-router8.get("/pricing/:role/:accessTo", paymentController.getPricingPlanByRoleAndAccess);
-router8.post(
-  "/upgrade",
-  verifyToken,
-  paymentController.createUpgradeCheckout
+router8.get(
+  "/pricing/:role/:accessTo",
+  paymentController.getPricingPlanByRoleAndAccess
 );
+router8.post("/upgrade", verifyToken, paymentController.createUpgradeCheckout);
 router8.get(
   "/verify-session/:sessionId",
   paymentController.verifyCheckoutSession
@@ -14209,15 +14589,19 @@ router8.post(
 router8.get(
   "/registration-pending",
   verifyToken,
-  authorizeRoles(
-    "founder"
-  ),
+  authorizeRoles("founder"),
   paymentController.getPendingRegistrationPayments
 );
+router8.get("/upgrade/plans", verifyToken, paymentController.getMyUpgradePlans);
 router8.get(
-  "/upgrade/plans",
+  "/access-upgrade/plan",
   verifyToken,
-  paymentController.getMyUpgradePlans
+  paymentController.getAccessUpgradePlan
+);
+router8.post(
+  "/access-upgrade/checkout",
+  verifyToken,
+  paymentController.createAccessUpgradeCheckout
 );
 router8.post(
   "/registration-link/:linkId/send",
@@ -14889,7 +15273,7 @@ var promoterRoutes = router11;
 import { Router as Router12 } from "express";
 
 // src/modules/dashboardAnalytics/dashboard.analytics.services.ts
-import { Types as Types24 } from "mongoose";
+import { Types as Types25 } from "mongoose";
 var FULL_ANALYTICS_ACCESS_ROLES = [
   "manager",
   "founder"
@@ -14900,7 +15284,7 @@ var FULL_ANALYTICS_ACCESS_ROLES = [
 var hasFullAnalyticsAccess = (role) => FULL_ANALYTICS_ACCESS_ROLES.includes(role);
 var isAdminOrManager5 = (role) => role === "manager" || role === "founder";
 var getDashboardStats = async (userId, role) => {
-  const ownerId = new Types24.ObjectId(userId);
+  const ownerId = new Types25.ObjectId(userId);
   const isPrivileged = isAdminOrManager5(role);
   const listingMatch = isPrivileged ? {} : { associate_id: ownerId };
   const commissionMatch = {
@@ -15000,7 +15384,7 @@ var getTopPromoters = async () => {
   ]);
 };
 var getListingsViewsAnalytics = async (userId, role) => {
-  const ownerId = new Types24.ObjectId(userId);
+  const ownerId = new Types25.ObjectId(userId);
   const canViewAllAnalytics = hasFullAnalyticsAccess(role);
   const listingMatch = canViewAllAnalytics ? {} : {
     associate_id: ownerId
@@ -15392,7 +15776,7 @@ var invictusAccessMiddleware_default = requireInvictusAccess;
 
 // src/modules/challengePillars/challenge.pillar.service.ts
 init_challenge_pillar_model_schema();
-import { Types as Types25 } from "mongoose";
+import { Types as Types26 } from "mongoose";
 var throwServiceError6 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -15453,12 +15837,12 @@ var createChallengePillar = async (payload, actorId) => {
       ...payload.introVideo
     },
     status: "draft",
-    createdBy: new Types25.ObjectId(actorId)
+    createdBy: new Types26.ObjectId(actorId)
   });
   return pillar;
 };
 var seedDefaultChallengePillars = async (actorId) => {
-  const createdBy = new Types25.ObjectId(actorId);
+  const createdBy = new Types26.ObjectId(actorId);
   const defaultPillars = [
     {
       name: "FEARLESS",
@@ -15595,7 +15979,7 @@ var updateChallengePillar = async (pillarId, payload, actorId) => {
       ...payload.introVideo
     });
   }
-  pillar.updatedBy = new Types25.ObjectId(actorId);
+  pillar.updatedBy = new Types26.ObjectId(actorId);
   await pillar.save();
   return pillar.populate("updatedBy", "fullName email role profileImage");
 };
@@ -15613,7 +15997,7 @@ var publishChallengePillar = async (pillarId, actorId) => {
   pillar.status = "published";
   pillar.publishedAt = /* @__PURE__ */ new Date();
   pillar.archivedAt = void 0;
-  pillar.updatedBy = new Types25.ObjectId(actorId);
+  pillar.updatedBy = new Types26.ObjectId(actorId);
   await pillar.save();
   return pillar;
 };
@@ -15625,7 +16009,7 @@ var moveChallengePillarToDraft = async (pillarId, actorId) => {
   }
   pillar.status = "draft";
   pillar.publishedAt = void 0;
-  pillar.updatedBy = new Types25.ObjectId(actorId);
+  pillar.updatedBy = new Types26.ObjectId(actorId);
   await pillar.save();
   return pillar;
 };
@@ -15635,7 +16019,7 @@ var archiveChallengePillar = async (pillarId, actorId) => {
   pillar.status = "archived";
   pillar.archivedAt = /* @__PURE__ */ new Date();
   pillar.publishedAt = void 0;
-  pillar.updatedBy = new Types25.ObjectId(actorId);
+  pillar.updatedBy = new Types26.ObjectId(actorId);
   await pillar.save();
   return pillar;
 };
@@ -16006,7 +16390,7 @@ import { Router as Router14 } from "express";
 init_challenge_pillar_model_schema();
 init_course_module_model_schema();
 init_module_video_model_schema();
-import { Types as Types26 } from "mongoose";
+import { Types as Types27 } from "mongoose";
 var throwServiceError7 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -16048,7 +16432,7 @@ var createCourseModule = async (payload, actorId) => {
   }
   const courseModule = await CourseModule.create({
     ...payload,
-    pillar: new Types26.ObjectId(payload.pillar),
+    pillar: new Types27.ObjectId(payload.pillar),
     estimatedDurationMinutes: payload.estimatedDurationMinutes ?? 0,
     minimumVideoPercent: payload.minimumVideoPercent ?? 80,
     minimumActionPercent: payload.minimumActionPercent ?? 80,
@@ -16056,7 +16440,7 @@ var createCourseModule = async (payload, actorId) => {
     maximumQuizAttempts: payload.maximumQuizAttempts ?? 2,
     completionPoints: payload.completionPoints ?? 20,
     status: "draft",
-    createdBy: new Types26.ObjectId(actorId)
+    createdBy: new Types27.ObjectId(actorId)
   });
   return courseModule.populate([
     {
@@ -16076,7 +16460,7 @@ var getAllCourseModules = async ({
 }) => {
   const filter = {};
   if (pillarId) {
-    filter.pillar = new Types26.ObjectId(pillarId);
+    filter.pillar = new Types27.ObjectId(pillarId);
   }
   if (!isAdminOrManager7(actorRole)) {
     filter.status = "published";
@@ -16236,7 +16620,7 @@ var updateCourseModule = async (moduleId, payload, actorId) => {
   if (payload.completionPoints !== void 0) {
     courseModule.completionPoints = payload.completionPoints;
   }
-  courseModule.updatedBy = new Types26.ObjectId(actorId);
+  courseModule.updatedBy = new Types27.ObjectId(actorId);
   await courseModule.save();
   return courseModule.populate([
     {
@@ -16272,7 +16656,7 @@ var publishCourseModule = async (moduleId, actorId) => {
   courseModule.status = "published";
   courseModule.publishedAt = /* @__PURE__ */ new Date();
   courseModule.archivedAt = void 0;
-  courseModule.updatedBy = new Types26.ObjectId(actorId);
+  courseModule.updatedBy = new Types27.ObjectId(actorId);
   await courseModule.save();
   return courseModule;
 };
@@ -16287,7 +16671,7 @@ var moveCourseModuleToDraft = async (moduleId, actorId) => {
   }
   courseModule.status = "draft";
   courseModule.publishedAt = void 0;
-  courseModule.updatedBy = new Types26.ObjectId(actorId);
+  courseModule.updatedBy = new Types27.ObjectId(actorId);
   await courseModule.save();
   return courseModule;
 };
@@ -16300,7 +16684,7 @@ var archiveCourseModule = async (moduleId, actorId) => {
   courseModule.status = "archived";
   courseModule.archivedAt = /* @__PURE__ */ new Date();
   courseModule.publishedAt = void 0;
-  courseModule.updatedBy = new Types26.ObjectId(actorId);
+  courseModule.updatedBy = new Types27.ObjectId(actorId);
   await courseModule.save();
   return courseModule;
 };
@@ -16779,9 +17163,10 @@ var getUploadedFieldFile = (req, fieldName) => {
 
 // src/modules/moduleVideos/module.video.service.ts
 init_course_module_model_schema();
+init_module_progress_model_schema();
 init_module_video_model_schema();
 init_userEntitlements_service();
-import { Types as Types27 } from "mongoose";
+import { Types as Types28 } from "mongoose";
 var throwServiceError8 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -16826,17 +17211,38 @@ var syncModuleDuration = async (moduleId) => {
     {
       $group: {
         _id: null,
-        totalDurationSeconds: { $sum: "$durationSeconds" }
+        totalDurationSeconds: { $sum: "$durationSeconds" },
+        count: { $sum: 1 }
       }
     }
   ]);
+  const publishedCount = result[0]?.count ?? 0;
+  const totalDurationSeconds = result[0]?.totalDurationSeconds ?? 0;
   await CourseModule.findByIdAndUpdate(moduleId, {
     $set: {
-      estimatedDurationMinutes: Math.ceil(
-        (result[0]?.totalDurationSeconds ?? 0) / 60
-      )
+      estimatedDurationMinutes: Math.ceil(totalDurationSeconds / 60)
     }
   });
+  if (publishedCount === 0) {
+    await ModuleProgress.updateMany(
+      { module: moduleId },
+      {
+        $set: {
+          "videoSummary.totalRequired": 0,
+          "videoSummary.completedRequired": 0,
+          "videoSummary.completionPercent": 0,
+          "videoSummary.completed": false,
+          actionsUnlocked: false,
+          quizUnlocked: false,
+          "quizSummary.status": "locked",
+          overallCompletionPercent: 0,
+          isCompleted: false,
+          completedAt: null,
+          lastCalculatedAt: /* @__PURE__ */ new Date()
+        }
+      }
+    );
+  }
 };
 var createModuleVideo = async (moduleId, payload, actorId) => {
   await ensureCourseModuleExists(moduleId);
@@ -16854,7 +17260,7 @@ var createModuleVideo = async (moduleId, payload, actorId) => {
     );
   }
   const createData = {
-    module: new Types27.ObjectId(moduleId),
+    module: new Types28.ObjectId(moduleId),
     title: payload.title,
     slug: payload.slug,
     provider: "cloudinary",
@@ -16869,7 +17275,7 @@ var createModuleVideo = async (moduleId, payload, actorId) => {
     order: payload.order,
     uploadStatus: payload.uploadStatus ?? "ready",
     status: "draft",
-    uploadedBy: new Types27.ObjectId(actorId)
+    uploadedBy: new Types28.ObjectId(actorId)
   };
   const optionalValues = [
     ["description", payload.description],
@@ -16911,7 +17317,7 @@ var getAllModuleVideos = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    filter.module = new Types27.ObjectId(moduleId);
+    filter.module = new Types28.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager8(actorRole);
   if (!isPrivileged) {
@@ -16943,7 +17349,7 @@ var getVideosByModule = async (moduleId, actorRole) => {
   const courseModule = await CourseModule.findOne(moduleFilter).populate("pillar", "name slug title isPaid priceCents currency status").lean();
   assertFound6(courseModule, "Course module not found or unavailable", 404);
   const filter = {
-    module: new Types27.ObjectId(moduleId)
+    module: new Types28.ObjectId(moduleId)
   };
   const isPrivileged = isAdminOrManager8(actorRole);
   if (!isPrivileged) {
@@ -17105,7 +17511,7 @@ var updateModuleVideo = async (videoId, payload, actorId) => {
   setNullableField(video, "bytes", payload.bytes);
   setNullableField(video, "width", payload.width);
   setNullableField(video, "height", payload.height);
-  video.updatedBy = new Types27.ObjectId(actorId);
+  video.updatedBy = new Types28.ObjectId(actorId);
   await video.save();
   await syncModuleDuration(video.module);
   return video.populate([
@@ -17144,7 +17550,7 @@ var publishModuleVideo = async (videoId, actorId) => {
   video.status = "published";
   video.publishedAt = /* @__PURE__ */ new Date();
   video.set("archivedAt", void 0);
-  video.updatedBy = new Types27.ObjectId(actorId);
+  video.updatedBy = new Types28.ObjectId(actorId);
   await video.save();
   await syncModuleDuration(video.module);
   return video;
@@ -17157,7 +17563,7 @@ var moveModuleVideoToDraft = async (videoId, actorId) => {
   }
   video.status = "draft";
   video.set("publishedAt", void 0);
-  video.updatedBy = new Types27.ObjectId(actorId);
+  video.updatedBy = new Types28.ObjectId(actorId);
   await video.save();
   await syncModuleDuration(video.module);
   return video;
@@ -17168,7 +17574,7 @@ var archiveModuleVideo = async (videoId, actorId) => {
   video.status = "archived";
   video.archivedAt = /* @__PURE__ */ new Date();
   video.set("publishedAt", void 0);
-  video.updatedBy = new Types27.ObjectId(actorId);
+  video.updatedBy = new Types28.ObjectId(actorId);
   await video.save();
   await syncModuleDuration(video.module);
   return video;
@@ -17563,7 +17969,7 @@ import { Router as Router16 } from "express";
 init_course_module_model_schema();
 init_module_resource_model_schema();
 init_userEntitlements_service();
-import { Types as Types28 } from "mongoose";
+import { Types as Types29 } from "mongoose";
 var throwServiceError9 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -17642,7 +18048,7 @@ var createModuleResource = async (moduleId, payload, actorId) => {
     );
   }
   const createData = {
-    module: new Types28.ObjectId(moduleId),
+    module: new Types29.ObjectId(moduleId),
     title: payload.title,
     slug: payload.slug,
     resourceType: payload.resourceType,
@@ -17651,7 +18057,7 @@ var createModuleResource = async (moduleId, payload, actorId) => {
     pointsReward: payload.pointsReward ?? 5,
     order: payload.order,
     status: "draft",
-    createdBy: new Types28.ObjectId(actorId)
+    createdBy: new Types29.ObjectId(actorId)
   };
   const optionalValues = [
     ["description", payload.description],
@@ -17695,7 +18101,7 @@ var getAllModuleResources = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    filter.module = new Types28.ObjectId(moduleId);
+    filter.module = new Types29.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager9(actorRole);
   if (!isPrivileged) {
@@ -17737,7 +18143,7 @@ var getResourcesByModule = async (moduleId, actorRole, userId) => {
     }
   }
   const filter = {
-    module: new Types28.ObjectId(moduleId)
+    module: new Types29.ObjectId(moduleId)
   };
   const isPrivileged = isAdminOrManager9(actorRole);
   if (!isPrivileged) {
@@ -17841,7 +18247,7 @@ var updateModuleResource = async (resourceId, payload, actorId) => {
   setNullableField2(resource, "secureUrl", payload.secureUrl);
   setNullableField2(resource, "externalUrl", payload.externalUrl);
   setNullableField2(resource, "thumbnailUrl", payload.thumbnailUrl);
-  resource.updatedBy = new Types28.ObjectId(actorId);
+  resource.updatedBy = new Types29.ObjectId(actorId);
   await resource.save();
   return resource.populate([
     {
@@ -17882,7 +18288,7 @@ var publishModuleResource = async (resourceId, actorId) => {
   resource.status = "published";
   resource.publishedAt = /* @__PURE__ */ new Date();
   resource.set("archivedAt", void 0);
-  resource.updatedBy = new Types28.ObjectId(actorId);
+  resource.updatedBy = new Types29.ObjectId(actorId);
   await resource.save();
   return resource;
 };
@@ -17894,7 +18300,7 @@ var moveModuleResourceToDraft = async (resourceId, actorId) => {
   }
   resource.status = "draft";
   resource.set("publishedAt", void 0);
-  resource.updatedBy = new Types28.ObjectId(actorId);
+  resource.updatedBy = new Types29.ObjectId(actorId);
   await resource.save();
   return resource;
 };
@@ -17904,7 +18310,7 @@ var archiveModuleResource = async (resourceId, actorId) => {
   resource.status = "archived";
   resource.archivedAt = /* @__PURE__ */ new Date();
   resource.set("publishedAt", void 0);
-  resource.updatedBy = new Types28.ObjectId(actorId);
+  resource.updatedBy = new Types29.ObjectId(actorId);
   await resource.save();
   return resource;
 };
@@ -18285,7 +18691,7 @@ import { Router as Router17 } from "express";
 init_course_module_model_schema();
 init_userEntitlements_service();
 init_quiz_question_model_schema();
-import { Types as Types29 } from "mongoose";
+import { Types as Types30 } from "mongoose";
 var MAX_QUESTIONS_PER_MODULE = 5;
 var throwServiceError10 = (message, statusCode) => {
   const error = new Error(message);
@@ -18298,7 +18704,7 @@ var assertFound8 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId8 = (value, fieldName) => {
-  if (!Types29.ObjectId.isValid(value)) {
+  if (!Types30.ObjectId.isValid(value)) {
     throwServiceError10(`${fieldName} is invalid`, 400);
   }
 };
@@ -18400,12 +18806,12 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
     throwServiceError10("Question order already exists in this module", 409);
   }
   const createData = {
-    module: new Types29.ObjectId(moduleId),
+    module: new Types30.ObjectId(moduleId),
     question: payload.question,
     questionType: payload.questionType,
     order: payload.order,
     status: "draft",
-    createdBy: new Types29.ObjectId(actorId)
+    createdBy: new Types30.ObjectId(actorId)
   };
   if (payload.questionType === "true_false") {
     createData.correctBooleanAnswer = payload.correctBooleanAnswer;
@@ -18448,7 +18854,7 @@ var getAllQuizQuestions = async ({
   const filter = {};
   if (moduleId) {
     assertValidObjectId8(moduleId, "Course module ID");
-    filter.module = new Types29.ObjectId(moduleId);
+    filter.module = new Types30.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager10(actorRole);
   if (!isPrivileged) {
@@ -18506,7 +18912,7 @@ var getQuestionsByModule = async (moduleId, actorRole, userId) => {
     }
   }
   const questionFilter = {
-    module: new Types29.ObjectId(moduleId)
+    module: new Types30.ObjectId(moduleId)
   };
   if (!isPrivileged) {
     questionFilter.status = "published";
@@ -18629,7 +19035,7 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
   if (payload.order !== void 0) {
     question.order = payload.order;
   }
-  question.updatedBy = new Types29.ObjectId(actorId);
+  question.updatedBy = new Types30.ObjectId(actorId);
   try {
     await question.save();
   } catch (error) {
@@ -18678,7 +19084,7 @@ var publishQuizQuestion = async (questionId, actorId) => {
   question.status = "published";
   question.publishedAt = /* @__PURE__ */ new Date();
   question.set("archivedAt", void 0);
-  question.updatedBy = new Types29.ObjectId(actorId);
+  question.updatedBy = new Types30.ObjectId(actorId);
   await question.save();
   return question;
 };
@@ -18691,7 +19097,7 @@ var moveQuizQuestionToDraft = async (questionId, actorId) => {
   }
   question.status = "draft";
   question.set("publishedAt", void 0);
-  question.updatedBy = new Types29.ObjectId(actorId);
+  question.updatedBy = new Types30.ObjectId(actorId);
   await question.save();
   return question;
 };
@@ -18702,7 +19108,7 @@ var archiveQuizQuestion = async (questionId, actorId) => {
   question.status = "archived";
   question.archivedAt = /* @__PURE__ */ new Date();
   question.set("publishedAt", void 0);
-  question.updatedBy = new Types29.ObjectId(actorId);
+  question.updatedBy = new Types30.ObjectId(actorId);
   await question.save();
   return question;
 };
@@ -19087,7 +19493,7 @@ import { Router as Router18 } from "express";
 init_course_module_model_schema();
 init_module_action_model_schema();
 import {
-  Types as Types30
+  Types as Types31
 } from "mongoose";
 var throwServiceError11 = (message, statusCode) => {
   const error = new Error(
@@ -19105,7 +19511,7 @@ var assertFound9 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId9 = (value, fieldName) => {
-  if (!Types30.ObjectId.isValid(value)) {
+  if (!Types31.ObjectId.isValid(value)) {
     throwServiceError11(
       `${fieldName} is invalid`,
       400
@@ -19154,13 +19560,13 @@ var createModuleAction = async (moduleId, payload, actorId) => {
     );
   }
   const createData = {
-    module: new Types30.ObjectId(moduleId),
+    module: new Types31.ObjectId(moduleId),
     title: payload.title,
     order: payload.order,
     isRequired: payload.isRequired ?? true,
     pointsReward: payload.pointsReward ?? 5,
     status: "draft",
-    createdBy: new Types30.ObjectId(actorId)
+    createdBy: new Types31.ObjectId(actorId)
   };
   if (payload.description !== void 0) {
     createData.description = payload.description;
@@ -19205,7 +19611,7 @@ var getAllModuleActions = async ({
       moduleId,
       "Course module ID"
     );
-    filter.module = new Types30.ObjectId(moduleId);
+    filter.module = new Types31.ObjectId(moduleId);
   }
   if (!isAdminOrManager11(actorRole)) {
     filter.status = "published";
@@ -19257,7 +19663,7 @@ var getActionsByModule = async (moduleId, actorRole) => {
     404
   );
   const actionFilter = {
-    module: new Types30.ObjectId(moduleId)
+    module: new Types31.ObjectId(moduleId)
   };
   if (!isPrivileged) {
     actionFilter.status = "published";
@@ -19367,7 +19773,7 @@ var updateModuleAction = async (actionId, payload, actorId) => {
   if (payload.pointsReward !== void 0) {
     action.pointsReward = payload.pointsReward;
   }
-  action.updatedBy = new Types30.ObjectId(actorId);
+  action.updatedBy = new Types31.ObjectId(actorId);
   try {
     await action.save();
   } catch (error) {
@@ -19434,7 +19840,7 @@ var publishModuleAction = async (actionId, actorId) => {
     "archivedAt",
     void 0
   );
-  action.updatedBy = new Types30.ObjectId(actorId);
+  action.updatedBy = new Types31.ObjectId(actorId);
   await action.save();
   return action;
 };
@@ -19462,7 +19868,7 @@ var moveModuleActionToDraft = async (actionId, actorId) => {
     "publishedAt",
     void 0
   );
-  action.updatedBy = new Types30.ObjectId(actorId);
+  action.updatedBy = new Types31.ObjectId(actorId);
   await action.save();
   return action;
 };
@@ -19485,7 +19891,7 @@ var archiveModuleAction = async (actionId, actorId) => {
     "publishedAt",
     void 0
   );
-  action.updatedBy = new Types30.ObjectId(actorId);
+  action.updatedBy = new Types31.ObjectId(actorId);
   await action.save();
   return action;
 };
@@ -19817,6 +20223,62 @@ import { Router as Router19 } from "express";
 
 // src/modules/room/room.controller.ts
 init_users_model_schema();
+var getPrivateRoomsHandler = async (req, res, next) => {
+  try {
+    const rooms = await getPrivateRoomsForUser(
+      String(req.user?.id ?? ""),
+      String(req.user?.role ?? "")
+    );
+    res.status(200).json({ success: true, data: rooms });
+  } catch (error) {
+    next(error);
+  }
+};
+var getPrivateRoomHandler = async (req, res, next) => {
+  try {
+    const userId = String(req.user?.id ?? "");
+    const room = await getPrivateRoom(
+      String(req.params.slug),
+      userId,
+      String(req.user?.role ?? "")
+    );
+    res.status(200).json({ success: true, data: room });
+  } catch (error) {
+    next(error);
+  }
+};
+var invitePrivateRoomMemberHandler = async (req, res, next) => {
+  try {
+    await ensurePrivateRooms(String(req.user?.id ?? req.params.userId));
+    const target = await User.findById(req.params.userId).select("fullName email").lean();
+    if (!target) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+    const definition2 = PRIVATE_ROOM_DEFINITIONS.find(
+      (room) => room.slug === req.params.slug
+    );
+    if (!definition2) {
+      res.status(404).json({ success: false, message: "Private room not found" });
+      return;
+    }
+    await addPrivateRoomMember(definition2.slug, target._id.toString());
+    const link = `${config_default.FRONTEND_URL}/invictus/community-rooms/private?room=${encodeURIComponent(definition2.slug)}`;
+    await sendCustomMail_default({
+      to: target.email,
+      subject: `Invitation to ${definition2.name}`,
+      text: `You have been invited to ${definition2.name}: ${link}`,
+      html: `<p>Hello ${target.fullName},</p><p>You have been invited to join <strong>${definition2.name}</strong>.</p><p><a href="${link}">Open the private community room</a></p><p>Sign in to Invictus first if required.</p>`
+    });
+    res.status(200).json({
+      success: true,
+      message: `Invitation sent to ${target.email}`,
+      data: { room: definition2, link }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var getGeneralRoomHandler = async (req, res, next) => {
   try {
     const userId = req.user?.id;
@@ -19840,7 +20302,6 @@ var getCountryRoomHandler = async (req, res, next) => {
       res.status(401).json({ success: false, message: "Authentication required" });
       return;
     }
-    const canChooseAnyRoom = req.user?.role === "founder" || req.user?.role === "admin" || req.user?.role === "manager";
     const countryName = req.query.countryName;
     if (typeof countryName !== "string" || !countryName.trim()) {
       res.status(400).json({
@@ -19849,17 +20310,17 @@ var getCountryRoomHandler = async (req, res, next) => {
       });
       return;
     }
-    if (!canChooseAnyRoom) {
-      const userDoc = await User.findById(userId).select("country");
-      const userCountry = resolveCountry(userDoc?.country);
-      const requestedCountry = resolveCountry(countryName);
-      if (!userCountry || !requestedCountry || userCountry.code !== requestedCountry.code) {
-        res.status(403).json({
-          success: false,
-          message: "You can only access your own country room"
-        });
-        return;
-      }
+    const access = await getCountryRoomAccess(
+      String(userId),
+      String(req.user?.role ?? ""),
+      countryName
+    );
+    if (!access.canEnter) {
+      res.status(403).json({
+        success: false,
+        message: "You do not have access to this country room"
+      });
+      return;
     }
     const room = await getOrCreateCountryRoom(
       countryName,
@@ -19873,11 +20334,92 @@ var getCountryRoomHandler = async (req, res, next) => {
     next(error);
   }
 };
+var getCountryRoomAccessHandler = async (req, res, next) => {
+  try {
+    const userId = String(req.user?.id ?? "");
+    const countryName = String(req.query.countryName ?? "");
+    const result = await getCountryRoomAccess(
+      userId,
+      String(req.user?.role ?? ""),
+      countryName
+    );
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+var requestCountryRoomHandler = async (req, res, next) => {
+  try {
+    const request = await createCountryRoomRequest(
+      String(req.user?.id ?? ""),
+      String(req.body.countryName ?? "")
+    );
+    res.status(201).json({ success: true, data: request });
+  } catch (error) {
+    next(error);
+  }
+};
+var getMyCountryRoomRequestsHandler = async (req, res, next) => {
+  try {
+    const requests = await getMyCountryRoomRequests(String(req.user?.id ?? ""));
+    res.status(200).json({ success: true, data: requests });
+  } catch (error) {
+    next(error);
+  }
+};
+var getCountryRoomRequestsForReviewHandler = async (req, res, next) => {
+  try {
+    const requests = await getCountryRoomRequestsForReview();
+    res.status(200).json({ success: true, data: requests });
+  } catch (error) {
+    next(error);
+  }
+};
+var reviewCountryRoomRequestHandler = async (req, res, next) => {
+  try {
+    const status = req.body.status;
+    if (status !== "approved" && status !== "rejected") {
+      res.status(400).json({ success: false, message: "Invalid review status" });
+      return;
+    }
+    const request = await reviewCountryRoomRequest(
+      String(req.params.id),
+      String(req.user?.id ?? ""),
+      status
+    );
+    res.status(200).json({ success: true, data: request });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // src/modules/room/room.route.ts
 var router19 = Router19();
 router19.get("/general", verifyToken, getGeneralRoomHandler);
 router19.get("/country", verifyToken, getCountryRoomHandler);
+router19.get("/country/access", verifyToken, getCountryRoomAccessHandler);
+router19.post("/country/requests", verifyToken, requestCountryRoomHandler);
+router19.get("/country/requests/me", verifyToken, getMyCountryRoomRequestsHandler);
+router19.get(
+  "/country/requests",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  getCountryRoomRequestsForReviewHandler
+);
+router19.patch(
+  "/country/requests/:id",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  reviewCountryRoomRequestHandler
+);
+router19.get("/private/:slug", verifyToken, getPrivateRoomHandler);
+router19.get("/private", verifyToken, getPrivateRoomsHandler);
+router19.post(
+  "/private/:slug/invite/:userId",
+  verifyToken,
+  authorizeRoles("founder"),
+  invitePrivateRoomMemberHandler
+);
 var room_route_default = router19;
 
 // src/modules/message/message.route.ts
@@ -19889,6 +20431,16 @@ var getMessageHistoryHandler = async (req, res, next) => {
     const { roomId } = req.params;
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 100;
+    const room = await Room.findById(roomId).select("type members").lean();
+    if (!room) {
+      res.status(404).json({ success: false, message: "Room not found" });
+      return;
+    }
+    const isPrivilegedPrivateRoomUser = canAccessEveryPrivateRoom(req.user?.role);
+    if (room.type === "private" && !isPrivilegedPrivateRoomUser && !room.members.some((member) => String(member) === String(req.user?.id))) {
+      res.status(403).json({ success: false, message: "You are not a member of this private room" });
+      return;
+    }
     const messages = await getMessageHistory(roomId, page, limit);
     res.status(200).json({
       success: true,
@@ -19911,8 +20463,8 @@ var message_route_default = router20;
 import { Router as Router21 } from "express";
 
 // src/modules/manageLogo/logo.model.schema.ts
-import { model as model31, Schema as Schema31 } from "mongoose";
-var logoSchema = new Schema31(
+import { model as model33, Schema as Schema33 } from "mongoose";
+var logoSchema = new Schema33(
   {
     logo: {
       type: String,
@@ -19921,7 +20473,7 @@ var logoSchema = new Schema31(
     }
   }
 );
-var logo = model31("logo", logoSchema);
+var logo = model33("logo", logoSchema);
 
 // src/modules/manageLogo/logo.service.ts
 var uploadLogoIntoDB = async (userId, file) => {
@@ -20044,25 +20596,25 @@ var LogoRoutes = router21;
 import { Router as Router22 } from "express";
 
 // src/modules/academyProfiles/academy.profile.service.ts
-import { Types as Types31 } from "mongoose";
+import { Types as Types32 } from "mongoose";
 
 // src/modules/academyProfiles/academy.profile.model.schema.ts
-import { Schema as Schema32, model as model32 } from "mongoose";
-var AcademyProfileSchema = new Schema32(
+import { Schema as Schema34, model as model34 } from "mongoose";
+var AcademyProfileSchema = new Schema34(
   {
     user: {
-      type: Schema32.Types.ObjectId,
+      type: Schema34.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
       index: true
     },
     mentor: {
-      type: Schema32.Types.ObjectId,
+      type: Schema34.Types.ObjectId,
       ref: "User"
     },
     currentPillar: {
-      type: Schema32.Types.ObjectId,
+      type: Schema34.Types.ObjectId,
       ref: "ChallengePillar"
     },
     academyName: {
@@ -20119,7 +20671,7 @@ var AcademyProfileSchema = new Schema32(
     timestamps: true
   }
 );
-var AcademyProfile = model32(
+var AcademyProfile = model34(
   "AcademyProfile",
   AcademyProfileSchema
 );
@@ -20143,14 +20695,14 @@ var createProfile = async (userId, payload) => {
     throwServiceError12("Academy profile already exists", 409);
   }
   const profile = await AcademyProfile.create({
-    user: new Types31.ObjectId(userId),
+    user: new Types32.ObjectId(userId),
     ...payload
   });
   return profile;
 };
 var getMyProfile2 = async (userId) => {
   const filter = {
-    user: new Types31.ObjectId(userId)
+    user: new Types32.ObjectId(userId)
   };
   const profile = await AcademyProfile.findOne(filter).populate("currentPillar", "name slug title").populate("mentor", "fullName email profileImage").lean();
   assertFound10(profile, "Academy profile not found", 404);
@@ -20158,7 +20710,7 @@ var getMyProfile2 = async (userId) => {
 };
 var updateProfile = async (userId, payload) => {
   const profile = await AcademyProfile.findOne({
-    user: new Types31.ObjectId(userId)
+    user: new Types32.ObjectId(userId)
   });
   assertFound10(profile, "Academy profile not found", 404);
   if (payload.academyName !== void 0)
@@ -20669,12 +21221,12 @@ init_userEntitlements_service();
 init_video_progress_model_schema();
 init_throwServiceError();
 init_assertFound();
-import { Types as Types33 } from "mongoose";
+import { Types as Types34 } from "mongoose";
 var MAX_HEARTBEAT_SEGMENT_SECONDS = 60;
 var VIDEO_DURATION_TOLERANCE_SECONDS = 5;
 var RANGE_MERGE_TOLERANCE_SECONDS = 0.5;
 var assertValidObjectId11 = (value, fieldName) => {
-  if (!Types33.ObjectId.isValid(value)) {
+  if (!Types34.ObjectId.isValid(value)) {
     throwServiceError_default(`${fieldName} is invalid`, 400);
   }
 };
@@ -20867,8 +21419,8 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
     durationSeconds
   );
   const progressFilter = {
-    user: new Types33.ObjectId(userId),
-    video: new Types33.ObjectId(videoId)
+    user: new Types34.ObjectId(userId),
+    video: new Types34.ObjectId(videoId)
   };
   let progress = await VideoProgress.findOne(progressFilter);
   const now = /* @__PURE__ */ new Date();
@@ -20881,8 +21433,8 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
     );
     const isCompleted = watchPercent2 >= requiredWatchPercent;
     const createData = {
-      user: new Types33.ObjectId(userId),
-      video: new Types33.ObjectId(videoId),
+      user: new Types34.ObjectId(userId),
+      video: new Types34.ObjectId(videoId),
       module: courseModule._id,
       durationSecondsSnapshot: durationSeconds,
       requiredWatchPercentSnapshot: requiredWatchPercent,
@@ -20970,8 +21522,8 @@ var getMyVideoProgress = async (userId, videoId) => {
   assertValidObjectId11(userId, "User ID");
   const { video, courseModule } = await ensureVideoIsAvailable(videoId);
   const filter = {
-    user: new Types33.ObjectId(userId),
-    video: new Types33.ObjectId(videoId)
+    user: new Types34.ObjectId(userId),
+    video: new Types34.ObjectId(videoId)
   };
   const progress = await VideoProgress.findOne(filter);
   return {
@@ -21031,7 +21583,7 @@ var getMyModuleVideoProgress = async (userId, moduleId) => {
     throwServiceError_default("Course module is not published", 403);
   }
   const videos = await ModuleVideo.find({
-    module: new Types33.ObjectId(moduleId),
+    module: new Types34.ObjectId(moduleId),
     status: "published"
   }).select(
     [
@@ -21049,8 +21601,8 @@ var getMyModuleVideoProgress = async (userId, moduleId) => {
   ).sort({ order: 1 }).lean();
   const videoIds = videos.map((video) => video._id);
   const progressFilter = {
-    user: new Types33.ObjectId(userId),
-    module: new Types33.ObjectId(moduleId),
+    user: new Types34.ObjectId(userId),
+    module: new Types34.ObjectId(moduleId),
     video: {
       $in: videoIds
     }
@@ -21084,10 +21636,10 @@ var getMyModuleVideoProgress = async (userId, moduleId) => {
   const completedRequiredVideos = requiredVideos.filter(
     (video) => video.progress.isCompleted
   ).length;
-  const requiredVideoCompletionPercent = requiredVideos.length === 0 ? 100 : roundToTwoDecimalPlaces(
+  const requiredVideoCompletionPercent = requiredVideos.length === 0 ? 0 : roundToTwoDecimalPlaces(
     completedRequiredVideos / requiredVideos.length * 100
   );
-  const allRequiredVideosCompleted = requiredVideos.length === 0 || completedRequiredVideos === requiredVideos.length;
+  const allRequiredVideosCompleted = requiredVideos.length > 0 && completedRequiredVideos === requiredVideos.length;
   return {
     module: courseModule,
     summary: {
@@ -21106,7 +21658,7 @@ var getMyAllVideoProgress = async (userId) => {
     status: "published"
   }).distinct("_id");
   const filter = {
-    user: new Types33.ObjectId(userId),
+    user: new Types34.ObjectId(userId),
     video: { $in: publishedVideoIds }
   };
   return VideoProgress.find(filter).sort({
@@ -21138,15 +21690,15 @@ var getAllVideoProgress = async (query) => {
   const filter = {};
   if (query.userId) {
     assertValidObjectId11(query.userId, "User ID");
-    filter.user = new Types33.ObjectId(query.userId);
+    filter.user = new Types34.ObjectId(query.userId);
   }
   if (query.videoId) {
     assertValidObjectId11(query.videoId, "Module video ID");
-    filter.video = new Types33.ObjectId(query.videoId);
+    filter.video = new Types34.ObjectId(query.videoId);
   }
   if (query.moduleId) {
     assertValidObjectId11(query.moduleId, "Course module ID");
-    filter.module = new Types33.ObjectId(query.moduleId);
+    filter.module = new Types34.ObjectId(query.moduleId);
   }
   if (query.isCompleted !== void 0) {
     filter.isCompleted = query.isCompleted;
@@ -21652,14 +22204,14 @@ import { Router as Router26 } from "express";
 // src/modules/quizAttempts/quiz.attempt.service.ts
 init_course_module_model_schema();
 init_module_progress_service();
-import { Types as Types34 } from "mongoose";
+import { Types as Types35 } from "mongoose";
 
 // src/modules/quizAttempts/quiz.attempt.model.schema.ts
-import { model as model35, Schema as Schema35 } from "mongoose";
-var quizAttemptAnswerSchema = new Schema35(
+import { model as model36, Schema as Schema36 } from "mongoose";
+var quizAttemptAnswerSchema = new Schema36(
   {
     question: {
-      type: Schema35.Types.ObjectId,
+      type: Schema36.Types.ObjectId,
       ref: "QuizQuestion",
       required: true
     },
@@ -21684,16 +22236,16 @@ var quizAttemptAnswerSchema = new Schema35(
     _id: false
   }
 );
-var quizAttemptSchema = new Schema35(
+var quizAttemptSchema = new Schema36(
   {
     user: {
-      type: Schema35.Types.ObjectId,
+      type: Schema36.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     module: {
-      type: Schema35.Types.ObjectId,
+      type: Schema36.Types.ObjectId,
       ref: "CourseModule",
       required: true,
       index: true
@@ -21759,7 +22311,7 @@ quizAttemptSchema.index({
   module: 1,
   passed: 1
 });
-var QuizAttempt = model35(
+var QuizAttempt = model36(
   "QuizAttempt",
   quizAttemptSchema
 );
@@ -21779,7 +22331,7 @@ var assertFound14 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId12 = (value, fieldName) => {
-  if (!Types34.ObjectId.isValid(value)) {
+  if (!Types35.ObjectId.isValid(value)) {
     throwServiceError14(`${fieldName} is invalid`, 400);
   }
 };
@@ -21837,8 +22389,8 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     );
   }
   const previousAttempts = await QuizAttempt.find({
-    user: new Types34.ObjectId(userId),
-    module: new Types34.ObjectId(moduleId)
+    user: new Types35.ObjectId(userId),
+    module: new Types35.ObjectId(moduleId)
   }).sort({
     attemptNumber: 1
   }).select("attemptNumber score passed submittedAt").lean();
@@ -21849,7 +22401,7 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     throwServiceError14("Maximum two quiz attempts have already been used", 400);
   }
   const questions = await QuizQuestion.find({
-    module: new Types34.ObjectId(moduleId),
+    module: new Types35.ObjectId(moduleId),
     status: "published"
   }).sort({
     order: 1
@@ -21976,8 +22528,8 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
   let attempt;
   try {
     attempt = await QuizAttempt.create({
-      user: new Types34.ObjectId(userId),
-      module: new Types34.ObjectId(moduleId),
+      user: new Types35.ObjectId(userId),
+      module: new Types35.ObjectId(moduleId),
       attemptNumber,
       answers: calculatedAnswers,
       totalQuestions,
@@ -21996,8 +22548,8 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     throw error;
   }
   const allAttempts = await QuizAttempt.find({
-    user: new Types34.ObjectId(userId),
-    module: new Types34.ObjectId(moduleId)
+    user: new Types35.ObjectId(userId),
+    module: new Types35.ObjectId(moduleId)
   }).select("score passed submittedAt").lean();
   const bestScore = allAttempts.reduce(
     (highestScore, item) => Math.max(highestScore, item.score),
@@ -22049,8 +22601,8 @@ var getMyModuleAttempts = async (userId, moduleId) => {
   assertValidObjectId12(userId, "User ID");
   assertValidObjectId12(moduleId, "Course module ID");
   return QuizAttempt.find({
-    user: new Types34.ObjectId(userId),
-    module: new Types34.ObjectId(moduleId)
+    user: new Types35.ObjectId(userId),
+    module: new Types35.ObjectId(moduleId)
   }).sort({
     attemptNumber: 1
   }).populate(
@@ -22062,8 +22614,8 @@ var getMySingleAttempt = async (userId, attemptId) => {
   assertValidObjectId12(userId, "User ID");
   assertValidObjectId12(attemptId, "Quiz attempt ID");
   const filter = {
-    _id: new Types34.ObjectId(attemptId),
-    user: new Types34.ObjectId(userId)
+    _id: new Types35.ObjectId(attemptId),
+    user: new Types35.ObjectId(userId)
   };
   const attempt = await QuizAttempt.findOne(filter).populate({
     path: "module",
@@ -22109,11 +22661,11 @@ var getAllQuizAttempts = async (query) => {
   const filter = {};
   if (query.userId) {
     assertValidObjectId12(query.userId, "User ID");
-    filter.user = new Types34.ObjectId(query.userId);
+    filter.user = new Types35.ObjectId(query.userId);
   }
   if (query.moduleId) {
     assertValidObjectId12(query.moduleId, "Course module ID");
-    filter.module = new Types34.ObjectId(query.moduleId);
+    filter.module = new Types35.ObjectId(query.moduleId);
   }
   if (query.passed !== void 0) {
     filter.passed = query.passed;
@@ -22384,37 +22936,37 @@ init_course_module_model_schema();
 init_module_progress_model_schema();
 init_module_video_model_schema();
 init_quiz_question_model_schema();
-import { Types as Types35 } from "mongoose";
+import { Types as Types36 } from "mongoose";
 
 // src/modules/quizCertificates/quiz.certificate.model.schema.ts
-import { model as model36, Schema as Schema36 } from "mongoose";
+import { model as model37, Schema as Schema37 } from "mongoose";
 
 // src/modules/quizCertificates/quiz.certificate.interface.ts
 var CERTIFICATE_STATUSES = ["issued", "revoked"];
 
 // src/modules/quizCertificates/quiz.certificate.model.schema.ts
-var quizCertificateSchema = new Schema36(
+var quizCertificateSchema = new Schema37(
   {
     user: {
-      type: Schema36.Types.ObjectId,
+      type: Schema37.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     // Pillar-level certificates do not have a module — field is optional and NOT indexed
     module: {
-      type: Schema36.Types.ObjectId,
+      type: Schema37.Types.ObjectId,
       ref: "CourseModule",
       required: false
     },
     pillar: {
-      type: Schema36.Types.ObjectId,
+      type: Schema37.Types.ObjectId,
       ref: "ChallengePillar",
       required: true,
       index: true
     },
     quizAttempt: {
-      type: Schema36.Types.ObjectId,
+      type: Schema37.Types.ObjectId,
       ref: "QuizAttempt"
     },
     certificateNumber: {
@@ -22457,7 +23009,7 @@ var quizCertificateSchema = new Schema36(
       maxlength: 500
     },
     revokedBy: {
-      type: Schema36.Types.ObjectId,
+      type: Schema37.Types.ObjectId,
       ref: "User"
     }
   },
@@ -22479,7 +23031,7 @@ quizCertificateSchema.index({
   status: 1,
   issuedAt: -1
 });
-var QuizCertificate = model36(
+var QuizCertificate = model37(
   "QuizCertificate",
   quizCertificateSchema
 );
@@ -22509,7 +23061,7 @@ var assertFound15 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId13 = (value, fieldName) => {
-  if (!Types35.ObjectId.isValid(value)) {
+  if (!Types36.ObjectId.isValid(value)) {
     throwServiceError15(`${fieldName} is invalid`, 400);
   }
 };
@@ -22555,7 +23107,7 @@ var buildCertificateNumber = (pillarSlug) => {
 };
 var getPillarContentVersion = async (pillarId) => {
   const moduleIds = await CourseModule.find({
-    pillar: new Types35.ObjectId(pillarId),
+    pillar: new Types36.ObjectId(pillarId),
     status: "published"
   }).select("_id updatedAt").lean();
   const ids = moduleIds.map((module) => module._id);
@@ -22578,8 +23130,8 @@ var issueCertificateIfEligible = async (userId, pillarId) => {
   assertValidObjectId13(pillarId, "Pillar ID");
   const contentVersion = await getPillarContentVersion(pillarId);
   const existingCertificate = await QuizCertificate.findOne({
-    user: new Types35.ObjectId(userId),
-    pillar: new Types35.ObjectId(pillarId)
+    user: new Types36.ObjectId(userId),
+    pillar: new Types36.ObjectId(pillarId)
   }).populate(CERTIFICATE_POPULATE);
   if (existingCertificate?.status === "issued" && (existingCertificate.contentVersionAtIssue ?? existingCertificate.issuedAt) >= contentVersion) {
     return existingCertificate;
@@ -22591,7 +23143,7 @@ var issueCertificateIfEligible = async (userId, pillarId) => {
     await existingCertificate.save();
   }
   const pillarModules = await CourseModule.find({
-    pillar: new Types35.ObjectId(pillarId),
+    pillar: new Types36.ObjectId(pillarId),
     status: "published"
   }).select("_id title moduleNumber").lean();
   if (pillarModules.length === 0) {
@@ -22599,7 +23151,7 @@ var issueCertificateIfEligible = async (userId, pillarId) => {
   }
   const moduleIds = pillarModules.map((m) => m._id);
   const progressDocs = await ModuleProgress.find({
-    user: new Types35.ObjectId(userId),
+    user: new Types36.ObjectId(userId),
     module: { $in: moduleIds }
   }).select("module quizSummary videoSummary").lean();
   const progressByModuleId = {};
@@ -22624,8 +23176,8 @@ var issueCertificateIfEligible = async (userId, pillarId) => {
   const pillarDoc = await ChallengePillar2.findById(pillarId).select("slug").lean();
   assertFound15(pillarDoc, "Challenge pillar not found", 404);
   const createData = {
-    user: new Types35.ObjectId(userId),
-    pillar: new Types35.ObjectId(pillarId),
+    user: new Types36.ObjectId(userId),
+    pillar: new Types36.ObjectId(pillarId),
     status: "issued",
     score: averageScore,
     issuedAt: /* @__PURE__ */ new Date(),
@@ -22663,8 +23215,8 @@ var issueCertificateIfEligible = async (userId, pillarId) => {
       lastError = error;
       if (isDuplicateKeyError10(error)) {
         const raceCertificate = await QuizCertificate.findOne({
-          user: new Types35.ObjectId(userId),
-          pillar: new Types35.ObjectId(pillarId)
+          user: new Types36.ObjectId(userId),
+          pillar: new Types36.ObjectId(pillarId)
         }).populate(CERTIFICATE_POPULATE);
         if (raceCertificate) {
           return raceCertificate;
@@ -22679,7 +23231,7 @@ var issueCertificateIfEligible = async (userId, pillarId) => {
 var getMyCertificates = async (userId) => {
   assertValidObjectId13(userId, "User ID");
   const certificates = await QuizCertificate.find({
-    user: new Types35.ObjectId(userId)
+    user: new Types36.ObjectId(userId)
   }).sort({ issuedAt: -1 }).populate(CERTIFICATE_POPULATE);
   for (const certificate of certificates) {
     if (certificate.status !== "issued") {
@@ -22703,7 +23255,7 @@ var getMySingleCertificate = async (userId, certificateId) => {
   assertValidObjectId13(certificateId, "Certificate ID");
   const certificate = await QuizCertificate.findOne({
     _id: certificateId,
-    user: new Types35.ObjectId(userId)
+    user: new Types36.ObjectId(userId)
   }).populate(CERTIFICATE_POPULATE);
   assertFound15(certificate, "Certificate not found", 404);
   return certificate;
@@ -22730,15 +23282,15 @@ var getAllCertificatesAdmin = async (query) => {
   const filter = {};
   if (query.userId) {
     assertValidObjectId13(query.userId, "User ID");
-    filter.user = new Types35.ObjectId(query.userId);
+    filter.user = new Types36.ObjectId(query.userId);
   }
   if (query.moduleId) {
     assertValidObjectId13(query.moduleId, "Course module ID");
-    filter.module = new Types35.ObjectId(query.moduleId);
+    filter.module = new Types36.ObjectId(query.moduleId);
   }
   if (query.pillarId) {
     assertValidObjectId13(query.pillarId, "Challenge pillar ID");
-    filter.pillar = new Types35.ObjectId(query.pillarId);
+    filter.pillar = new Types36.ObjectId(query.pillarId);
   }
   if (query.status) {
     filter.status = query.status;
@@ -22778,7 +23330,7 @@ var revokeCertificate = async (certificateId, actorId, reason) => {
   }
   certificate.status = "revoked";
   certificate.revokedAt = /* @__PURE__ */ new Date();
-  certificate.revokedBy = new Types35.ObjectId(actorId);
+  certificate.revokedBy = new Types36.ObjectId(actorId);
   if (reason !== void 0) {
     certificate.revokedReason = reason;
   }
@@ -23083,10 +23635,10 @@ init_assertFound();
 
 // src/modules/mentorshipProfiles/mentorship.profile.service.ts
 init_users_model_schema();
-import { Types as Types36 } from "mongoose";
+import { Types as Types37 } from "mongoose";
 
 // src/modules/mentorshipProfiles/mentorship.profile.model.schema.ts
-import { model as model37, Schema as Schema37 } from "mongoose";
+import { model as model38, Schema as Schema38 } from "mongoose";
 
 // src/modules/mentorshipProfiles/mentorship.profile.interface.ts
 var MENTORSHIP_PROFILE_STATUSES = [
@@ -23105,7 +23657,7 @@ var AVAILABILITY_DAYS = [
 ];
 
 // src/modules/mentorshipProfiles/mentorship.profile.model.schema.ts
-var availabilitySlotSchema = new Schema37(
+var availabilitySlotSchema = new Schema38(
   {
     day: {
       type: String,
@@ -23134,10 +23686,10 @@ var availabilitySlotSchema = new Schema37(
     _id: false
   }
 );
-var mentorshipProfileSchema = new Schema37(
+var mentorshipProfileSchema = new Schema38(
   {
     mentor: {
-      type: Schema37.Types.ObjectId,
+      type: Schema38.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
@@ -23205,12 +23757,12 @@ var mentorshipProfileSchema = new Schema37(
       type: Date
     },
     createdBy: {
-      type: Schema37.Types.ObjectId,
+      type: Schema38.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema37.Types.ObjectId,
+      type: Schema38.Types.ObjectId,
       ref: "User"
     }
   },
@@ -23236,7 +23788,7 @@ mentorshipProfileSchema.index(
     name: "one_primary_mentor"
   }
 );
-var MentorshipProfile = model37(
+var MentorshipProfile = model38(
   "MentorshipProfile",
   mentorshipProfileSchema
 );
@@ -23253,7 +23805,7 @@ var assertFound16 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId14 = (value, fieldName) => {
-  if (!Types36.ObjectId.isValid(value)) {
+  if (!Types37.ObjectId.isValid(value)) {
     throwServiceError16(`${fieldName} is invalid`, 400);
   }
 };
@@ -23310,7 +23862,7 @@ var createMentorshipProfileRecord = async (payload, mentorId, actorId, session) 
     order: nextOrder,
     status: "draft",
     isActive: true,
-    createdBy: new Types36.ObjectId(actorId)
+    createdBy: new Types37.ObjectId(actorId)
   };
   if (createData.isPrimaryMentor) {
     await clearOtherPrimaryMentors(void 0, session);
@@ -23336,7 +23888,7 @@ var createMentorshipProfile = async (payload, actorId) => {
   try {
     const profile = await createMentorshipProfileRecord(
       payload,
-      new Types36.ObjectId(payload.mentor),
+      new Types37.ObjectId(payload.mentor),
       actorId
     );
     return profile.populate(PROFILE_POPULATE);
@@ -23423,7 +23975,7 @@ var updateMentorshipProfile = async (profileId, payload, actorId) => {
   if (payload.isPrimaryMentor !== void 0) {
     profile.isPrimaryMentor = payload.isPrimaryMentor;
   }
-  profile.updatedBy = new Types36.ObjectId(actorId);
+  profile.updatedBy = new Types37.ObjectId(actorId);
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
 };
@@ -23437,7 +23989,7 @@ var publishMentorshipProfile = async (profileId, actorId) => {
   profile.status = "published";
   profile.publishedAt = /* @__PURE__ */ new Date();
   profile.set("archivedAt", void 0);
-  profile.updatedBy = new Types36.ObjectId(actorId);
+  profile.updatedBy = new Types37.ObjectId(actorId);
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
 };
@@ -23453,7 +24005,7 @@ var moveMentorshipProfileToDraft = async (profileId, actorId) => {
   }
   profile.status = "draft";
   profile.set("publishedAt", void 0);
-  profile.updatedBy = new Types36.ObjectId(actorId);
+  profile.updatedBy = new Types37.ObjectId(actorId);
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
 };
@@ -23466,7 +24018,7 @@ var archiveMentorshipProfile = async (profileId, actorId) => {
   profile.isActive = false;
   profile.isPrimaryMentor = false;
   profile.set("publishedAt", void 0);
-  profile.updatedBy = new Types36.ObjectId(actorId);
+  profile.updatedBy = new Types37.ObjectId(actorId);
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
 };
@@ -23521,7 +24073,7 @@ var selectMyCoMentor = async (memberUserId, mentorshipProfileId) => {
     {
       assignedCoMentorProfile: profile._id,
       coMentorAssignedAt: /* @__PURE__ */ new Date(),
-      coMentorAssignedBy: new Types36.ObjectId(memberUserId)
+      coMentorAssignedBy: new Types37.ObjectId(memberUserId)
     },
     { new: true }
   );
@@ -23545,7 +24097,7 @@ var getMyCoMentor = async (memberUserId) => {
 var getAvailabilityForProfileOwner = async (userId, actorRole) => {
   assertValidObjectId14(userId, "User ID");
   const profile = actorRole === "founder" ? await MentorshipProfile.findOne({ isPrimaryMentor: true }) : await MentorshipProfile.findOne({
-    mentor: new Types36.ObjectId(userId),
+    mentor: new Types37.ObjectId(userId),
     isPrimaryMentor: true
   });
   assertFound16(
@@ -23597,7 +24149,7 @@ var createMentor = async (payload, actorId) => {
               approvalStatus: "approved",
               accountStatus: "active",
               licenseVerificationStatus: "verified",
-              approvedBy: new Types36.ObjectId(actorId)
+              approvedBy: new Types37.ObjectId(actorId)
             }
           ],
           { session }
@@ -24072,10 +24624,10 @@ init_assertFound();
 
 // src/modules/mentorshipReviews/mentorship.review.service.ts
 init_users_model_schema();
-import mongoose5, { Types as Types37 } from "mongoose";
+import mongoose5, { Types as Types38 } from "mongoose";
 
 // src/modules/mentorshipReviews/mentorship.review.model.schema.ts
-import { model as model38, Schema as Schema38 } from "mongoose";
+import { model as model39, Schema as Schema39 } from "mongoose";
 
 // src/modules/mentorshipReviews/mentorship.review.interface.ts
 var MENTORSHIP_REVIEW_STATUSES = [
@@ -24085,29 +24637,29 @@ var MENTORSHIP_REVIEW_STATUSES = [
 ];
 
 // src/modules/mentorshipReviews/mentorship.review.model.schema.ts
-var mentorshipReviewSchema = new Schema38(
+var mentorshipReviewSchema = new Schema39(
   {
     booking: {
-      type: Schema38.Types.ObjectId,
+      type: Schema39.Types.ObjectId,
       ref: "MentorBooking",
       required: true,
       unique: true,
       index: true
     },
     user: {
-      type: Schema38.Types.ObjectId,
+      type: Schema39.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     mentor: {
-      type: Schema38.Types.ObjectId,
+      type: Schema39.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     mentorshipProfile: {
-      type: Schema38.Types.ObjectId,
+      type: Schema39.Types.ObjectId,
       ref: "MentorshipProfile",
       index: true
     },
@@ -24143,7 +24695,7 @@ var mentorshipReviewSchema = new Schema38(
       maxlength: 1e3
     },
     moderatedBy: {
-      type: Schema38.Types.ObjectId,
+      type: Schema39.Types.ObjectId,
       ref: "User"
     },
     moderatedAt: {
@@ -24172,7 +24724,7 @@ mentorshipReviewSchema.index({
   rating: 1,
   status: 1
 });
-var MentorshipReview = model38(
+var MentorshipReview = model39(
   "MentorshipReview",
   mentorshipReviewSchema
 );
@@ -24189,7 +24741,7 @@ var assertFound17 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId15 = (value, fieldName) => {
-  if (!Types37.ObjectId.isValid(value)) {
+  if (!Types38.ObjectId.isValid(value)) {
     throwServiceError17(`${fieldName} is invalid`, 400);
   }
 };
@@ -24267,7 +24819,7 @@ var createReview = async (payload, userId) => {
   await ensureMentorUserExists2(payload.mentor);
   await verifyBookingForReview(payload.booking, userId, payload.mentor);
   const existingReview = await MentorshipReview.findOne({
-    booking: new Types37.ObjectId(payload.booking)
+    booking: new Types38.ObjectId(payload.booking)
   }).lean();
   if (existingReview) {
     throwServiceError17(
@@ -24278,16 +24830,16 @@ var createReview = async (payload, userId) => {
   let mentorshipProfileId = payload.mentorshipProfile;
   if (!mentorshipProfileId) {
     const profile = await MentorshipProfile.findOne({
-      mentor: new Types37.ObjectId(payload.mentor)
+      mentor: new Types38.ObjectId(payload.mentor)
     }).select("_id").lean();
     if (profile) {
       mentorshipProfileId = profile._id.toString();
     }
   }
   const createData = {
-    booking: new Types37.ObjectId(payload.booking),
-    user: new Types37.ObjectId(userId),
-    mentor: new Types37.ObjectId(payload.mentor),
+    booking: new Types38.ObjectId(payload.booking),
+    user: new Types38.ObjectId(userId),
+    mentor: new Types38.ObjectId(payload.mentor),
     rating: payload.rating,
     status: "published",
     isAnonymous: payload.isAnonymous ?? false,
@@ -24295,7 +24847,7 @@ var createReview = async (payload, userId) => {
   };
   if (mentorshipProfileId) {
     assertValidObjectId15(mentorshipProfileId, "Mentorship profile ID");
-    createData.mentorshipProfile = new Types37.ObjectId(mentorshipProfileId);
+    createData.mentorshipProfile = new Types38.ObjectId(mentorshipProfileId);
   }
   if (payload.comment) {
     createData.comment = payload.comment.trim();
@@ -24320,8 +24872,8 @@ var getReviewsForMentor = async (mentorId, options2) => {
   const skip = (page - 1) * limit;
   let filter = {
     $or: [
-      { mentor: new Types37.ObjectId(mentorId) },
-      { mentorshipProfile: new Types37.ObjectId(mentorId) }
+      { mentor: new Types38.ObjectId(mentorId) },
+      { mentorshipProfile: new Types38.ObjectId(mentorId) }
     ],
     status: "published"
   };
@@ -24332,8 +24884,8 @@ var getReviewsForMentor = async (mentorId, options2) => {
       {
         $match: {
           $or: [
-            { mentor: new Types37.ObjectId(mentorId) },
-            { mentorshipProfile: new Types37.ObjectId(mentorId) }
+            { mentor: new Types38.ObjectId(mentorId) },
+            { mentorshipProfile: new Types38.ObjectId(mentorId) }
           ],
           status: "published"
         }
@@ -24391,7 +24943,7 @@ var getMyReviews = async (userId, options2) => {
   const page = Math.max(1, options2?.page ?? 1);
   const limit = Math.max(1, Math.min(50, options2?.limit ?? 10));
   const skip = (page - 1) * limit;
-  const filter = { user: new Types37.ObjectId(userId) };
+  const filter = { user: new Types38.ObjectId(userId) };
   const [reviews, total] = await Promise.all([
     MentorshipReview.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).populate(getReviewPopulate()).lean(),
     MentorshipReview.countDocuments(filter)
@@ -24470,19 +25022,19 @@ var getAllReviewsAdmin = async (query) => {
   const filter = {};
   if (query.mentor) {
     assertValidObjectId15(query.mentor, "Mentor ID");
-    filter.mentor = new Types37.ObjectId(query.mentor);
+    filter.mentor = new Types38.ObjectId(query.mentor);
   }
   if (query.user) {
     assertValidObjectId15(query.user, "User ID");
-    filter.user = new Types37.ObjectId(query.user);
+    filter.user = new Types38.ObjectId(query.user);
   }
   if (query.booking) {
     assertValidObjectId15(query.booking, "Booking ID");
-    filter.booking = new Types37.ObjectId(query.booking);
+    filter.booking = new Types38.ObjectId(query.booking);
   }
   if (query.mentorshipProfile) {
     assertValidObjectId15(query.mentorshipProfile, "Mentorship Profile ID");
-    filter.mentorshipProfile = new Types37.ObjectId(query.mentorshipProfile);
+    filter.mentorshipProfile = new Types38.ObjectId(query.mentorshipProfile);
   }
   if (query.status) {
     filter.status = query.status;
@@ -24511,7 +25063,7 @@ var moderateReview = async (reviewId, payload, adminId) => {
   const review = await MentorshipReview.findById(reviewId);
   assertFound17(review, "Mentorship review not found", 404);
   review.status = payload.status;
-  review.moderatedBy = new Types37.ObjectId(adminId);
+  review.moderatedBy = new Types38.ObjectId(adminId);
   review.moderatedAt = /* @__PURE__ */ new Date();
   if (payload.adminNotes !== void 0) {
     review.adminNotes = payload.adminNotes;
@@ -24838,10 +25390,10 @@ import { Router as Router30 } from "express";
 init_assertFound();
 
 // src/modules/retreatLocations/retreat.location.service.ts
-import { Types as Types38 } from "mongoose";
+import { Types as Types39 } from "mongoose";
 
 // src/modules/retreatLocations/retreat.location.model.schema.ts
-import { model as model39, Schema as Schema39 } from "mongoose";
+import { model as model40, Schema as Schema40 } from "mongoose";
 
 // src/modules/retreatLocations/retreat.location.interface.ts
 var RETREAT_LOCATION_STATUSES = [
@@ -24851,7 +25403,7 @@ var RETREAT_LOCATION_STATUSES = [
 ];
 
 // src/modules/retreatLocations/retreat.location.model.schema.ts
-var retreatLocationSchema = new Schema39(
+var retreatLocationSchema = new Schema40(
   {
     title: {
       type: String,
@@ -24927,12 +25479,12 @@ var retreatLocationSchema = new Schema39(
       default: 0
     },
     createdBy: {
-      type: Schema39.Types.ObjectId,
+      type: Schema40.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema39.Types.ObjectId,
+      type: Schema40.Types.ObjectId,
       ref: "User"
     }
   },
@@ -24946,7 +25498,7 @@ retreatLocationSchema.index({
   status: 1,
   order: 1
 });
-var RetreatLocation = model39(
+var RetreatLocation = model40(
   "RetreatLocation",
   retreatLocationSchema
 );
@@ -24963,7 +25515,7 @@ var assertFound18 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId16 = (value, fieldName) => {
-  if (!Types38.ObjectId.isValid(value)) {
+  if (!Types39.ObjectId.isValid(value)) {
     throwServiceError18(`${fieldName} is invalid`, 400);
   }
 };
@@ -24998,7 +25550,7 @@ var createRetreatLocation = async (payload, actorId) => {
     isActive: payload.isActive ?? true,
     status: payload.status ?? "published",
     order: payload.order ?? 0,
-    createdBy: new Types38.ObjectId(actorId)
+    createdBy: new Types39.ObjectId(actorId)
   };
   if (payload.tagline !== void 0) {
     createData.tagline = payload.tagline;
@@ -25051,8 +25603,8 @@ var getAllRetreatLocations = async (query = {}, isPublicOnly = false) => {
 };
 var getSingleRetreatLocation = async (idOrSlug, isPublicOnly = false) => {
   const filter = {};
-  if (Types38.ObjectId.isValid(idOrSlug)) {
-    filter._id = new Types38.ObjectId(idOrSlug);
+  if (Types39.ObjectId.isValid(idOrSlug)) {
+    filter._id = new Types39.ObjectId(idOrSlug);
   } else {
     filter.slug = idOrSlug.toLowerCase();
   }
@@ -25124,7 +25676,7 @@ var updateRetreatLocation = async (locationId, payload, actorId) => {
   if (payload.order !== void 0) {
     location.order = payload.order;
   }
-  location.updatedBy = new Types38.ObjectId(actorId);
+  location.updatedBy = new Types39.ObjectId(actorId);
   await location.save();
   return location.populate(LOCATION_POPULATE);
 };
@@ -26018,11 +26570,11 @@ init_assertFound();
 
 // src/modules/mentorBookings/mentor.booking.service.ts
 init_users_model_schema();
-import { Types as Types39 } from "mongoose";
+import { Types as Types40 } from "mongoose";
 
 // src/modules/mentorBookings/mentor.booking.model.schema.ts
-import { model as model40, Schema as Schema40 } from "mongoose";
-var mentorBookingRecordingSchema = new Schema40(
+import { model as model41, Schema as Schema41 } from "mongoose";
+var mentorBookingRecordingSchema = new Schema41(
   {
     provider: {
       type: String,
@@ -26067,32 +26619,32 @@ var mentorBookingRecordingSchema = new Schema40(
   },
   { _id: false }
 );
-var mentorBookingSchema = new Schema40(
+var mentorBookingSchema = new Schema41(
   {
     member: {
-      type: Schema40.Types.ObjectId,
+      type: Schema41.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     leadMentor: {
-      type: Schema40.Types.ObjectId,
+      type: Schema41.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     leadMentorProfile: {
-      type: Schema40.Types.ObjectId,
+      type: Schema41.Types.ObjectId,
       ref: "MentorshipProfile",
       index: true
     },
     coMentor: {
-      type: Schema40.Types.ObjectId,
+      type: Schema41.Types.ObjectId,
       ref: "User",
       index: true
     },
     coMentorProfile: {
-      type: Schema40.Types.ObjectId,
+      type: Schema41.Types.ObjectId,
       ref: "MentorshipProfile",
       index: true
     },
@@ -26145,7 +26697,7 @@ var mentorBookingSchema = new Schema40(
       maxlength: 1e3
     },
     cancelledBy: {
-      type: Schema40.Types.ObjectId,
+      type: Schema41.Types.ObjectId,
       ref: "User"
     },
     cancelledAt: {
@@ -26180,12 +26732,12 @@ var mentorBookingSchema = new Schema40(
       maxlength: 3e3
     },
     createdBy: {
-      type: Schema40.Types.ObjectId,
+      type: Schema41.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema40.Types.ObjectId,
+      type: Schema41.Types.ObjectId,
       ref: "User"
     }
   },
@@ -26214,7 +26766,7 @@ mentorBookingSchema.index({
   status: 1,
   scheduledStartTime: 1
 });
-var MentorBooking = model40(
+var MentorBooking = model41(
   "MentorBooking",
   mentorBookingSchema
 );
@@ -26231,7 +26783,7 @@ var assertFound19 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId17 = (value, fieldName) => {
-  if (!Types39.ObjectId.isValid(value)) {
+  if (!Types40.ObjectId.isValid(value)) {
     throwServiceError19(`${fieldName} is invalid`, 400);
   }
 };
@@ -26292,7 +26844,7 @@ var resolveMentorshipProfileId = async (mentorUserId, explicitProfileId) => {
     return profile2._id;
   }
   const profile = await MentorshipProfile.findOne({
-    mentor: new Types39.ObjectId(mentorUserId),
+    mentor: new Types40.ObjectId(mentorUserId),
     isActive: true
   }).lean();
   return profile ? profile._id : void 0;
@@ -26312,11 +26864,11 @@ var checkSchedulingConflicts = async ({
     scheduledEndTime: { $gt: startTime }
   };
   if (excludeBookingId) {
-    baseOverlapFilter._id = { $ne: new Types39.ObjectId(excludeBookingId) };
+    baseOverlapFilter._id = { $ne: new Types40.ObjectId(excludeBookingId) };
   }
   const memberConflict = await MentorBooking.findOne({
     ...baseOverlapFilter,
-    member: new Types39.ObjectId(memberId)
+    member: new Types40.ObjectId(memberId)
   });
   if (memberConflict) {
     throwServiceError19(
@@ -26327,9 +26879,9 @@ var checkSchedulingConflicts = async ({
   const leadMentorConflict = await MentorBooking.findOne({
     ...baseOverlapFilter,
     $or: [
-      { leadMentor: new Types39.ObjectId(leadMentorId) },
-      { coMentor: new Types39.ObjectId(leadMentorId) },
-      { member: new Types39.ObjectId(leadMentorId) }
+      { leadMentor: new Types40.ObjectId(leadMentorId) },
+      { coMentor: new Types40.ObjectId(leadMentorId) },
+      { member: new Types40.ObjectId(leadMentorId) }
     ]
   });
   if (leadMentorConflict) {
@@ -26342,9 +26894,9 @@ var checkSchedulingConflicts = async ({
     const coMentorConflict = await MentorBooking.findOne({
       ...baseOverlapFilter,
       $or: [
-        { leadMentor: new Types39.ObjectId(coMentorId) },
-        { coMentor: new Types39.ObjectId(coMentorId) },
-        { member: new Types39.ObjectId(coMentorId) }
+        { leadMentor: new Types40.ObjectId(coMentorId) },
+        { coMentor: new Types40.ObjectId(coMentorId) },
+        { member: new Types40.ObjectId(coMentorId) }
       ]
     });
     if (coMentorConflict) {
@@ -26398,20 +26950,20 @@ var createBooking = async (payload, memberUserId, actorId) => {
     );
   }
   const createData = {
-    member: new Types39.ObjectId(memberUserId),
-    leadMentor: new Types39.ObjectId(payload.leadMentor),
+    member: new Types40.ObjectId(memberUserId),
+    leadMentor: new Types40.ObjectId(payload.leadMentor),
     scheduledStartTime: startTime,
     scheduledEndTime: endTime,
     durationMinutes,
     timezone: payload.timezone,
     status: "requested",
-    createdBy: new Types39.ObjectId(actorId)
+    createdBy: new Types40.ObjectId(actorId)
   };
   if (leadMentorProfileId) {
     createData.leadMentorProfile = leadMentorProfileId;
   }
   if (payload.coMentor) {
-    createData.coMentor = new Types39.ObjectId(payload.coMentor);
+    createData.coMentor = new Types40.ObjectId(payload.coMentor);
   }
   if (coMentorProfileId) {
     createData.coMentorProfile = coMentorProfileId;
@@ -26459,7 +27011,7 @@ var createBooking = async (payload, memberUserId, actorId) => {
 var getMyMemberBookings = async (memberUserId, query = {}) => {
   assertValidObjectId17(memberUserId, "Member user ID");
   const filter = {
-    member: new Types39.ObjectId(memberUserId)
+    member: new Types40.ObjectId(memberUserId)
   };
   if (query.status) {
     filter.status = query.status;
@@ -26495,8 +27047,8 @@ var getMyMemberSingleBooking = async (bookingId, memberUserId) => {
   assertValidObjectId17(bookingId, "Booking ID");
   assertValidObjectId17(memberUserId, "Member user ID");
   const booking = await MentorBooking.findOne({
-    _id: new Types39.ObjectId(bookingId),
-    member: new Types39.ObjectId(memberUserId)
+    _id: new Types40.ObjectId(bookingId),
+    member: new Types40.ObjectId(memberUserId)
   }).populate(BOOKING_POPULATE).lean();
   assertFound19(booking, "Mentor booking not found", 404);
   return booking;
@@ -26525,7 +27077,7 @@ var resolveNextSession = async (memberObjectId) => {
 };
 var getMyMentor = async (memberUserId) => {
   assertValidObjectId17(memberUserId, "Member user ID");
-  const memberObjectId = new Types39.ObjectId(memberUserId);
+  const memberObjectId = new Types40.ObjectId(memberUserId);
   const [primaryProfile, member, nextSession] = await Promise.all([
     MentorshipProfile.findOne({
       isPrimaryMentor: true,
@@ -26558,7 +27110,7 @@ var getMyMentor = async (memberUserId) => {
 };
 var getMyMentorBookings = async (mentorUserId, query = {}) => {
   assertValidObjectId17(mentorUserId, "Mentor user ID");
-  const mentorObjectId = new Types39.ObjectId(mentorUserId);
+  const mentorObjectId = new Types40.ObjectId(mentorUserId);
   const filter = {
     $or: [{ leadMentor: mentorObjectId }, { coMentor: mentorObjectId }]
   };
@@ -26595,9 +27147,9 @@ var getMyMentorBookings = async (mentorUserId, query = {}) => {
 var getMyMentorSingleBooking = async (bookingId, mentorUserId) => {
   assertValidObjectId17(bookingId, "Booking ID");
   assertValidObjectId17(mentorUserId, "Mentor user ID");
-  const mentorObjectId = new Types39.ObjectId(mentorUserId);
+  const mentorObjectId = new Types40.ObjectId(mentorUserId);
   const booking = await MentorBooking.findOne({
-    _id: new Types39.ObjectId(bookingId),
+    _id: new Types40.ObjectId(bookingId),
     $or: [{ leadMentor: mentorObjectId }, { coMentor: mentorObjectId }]
   }).populate(BOOKING_POPULATE).lean();
   assertFound19(booking, "Mentor booking not found", 404);
@@ -26607,19 +27159,19 @@ var getAllBookingsAdmin = async (query = {}) => {
   const filter = {};
   if (query.memberId) {
     assertValidObjectId17(query.memberId, "Member ID");
-    filter.member = new Types39.ObjectId(query.memberId);
+    filter.member = new Types40.ObjectId(query.memberId);
   }
   if (query.leadMentorId) {
     assertValidObjectId17(query.leadMentorId, "Lead mentor ID");
-    filter.leadMentor = new Types39.ObjectId(query.leadMentorId);
+    filter.leadMentor = new Types40.ObjectId(query.leadMentorId);
   }
   if (query.coMentorId) {
     assertValidObjectId17(query.coMentorId, "co_mentor ID");
-    filter.coMentor = new Types39.ObjectId(query.coMentorId);
+    filter.coMentor = new Types40.ObjectId(query.coMentorId);
   }
   if (query.mentorId) {
     assertValidObjectId17(query.mentorId, "Mentor ID");
-    const mentorObjId = new Types39.ObjectId(query.mentorId);
+    const mentorObjId = new Types40.ObjectId(query.mentorId);
     filter.$or = [{ leadMentor: mentorObjId }, { coMentor: mentorObjId }];
   }
   if (query.status) {
@@ -26700,7 +27252,7 @@ var updateBooking = async ({
   }
   if (payload.leadMentor && payload.leadMentor !== String(booking.leadMentor)) {
     await checkUserExists(payload.leadMentor, "Lead mentor user");
-    booking.leadMentor = new Types39.ObjectId(payload.leadMentor);
+    booking.leadMentor = new Types40.ObjectId(payload.leadMentor);
   }
   if (payload.coMentor !== void 0) {
     if (payload.coMentor === null) {
@@ -26708,7 +27260,7 @@ var updateBooking = async ({
       booking.set("coMentorProfile", void 0);
     } else {
       await checkUserExists(payload.coMentor, "co_mentor user");
-      booking.coMentor = new Types39.ObjectId(payload.coMentor);
+      booking.coMentor = new Types40.ObjectId(payload.coMentor);
     }
   }
   if (payload.leadMentorProfile !== void 0) {
@@ -26767,7 +27319,7 @@ var updateBooking = async ({
   } else if (payload.meetingUrl !== void 0) {
     booking.meetingUrl = payload.meetingUrl;
   }
-  booking.updatedBy = new Types39.ObjectId(actorId);
+  booking.updatedBy = new Types40.ObjectId(actorId);
   await booking.save();
   const updatedBookingId = String(booking._id);
   const updateRecipients = [
@@ -26822,7 +27374,7 @@ var confirmBooking = async ({
     if (payload.notes !== void 0) {
       booking.notes = payload.notes;
     }
-    booking.updatedBy = new Types39.ObjectId(actorId);
+    booking.updatedBy = new Types40.ObjectId(actorId);
     await booking.save();
     return booking.populate(BOOKING_POPULATE);
   }
@@ -26843,7 +27395,7 @@ var confirmBooking = async ({
   if (payload.notes !== void 0) {
     booking.notes = payload.notes;
   }
-  booking.updatedBy = new Types39.ObjectId(actorId);
+  booking.updatedBy = new Types40.ObjectId(actorId);
   await booking.save();
   const confirmedBookingId = String(booking._id);
   await notificationService.safeCreateFromTemplateOrFallback({
@@ -26891,9 +27443,9 @@ var cancelBooking = async ({
   }
   booking.status = "cancelled";
   booking.cancellationReason = payload.reason;
-  booking.cancelledBy = new Types39.ObjectId(actorId);
+  booking.cancelledBy = new Types40.ObjectId(actorId);
   booking.cancelledAt = /* @__PURE__ */ new Date();
-  booking.updatedBy = new Types39.ObjectId(actorId);
+  booking.updatedBy = new Types40.ObjectId(actorId);
   await booking.save();
   const cancelledBookingId = String(booking._id);
   const cancellationRecipients = [
@@ -26985,7 +27537,7 @@ var completeBooking = async ({
   if (payload.mentorFeedback !== void 0) {
     booking.mentorFeedback = payload.mentorFeedback;
   }
-  booking.updatedBy = new Types39.ObjectId(actorId);
+  booking.updatedBy = new Types40.ObjectId(actorId);
   await booking.save();
   const completedBookingId = String(booking._id);
   await notificationService.safeCreateFromTemplateOrFallback({
@@ -27033,7 +27585,7 @@ var markNoShowBooking = async ({
   if (payload.reason !== void 0) {
     booking.noShowReason = payload.reason;
   }
-  booking.updatedBy = new Types39.ObjectId(actorId);
+  booking.updatedBy = new Types40.ObjectId(actorId);
   await booking.save();
   const noShowBookingId = String(booking._id);
   const noShowRecipients = [
@@ -27554,7 +28106,7 @@ import { Router as Router34 } from "express";
 init_assertFound();
 
 // src/modules/retreatBatches/retreat.batch.service.ts
-import { Types as Types40 } from "mongoose";
+import { Types as Types41 } from "mongoose";
 var throwServiceError20 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -27566,7 +28118,7 @@ var assertFound20 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId18 = (value, fieldName) => {
-  if (!Types40.ObjectId.isValid(value)) {
+  if (!Types41.ObjectId.isValid(value)) {
     throwServiceError20(`${fieldName} is invalid`, 400);
   }
 };
@@ -27618,7 +28170,7 @@ var createRetreatBatch = async (payload, actorId) => {
     status: payload.status ?? "upcoming",
     isFeatured: payload.isFeatured ?? false,
     isActive: payload.isActive ?? true,
-    createdBy: new Types40.ObjectId(actorId)
+    createdBy: new Types41.ObjectId(actorId)
   };
   if (payload.depositAmount !== void 0) {
     createData.depositAmount = payload.depositAmount;
@@ -27639,12 +28191,12 @@ var getAllRetreatBatches = async (query = {}, isPublicOnly = false) => {
   const filter = {};
   if (query.locationId) {
     assertValidObjectId18(query.locationId, "Retreat location ID");
-    filter.retreatLocation = new Types40.ObjectId(query.locationId);
+    filter.retreatLocation = new Types41.ObjectId(query.locationId);
   } else if (query.locationIds) {
     const ids = query.locationIds.split(",").map((id3) => id3.trim()).filter(Boolean);
     ids.forEach((id3) => assertValidObjectId18(id3, "Retreat location ID"));
     filter.retreatLocation = {
-      $in: ids.map((id3) => new Types40.ObjectId(id3))
+      $in: ids.map((id3) => new Types41.ObjectId(id3))
     };
   }
   if (isPublicOnly) {
@@ -27694,8 +28246,8 @@ var getAllRetreatBatches = async (query = {}, isPublicOnly = false) => {
 };
 var getSingleRetreatBatch = async (idOrSlug, isPublicOnly = false) => {
   const filter = {};
-  if (Types40.ObjectId.isValid(idOrSlug)) {
-    filter._id = new Types40.ObjectId(idOrSlug);
+  if (Types41.ObjectId.isValid(idOrSlug)) {
+    filter._id = new Types41.ObjectId(idOrSlug);
   } else {
     filter.slug = idOrSlug.toLowerCase();
   }
@@ -27782,7 +28334,7 @@ var updateRetreatBatch = async (batchId, payload, actorId) => {
   if (payload.notes !== void 0) {
     batch.notes = payload.notes;
   }
-  batch.updatedBy = new Types40.ObjectId(actorId);
+  batch.updatedBy = new Types41.ObjectId(actorId);
   await batch.save();
   return batch.populate(BATCH_POPULATE);
 };
@@ -28021,12 +28573,12 @@ import { Router as Router35 } from "express";
 init_assertFound();
 
 // src/modules/retreatBookings/retreat.booking.service.ts
-import { Types as Types41 } from "mongoose";
+import { Types as Types42 } from "mongoose";
 import Stripe3 from "stripe";
 init_users_model_schema();
 
 // src/modules/retreatBookings/retreat.booking.model.schema.ts
-import { model as model41, Schema as Schema41 } from "mongoose";
+import { model as model42, Schema as Schema42 } from "mongoose";
 
 // src/modules/retreatBookings/retreat.booking.interface.ts
 var RETREAT_BOOKING_STATUSES = [
@@ -28039,7 +28591,7 @@ var RETREAT_BOOKING_STATUSES = [
 ];
 
 // src/modules/retreatBookings/retreat.booking.model.schema.ts
-var emergencyContactSchema = new Schema41(
+var emergencyContactSchema = new Schema42(
   {
     name: { type: String, trim: true, maxlength: 100 },
     phone: { type: String, trim: true, maxlength: 50 },
@@ -28047,28 +28599,28 @@ var emergencyContactSchema = new Schema41(
   },
   { _id: false }
 );
-var retreatBookingSchema = new Schema41(
+var retreatBookingSchema = new Schema42(
   {
     user: {
-      type: Schema41.Types.ObjectId,
+      type: Schema42.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     retreatBatch: {
-      type: Schema41.Types.ObjectId,
+      type: Schema42.Types.ObjectId,
       ref: "RetreatBatch",
       required: true,
       index: true
     },
     retreatLocation: {
-      type: Schema41.Types.ObjectId,
+      type: Schema42.Types.ObjectId,
       ref: "RetreatLocation",
       required: true,
       index: true
     },
     paymentSession: {
-      type: Schema41.Types.ObjectId,
+      type: Schema42.Types.ObjectId,
       ref: "PaymentSession"
     },
     status: {
@@ -28153,12 +28705,12 @@ var retreatBookingSchema = new Schema41(
       type: emergencyContactSchema
     },
     createdBy: {
-      type: Schema41.Types.ObjectId,
+      type: Schema42.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema41.Types.ObjectId,
+      type: Schema42.Types.ObjectId,
       ref: "User"
     }
   },
@@ -28179,7 +28731,7 @@ retreatBookingSchema.index({
   user: 1,
   status: 1
 });
-var RetreatBooking = model41(
+var RetreatBooking = model42(
   "RetreatBooking",
   retreatBookingSchema
 );
@@ -28204,7 +28756,7 @@ var assertFound21 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId19 = (value, fieldName) => {
-  if (!Types41.ObjectId.isValid(value)) {
+  if (!Types42.ObjectId.isValid(value)) {
     throwServiceError21(`${fieldName} is invalid`, 400);
   }
 };
@@ -28249,7 +28801,7 @@ var createRetreatBooking = async (payload, userId, actorId) => {
     throwServiceError21(`Cannot join a retreat batch that is ${batch.status}`, 400);
   }
   const activeExistingBooking = await RetreatBooking.findOne({
-    user: new Types41.ObjectId(userId),
+    user: new Types42.ObjectId(userId),
     retreatBatch: batch._id,
     status: { $in: ["waitlisted", "invited", "payment_pending", "confirmed"] }
   });
@@ -28267,7 +28819,7 @@ var createRetreatBooking = async (payload, userId, actorId) => {
     status: "waitlisted",
     amount: batch.price,
     currency: batch.currency,
-    createdBy: new Types41.ObjectId(actorId)
+    createdBy: new Types42.ObjectId(actorId)
   };
   if (payload.notes !== void 0) {
     createData.notes = payload.notes;
@@ -28380,7 +28932,7 @@ var createRetreatBookingCheckoutSession = async ({
   booking.stripeCheckoutSessionId = session.id;
   booking.checkoutUrl = session.url ?? void 0;
   booking.status = "payment_pending";
-  booking.updatedBy = new Types41.ObjectId(userId);
+  booking.updatedBy = new Types42.ObjectId(userId);
   await booking.save();
   return {
     bookingId: booking._id,
@@ -28495,7 +29047,7 @@ var inviteRetreatBooking = async (bookingId, payload, actorId) => {
   if (payload.notes !== void 0) {
     booking.notes = payload.notes;
   }
-  booking.updatedBy = new Types41.ObjectId(actorId);
+  booking.updatedBy = new Types42.ObjectId(actorId);
   await booking.save();
   if (previousStatus === "waitlisted") {
     await RetreatBatch.findByIdAndUpdate(booking.retreatBatch, {
@@ -28554,7 +29106,7 @@ var confirmRetreatBookingAdmin = async (bookingId, payload, actorId) => {
   if (payload.notes !== void 0) {
     booking.notes = payload.notes;
   }
-  booking.updatedBy = new Types41.ObjectId(actorId);
+  booking.updatedBy = new Types42.ObjectId(actorId);
   await booking.save();
   const confirmedBookingId = String(booking._id);
   await notificationService.safeCreateFromTemplateOrFallback({
@@ -28602,7 +29154,7 @@ var cancelRetreatBooking = async ({
   booking.status = "cancelled";
   booking.cancellationReason = payload.reason;
   booking.cancelledAt = /* @__PURE__ */ new Date();
-  booking.updatedBy = new Types41.ObjectId(actorId);
+  booking.updatedBy = new Types42.ObjectId(actorId);
   await booking.save();
   const batch = await RetreatBatch.findById(booking.retreatBatch);
   if (batch) {
@@ -28684,7 +29236,7 @@ var refundRetreatBooking = async (bookingId, payload, actorId) => {
   if (payload.reason !== void 0) {
     booking.refundReason = payload.reason;
   }
-  booking.updatedBy = new Types41.ObjectId(actorId);
+  booking.updatedBy = new Types42.ObjectId(actorId);
   await booking.save();
   const batch = await RetreatBatch.findById(booking.retreatBatch);
   if (batch && batch.confirmedBookingsCount > 0) {
@@ -28744,25 +29296,25 @@ var updateRetreatBooking = async ({
   if (payload.emergencyContact !== void 0) {
     booking.emergencyContact = payload.emergencyContact;
   }
-  booking.updatedBy = new Types41.ObjectId(actorId);
+  booking.updatedBy = new Types42.ObjectId(actorId);
   await booking.save();
   return booking.populate(BOOKING_POPULATE2);
 };
 var getMyRetreatBookings = async (userId, query = {}) => {
   assertValidObjectId19(userId, "User ID");
   const filter = {
-    user: new Types41.ObjectId(userId)
+    user: new Types42.ObjectId(userId)
   };
   if (query.status) {
     filter.status = query.status;
   }
   if (query.batchId) {
     assertValidObjectId19(query.batchId, "Retreat batch ID");
-    filter.retreatBatch = new Types41.ObjectId(query.batchId);
+    filter.retreatBatch = new Types42.ObjectId(query.batchId);
   }
   if (query.locationId) {
     assertValidObjectId19(query.locationId, "Retreat location ID");
-    filter.retreatLocation = new Types41.ObjectId(query.locationId);
+    filter.retreatLocation = new Types42.ObjectId(query.locationId);
   }
   const page = query.page ?? 1;
   const limit = query.limit ?? 20;
@@ -28785,8 +29337,8 @@ var getMySingleRetreatBooking = async (bookingId, userId) => {
   assertValidObjectId19(bookingId, "Retreat booking ID");
   assertValidObjectId19(userId, "User ID");
   const booking = await RetreatBooking.findOne({
-    _id: new Types41.ObjectId(bookingId),
-    user: new Types41.ObjectId(userId)
+    _id: new Types42.ObjectId(bookingId),
+    user: new Types42.ObjectId(userId)
   }).populate(BOOKING_POPULATE2).lean();
   assertFound21(booking, "Retreat booking not found", 404);
   return booking;
@@ -28795,15 +29347,15 @@ var getAllRetreatBookingsAdmin = async (query = {}) => {
   const filter = {};
   if (query.userId) {
     assertValidObjectId19(query.userId, "User ID");
-    filter.user = new Types41.ObjectId(query.userId);
+    filter.user = new Types42.ObjectId(query.userId);
   }
   if (query.batchId) {
     assertValidObjectId19(query.batchId, "Retreat batch ID");
-    filter.retreatBatch = new Types41.ObjectId(query.batchId);
+    filter.retreatBatch = new Types42.ObjectId(query.batchId);
   }
   if (query.locationId) {
     assertValidObjectId19(query.locationId, "Retreat location ID");
-    filter.retreatLocation = new Types41.ObjectId(query.locationId);
+    filter.retreatLocation = new Types42.ObjectId(query.locationId);
   }
   if (query.status) {
     filter.status = query.status;
@@ -29260,7 +29812,7 @@ import { Router as Router36 } from "express";
 // src/modules/paymentPlans/payment.plan.service.ts
 init_challenge_pillar_model_schema();
 import {
-  Types as Types42
+  Types as Types43
 } from "mongoose";
 var throwServiceError22 = (message, statusCode) => {
   const error = new Error(
@@ -29278,7 +29830,7 @@ var assertFound22 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId20 = (value, fieldName) => {
-  if (!Types42.ObjectId.isValid(value)) {
+  if (!Types43.ObjectId.isValid(value)) {
     throwServiceError22(
       `${fieldName} is invalid`,
       400
@@ -29361,13 +29913,13 @@ var createPaymentPlan = async (payload, actorId) => {
     order: payload.order ?? 1,
     status: "draft",
     isActive: true,
-    createdBy: new Types42.ObjectId(actorId)
+    createdBy: new Types43.ObjectId(actorId)
   };
   if (payload.description !== void 0) {
     createData.description = payload.description;
   }
   if (payload.product !== void 0) {
-    createData.product = new Types42.ObjectId(
+    createData.product = new Types43.ObjectId(
       payload.product
     );
     createData.productRefModel = payload.productRefModel;
@@ -29519,7 +30071,7 @@ var updatePaymentPlan = async (planId, payload, actorId) => {
       void 0
     );
   } else if (payload.product !== void 0) {
-    plan.product = new Types42.ObjectId(
+    plan.product = new Types43.ObjectId(
       payload.product
     );
   }
@@ -29578,7 +30130,7 @@ var updatePaymentPlan = async (planId, payload, actorId) => {
   if (payload.order !== void 0) {
     plan.order = payload.order;
   }
-  plan.updatedBy = new Types42.ObjectId(actorId);
+  plan.updatedBy = new Types43.ObjectId(actorId);
   try {
     await plan.save();
   } catch (error) {
@@ -29618,7 +30170,7 @@ var activatePaymentPlan = async (planId, actorId) => {
   plan.isActive = true;
   plan.publishedAt = /* @__PURE__ */ new Date();
   plan.set("archivedAt", void 0);
-  plan.updatedBy = new Types42.ObjectId(actorId);
+  plan.updatedBy = new Types43.ObjectId(actorId);
   await plan.save();
   return plan;
 };
@@ -29644,7 +30196,7 @@ var deactivatePaymentPlan = async (planId, actorId) => {
   plan.status = "draft";
   plan.isActive = false;
   plan.set("publishedAt", void 0);
-  plan.updatedBy = new Types42.ObjectId(actorId);
+  plan.updatedBy = new Types43.ObjectId(actorId);
   await plan.save();
   return plan;
 };
@@ -29665,7 +30217,7 @@ var archivePaymentPlan = async (planId, actorId) => {
   plan.isActive = false;
   plan.archivedAt = /* @__PURE__ */ new Date();
   plan.set("publishedAt", void 0);
-  plan.updatedBy = new Types42.ObjectId(actorId);
+  plan.updatedBy = new Types43.ObjectId(actorId);
   await plan.save();
   return plan;
 };
@@ -30454,9 +31006,9 @@ init_assertFound();
 // src/modules/notificationTemplates/notification.template.service.ts
 init_assertFound();
 init_throwServiceError();
-import { Types as Types43 } from "mongoose";
+import { Types as Types44 } from "mongoose";
 var assertValidObjectId21 = (value, fieldName) => {
-  if (!Types43.ObjectId.isValid(value)) {
+  if (!Types44.ObjectId.isValid(value)) {
     throwServiceError_default(`${fieldName} is invalid`, 400);
   }
 };
@@ -30485,8 +31037,8 @@ var createTemplate = async (payload, actorId) => {
     ...payload.actionUrlTemplate !== void 0 ? { actionUrlTemplate: payload.actionUrlTemplate } : {},
     ...payload.description !== void 0 ? { description: payload.description } : {},
     enabled: payload.enabled ?? true,
-    createdBy: new Types43.ObjectId(actorId),
-    updatedBy: new Types43.ObjectId(actorId)
+    createdBy: new Types44.ObjectId(actorId),
+    updatedBy: new Types44.ObjectId(actorId)
   });
   return template.populate(TEMPLATE_POPULATE);
 };
@@ -30566,7 +31118,7 @@ var updateTemplate = async (templateId, payload, actorId) => {
   if (payload.enabled !== void 0) {
     template.enabled = payload.enabled;
   }
-  template.updatedBy = new Types43.ObjectId(actorId);
+  template.updatedBy = new Types44.ObjectId(actorId);
   await template.save();
   return template.populate(TEMPLATE_POPULATE);
 };
@@ -31098,10 +31650,10 @@ import { Router as Router42 } from "express";
 init_users_model_schema();
 init_challenge_pillar_model_schema();
 init_course_module_model_schema();
-import { Types as Types44 } from "mongoose";
+import { Types as Types45 } from "mongoose";
 
 // src/modules/sessionSchedules/sessionschedules.model.schema.ts
-import { model as model42, Schema as Schema42 } from "mongoose";
+import { model as model43, Schema as Schema43 } from "mongoose";
 
 // src/modules/sessionSchedules/sessionschedules.interface.ts
 var SESSION_TYPES = [
@@ -31120,7 +31672,7 @@ var SESSION_STATUSES = [
 ];
 
 // src/modules/sessionSchedules/sessionschedules.model.schema.ts
-var sessionScheduleSchema = new Schema42(
+var sessionScheduleSchema = new Schema43(
   {
     title: {
       type: String,
@@ -31140,18 +31692,18 @@ var sessionScheduleSchema = new Schema42(
       index: true
     },
     host: {
-      type: Schema42.Types.ObjectId,
+      type: Schema43.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     pillar: {
-      type: Schema42.Types.ObjectId,
+      type: Schema43.Types.ObjectId,
       ref: "ChallengePillar",
       index: true
     },
     courseModule: {
-      type: Schema42.Types.ObjectId,
+      type: Schema43.Types.ObjectId,
       ref: "CourseModule",
       index: true
     },
@@ -31190,19 +31742,19 @@ var sessionScheduleSchema = new Schema42(
       maxlength: 1e3
     },
     cancelledBy: {
-      type: Schema42.Types.ObjectId,
+      type: Schema43.Types.ObjectId,
       ref: "User"
     },
     cancelledAt: {
       type: Date
     },
     createdBy: {
-      type: Schema42.Types.ObjectId,
+      type: Schema43.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema42.Types.ObjectId,
+      type: Schema43.Types.ObjectId,
       ref: "User"
     }
   },
@@ -31228,7 +31780,7 @@ sessionScheduleSchema.index({
   status: 1,
   startTime: 1
 });
-var SessionSchedule = model42(
+var SessionSchedule = model43(
   "SessionSchedule",
   sessionScheduleSchema
 );
@@ -31245,7 +31797,7 @@ var assertFound25 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId22 = (value, fieldName) => {
-  if (!Types44.ObjectId.isValid(value)) {
+  if (!Types45.ObjectId.isValid(value)) {
     throwServiceError23(`${fieldName} is invalid`, 400);
   }
 };
@@ -31282,13 +31834,13 @@ var ensureCourseModuleExists6 = async (courseModuleId) => {
 };
 var assertNoHostConflict = async (params) => {
   const filter = {
-    host: new Types44.ObjectId(params.hostId),
+    host: new Types45.ObjectId(params.hostId),
     status: { $nin: ["cancelled"] },
     startTime: { $lt: params.endTime },
     endTime: { $gt: params.startTime }
   };
   if (params.excludeSessionId) {
-    filter._id = { $ne: new Types44.ObjectId(params.excludeSessionId) };
+    filter._id = { $ne: new Types45.ObjectId(params.excludeSessionId) };
   }
   const conflictingSession = await SessionSchedule.findOne(filter);
   if (conflictingSession) {
@@ -31320,20 +31872,20 @@ var createSessionSchedule = async (payload, actorId) => {
   const createData = {
     title: payload.title,
     sessionType: payload.sessionType,
-    host: new Types44.ObjectId(payload.host),
+    host: new Types45.ObjectId(payload.host),
     startTime,
     endTime,
     timezone: payload.timezone,
-    createdBy: new Types44.ObjectId(actorId)
+    createdBy: new Types45.ObjectId(actorId)
   };
   if (payload.description !== void 0) {
     createData.description = payload.description;
   }
   if (payload.pillar) {
-    createData.pillar = new Types44.ObjectId(payload.pillar);
+    createData.pillar = new Types45.ObjectId(payload.pillar);
   }
   if (payload.courseModule) {
-    createData.courseModule = new Types44.ObjectId(payload.courseModule);
+    createData.courseModule = new Types45.ObjectId(payload.courseModule);
   }
   if (payload.meetingUrl !== void 0) {
     createData.meetingUrl = payload.meetingUrl;
@@ -31359,15 +31911,15 @@ var getAllSessionSchedules = async (options2) => {
   const filter = {};
   if (options2.hostId) {
     assertValidObjectId22(options2.hostId, "Host ID");
-    filter.host = new Types44.ObjectId(options2.hostId);
+    filter.host = new Types45.ObjectId(options2.hostId);
   }
   if (options2.pillarId) {
     assertValidObjectId22(options2.pillarId, "Pillar ID");
-    filter.pillar = new Types44.ObjectId(options2.pillarId);
+    filter.pillar = new Types45.ObjectId(options2.pillarId);
   }
   if (options2.courseModuleId) {
     assertValidObjectId22(options2.courseModuleId, "Course module ID");
-    filter.courseModule = new Types44.ObjectId(options2.courseModuleId);
+    filter.courseModule = new Types45.ObjectId(options2.courseModuleId);
   }
   if (options2.sessionType) {
     filter.sessionType = options2.sessionType;
@@ -31407,7 +31959,7 @@ var getAllSessionSchedules = async (options2) => {
 var getSingleSessionSchedule = async (sessionId) => {
   assertValidObjectId22(sessionId, "Session schedule ID");
   const session = await populateSessionSchedule(
-    new Types44.ObjectId(sessionId)
+    new Types45.ObjectId(sessionId)
   );
   assertFound25(session, "Session schedule not found", 404);
   return session;
@@ -31421,14 +31973,14 @@ var updateSessionSchedule = async (sessionId, payload, actorId) => {
   }
   if (payload.host) {
     await ensureHostExists(payload.host);
-    session.host = new Types44.ObjectId(payload.host);
+    session.host = new Types45.ObjectId(payload.host);
   }
   if (payload.pillar !== void 0) {
     if (payload.pillar === null) {
       session.set("pillar", void 0);
     } else {
       await ensurePillarExists2(payload.pillar);
-      session.pillar = new Types44.ObjectId(payload.pillar);
+      session.pillar = new Types45.ObjectId(payload.pillar);
     }
   }
   if (payload.courseModule !== void 0) {
@@ -31436,7 +31988,7 @@ var updateSessionSchedule = async (sessionId, payload, actorId) => {
       session.set("courseModule", void 0);
     } else {
       await ensureCourseModuleExists6(payload.courseModule);
-      session.courseModule = new Types44.ObjectId(payload.courseModule);
+      session.courseModule = new Types45.ObjectId(payload.courseModule);
     }
   }
   const nextStartTime = payload.startTime ? new Date(payload.startTime) : session.startTime;
@@ -31481,7 +32033,7 @@ var updateSessionSchedule = async (sessionId, payload, actorId) => {
   if (payload.status !== void 0) {
     session.status = payload.status;
   }
-  session.updatedBy = new Types44.ObjectId(actorId);
+  session.updatedBy = new Types45.ObjectId(actorId);
   await session.save();
   await safeLogActivityEvent2({
     actorId,
@@ -31505,9 +32057,9 @@ var cancelSessionSchedule = async (sessionId, payload, actorId) => {
   }
   session.status = "cancelled";
   session.cancellationReason = payload.reason;
-  session.cancelledBy = new Types44.ObjectId(actorId);
+  session.cancelledBy = new Types45.ObjectId(actorId);
   session.cancelledAt = /* @__PURE__ */ new Date();
-  session.updatedBy = new Types44.ObjectId(actorId);
+  session.updatedBy = new Types45.ObjectId(actorId);
   await session.save();
   await safeLogActivityEvent2({
     actorId,
@@ -31820,10 +32372,10 @@ import { Router as Router43 } from "express";
 
 // src/modules/sessionattendances/sessionattendances.service.ts
 init_users_model_schema();
-import { Types as Types45 } from "mongoose";
+import { Types as Types46 } from "mongoose";
 
 // src/modules/sessionattendances/sessionattendances.model.schema.ts
-import { model as model43, Schema as Schema43 } from "mongoose";
+import { model as model44, Schema as Schema44 } from "mongoose";
 
 // src/modules/sessionattendances/sessionattendances.interface.ts
 var SESSION_ATTENDANCE_STATUSES = [
@@ -31835,16 +32387,16 @@ var SESSION_ATTENDANCE_STATUSES = [
 ];
 
 // src/modules/sessionattendances/sessionattendances.model.schema.ts
-var sessionAttendanceSchema = new Schema43(
+var sessionAttendanceSchema = new Schema44(
   {
     session: {
-      type: Schema43.Types.ObjectId,
+      type: Schema44.Types.ObjectId,
       ref: "SessionSchedule",
       required: true,
       index: true
     },
     user: {
-      type: Schema43.Types.ObjectId,
+      type: Schema44.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
@@ -31866,7 +32418,7 @@ var sessionAttendanceSchema = new Schema43(
       type: Date
     },
     markedBy: {
-      type: Schema43.Types.ObjectId,
+      type: Schema44.Types.ObjectId,
       ref: "User"
     },
     cancellationReason: {
@@ -31905,7 +32457,7 @@ sessionAttendanceSchema.index({
   user: 1,
   status: 1
 });
-var SessionAttendance = model43(
+var SessionAttendance = model44(
   "SessionAttendance",
   sessionAttendanceSchema
 );
@@ -31922,7 +32474,7 @@ var assertFound27 = (value, message, statusCode) => {
   }
 };
 var assertValidObjectId23 = (value, fieldName) => {
-  if (!Types45.ObjectId.isValid(value)) {
+  if (!Types46.ObjectId.isValid(value)) {
     throwServiceError24(`${fieldName} is invalid`, 400);
   }
 };
@@ -31942,8 +32494,8 @@ var populateAttendance = (id3) => SessionAttendance.findById(id3).populate("sess
 var registerSessionAttendance = async (payload) => {
   await ensureSessionExists(payload.session);
   await ensureUserExists4(payload.user);
-  const sessionObjectId = new Types45.ObjectId(payload.session);
-  const userObjectId = new Types45.ObjectId(payload.user);
+  const sessionObjectId = new Types46.ObjectId(payload.session);
+  const userObjectId = new Types46.ObjectId(payload.user);
   const attendance = await SessionAttendance.findOneAndUpdate(
     {
       session: sessionObjectId,
@@ -31970,8 +32522,8 @@ var registerSessionAttendance = async (payload) => {
 var markSessionAttendance = async (payload) => {
   await ensureSessionExists(payload.session);
   await ensureUserExists4(payload.user);
-  const sessionObjectId = new Types45.ObjectId(payload.session);
-  const userObjectId = new Types45.ObjectId(payload.user);
+  const sessionObjectId = new Types46.ObjectId(payload.session);
+  const userObjectId = new Types46.ObjectId(payload.user);
   const setData = {
     status: payload.status
   };
@@ -31980,7 +32532,7 @@ var markSessionAttendance = async (payload) => {
   }
   if (payload.markedBy) {
     assertValidObjectId23(payload.markedBy, "Marked by ID");
-    setData.markedBy = new Types45.ObjectId(payload.markedBy);
+    setData.markedBy = new Types46.ObjectId(payload.markedBy);
   }
   if (payload.notes !== void 0) {
     setData.notes = payload.notes;
@@ -32012,8 +32564,8 @@ var cancelSessionAttendance = async (payload) => {
   assertValidObjectId23(payload.session, "Session ID");
   assertValidObjectId23(payload.user, "User ID");
   const attendance = await SessionAttendance.findOne({
-    session: new Types45.ObjectId(payload.session),
-    user: new Types45.ObjectId(payload.user)
+    session: new Types46.ObjectId(payload.session),
+    user: new Types46.ObjectId(payload.user)
   });
   assertFound27(attendance, "Session attendance record not found", 404);
   if (attendance.status === "cancelled") {
@@ -32036,11 +32588,11 @@ var getAllSessionAttendances = async (options2) => {
   const filter = {};
   if (options2.sessionId) {
     assertValidObjectId23(options2.sessionId, "Session ID");
-    filter.session = new Types45.ObjectId(options2.sessionId);
+    filter.session = new Types46.ObjectId(options2.sessionId);
   }
   if (options2.userId) {
     assertValidObjectId23(options2.userId, "User ID");
-    filter.user = new Types45.ObjectId(options2.userId);
+    filter.user = new Types46.ObjectId(options2.userId);
   }
   if (options2.status) {
     filter.status = options2.status;
@@ -32064,7 +32616,7 @@ var getAllSessionAttendances = async (options2) => {
 var getMySessionAttendances = async (userId) => {
   assertValidObjectId23(userId, "User ID");
   const attendances = await SessionAttendance.find({
-    user: new Types45.ObjectId(userId)
+    user: new Types46.ObjectId(userId)
   }).sort({
     createdAt: -1
   }).populate("session", "title sessionType startTime endTime status");
@@ -32073,7 +32625,7 @@ var getMySessionAttendances = async (userId) => {
 var getSingleSessionAttendance = async (attendanceId) => {
   assertValidObjectId23(attendanceId, "Session attendance ID");
   const attendance = await populateAttendance(
-    new Types45.ObjectId(attendanceId)
+    new Types46.ObjectId(attendanceId)
   );
   assertFound27(attendance, "Session attendance not found", 404);
   return attendance;
@@ -32317,11 +32869,11 @@ init_assertFound();
 
 // src/modules/supportTickets/support.ticket.service.ts
 init_assertFound();
-import { Types as Types46 } from "mongoose";
+import { Types as Types47 } from "mongoose";
 init_users_model_schema();
 
 // src/modules/supportTickets/support.ticket.model.schema.ts
-import { model as model44, Schema as Schema44 } from "mongoose";
+import { model as model45, Schema as Schema45 } from "mongoose";
 
 // src/modules/supportTickets/support.ticket.interface.ts
 var SUPPORT_TICKET_CATEGORIES = [
@@ -32335,11 +32887,11 @@ var SUPPORT_TICKET_PRIORITIES = ["low", "medium", "high", "urgent"];
 var SUPPORT_TICKET_STATUSES = ["open", "in_progress", "resolved", "closed"];
 
 // src/modules/supportTickets/support.ticket.model.schema.ts
-var supportTicketSchema = new Schema44(
+var supportTicketSchema = new Schema45(
   {
     ticketNumber: { type: String, required: true, unique: true, index: true, trim: true },
-    requester: { type: Schema44.Types.ObjectId, ref: "User", required: true, index: true },
-    assignedTo: { type: Schema44.Types.ObjectId, ref: "User", index: true },
+    requester: { type: Schema45.Types.ObjectId, ref: "User", required: true, index: true },
+    assignedTo: { type: Schema45.Types.ObjectId, ref: "User", index: true },
     subject: { type: String, required: true, trim: true, maxlength: 200 },
     message: { type: String, required: true, trim: true, maxlength: 5e3 },
     category: { type: String, enum: SUPPORT_TICKET_CATEGORIES, default: "general", required: true, index: true },
@@ -32353,7 +32905,7 @@ var supportTicketSchema = new Schema44(
 );
 supportTicketSchema.index({ requester: 1, createdAt: -1 });
 supportTicketSchema.index({ status: 1, priority: 1, createdAt: -1 });
-var SupportTicket = model44("SupportTicket", supportTicketSchema);
+var SupportTicket = model45("SupportTicket", supportTicketSchema);
 
 // src/modules/supportTickets/support.ticket.service.ts
 var populate = [
@@ -32376,7 +32928,7 @@ var supportTicketService = {
     assertFound_default(user, "Requester user not found", 404);
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        return await SupportTicket.create({ ...payload, requester: new Types46.ObjectId(requester), ticketNumber: ticketNumber() });
+        return await SupportTicket.create({ ...payload, requester: new Types47.ObjectId(requester), ticketNumber: ticketNumber() });
       } catch (error) {
         if (error.code !== 11e3) throw error;
       }
@@ -32384,7 +32936,7 @@ var supportTicketService = {
     throw new BadRequestError("Could not generate a unique ticket number");
   },
   myTickets(requester, query) {
-    return list({ requester: new Types46.ObjectId(requester), ...queryFilters(query) }, query);
+    return list({ requester: new Types47.ObjectId(requester), ...queryFilters(query) }, query);
   },
   adminList(query) {
     return list(queryFilters(query), query);
@@ -32405,7 +32957,7 @@ var supportTicketService = {
       update2.adminResponse = payload.adminResponse;
       update2.respondedAt = /* @__PURE__ */ new Date();
     }
-    if (payload.assignedTo) update2.assignedTo = new Types46.ObjectId(payload.assignedTo);
+    if (payload.assignedTo) update2.assignedTo = new Types47.ObjectId(payload.assignedTo);
     if (payload.status === "resolved" || payload.status === "closed") update2.resolvedAt = /* @__PURE__ */ new Date();
     const ticket = await SupportTicket.findByIdAndUpdate(id3, update2, { new: true, runValidators: true }).populate(populate);
     assertFound_default(ticket, "Support ticket not found", 404);
@@ -32555,16 +33107,16 @@ init_assertFound();
 
 // src/modules/userDevices/user.device.service.ts
 init_assertFound();
-import { Types as Types47 } from "mongoose";
+import { Types as Types48 } from "mongoose";
 
 // src/modules/userDevices/user.device.model.schema.ts
-import { model as model45, Schema as Schema45 } from "mongoose";
+import { model as model46, Schema as Schema46 } from "mongoose";
 
 // src/modules/userDevices/user.device.interface.ts
 var DEVICE_PLATFORMS = ["ios", "android", "web", "windows", "macos", "linux"];
 
 // src/modules/userDevices/user.device.model.schema.ts
-var pushSubscriptionSchema = new Schema45(
+var pushSubscriptionSchema = new Schema46(
   {
     endpoint: { type: String, trim: true, maxlength: 2e3 },
     p256dh: { type: String, select: false },
@@ -32572,9 +33124,9 @@ var pushSubscriptionSchema = new Schema45(
   },
   { _id: false }
 );
-var userDeviceSchema = new Schema45(
+var userDeviceSchema = new Schema46(
   {
-    user: { type: Schema45.Types.ObjectId, ref: "User", required: true, index: true },
+    user: { type: Schema46.Types.ObjectId, ref: "User", required: true, index: true },
     deviceIdentifier: { type: String, required: true, trim: true, maxlength: 200, index: true },
     platform: { type: String, enum: DEVICE_PLATFORMS, required: true },
     deviceName: { type: String, trim: true, maxlength: 120 },
@@ -32591,15 +33143,15 @@ userDeviceSchema.index(
   { "pushSubscription.endpoint": 1 },
   { unique: true, sparse: true, partialFilterExpression: { isActive: true } }
 );
-var UserDevice = model45("UserDevice", userDeviceSchema);
+var UserDevice = model46("UserDevice", userDeviceSchema);
 
 // src/modules/userDevices/user.device.service.ts
 var safeSelect = "_id deviceIdentifier platform deviceName appVersion isActive lastActiveAt revokedAt createdAt updatedAt";
 var userDeviceService = {
   async register(userId, payload) {
     const device = await UserDevice.findOneAndUpdate(
-      { user: new Types47.ObjectId(userId), deviceIdentifier: payload.deviceIdentifier },
-      { ...payload, user: new Types47.ObjectId(userId), isActive: true, revokedAt: void 0, lastActiveAt: /* @__PURE__ */ new Date() },
+      { user: new Types48.ObjectId(userId), deviceIdentifier: payload.deviceIdentifier },
+      { ...payload, user: new Types48.ObjectId(userId), isActive: true, revokedAt: void 0, lastActiveAt: /* @__PURE__ */ new Date() },
       { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
     ).select(safeSelect);
     return device;
@@ -33866,6 +34418,8 @@ var port = process.env.PORT || 3e3;
 var main = async () => {
   try {
     await mongoose6.connect(config_default.MONGO_URI);
+    const systemUser = await mongoose6.connection.collection("users").findOne({}, { projection: { _id: 1 } });
+    if (systemUser?._id) await ensurePrivateRooms(String(systemUser._id));
     await dropLegacyQuizCertificateIndexes();
     const httpServer = http.createServer(app_default);
     initSocket(httpServer);

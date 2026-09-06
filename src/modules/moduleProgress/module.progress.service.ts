@@ -190,6 +190,15 @@ const recalculateDerivedFields = (progress: ModuleProgressDocument): void => {
   progress.actionSummary.completed = true;
   progress.quizUnlocked = videosCompleted;
 
+  if (!hasPublishedVideos) {
+    progress.quizSummary.status = "locked";
+    progress.overallCompletionPercent = 0;
+    progress.isCompleted = false;
+    progress.set("completedAt", undefined);
+    progress.lastCalculatedAt = new Date();
+    return;
+  }
+
   if (progress.quizSummary.passed) {
     progress.quizSummary.status = "passed";
   } else if (!progress.quizUnlocked) {
@@ -202,15 +211,15 @@ const recalculateDerivedFields = (progress: ModuleProgressDocument): void => {
     progress.quizSummary.status = "failed";
   }
 
-  // Progress is 100% when quiz is passed, or proportional to video completion
-  if (progress.quizSummary.passed) {
+  // Progress is 100% when quiz is passed AND videos completed, or proportional to video completion
+  if (progress.quizSummary.passed && videosCompleted) {
     progress.overallCompletionPercent = 100;
   } else {
     progress.overallCompletionPercent = progress.videoSummary.completionPercent;
   }
 
   const moduleCompleted =
-    progress.videoSummary.completed && progress.quizSummary.passed;
+    videosCompleted && progress.quizSummary.passed;
 
   const newlyCompleted = !progress.isCompleted && moduleCompleted;
 
@@ -481,10 +490,10 @@ const refreshModuleProgress = async (userId: string, moduleId: string) => {
 
   const totalRequiredVideos = targetVideoIds.length;
   const isVideoCompleted =
-    totalRequiredVideos === 0 || completedVideosCount >= totalRequiredVideos;
+    totalRequiredVideos > 0 && completedVideosCount >= totalRequiredVideos;
   const videoPercent =
     totalRequiredVideos === 0
-      ? 100
+      ? 0
       : calculateCompletionPercent(completedVideosCount, totalRequiredVideos);
 
   progress.set("videoSummary", {

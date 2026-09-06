@@ -1,6 +1,6 @@
-import { Router } from 'express';
-import { verifyToken,authorizeRoles, } from '../../middleware/authMiddleware';
-import { paymentController } from './payment.controller';
+import { Router } from "express";
+import { verifyToken, authorizeRoles } from "../../middleware/authMiddleware";
+import { paymentController } from "./payment.controller";
 
 const router = Router();
 
@@ -25,7 +25,7 @@ const router = Router();
  *                   items:
  *                     $ref: '#/components/schemas/RolePricingPlan'
  */
-router.get('/pricing', paymentController.getAllPricingPlans);
+router.get("/pricing", paymentController.getAllPricingPlans);
 
 /**
  * @openapi
@@ -60,7 +60,10 @@ router.get('/pricing', paymentController.getAllPricingPlans);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/pricing/:role/:accessTo', paymentController.getPricingPlanByRoleAndAccess);
+router.get(
+  "/pricing/:role/:accessTo",
+  paymentController.getPricingPlanByRoleAndAccess,
+);
 
 /**
  * @openapi
@@ -90,11 +93,7 @@ router.get('/pricing/:role/:accessTo', paymentController.getPricingPlanByRoleAnd
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post(
-  '/upgrade',
-  verifyToken,
-  paymentController.createUpgradeCheckout
-);
+router.post("/upgrade", verifyToken, paymentController.createUpgradeCheckout);
 
 /**
  * @openapi
@@ -130,8 +129,8 @@ router.post(
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get(
-  '/verify-session/:sessionId',
-  paymentController.verifyCheckoutSession
+  "/verify-session/:sessionId",
+  paymentController.verifyCheckoutSession,
 );
 
 /**
@@ -161,46 +160,47 @@ router.get(
 // Note: this route is actually registered directly in app.ts (before express.json())
 // It is documented here for completeness.
 
-
 router.get(
-  '/registration-link/:token',
+  "/registration-link/:token",
 
-  paymentController
-    .getRegistrationPaymentDetails
+  paymentController.getRegistrationPaymentDetails,
 );
 
 router.post(
-  '/registration-link/:token/checkout',
+  "/registration-link/:token/checkout",
 
-  paymentController
-    .createRegistrationCheckout
+  paymentController.createRegistrationCheckout,
 );
 
 router.get(
-  '/registration-pending',
+  "/registration-pending",
 
   verifyToken,
 
-  authorizeRoles(
-    'founder'
-  ),
+  authorizeRoles("founder"),
 
-  paymentController
-    .getPendingRegistrationPayments
+  paymentController.getPendingRegistrationPayments,
 );
+
+router.get("/upgrade/plans", verifyToken, paymentController.getMyUpgradePlans);
 
 router.get(
-  '/upgrade/plans',
+  "/access-upgrade/plan",
   verifyToken,
-  paymentController.getMyUpgradePlans
+  paymentController.getAccessUpgradePlan,
 );
-
 
 router.post(
-  '/registration-link/:linkId/send',
+  "/access-upgrade/checkout",
   verifyToken,
-  authorizeRoles('founder'),
-  paymentController.sendRegistrationPaymentLink
+  paymentController.createAccessUpgradeCheckout,
 );
 
-export const paymentRoutes = router; 
+router.post(
+  "/registration-link/:linkId/send",
+  verifyToken,
+  authorizeRoles("founder"),
+  paymentController.sendRegistrationPaymentLink,
+);
+
+export const paymentRoutes = router;

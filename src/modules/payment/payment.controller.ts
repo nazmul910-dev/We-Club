@@ -1,16 +1,16 @@
-import { NextFunction, Request, Response } from 'express';
-import sendResponse from '../../utility/sendResponse';
-import { UnauthorizedError } from '../../utility/errorResponses';
-import { paymentService } from './payment.service';
+import { NextFunction, Request, Response } from "express";
+import sendResponse from "../../utility/sendResponse";
+import { UnauthorizedError } from "../../utility/errorResponses";
+import { paymentService } from "./payment.service";
 import {
   createUpgradeCheckoutValidation,
   paymentRolePricingValidation,
   verifyCheckoutSessionValidation,
-} from './payment.validation';
+} from "./payment.validation";
 
 const getAuthUserId = (req: Request): any => {
   if (!req.user) {
-    throw new UnauthorizedError('Authentication required');
+    throw new UnauthorizedError("Authentication required");
   }
 
   return req.user.id;
@@ -19,7 +19,7 @@ const getAuthUserId = (req: Request): any => {
 const getAllPricingPlans = async (
   _req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const result = paymentService.getAllPricingPlans();
@@ -27,7 +27,7 @@ const getAllPricingPlans = async (
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Pricing plans retrieved successfully',
+      message: "Pricing plans retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -38,7 +38,7 @@ const getAllPricingPlans = async (
 const getPricingPlanByRoleAndAccess = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const validatedData = paymentRolePricingValidation.parse({
@@ -47,13 +47,13 @@ const getPricingPlanByRoleAndAccess = async (
 
     const result = paymentService.getPricingPlanByRoleAndAccess(
       validatedData.params.role,
-      validatedData.params.accessTo
+      validatedData.params.accessTo,
     );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Pricing plan retrieved successfully',
+      message: "Pricing plan retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -64,7 +64,7 @@ const getPricingPlanByRoleAndAccess = async (
 const createUpgradeCheckout = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const userId = getAuthUserId(req);
@@ -73,17 +73,16 @@ const createUpgradeCheckout = async (
       body: req.body,
     });
 
-    const result =
-      await paymentService.createUpgradeCheckoutSessionIntoStripe(
-        userId,
-        validatedData.body.durationMonths,
-        validatedData.body?.discountCode
-      );
+    const result = await paymentService.createUpgradeCheckoutSessionIntoStripe(
+      userId,
+      validatedData.body.durationMonths,
+      validatedData.body?.discountCode,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Stripe checkout session created successfully',
+      message: "Stripe checkout session created successfully",
       data: result,
     });
   } catch (error) {
@@ -94,7 +93,7 @@ const createUpgradeCheckout = async (
 const verifyCheckoutSession = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const validatedData = verifyCheckoutSessionValidation.parse({
@@ -102,7 +101,7 @@ const verifyCheckoutSession = async (
     });
 
     const result = await paymentService.verifyCheckoutSessionFromStripe(
-      validatedData.params.sessionId
+      validatedData.params.sessionId,
     );
 
     sendResponse(res, {
@@ -119,10 +118,10 @@ const verifyCheckoutSession = async (
 const stripeWebhook = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const signature = req.headers['stripe-signature'];
+    const signature = req.headers["stripe-signature"];
 
     await paymentService.handleStripeWebhook(req.body as Buffer, signature);
 
@@ -134,166 +133,174 @@ const stripeWebhook = async (
   }
 };
 
-
-
-const getRegistrationPaymentDetails =
-  async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const token =
-        req.params.token;
-
-      if (!token) {
-        throw new Error(
-          'Payment token is required'
-        );
-      }
-
-      const result =
-        await paymentService
-          .getRegistrationPaymentDetails(
-            token as string
-          );
-
-      sendResponse(res, {
-        statusCode: 200,
-
-        success: true,
-
-        message:
-          'Registration payment details retrieved successfully',
-
-        data: result,
-      });
-
-    } catch (error) {
-      next(error);
-    }
-  };
-
-
-  const createRegistrationCheckout =
-  async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const token =
-        req.params.token;
-
-      if (!token) {
-        throw new Error(
-          'Payment token is required'
-        );
-      }
-
-      const result =
-        await paymentService
-          .createRegistrationCheckoutByToken(
-            token as string,
-            req.body?.discountCode
-          );
-
-      sendResponse(res, {
-        statusCode: 200,
-
-        success: true,
-
-        message:
-          'Stripe checkout session created successfully',
-
-        data: result,
-      });
-
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  const getPendingRegistrationPayments =
-  async (
-    _req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-
-      const result =
-        await paymentService
-          .getPendingRegistrationPayments();
-
-      sendResponse(res, {
-        statusCode: 200,
-
-        success: true,
-
-        message:
-          'Pending registration payments retrieved successfully',
-
-        data: result,
-      });
-
-    } catch (error) {
-      next(error);
-    }
-  };
-
-
-  const getMyUpgradePlans =
-async (
+const getRegistrationPaymentDetails = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const userId =
-      getAuthUserId(req);
+    const token = req.params.token;
 
-    const result =
-      await paymentService
-        .getMyUpgradePlans(
-          userId
-        );
+    if (!token) {
+      throw new Error("Payment token is required");
+    }
+
+    const result = await paymentService.getRegistrationPaymentDetails(
+      token as string,
+    );
 
     sendResponse(res, {
       statusCode: 200,
+
       success: true,
 
-      message:
-        'Upgrade plans retrieved successfully',
+      message: "Registration payment details retrieved successfully",
 
-      data:
-        result,
+      data: result,
     });
   } catch (error) {
     next(error);
   }
 };
 
+const createRegistrationCheckout = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const token = req.params.token;
+
+    if (!token) {
+      throw new Error("Payment token is required");
+    }
+
+    const result = await paymentService.createRegistrationCheckoutByToken(
+      token as string,
+      req.body?.discountCode,
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+
+      success: true,
+
+      message: "Stripe checkout session created successfully",
+
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getPendingRegistrationPayments = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await paymentService.getPendingRegistrationPayments();
+
+    sendResponse(res, {
+      statusCode: 200,
+
+      success: true,
+
+      message: "Pending registration payments retrieved successfully",
+
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getMyUpgradePlans = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = getAuthUserId(req);
+
+    const result = await paymentService.getMyUpgradePlans(userId);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+
+      message: "Upgrade plans retrieved successfully",
+
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const sendRegistrationPaymentLink = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const linkId = req.params.linkId;
 
     if (!linkId) {
-      throw new Error('Payment link ID is required');
+      throw new Error("Payment link ID is required");
     }
 
-    const result =
-      await paymentService.sendRegistrationPaymentLinkEmail(linkId as string);
+    const result = await paymentService.sendRegistrationPaymentLinkEmail(
+      linkId as string,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message: 'Payment link sent to user successfully',
+      message: "Payment link sent to user successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAccessUpgradePlan = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await paymentService.getAccessUpgradePlan(
+      getAuthUserId(req),
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Access upgrade plan retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const createAccessUpgradeCheckout = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await paymentService.createAccessUpgradeCheckoutSession(
+      getAuthUserId(req),
+      req.body?.cancelPath,
+      req.body?.discountCode,
+    );
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Access upgrade checkout created successfully",
       data: result,
     });
   } catch (error) {
@@ -307,7 +314,9 @@ export const paymentController = {
   createUpgradeCheckout,
   verifyCheckoutSession,
   stripeWebhook,
-getMyUpgradePlans,
+  getMyUpgradePlans,
+  getAccessUpgradePlan,
+  createAccessUpgradeCheckout,
   getRegistrationPaymentDetails,
   createRegistrationCheckout,
   getPendingRegistrationPayments,

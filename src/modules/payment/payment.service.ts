@@ -53,7 +53,7 @@ const getStripeClient = (): Stripe => {
   return stripeClient as Stripe;
 };
 
-type CheckoutPurpose = "registration" | "upgrade";
+type CheckoutPurpose = "registration" | "upgrade" | "access_upgrade";
 
 type CreateCheckoutPayload = {
   userId: string;
@@ -636,6 +636,129 @@ const createUpgradeCheckoutSessionIntoStripe = async (
   };
 };
 
+const getAccessUpgradePlan = async (userId: string) => {
+  const user = await User.findById(userId).select(
+    "role accessTo membershipAccessStatus subscriptionExpiresAt",
+  );
+
+  assertFound(user, "User not found", 404);
+
+  if (user.role === "admin" || user.accessTo === "both") {
+    return { hasBoth: true, currentAccessTo: user.accessTo };
+  }
+
+  const targetAccessTo =
+    user.accessTo === "we_command_center" ? "invictus" : "we_command_center";
+  const amountCents = targetAccessTo === "invictus" ? 29500 : 19500;
+
+  return {
+    hasBoth: false,
+    currentAccessTo: user.accessTo,
+    targetAccessTo,
+    displayName: "WÉ Command Center + INVICTUS Academy",
+    addOnName:
+      targetAccessTo === "invictus"
+        ? "INVICTUS Academy add-on"
+        : "WÉ Command Center add-on",
+    amountCents,
+    amount: amountCents / 100,
+    currency: "usd",
+    formattedAmount: `$${(amountCents / 100).toFixed(2)}`,
+    billingText: "One-time upgrade for the remainder of your current cycle",
+    subscriptionExpiresAt: user.subscriptionExpiresAt,
+  };
+};
+
+const createAccessUpgradeCheckoutSession = async (
+  userId: string,
+  cancelPath = "/dashboard/academy",
+  discountCode?: string,
+) => {
+  const user = await User.findById(userId).select("-password");
+  assertFound(user, "User not found", 404);
+
+  if (user.role === "admin" || user.accessTo === "both") {
+    throwError("Your account already has access to both platforms.", 400);
+  }
+
+  if (user.membershipAccessStatus === "expired") {
+    throwError("Renew your membership before upgrading platform access.", 400);
+  }
+
+  if (!isPaidRole(user.role)) {
+    throwError("This role does not require an access upgrade payment.", 400);
+  }
+
+  const targetAccessTo =
+    user.accessTo === "we_command_center" ? "invictus" : "we_command_center";
+  const originalAmountCents = targetAccessTo === "invictus" ? 29500 : 19500;
+  const discount = await discountService.validateDiscountCodeForCheckout({
+    code: discountCode,
+    role: user.role,
+    accessTo: user.accessTo,
+    userId: String(user._id),
+  });
+  const amountCents = discount
+    ? Math.round(originalAmountCents * (1 - discount.discountPercent / 100))
+    : originalAmountCents;
+  const stripeClient = getStripeClient();
+  const session = await stripeClient.checkout.sessions.create({
+    mode: "payment",
+    customer: user.stripeCustomerId || undefined,
+    customer_email: user.stripeCustomerId ? undefined : user.email,
+    client_reference_id: String(user._id),
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: amountCents,
+          product_data: {
+            name: "WÉ Command Center + INVICTUS Academy access upgrade",
+            description:
+              "Unlock the second platform for your current membership cycle.",
+          },
+        },
+      },
+    ],
+    success_url: `${config.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config.FRONTEND_URL}${cancelPath}`,
+    metadata: {
+      userId: String(user._id),
+      role: user.role,
+      accessTo: user.accessTo,
+      targetAccessTo: "both",
+      purpose: "access_upgrade",
+      discountCode: discount?.code || "",
+      discountPercent: String(discount?.discountPercent ?? 0),
+      originalAmountCents: String(originalAmountCents),
+      finalAmountCents: String(amountCents),
+    },
+  });
+
+  if (!session.url)
+    throwError("Stripe Checkout session could not be created.", 500);
+
+  await PaymentSession.create({
+    user: user._id,
+    role: user.role,
+    accessTo: "both",
+    purpose: "access_upgrade",
+    status: "pending",
+    stripeCheckoutSessionId: session.id,
+    stripeCustomerId: user.stripeCustomerId,
+    checkoutUrl: session.url,
+    amountTotal: amountCents,
+    originalAmountTotal: originalAmountCents,
+    discountAmountTotal: originalAmountCents - amountCents,
+    discountCode: discount?.code,
+    discountPercent: discount?.discountPercent,
+    currency: "usd",
+  } as any);
+
+  return { checkoutUrl: session.url, sessionId: session.id };
+};
+
 const getSubscriptionPeriodEnd = (
   subscription: Stripe.Subscription,
 ): Date | undefined => {
@@ -758,7 +881,6 @@ const activateRegistrationPayment = async (
         stripeCheckoutSessionId: session.id,
       });
     } catch (error) {
-
       console.error(
         `[DISCOUNT REDEEM FAILED] session=${session.id} code=${discountCode} userId=${userId}:`,
         error,
@@ -863,6 +985,52 @@ const activateUpgradePayment = async (session: Stripe.Checkout.Session) => {
   return User.findById(userId);
 };
 
+const activateAccessUpgradePayment = async (
+  session: Stripe.Checkout.Session,
+) => {
+  const userId = session.metadata?.userId;
+  if (!userId) throwError("User ID missing from payment metadata.", 400);
+
+  const payment = await PaymentSession.findOne({
+    stripeCheckoutSessionId: session.id,
+  });
+  if (payment?.status === "paid") return User.findById(userId);
+
+  const user = await User.findById(userId);
+  assertFound(user, "User not found", 404);
+
+  await User.findByIdAndUpdate(userId, {
+    $set: { accessTo: "both" },
+  });
+  await PaymentSession.findOneAndUpdate(
+    { stripeCheckoutSessionId: session.id },
+    {
+      $set: {
+        status: "paid",
+        amountTotal: session.amount_total ?? undefined,
+        currency: session.currency ?? "usd",
+      },
+    },
+  );
+
+  const discountCode = session.metadata?.discountCode || undefined;
+  if (discountCode) {
+    await discountService
+      .redeemDiscountCodeAfterPayment({
+        code: discountCode,
+        userId,
+        role: user.role,
+        accessTo: "both",
+        stripeCheckoutSessionId: session.id,
+      })
+      .catch((error) =>
+        console.error("[ACCESS UPGRADE DISCOUNT REDEEM FAILED]", error),
+      );
+  }
+
+  return User.findById(userId);
+};
+
 const handleCheckoutSessionCompleted = async (
   session: Stripe.Checkout.Session,
 ) => {
@@ -883,6 +1051,11 @@ const handleCheckoutSessionCompleted = async (
 
   if (purpose === "upgrade") {
     await activateUpgradePayment(session);
+    return;
+  }
+
+  if (purpose === "access_upgrade") {
+    await activateAccessUpgradePayment(session);
     return;
   }
 
@@ -1073,6 +1246,11 @@ const handleStripeWebhook = async (
         break;
       }
 
+      if (purpose === "access_upgrade") {
+        await activateAccessUpgradePayment(session);
+        break;
+      }
+
       console.warn(
         `Unknown Stripe checkout purpose "${purpose}" for session ${session.id}`,
       );
@@ -1106,23 +1284,24 @@ const verifyCheckoutSessionFromStripe = async (sessionId: string) => {
   const stripeClient = getStripeClient();
   const session = await stripeClient.checkout.sessions.retrieve(sessionId);
 
-  if (session.payment_status !== 'paid') {
-    return { paid: false, message: 'Payment is not completed yet' };
+  if (session.payment_status !== "paid") {
+    return { paid: false, message: "Payment is not completed yet" };
   }
 
   const purpose = session.metadata?.purpose;
 
-  if (purpose === 'upgrade') {
+  if (purpose === "upgrade") {
     await activateUpgradePayment(session);
-  } else if (purpose === 'invictus_purchase') {
+  } else if (purpose === "access_upgrade") {
+    await activateAccessUpgradePayment(session);
+  } else if (purpose === "invictus_purchase") {
     await invictusPaymentService.activateInvictusPurchase(session);
   } else {
     await activateRegistrationPayment(session);
   }
 
-  return { paid: true, message: 'Payment verified successfully' };
+  return { paid: true, message: "Payment verified successfully" };
 };
-
 
 const getMyUpgradePlans = async (userId: string) => {
   await syncMembershipExpiry(userId);
@@ -1222,6 +1401,8 @@ export const paymentService = {
   verifyCheckoutSessionFromStripe,
 
   getMyUpgradePlans,
+  getAccessUpgradePlan,
+  createAccessUpgradeCheckoutSession,
   getRegistrationPaymentDetails,
   createRegistrationCheckoutByToken,
   getPendingRegistrationPayments,

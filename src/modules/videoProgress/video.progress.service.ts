@@ -656,13 +656,13 @@ const getMyModuleVideoProgress = async (userId: string, moduleId: string) => {
 
   const requiredVideoCompletionPercent =
     requiredVideos.length === 0
-      ? 100
+      ? 0
       : roundToTwoDecimalPlaces(
           (completedRequiredVideos / requiredVideos.length) * 100,
         );
 
   const allRequiredVideosCompleted =
-    requiredVideos.length === 0 ||
+    requiredVideos.length > 0 &&
     completedRequiredVideos === requiredVideos.length;
 
   return {
