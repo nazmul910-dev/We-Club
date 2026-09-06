@@ -4,7 +4,11 @@ import jwt from "jsonwebtoken";
 
 import config from "../config";
 import { User } from "../modules/users/users.model.schema";
-import { getOrCreateCountryRoom } from "../modules/room/room.service";
+import {
+  getCountryRoomAccess,
+  getOrCreateCountryRoom,
+  getPrivateRoom,
+} from "../modules/room/room.service";
 import { createMessage, deleteMessage } from "../modules/message/message.services";
 import { resolveCountry } from "../utility/country";
 
@@ -85,6 +89,22 @@ export const initSocket = (httpServer: HttpServer) => {
       socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
       socket.data.user.profileImage = userDoc?.profileImage ?? null;
       const countryName = userDoc?.country?.trim();
+      const requestedCountryName = socket.handshake.auth?.countryName as
+        | string
+        | undefined;
+      const privateRoomSlug = socket.handshake.auth?.privateRoomSlug as string | undefined;
+
+      if (privateRoomSlug) {
+        const privateRoom = await getPrivateRoom(
+          privateRoomSlug,
+          userId,
+          socket.data.user.role,
+        );
+        const privateRoomId = privateRoom._id.toString();
+        socket.data.roomId = privateRoomId;
+        socket.join(privateRoomId);
+        socket.emit("room:joined", { roomId: privateRoomId, name: privateRoom.name });
+      }
 
       // founders/admins/managers aren't tied to a single country room, so they
       // shouldn't be booted for lacking one — fall back to a default room and
@@ -92,11 +112,30 @@ export const initSocket = (httpServer: HttpServer) => {
       const isPrivilegedRole =
         socket.data.user.role === "founder" ||
         socket.data.user.role === "admin" ||
-        socket.data.user.role === "manager";
+        socket.data.user.role === "manager" ||
+        socket.data.user.role === "ceo";
 
-      let country = countryName ? resolveCountry(countryName) : null;
+      let country = privateRoomSlug
+        ? null
+        : requestedCountryName
+          ? resolveCountry(requestedCountryName)
+          : countryName
+            ? resolveCountry(countryName)
+            : null;
 
-      if (!country && !isPrivilegedRole) {
+      if (!privateRoomSlug && requestedCountryName && country) {
+        const access = await getCountryRoomAccess(
+          userId,
+          socket.data.user.role,
+          requestedCountryName,
+        );
+        if (!access.canEnter) {
+          socket.emit("error", "You do not have access to this country room");
+          return socket.disconnect();
+        }
+      }
+
+      if (!privateRoomSlug && !country && !isPrivilegedRole) {
         socket.emit(
           "error",
           countryName ? "Invalid country on your profile" : "No country set on your profile",
@@ -104,19 +143,21 @@ export const initSocket = (httpServer: HttpServer) => {
         return socket.disconnect();
       }
 
-      if (!country) {
+      if (!privateRoomSlug && !country) {
         // privileged role with no/invalid country on file — default them
         // into a fallback room so the connection still succeeds.
         // (swap "United States" for whatever your default/global room should be)
         country = resolveCountry("United States");
       }
 
-      if (!country) {
+      if (!privateRoomSlug && !country) {
         socket.emit("error", "No default community room is configured");
         return socket.disconnect();
       }
 
-      const room = await getOrCreateCountryRoom(country.name, userId);
+      const room = privateRoomSlug
+        ? await getPrivateRoom(privateRoomSlug, userId, socket.data.user.role)
+        : await getOrCreateCountryRoom(country!.name, userId);
       let roomId = room._id.toString();
       socket.data.roomId = roomId;
       socket.join(roomId);
@@ -125,14 +166,15 @@ export const initSocket = (httpServer: HttpServer) => {
         roomId,
         countryCode: room.countryCode,
         countryName: room.countryName,
+        name: room.name,
       });
 
       socket.on("room:join", async (requestedCountryName: string) => {
         try {
-          const canSwitchRooms =
+          const canSwitchRooms = !privateRoomSlug && (
             socket.data.user.role === "founder" ||
             socket.data.user.role === "admin" ||
-            socket.data.user.role === "manager";
+            socket.data.user.role === "manager");
 
           if (!canSwitchRooms) {
             socket.emit(
