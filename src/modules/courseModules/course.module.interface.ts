@@ -1,16 +1,17 @@
-import { Types } from 'mongoose';
+import { Types } from "mongoose";
 
 export const COURSE_MODULE_STATUSES = [
-  'draft',
-  'published',
-  'archived',
+  "draft",
+  "published",
+  "archived",
 ] as const;
 
-export type CourseModuleStatus =
-  (typeof COURSE_MODULE_STATUSES)[number];
+export type CourseModuleStatus = (typeof COURSE_MODULE_STATUSES)[number];
 
 export interface ICourseModule {
   pillar: Types.ObjectId;
+
+  publishedVideoCount?: number;
 
   title: string;
   slug: string;

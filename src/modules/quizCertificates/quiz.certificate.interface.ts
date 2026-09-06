@@ -19,6 +19,8 @@ export interface IQuizCertificate {
 
   issuedAt: Date;
 
+  contentVersionAtIssue?: Date | undefined;
+
   certificateUrl?: string | undefined;
 
   revokedAt?: Date | undefined;

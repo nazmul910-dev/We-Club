@@ -2000,6 +2000,979 @@ var init_challenge_pillar_model_schema = __esm({
   }
 });
 
+// src/modules/userEntitlements/userEntitlements.interface.ts
+var ENTITLEMENT_TYPES, ENTITLEMENT_SOURCES, ADMIN_ENTITLEMENT_SOURCES, ENTITLEMENT_STATUSES;
+var init_userEntitlements_interface = __esm({
+  "src/modules/userEntitlements/userEntitlements.interface.ts"() {
+    "use strict";
+    ENTITLEMENT_TYPES = [
+      "pillar",
+      "bundle",
+      "event",
+      "retreat"
+    ];
+    ENTITLEMENT_SOURCES = [
+      "stripe",
+      "admin",
+      "promotion",
+      "complimentary",
+      "migration"
+    ];
+    ADMIN_ENTITLEMENT_SOURCES = [
+      "admin",
+      "promotion",
+      "complimentary",
+      "migration"
+    ];
+    ENTITLEMENT_STATUSES = [
+      "active",
+      "revoked",
+      "refunded",
+      "expired"
+    ];
+  }
+});
+
+// src/modules/userEntitlements/userEntitlements.model.schema.ts
+import { model as model20, Schema as Schema20 } from "mongoose";
+var userEntitlementSchema, UserEntitlement;
+var init_userEntitlements_model_schema = __esm({
+  "src/modules/userEntitlements/userEntitlements.model.schema.ts"() {
+    "use strict";
+    init_userEntitlements_interface();
+    userEntitlementSchema = new Schema20(
+      {
+        user: {
+          type: Schema20.Types.ObjectId,
+          ref: "User",
+          required: true,
+          index: true
+        },
+        entitlementType: {
+          type: String,
+          enum: ENTITLEMENT_TYPES,
+          required: true,
+          index: true
+        },
+        entitlementKey: {
+          type: String,
+          required: true,
+          trim: true
+        },
+        pillar: {
+          type: Schema20.Types.ObjectId,
+          ref: "ChallengePillar",
+          index: true
+        },
+        targetId: {
+          type: Schema20.Types.ObjectId,
+          index: true
+        },
+        source: {
+          type: String,
+          enum: ENTITLEMENT_SOURCES,
+          required: true,
+          index: true
+        },
+        status: {
+          type: String,
+          enum: ENTITLEMENT_STATUSES,
+          default: "active",
+          required: true,
+          index: true
+        },
+        paymentSession: {
+          type: Schema20.Types.ObjectId,
+          ref: "PaymentSession",
+          index: true
+        },
+        startsAt: {
+          type: Date,
+          required: true,
+          default: Date.now
+        },
+        expiresAt: {
+          type: Date,
+          index: true
+        },
+        grantedBy: {
+          type: Schema20.Types.ObjectId,
+          ref: "User"
+        },
+        statusChangedBy: {
+          type: Schema20.Types.ObjectId,
+          ref: "User"
+        },
+        statusReason: {
+          type: String,
+          trim: true,
+          maxlength: 1e3
+        },
+        revokedAt: {
+          type: Date
+        },
+        refundedAt: {
+          type: Date
+        },
+        expiredAt: {
+          type: Date
+        }
+      },
+      {
+        timestamps: true,
+        collection: "userentitlements"
+      }
+    );
+    userEntitlementSchema.index(
+      {
+        user: 1,
+        entitlementKey: 1
+      },
+      {
+        unique: true
+      }
+    );
+    userEntitlementSchema.index({
+      user: 1,
+      status: 1,
+      startsAt: 1,
+      expiresAt: 1
+    });
+    userEntitlementSchema.index({
+      user: 1,
+      pillar: 1,
+      status: 1
+    });
+    userEntitlementSchema.index({
+      entitlementType: 1,
+      status: 1,
+      createdAt: -1
+    });
+    UserEntitlement = model20(
+      "UserEntitlement",
+      userEntitlementSchema
+    );
+  }
+});
+
+// src/modules/entitlementLogs/entitlementlog.interface.ts
+var ENTITLEMENT_LOG_ACTIONS, ENTITLEMENT_LOG_SOURCES;
+var init_entitlementlog_interface = __esm({
+  "src/modules/entitlementLogs/entitlementlog.interface.ts"() {
+    "use strict";
+    ENTITLEMENT_LOG_ACTIONS = [
+      "granted",
+      "reactivated",
+      "revoked",
+      "refunded",
+      "expired"
+    ];
+    ENTITLEMENT_LOG_SOURCES = [
+      "stripe",
+      "admin",
+      "promotion",
+      "complimentary",
+      "migration",
+      "system"
+    ];
+  }
+});
+
+// src/modules/entitlementLogs/entitlement.model.schema.ts
+import { model as model21, Schema as Schema21 } from "mongoose";
+var entitlementLogSchema, EntitlementLog;
+var init_entitlement_model_schema = __esm({
+  "src/modules/entitlementLogs/entitlement.model.schema.ts"() {
+    "use strict";
+    init_entitlementlog_interface();
+    entitlementLogSchema = new Schema21(
+      {
+        user: {
+          type: Schema21.Types.ObjectId,
+          ref: "User",
+          required: true,
+          index: true
+        },
+        entitlement: {
+          type: Schema21.Types.ObjectId,
+          ref: "UserEntitlement",
+          required: true,
+          index: true
+        },
+        pillar: {
+          type: Schema21.Types.ObjectId,
+          ref: "ChallengePillar",
+          index: true
+        },
+        paymentSession: {
+          type: Schema21.Types.ObjectId,
+          ref: "PaymentSession",
+          index: true
+        },
+        action: {
+          type: String,
+          enum: ENTITLEMENT_LOG_ACTIONS,
+          required: true,
+          index: true
+        },
+        source: {
+          type: String,
+          enum: ENTITLEMENT_LOG_SOURCES,
+          required: true,
+          index: true
+        },
+        reason: {
+          type: String,
+          trim: true,
+          maxlength: 1e3
+        },
+        actor: {
+          type: Schema21.Types.ObjectId,
+          ref: "User",
+          index: true
+        },
+        metadata: {
+          type: Schema21.Types.Mixed
+        }
+      },
+      {
+        timestamps: true,
+        collection: "entitlementslog"
+      }
+    );
+    entitlementLogSchema.index({
+      user: 1,
+      createdAt: -1
+    });
+    entitlementLogSchema.index({
+      entitlement: 1,
+      createdAt: -1
+    });
+    entitlementLogSchema.index({
+      action: 1,
+      createdAt: -1
+    });
+    EntitlementLog = model21(
+      "EntitlementLog",
+      entitlementLogSchema
+    );
+  }
+});
+
+// src/modules/entitlementLogs/entitlementlog.service.ts
+import { Types as Types19 } from "mongoose";
+var throwServiceError3, assertFound3, assertValidObjectId5, ensureUserExists, ensureEntitlementExists, createEntitlementLog, getAllEntitlementLogs, getMyEntitlementLogs, getSingleEntitlementLog, entitlementLogService;
+var init_entitlementlog_service = __esm({
+  "src/modules/entitlementLogs/entitlementlog.service.ts"() {
+    "use strict";
+    init_users_model_schema();
+    init_userEntitlements_model_schema();
+    init_entitlement_model_schema();
+    throwServiceError3 = (message, statusCode) => {
+      const error = new Error(message);
+      error.statusCode = statusCode;
+      throw error;
+    };
+    assertFound3 = (value, message, statusCode) => {
+      if (value === null || value === void 0) {
+        throwServiceError3(message, statusCode);
+      }
+    };
+    assertValidObjectId5 = (value, fieldName) => {
+      if (!Types19.ObjectId.isValid(value)) {
+        throwServiceError3(`${fieldName} is invalid`, 400);
+      }
+    };
+    ensureUserExists = async (userId) => {
+      assertValidObjectId5(userId, "User ID");
+      const user = await User.findById(userId).select("_id fullName email role");
+      assertFound3(user, "User not found", 404);
+      return user;
+    };
+    ensureEntitlementExists = async (entitlementId) => {
+      assertValidObjectId5(entitlementId, "Entitlement ID");
+      const entitlement = await UserEntitlement.findById(entitlementId);
+      assertFound3(entitlement, "User entitlement not found", 404);
+      return entitlement;
+    };
+    createEntitlementLog = async (payload) => {
+      await ensureUserExists(payload.user);
+      const entitlement = await ensureEntitlementExists(payload.entitlement);
+      if (payload.pillar) {
+        assertValidObjectId5(payload.pillar, "Pillar ID");
+      }
+      if (payload.paymentSession) {
+        assertValidObjectId5(payload.paymentSession, "Payment session ID");
+      }
+      if (payload.actor) {
+        assertValidObjectId5(payload.actor, "Actor ID");
+      }
+      const createData = {
+        user: new Types19.ObjectId(payload.user),
+        entitlement: new Types19.ObjectId(payload.entitlement),
+        action: payload.action,
+        source: payload.source
+      };
+      const pillarId = payload.pillar ?? entitlement.pillar?.toString();
+      if (pillarId) {
+        createData.pillar = new Types19.ObjectId(pillarId);
+      }
+      const paymentSessionId = payload.paymentSession ?? entitlement.paymentSession?.toString();
+      if (paymentSessionId) {
+        createData.paymentSession = new Types19.ObjectId(paymentSessionId);
+      }
+      if (payload.reason !== void 0) {
+        createData.reason = payload.reason;
+      }
+      if (payload.actor) {
+        createData.actor = new Types19.ObjectId(payload.actor);
+      }
+      if (payload.metadata !== void 0) {
+        createData.metadata = payload.metadata;
+      }
+      const log = await EntitlementLog.create(createData);
+      const populated = await EntitlementLog.findById(log._id).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role");
+      assertFound3(populated, "Entitlement log not found after creation", 500);
+      return populated;
+    };
+    getAllEntitlementLogs = async (options2) => {
+      const page = options2.page ?? 1;
+      const limit = Math.min(options2.limit ?? 20, 100);
+      const skip = (page - 1) * limit;
+      const filter = {};
+      if (options2.userId) {
+        assertValidObjectId5(options2.userId, "User ID");
+        filter.user = new Types19.ObjectId(options2.userId);
+      }
+      if (options2.entitlementId) {
+        assertValidObjectId5(options2.entitlementId, "Entitlement ID");
+        filter.entitlement = new Types19.ObjectId(options2.entitlementId);
+      }
+      if (options2.pillarId) {
+        assertValidObjectId5(options2.pillarId, "Pillar ID");
+        filter.pillar = new Types19.ObjectId(options2.pillarId);
+      }
+      if (options2.action) {
+        filter.action = options2.action;
+      }
+      if (options2.source) {
+        filter.source = options2.source;
+      }
+      const [data, total] = await Promise.all([
+        EntitlementLog.find(filter).sort({
+          createdAt: -1
+        }).skip(skip).limit(limit).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role").lean(),
+        EntitlementLog.countDocuments(filter)
+      ]);
+      return {
+        data,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    };
+    getMyEntitlementLogs = async (userId) => {
+      assertValidObjectId5(userId, "User ID");
+      const logs = await EntitlementLog.find({
+        user: new Types19.ObjectId(userId)
+      }).sort({
+        createdAt: -1
+      }).populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").lean();
+      return logs;
+    };
+    getSingleEntitlementLog = async (logId) => {
+      assertValidObjectId5(logId, "Entitlement log ID");
+      const log = await EntitlementLog.findById(logId).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role").lean();
+      assertFound3(log, "Entitlement log not found", 404);
+      return log;
+    };
+    entitlementLogService = {
+      createEntitlementLog,
+      getAllEntitlementLogs,
+      getMyEntitlementLogs,
+      getSingleEntitlementLog
+    };
+  }
+});
+
+// src/modules/userEntitlements/userEntitlements.service.ts
+import { Types as Types20 } from "mongoose";
+var throwServiceError4, assertFound4, assertValidObjectId6, safeLogEntitlementEvent, isDuplicateKeyError4, parseOptionalDate, parseNullableDate, buildEntitlementKey, validateDateRange, populateEntitlement, expirePastEntitlements, ensureUserExists2, ensurePillarExists, grantEntitlementInternal, grantEntitlementByAdmin, activatePillarEntitlementFromPayment, activateEntitlementFromPayment, hasActivePillarEntitlement, checkPillarAccess, getMyEntitlements, getAllEntitlements, getSingleEntitlement, changeEntitlementStatus, revokeEntitlement, refundEntitlement, expireEntitlement, reactivateEntitlement, userEntitlementService;
+var init_userEntitlements_service = __esm({
+  "src/modules/userEntitlements/userEntitlements.service.ts"() {
+    "use strict";
+    init_challenge_pillar_model_schema();
+    init_users_model_schema();
+    init_userEntitlements_model_schema();
+    init_entitlementlog_service();
+    throwServiceError4 = (message, statusCode) => {
+      const error = new Error(message);
+      error.statusCode = statusCode;
+      throw error;
+    };
+    assertFound4 = (value, message, statusCode) => {
+      if (value === null || value === void 0) {
+        throwServiceError4(message, statusCode);
+      }
+    };
+    assertValidObjectId6 = (value, fieldName) => {
+      if (!Types20.ObjectId.isValid(value)) {
+        throwServiceError4(`${fieldName} is invalid`, 400);
+      }
+    };
+    safeLogEntitlementEvent = async (params) => {
+      try {
+        await entitlementLogService.createEntitlementLog({
+          user: params.userId,
+          entitlement: params.entitlementId,
+          action: params.action,
+          source: params.source,
+          ...params.pillarId ? { pillar: params.pillarId } : {},
+          ...params.paymentSessionId ? { paymentSession: params.paymentSessionId } : {},
+          ...params.actorId ? { actor: params.actorId } : {},
+          ...params.reason !== void 0 ? { reason: params.reason } : {}
+        });
+      } catch (error) {
+        console.error("Failed to write entitlement log:", error);
+      }
+    };
+    isDuplicateKeyError4 = (error) => {
+      return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
+    };
+    parseOptionalDate = (value) => {
+      return value ? new Date(value) : /* @__PURE__ */ new Date();
+    };
+    parseNullableDate = (value) => {
+      if (value === null || value === void 0) {
+        return void 0;
+      }
+      return new Date(value);
+    };
+    buildEntitlementKey = ({
+      entitlementType,
+      pillarId,
+      targetId
+    }) => {
+      if (entitlementType === "pillar") {
+        if (!pillarId) {
+          throwServiceError4("Pillar ID is required", 400);
+        }
+        return `pillar:${pillarId}`;
+      }
+      if (!targetId) {
+        throwServiceError4("Target ID is required", 400);
+      }
+      return `${entitlementType}:${targetId}`;
+    };
+    validateDateRange = (startsAt, expiresAt) => {
+      if (expiresAt && expiresAt <= startsAt) {
+        throwServiceError4("expiresAt must be later than startsAt", 400);
+      }
+    };
+    populateEntitlement = (entitlementId) => {
+      return UserEntitlement.findById(entitlementId).populate("user", "fullName email role accessTo profileImage accountStatus").populate("pillar", "name slug title isPaid priceCents currency status").populate(
+        "paymentSession",
+        "purpose status stripeCheckoutSessionId amountTotal currency"
+      ).populate("grantedBy", "fullName email role profileImage").populate("statusChangedBy", "fullName email role profileImage");
+    };
+    expirePastEntitlements = async (userId) => {
+      const now = /* @__PURE__ */ new Date();
+      const filter = {
+        status: "active",
+        expiresAt: {
+          $lte: now
+        }
+      };
+      if (userId) {
+        filter.user = new Types20.ObjectId(userId);
+      }
+      await UserEntitlement.updateMany(filter, {
+        $set: {
+          status: "expired",
+          expiredAt: now
+        }
+      });
+    };
+    ensureUserExists2 = async (userId) => {
+      assertValidObjectId6(userId, "User ID");
+      const user = await User.findById(userId).select(
+        "_id fullName email role accessTo accountStatus"
+      );
+      assertFound4(user, "User not found", 404);
+      return user;
+    };
+    ensurePillarExists = async (pillarId) => {
+      assertValidObjectId6(pillarId, "Pillar ID");
+      const pillar = await ChallengePillar.findById(pillarId);
+      assertFound4(pillar, "Challenge pillar not found", 404);
+      if (pillar.status === "archived") {
+        throwServiceError4("Cannot grant access to an archived pillar", 400);
+      }
+      return pillar;
+    };
+    grantEntitlementInternal = async (input) => {
+      await ensureUserExists2(input.userId);
+      if (input.entitlementType === "pillar") {
+        if (!input.pillarId) {
+          throwServiceError4("Pillar ID is required", 400);
+        }
+        await ensurePillarExists(input.pillarId);
+      } else {
+        if (!input.targetId) {
+          throwServiceError4("Target ID is required", 400);
+        }
+        assertValidObjectId6(input.targetId, "Target ID");
+      }
+      if (input.paymentSessionId) {
+        assertValidObjectId6(input.paymentSessionId, "Payment session ID");
+      }
+      if (input.grantedBy) {
+        assertValidObjectId6(input.grantedBy, "Granted by user ID");
+      }
+      validateDateRange(input.startsAt, input.expiresAt);
+      const entitlementKey = buildEntitlementKey({
+        entitlementType: input.entitlementType,
+        pillarId: input.pillarId,
+        targetId: input.targetId
+      });
+      const existingEntitlement = await UserEntitlement.findOne({
+        user: new Types20.ObjectId(input.userId),
+        entitlementKey
+      });
+      if (existingEntitlement) {
+        existingEntitlement.entitlementType = input.entitlementType;
+        existingEntitlement.entitlementKey = entitlementKey;
+        existingEntitlement.source = input.source;
+        existingEntitlement.status = "active";
+        existingEntitlement.startsAt = input.startsAt;
+        existingEntitlement.set("expiresAt", input.expiresAt);
+        if (input.entitlementType === "pillar") {
+          existingEntitlement.pillar = new Types20.ObjectId(input.pillarId);
+          existingEntitlement.set("targetId", void 0);
+        } else {
+          existingEntitlement.targetId = new Types20.ObjectId(input.targetId);
+          existingEntitlement.set("pillar", void 0);
+        }
+        existingEntitlement.set(
+          "paymentSession",
+          input.paymentSessionId ? new Types20.ObjectId(input.paymentSessionId) : void 0
+        );
+        existingEntitlement.set(
+          "grantedBy",
+          input.grantedBy ? new Types20.ObjectId(input.grantedBy) : void 0
+        );
+        existingEntitlement.set("statusChangedBy", void 0);
+        existingEntitlement.set("statusReason", void 0);
+        existingEntitlement.set("revokedAt", void 0);
+        existingEntitlement.set("refundedAt", void 0);
+        existingEntitlement.set("expiredAt", void 0);
+        await existingEntitlement.save();
+        await safeLogEntitlementEvent({
+          userId: input.userId,
+          entitlementId: existingEntitlement._id.toString(),
+          action: "reactivated",
+          source: input.source,
+          ...input.pillarId ? { pillarId: input.pillarId } : {},
+          ...input.paymentSessionId ? { paymentSessionId: input.paymentSessionId } : {},
+          ...input.grantedBy ? { actorId: input.grantedBy } : {}
+        });
+        const populated = await populateEntitlement(existingEntitlement._id);
+        assertFound4(populated, "Entitlement not found after update", 500);
+        return populated;
+      }
+      const createData = {
+        user: new Types20.ObjectId(input.userId),
+        entitlementType: input.entitlementType,
+        entitlementKey,
+        source: input.source,
+        status: "active",
+        startsAt: input.startsAt
+      };
+      if (input.entitlementType === "pillar") {
+        createData.pillar = new Types20.ObjectId(input.pillarId);
+      } else {
+        createData.targetId = new Types20.ObjectId(input.targetId);
+      }
+      if (input.expiresAt) {
+        createData.expiresAt = input.expiresAt;
+      }
+      if (input.paymentSessionId) {
+        createData.paymentSession = new Types20.ObjectId(input.paymentSessionId);
+      }
+      if (input.grantedBy) {
+        createData.grantedBy = new Types20.ObjectId(input.grantedBy);
+      }
+      try {
+        const entitlement = await UserEntitlement.create(createData);
+        await safeLogEntitlementEvent({
+          userId: input.userId,
+          entitlementId: entitlement._id.toString(),
+          action: "granted",
+          source: input.source,
+          ...input.pillarId ? { pillarId: input.pillarId } : {},
+          ...input.paymentSessionId ? { paymentSessionId: input.paymentSessionId } : {},
+          ...input.grantedBy ? { actorId: input.grantedBy } : {}
+        });
+        const populated = await populateEntitlement(entitlement._id);
+        assertFound4(populated, "Entitlement not found after creation", 500);
+        return populated;
+      } catch (error) {
+        if (isDuplicateKeyError4(error)) {
+          const entitlement = await UserEntitlement.findOne({
+            user: new Types20.ObjectId(input.userId),
+            entitlementKey
+          });
+          assertFound4(
+            entitlement,
+            "Existing entitlement could not be retrieved",
+            409
+          );
+          return entitlement;
+        }
+        throw error;
+      }
+    };
+    grantEntitlementByAdmin = async (payload, actorId) => {
+      const entitlementType = payload.entitlementType ?? "pillar";
+      const startsAt = parseOptionalDate(payload.startsAt);
+      const expiresAt = parseNullableDate(payload.expiresAt);
+      return grantEntitlementInternal({
+        userId: payload.user,
+        entitlementType,
+        ...payload.pillar !== void 0 ? {
+          pillarId: payload.pillar
+        } : {},
+        ...payload.targetId !== void 0 ? {
+          targetId: payload.targetId
+        } : {},
+        source: payload.source ?? "admin",
+        ...payload.paymentSession !== void 0 ? {
+          paymentSessionId: payload.paymentSession
+        } : {},
+        startsAt,
+        ...expiresAt !== void 0 ? { expiresAt } : {},
+        grantedBy: actorId
+      });
+    };
+    activatePillarEntitlementFromPayment = async (payload) => {
+      return grantEntitlementInternal({
+        userId: payload.userId,
+        entitlementType: "pillar",
+        pillarId: payload.pillarId,
+        source: "stripe",
+        paymentSessionId: payload.paymentSessionId,
+        startsAt: payload.startsAt ?? /* @__PURE__ */ new Date(),
+        ...payload.expiresAt !== void 0 ? {
+          expiresAt: payload.expiresAt
+        } : {}
+      });
+    };
+    activateEntitlementFromPayment = async (payload) => {
+      return grantEntitlementInternal({
+        userId: payload.userId,
+        entitlementType: payload.entitlementType,
+        ...payload.pillarId !== void 0 ? { pillarId: payload.pillarId } : {},
+        ...payload.targetId !== void 0 ? { targetId: payload.targetId } : {},
+        source: "stripe",
+        paymentSessionId: payload.paymentSessionId,
+        startsAt: payload.startsAt ?? /* @__PURE__ */ new Date(),
+        ...payload.expiresAt !== void 0 ? { expiresAt: payload.expiresAt } : {}
+      });
+    };
+    hasActivePillarEntitlement = async (userId, pillarId) => {
+      assertValidObjectId6(userId, "User ID");
+      assertValidObjectId6(pillarId, "Pillar ID");
+      await expirePastEntitlements(userId);
+      const now = /* @__PURE__ */ new Date();
+      const filter = {
+        user: new Types20.ObjectId(userId),
+        entitlementType: "pillar",
+        pillar: new Types20.ObjectId(pillarId),
+        status: "active",
+        startsAt: {
+          $lte: now
+        },
+        $or: [
+          {
+            expiresAt: {
+              $exists: false
+            }
+          },
+          {
+            expiresAt: {
+              $gt: now
+            }
+          }
+        ]
+      };
+      const entitlement = await UserEntitlement.exists(filter);
+      return Boolean(entitlement);
+    };
+    checkPillarAccess = async (userId, pillarId) => {
+      assertValidObjectId6(userId, "User ID");
+      assertValidObjectId6(pillarId, "Pillar ID");
+      const user = await User.findById(userId).select(
+        "_id role accessTo accountStatus"
+      );
+      assertFound4(user, "User not found", 404);
+      const pillar = await ChallengePillar.findOne({
+        _id: pillarId,
+        status: { $ne: "archived" }
+      }).select("name slug title isPaid priceCents currency status");
+      assertFound4(pillar, "Challenge pillar not found or unavailable", 404);
+      if (user.role === "admin" || user.role === "manager" || user.role === "founder") {
+        return {
+          hasAccess: true,
+          accessType: "admin",
+          reason: "admin_override",
+          pillar,
+          entitlement: null
+        };
+      }
+      if (!pillar.isPaid) {
+        return {
+          hasAccess: true,
+          accessType: "free",
+          reason: "free_pillar",
+          pillar,
+          entitlement: null
+        };
+      }
+      await expirePastEntitlements(userId);
+      const now = /* @__PURE__ */ new Date();
+      const entitlement = await UserEntitlement.findOne({
+        user: new Types20.ObjectId(userId),
+        entitlementType: "pillar",
+        pillar: new Types20.ObjectId(pillarId),
+        status: "active",
+        startsAt: {
+          $lte: now
+        },
+        $or: [
+          {
+            expiresAt: {
+              $exists: false
+            }
+          },
+          {
+            expiresAt: {
+              $gt: now
+            }
+          }
+        ]
+      }).populate("paymentSession", "status purpose amountTotal currency");
+      if (!entitlement) {
+        return {
+          hasAccess: false,
+          accessType: "locked",
+          reason: "pillar_purchase_required",
+          pillar,
+          entitlement: null
+        };
+      }
+      return {
+        hasAccess: true,
+        accessType: "purchased",
+        reason: "active_pillar_entitlement",
+        pillar,
+        entitlement
+      };
+    };
+    getMyEntitlements = async (userId) => {
+      assertValidObjectId6(userId, "User ID");
+      await expirePastEntitlements(userId);
+      const entitlements = await UserEntitlement.find({
+        user: new Types20.ObjectId(userId)
+      }).sort({
+        createdAt: -1
+      }).populate("pillar", "name slug title isPaid priceCents currency status").populate(
+        "paymentSession",
+        "purpose status amountTotal currency stripeCheckoutSessionId"
+      );
+      const now = /* @__PURE__ */ new Date();
+      return entitlements.map((entitlement) => {
+        const isCurrentlyActive = entitlement.status === "active" && entitlement.startsAt <= now && (!entitlement.expiresAt || entitlement.expiresAt > now);
+        return {
+          ...entitlement.toObject(),
+          hasAccess: isCurrentlyActive
+        };
+      });
+    };
+    getAllEntitlements = async (options2) => {
+      await expirePastEntitlements();
+      const page = options2.page ?? 1;
+      const limit = options2.limit ?? 20;
+      const skip = (page - 1) * limit;
+      const filter = {};
+      if (options2.userId) {
+        assertValidObjectId6(options2.userId, "User ID");
+        filter.user = new Types20.ObjectId(options2.userId);
+      }
+      if (options2.pillarId) {
+        assertValidObjectId6(options2.pillarId, "Pillar ID");
+        filter.pillar = new Types20.ObjectId(options2.pillarId);
+      }
+      if (options2.entitlementType) {
+        filter.entitlementType = options2.entitlementType;
+      }
+      if (options2.source) {
+        filter.source = options2.source;
+      }
+      if (options2.status) {
+        filter.status = options2.status;
+      }
+      const [data, total] = await Promise.all([
+        UserEntitlement.find(filter).sort({
+          createdAt: -1
+        }).skip(skip).limit(limit).populate(
+          "user",
+          "fullName email role accessTo profileImage accountStatus"
+        ).populate("pillar", "name slug title isPaid priceCents currency status").populate(
+          "paymentSession",
+          "purpose status amountTotal currency stripeCheckoutSessionId"
+        ).populate("grantedBy", "fullName email role").populate("statusChangedBy", "fullName email role"),
+        UserEntitlement.countDocuments(filter)
+      ]);
+      return {
+        data,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    };
+    getSingleEntitlement = async (entitlementId) => {
+      assertValidObjectId6(entitlementId, "Entitlement ID");
+      const entitlement = await populateEntitlement(entitlementId);
+      assertFound4(entitlement, "User entitlement not found", 404);
+      return entitlement;
+    };
+    changeEntitlementStatus = async (input) => {
+      assertValidObjectId6(input.entitlementId, "Entitlement ID");
+      assertValidObjectId6(input.actorId, "Actor ID");
+      const entitlement = await UserEntitlement.findById(input.entitlementId);
+      assertFound4(entitlement, "User entitlement not found", 404);
+      entitlement.status = input.status;
+      entitlement.statusChangedBy = new Types20.ObjectId(input.actorId);
+      if (input.reason !== void 0) {
+        entitlement.statusReason = input.reason;
+      } else {
+        entitlement.set("statusReason", void 0);
+      }
+      const now = /* @__PURE__ */ new Date();
+      if (input.status === "revoked") {
+        entitlement.revokedAt = now;
+        entitlement.set("refundedAt", void 0);
+        entitlement.set("expiredAt", void 0);
+      }
+      if (input.status === "refunded") {
+        entitlement.refundedAt = now;
+        entitlement.set("revokedAt", void 0);
+        entitlement.set("expiredAt", void 0);
+      }
+      if (input.status === "expired") {
+        entitlement.expiredAt = now;
+        entitlement.set("revokedAt", void 0);
+        entitlement.set("refundedAt", void 0);
+      }
+      await entitlement.save();
+      await safeLogEntitlementEvent({
+        userId: entitlement.user.toString(),
+        entitlementId: entitlement._id.toString(),
+        action: input.status,
+        source: entitlement.source,
+        ...entitlement.pillar ? { pillarId: entitlement.pillar.toString() } : {},
+        ...entitlement.paymentSession ? { paymentSessionId: entitlement.paymentSession.toString() } : {},
+        actorId: input.actorId,
+        ...input.reason !== void 0 ? { reason: input.reason } : {}
+      });
+      const populated = await populateEntitlement(entitlement._id);
+      assertFound4(populated, "Entitlement not found after status update", 500);
+      return populated;
+    };
+    revokeEntitlement = async (entitlementId, payload, actorId) => {
+      return changeEntitlementStatus({
+        entitlementId,
+        status: "revoked",
+        actorId,
+        ...payload.reason !== void 0 ? {
+          reason: payload.reason
+        } : {}
+      });
+    };
+    refundEntitlement = async (entitlementId, payload, actorId) => {
+      return changeEntitlementStatus({
+        entitlementId,
+        status: "refunded",
+        actorId,
+        ...payload.reason !== void 0 ? {
+          reason: payload.reason
+        } : {}
+      });
+    };
+    expireEntitlement = async (entitlementId, payload, actorId) => {
+      return changeEntitlementStatus({
+        entitlementId,
+        status: "expired",
+        actorId,
+        ...payload.reason !== void 0 ? {
+          reason: payload.reason
+        } : {}
+      });
+    };
+    reactivateEntitlement = async (entitlementId, payload, actorId) => {
+      assertValidObjectId6(entitlementId, "Entitlement ID");
+      const entitlement = await UserEntitlement.findById(entitlementId);
+      assertFound4(entitlement, "User entitlement not found", 404);
+      const startsAt = parseOptionalDate(payload.startsAt);
+      const expiresAt = parseNullableDate(payload.expiresAt);
+      validateDateRange(startsAt, expiresAt);
+      entitlement.status = "active";
+      entitlement.source = payload.source ?? "admin";
+      entitlement.startsAt = startsAt;
+      entitlement.set("expiresAt", expiresAt);
+      entitlement.grantedBy = new Types20.ObjectId(actorId);
+      entitlement.set("statusChangedBy", void 0);
+      entitlement.set("statusReason", void 0);
+      entitlement.set("revokedAt", void 0);
+      entitlement.set("refundedAt", void 0);
+      entitlement.set("expiredAt", void 0);
+      entitlement.set("paymentSession", void 0);
+      await entitlement.save();
+      await safeLogEntitlementEvent({
+        userId: entitlement.user.toString(),
+        entitlementId: entitlement._id.toString(),
+        action: "reactivated",
+        source: entitlement.source,
+        ...entitlement.pillar ? { pillarId: entitlement.pillar.toString() } : {},
+        actorId
+      });
+      const populated = await populateEntitlement(entitlement._id);
+      assertFound4(populated, "Entitlement not found after reactivation", 500);
+      return populated;
+    };
+    userEntitlementService = {
+      grantEntitlementByAdmin,
+      activatePillarEntitlementFromPayment,
+      activateEntitlementFromPayment,
+      hasActivePillarEntitlement,
+      checkPillarAccess,
+      getMyEntitlements,
+      getAllEntitlements,
+      getSingleEntitlement,
+      revokeEntitlement,
+      refundEntitlement,
+      expireEntitlement,
+      reactivateEntitlement
+    };
+  }
+});
+
 // src/modules/courseModules/course.module.interface.ts
 var COURSE_MODULE_STATUSES;
 var init_course_module_interface = __esm({
@@ -2517,6 +3490,132 @@ var init_module_resource_model_schema = __esm({
   }
 });
 
+// src/modules/quizeQuestions/quiz.question.interface.ts
+var QUIZ_QUESTION_TYPES, QUIZ_QUESTION_STATUSES;
+var init_quiz_question_interface = __esm({
+  "src/modules/quizeQuestions/quiz.question.interface.ts"() {
+    "use strict";
+    QUIZ_QUESTION_TYPES = [
+      "single_choice",
+      "multiple_choice",
+      "true_false"
+    ];
+    QUIZ_QUESTION_STATUSES = [
+      "draft",
+      "published",
+      "archived"
+    ];
+  }
+});
+
+// src/modules/quizeQuestions/quiz.question.model.schema.ts
+import {
+  model as model29,
+  Schema as Schema29
+} from "mongoose";
+var quizQuestionSchema, QuizQuestion;
+var init_quiz_question_model_schema = __esm({
+  "src/modules/quizeQuestions/quiz.question.model.schema.ts"() {
+    "use strict";
+    init_quiz_question_interface();
+    quizQuestionSchema = new Schema29(
+      {
+        module: {
+          type: Schema29.Types.ObjectId,
+          ref: "CourseModule",
+          required: true,
+          index: true
+        },
+        question: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 2e3
+        },
+        questionType: {
+          type: String,
+          enum: QUIZ_QUESTION_TYPES,
+          required: true
+        },
+        options: {
+          type: [
+            {
+              type: String,
+              trim: true
+            }
+          ],
+          default: void 0
+        },
+        correctOptionIndexes: {
+          type: [
+            {
+              type: Number,
+              min: 0
+            }
+          ],
+          default: void 0
+        },
+        correctBooleanAnswer: {
+          type: Boolean
+        },
+        explanation: {
+          type: String,
+          trim: true,
+          maxlength: 5e3
+        },
+        order: {
+          type: Number,
+          required: true,
+          min: 1
+        },
+        status: {
+          type: String,
+          enum: QUIZ_QUESTION_STATUSES,
+          default: "draft",
+          index: true
+        },
+        publishedAt: {
+          type: Date
+        },
+        archivedAt: {
+          type: Date
+        },
+        createdBy: {
+          type: Schema29.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        updatedBy: {
+          type: Schema29.Types.ObjectId,
+          ref: "User"
+        }
+      },
+      {
+        timestamps: true,
+        collection: "quizquestions"
+      }
+    );
+    quizQuestionSchema.index(
+      {
+        module: 1,
+        order: 1
+      },
+      {
+        unique: true
+      }
+    );
+    quizQuestionSchema.index({
+      module: 1,
+      status: 1,
+      order: 1
+    });
+    QuizQuestion = model29(
+      "QuizQuestion",
+      quizQuestionSchema
+    );
+  }
+});
+
 // src/modules/moduleActions/module.action.interface.ts
 var MODULE_ACTION_STATUSES;
 var init_module_action_interface = __esm({
@@ -2992,7 +4091,9 @@ var init_module_progress_service = __esm({
     init_module_action_model_schema();
     init_module_resource_model_schema();
     init_module_video_model_schema();
+    init_quiz_question_model_schema();
     init_video_progress_model_schema();
+    init_userEntitlements_service();
     init_module_progress_model_schema();
     ACTION_COMPLETION_REQUIREMENT = 80;
     QUIZ_PASS_SCORE = 70;
@@ -3100,7 +4201,8 @@ var init_module_progress_service = __esm({
       }
     };
     recalculateDerivedFields = (progress) => {
-      const videosCompleted = progress.videoSummary.completed;
+      const hasPublishedVideos = progress.videoSummary.totalRequired > 0;
+      const videosCompleted = hasPublishedVideos && progress.videoSummary.completed;
       progress.actionsUnlocked = videosCompleted;
       progress.actionSummary.completed = true;
       progress.quizUnlocked = videosCompleted;
@@ -3223,10 +4325,43 @@ var init_module_progress_service = __esm({
       const progress = await getOrCreateModuleProgress(userId, moduleId);
       const moduleObjectId = new Types32.ObjectId(moduleId);
       const userObjectId = new Types32.ObjectId(userId);
+      const courseModule = await CourseModule.findById(moduleObjectId).select("pillar updatedAt").populate("pillar", "isPaid").lean();
+      const pillar = courseModule?.pillar;
+      const pillarId = pillar && typeof pillar === "object" && "_id" in pillar ? String(pillar._id) : pillar ? String(pillar) : void 0;
+      const pillarAccess = pillarId ? await userEntitlementService.checkPillarAccess(userId, pillarId) : { hasAccess: false };
       const publishedVideos = await ModuleVideo.find({
         module: moduleObjectId,
+        status: "published",
+        ...pillarAccess.hasAccess ? {} : { isPaid: false }
+      }).select("_id isRequired durationSeconds updatedAt").lean();
+      const latestQuestion = await QuizQuestion.findOne({
+        module: moduleObjectId,
         status: "published"
-      }).select("_id isRequired").lean();
+      }).sort({ updatedAt: -1 }).select("updatedAt").lean();
+      const latestContentUpdatedAt = [
+        courseModule?.updatedAt,
+        ...publishedVideos.map((video) => video.updatedAt),
+        latestQuestion?.updatedAt
+      ].reduce(
+        (latest, current) => current && (!latest || current > latest) ? current : latest,
+        void 0
+      );
+      if (progress.quizSummary.passed && latestContentUpdatedAt && progress.quizSummary.lastAttemptAt && progress.quizSummary.lastAttemptAt < latestContentUpdatedAt) {
+        progress.quizSummary.passed = false;
+        progress.quizSummary.status = "unlocked";
+        progress.quizSummary.attemptsUsed = 0;
+        progress.quizSummary.bestScore = 0;
+        progress.quizSummary.lastAttemptAt = void 0;
+      }
+      const totalDurationSeconds = publishedVideos.reduce(
+        (total, video) => total + Math.max(0, video.durationSeconds ?? 0),
+        0
+      );
+      await CourseModule.findByIdAndUpdate(moduleObjectId, {
+        $set: {
+          estimatedDurationMinutes: Math.ceil(totalDurationSeconds / 60)
+        }
+      });
       const requiredVideos = publishedVideos.filter(
         (video) => video.isRequired !== false
       );
@@ -3241,10 +4376,7 @@ var init_module_progress_service = __esm({
       });
       const totalRequiredVideos = targetVideoIds.length;
       const isVideoCompleted = totalRequiredVideos === 0 || completedVideosCount >= totalRequiredVideos;
-      const videoPercent = totalRequiredVideos === 0 ? 100 : calculateCompletionPercent(
-        completedVideosCount,
-        totalRequiredVideos
-      );
+      const videoPercent = totalRequiredVideos === 0 ? 100 : calculateCompletionPercent(completedVideosCount, totalRequiredVideos);
       progress.set("videoSummary", {
         totalRequired: totalRequiredVideos,
         completedRequired: completedVideosCount,
@@ -3366,20 +4498,17 @@ var init_module_progress_service = __esm({
     };
     getMyAllModuleProgress = async (userId) => {
       assertValidObjectId10(userId, "User ID");
-      const filter = {
+      const progressRecords = await ModuleProgress.find({
         user: new Types32.ObjectId(userId)
-      };
-      return ModuleProgress.find(filter).sort({
-        updatedAt: -1
-      }).populate({
-        path: "module",
-        select: "title slug moduleNumber pillar status",
-        populate: {
-          path: "pillar",
-          model: "ChallengePillar",
-          select: "name title slug status"
-        }
-      });
+      }).select("module").lean();
+      const refreshed = await Promise.all(
+        progressRecords.map(
+          (record) => refreshModuleProgress(userId, String(record.module))
+        )
+      );
+      return refreshed.sort(
+        (left, right) => (right.updatedAt?.getTime() ?? 0) - (left.updatedAt?.getTime() ?? 0)
+      );
     };
     getUserModuleProgress = async (userId, moduleId) => {
       return refreshModuleProgress(userId, moduleId);
@@ -10782,944 +11911,8 @@ var PaymentPlan = model19(
   paymentPlanSchema
 );
 
-// src/modules/userEntitlements/userEntitlements.service.ts
-init_challenge_pillar_model_schema();
-init_users_model_schema();
-import { Types as Types20 } from "mongoose";
-
-// src/modules/userEntitlements/userEntitlements.model.schema.ts
-import { model as model20, Schema as Schema20 } from "mongoose";
-
-// src/modules/userEntitlements/userEntitlements.interface.ts
-var ENTITLEMENT_TYPES = [
-  "pillar",
-  "bundle",
-  "event",
-  "retreat"
-];
-var ENTITLEMENT_SOURCES = [
-  "stripe",
-  "admin",
-  "promotion",
-  "complimentary",
-  "migration"
-];
-var ADMIN_ENTITLEMENT_SOURCES = [
-  "admin",
-  "promotion",
-  "complimentary",
-  "migration"
-];
-var ENTITLEMENT_STATUSES = [
-  "active",
-  "revoked",
-  "refunded",
-  "expired"
-];
-
-// src/modules/userEntitlements/userEntitlements.model.schema.ts
-var userEntitlementSchema = new Schema20(
-  {
-    user: {
-      type: Schema20.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    entitlementType: {
-      type: String,
-      enum: ENTITLEMENT_TYPES,
-      required: true,
-      index: true
-    },
-    entitlementKey: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    pillar: {
-      type: Schema20.Types.ObjectId,
-      ref: "ChallengePillar",
-      index: true
-    },
-    targetId: {
-      type: Schema20.Types.ObjectId,
-      index: true
-    },
-    source: {
-      type: String,
-      enum: ENTITLEMENT_SOURCES,
-      required: true,
-      index: true
-    },
-    status: {
-      type: String,
-      enum: ENTITLEMENT_STATUSES,
-      default: "active",
-      required: true,
-      index: true
-    },
-    paymentSession: {
-      type: Schema20.Types.ObjectId,
-      ref: "PaymentSession",
-      index: true
-    },
-    startsAt: {
-      type: Date,
-      required: true,
-      default: Date.now
-    },
-    expiresAt: {
-      type: Date,
-      index: true
-    },
-    grantedBy: {
-      type: Schema20.Types.ObjectId,
-      ref: "User"
-    },
-    statusChangedBy: {
-      type: Schema20.Types.ObjectId,
-      ref: "User"
-    },
-    statusReason: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    revokedAt: {
-      type: Date
-    },
-    refundedAt: {
-      type: Date
-    },
-    expiredAt: {
-      type: Date
-    }
-  },
-  {
-    timestamps: true,
-    collection: "userentitlements"
-  }
-);
-userEntitlementSchema.index(
-  {
-    user: 1,
-    entitlementKey: 1
-  },
-  {
-    unique: true
-  }
-);
-userEntitlementSchema.index({
-  user: 1,
-  status: 1,
-  startsAt: 1,
-  expiresAt: 1
-});
-userEntitlementSchema.index({
-  user: 1,
-  pillar: 1,
-  status: 1
-});
-userEntitlementSchema.index({
-  entitlementType: 1,
-  status: 1,
-  createdAt: -1
-});
-var UserEntitlement = model20(
-  "UserEntitlement",
-  userEntitlementSchema
-);
-
-// src/modules/entitlementLogs/entitlementlog.service.ts
-init_users_model_schema();
-import { Types as Types19 } from "mongoose";
-
-// src/modules/entitlementLogs/entitlement.model.schema.ts
-import { model as model21, Schema as Schema21 } from "mongoose";
-
-// src/modules/entitlementLogs/entitlementlog.interface.ts
-var ENTITLEMENT_LOG_ACTIONS = [
-  "granted",
-  "reactivated",
-  "revoked",
-  "refunded",
-  "expired"
-];
-var ENTITLEMENT_LOG_SOURCES = [
-  "stripe",
-  "admin",
-  "promotion",
-  "complimentary",
-  "migration",
-  "system"
-];
-
-// src/modules/entitlementLogs/entitlement.model.schema.ts
-var entitlementLogSchema = new Schema21(
-  {
-    user: {
-      type: Schema21.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    entitlement: {
-      type: Schema21.Types.ObjectId,
-      ref: "UserEntitlement",
-      required: true,
-      index: true
-    },
-    pillar: {
-      type: Schema21.Types.ObjectId,
-      ref: "ChallengePillar",
-      index: true
-    },
-    paymentSession: {
-      type: Schema21.Types.ObjectId,
-      ref: "PaymentSession",
-      index: true
-    },
-    action: {
-      type: String,
-      enum: ENTITLEMENT_LOG_ACTIONS,
-      required: true,
-      index: true
-    },
-    source: {
-      type: String,
-      enum: ENTITLEMENT_LOG_SOURCES,
-      required: true,
-      index: true
-    },
-    reason: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    actor: {
-      type: Schema21.Types.ObjectId,
-      ref: "User",
-      index: true
-    },
-    metadata: {
-      type: Schema21.Types.Mixed
-    }
-  },
-  {
-    timestamps: true,
-    collection: "entitlementslog"
-  }
-);
-entitlementLogSchema.index({
-  user: 1,
-  createdAt: -1
-});
-entitlementLogSchema.index({
-  entitlement: 1,
-  createdAt: -1
-});
-entitlementLogSchema.index({
-  action: 1,
-  createdAt: -1
-});
-var EntitlementLog = model21(
-  "EntitlementLog",
-  entitlementLogSchema
-);
-
-// src/modules/entitlementLogs/entitlementlog.service.ts
-var throwServiceError3 = (message, statusCode) => {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  throw error;
-};
-var assertFound3 = (value, message, statusCode) => {
-  if (value === null || value === void 0) {
-    throwServiceError3(message, statusCode);
-  }
-};
-var assertValidObjectId5 = (value, fieldName) => {
-  if (!Types19.ObjectId.isValid(value)) {
-    throwServiceError3(`${fieldName} is invalid`, 400);
-  }
-};
-var ensureUserExists = async (userId) => {
-  assertValidObjectId5(userId, "User ID");
-  const user = await User.findById(userId).select("_id fullName email role");
-  assertFound3(user, "User not found", 404);
-  return user;
-};
-var ensureEntitlementExists = async (entitlementId) => {
-  assertValidObjectId5(entitlementId, "Entitlement ID");
-  const entitlement = await UserEntitlement.findById(entitlementId);
-  assertFound3(entitlement, "User entitlement not found", 404);
-  return entitlement;
-};
-var createEntitlementLog = async (payload) => {
-  await ensureUserExists(payload.user);
-  const entitlement = await ensureEntitlementExists(payload.entitlement);
-  if (payload.pillar) {
-    assertValidObjectId5(payload.pillar, "Pillar ID");
-  }
-  if (payload.paymentSession) {
-    assertValidObjectId5(payload.paymentSession, "Payment session ID");
-  }
-  if (payload.actor) {
-    assertValidObjectId5(payload.actor, "Actor ID");
-  }
-  const createData = {
-    user: new Types19.ObjectId(payload.user),
-    entitlement: new Types19.ObjectId(payload.entitlement),
-    action: payload.action,
-    source: payload.source
-  };
-  const pillarId = payload.pillar ?? entitlement.pillar?.toString();
-  if (pillarId) {
-    createData.pillar = new Types19.ObjectId(pillarId);
-  }
-  const paymentSessionId = payload.paymentSession ?? entitlement.paymentSession?.toString();
-  if (paymentSessionId) {
-    createData.paymentSession = new Types19.ObjectId(paymentSessionId);
-  }
-  if (payload.reason !== void 0) {
-    createData.reason = payload.reason;
-  }
-  if (payload.actor) {
-    createData.actor = new Types19.ObjectId(payload.actor);
-  }
-  if (payload.metadata !== void 0) {
-    createData.metadata = payload.metadata;
-  }
-  const log = await EntitlementLog.create(createData);
-  const populated = await EntitlementLog.findById(log._id).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role");
-  assertFound3(populated, "Entitlement log not found after creation", 500);
-  return populated;
-};
-var getAllEntitlementLogs = async (options2) => {
-  const page = options2.page ?? 1;
-  const limit = Math.min(options2.limit ?? 20, 100);
-  const skip = (page - 1) * limit;
-  const filter = {};
-  if (options2.userId) {
-    assertValidObjectId5(options2.userId, "User ID");
-    filter.user = new Types19.ObjectId(options2.userId);
-  }
-  if (options2.entitlementId) {
-    assertValidObjectId5(options2.entitlementId, "Entitlement ID");
-    filter.entitlement = new Types19.ObjectId(options2.entitlementId);
-  }
-  if (options2.pillarId) {
-    assertValidObjectId5(options2.pillarId, "Pillar ID");
-    filter.pillar = new Types19.ObjectId(options2.pillarId);
-  }
-  if (options2.action) {
-    filter.action = options2.action;
-  }
-  if (options2.source) {
-    filter.source = options2.source;
-  }
-  const [data, total] = await Promise.all([
-    EntitlementLog.find(filter).sort({
-      createdAt: -1
-    }).skip(skip).limit(limit).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role").lean(),
-    EntitlementLog.countDocuments(filter)
-  ]);
-  return {
-    data,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit)
-    }
-  };
-};
-var getMyEntitlementLogs = async (userId) => {
-  assertValidObjectId5(userId, "User ID");
-  const logs = await EntitlementLog.find({
-    user: new Types19.ObjectId(userId)
-  }).sort({
-    createdAt: -1
-  }).populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").lean();
-  return logs;
-};
-var getSingleEntitlementLog = async (logId) => {
-  assertValidObjectId5(logId, "Entitlement log ID");
-  const log = await EntitlementLog.findById(logId).populate("user", "fullName email role").populate("entitlement", "entitlementType entitlementKey status").populate("pillar", "name slug title").populate("paymentSession", "purpose status amountTotal currency").populate("actor", "fullName email role").lean();
-  assertFound3(log, "Entitlement log not found", 404);
-  return log;
-};
-var entitlementLogService = {
-  createEntitlementLog,
-  getAllEntitlementLogs,
-  getMyEntitlementLogs,
-  getSingleEntitlementLog
-};
-
-// src/modules/userEntitlements/userEntitlements.service.ts
-var throwServiceError4 = (message, statusCode) => {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  throw error;
-};
-var assertFound4 = (value, message, statusCode) => {
-  if (value === null || value === void 0) {
-    throwServiceError4(message, statusCode);
-  }
-};
-var assertValidObjectId6 = (value, fieldName) => {
-  if (!Types20.ObjectId.isValid(value)) {
-    throwServiceError4(`${fieldName} is invalid`, 400);
-  }
-};
-var safeLogEntitlementEvent = async (params) => {
-  try {
-    await entitlementLogService.createEntitlementLog({
-      user: params.userId,
-      entitlement: params.entitlementId,
-      action: params.action,
-      source: params.source,
-      ...params.pillarId ? { pillar: params.pillarId } : {},
-      ...params.paymentSessionId ? { paymentSession: params.paymentSessionId } : {},
-      ...params.actorId ? { actor: params.actorId } : {},
-      ...params.reason !== void 0 ? { reason: params.reason } : {}
-    });
-  } catch (error) {
-    console.error("Failed to write entitlement log:", error);
-  }
-};
-var isDuplicateKeyError4 = (error) => {
-  return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
-};
-var parseOptionalDate = (value) => {
-  return value ? new Date(value) : /* @__PURE__ */ new Date();
-};
-var parseNullableDate = (value) => {
-  if (value === null || value === void 0) {
-    return void 0;
-  }
-  return new Date(value);
-};
-var buildEntitlementKey = ({
-  entitlementType,
-  pillarId,
-  targetId
-}) => {
-  if (entitlementType === "pillar") {
-    if (!pillarId) {
-      throwServiceError4("Pillar ID is required", 400);
-    }
-    return `pillar:${pillarId}`;
-  }
-  if (!targetId) {
-    throwServiceError4("Target ID is required", 400);
-  }
-  return `${entitlementType}:${targetId}`;
-};
-var validateDateRange = (startsAt, expiresAt) => {
-  if (expiresAt && expiresAt <= startsAt) {
-    throwServiceError4("expiresAt must be later than startsAt", 400);
-  }
-};
-var populateEntitlement = (entitlementId) => {
-  return UserEntitlement.findById(entitlementId).populate("user", "fullName email role accessTo profileImage accountStatus").populate("pillar", "name slug title isPaid priceCents currency status").populate(
-    "paymentSession",
-    "purpose status stripeCheckoutSessionId amountTotal currency"
-  ).populate("grantedBy", "fullName email role profileImage").populate("statusChangedBy", "fullName email role profileImage");
-};
-var expirePastEntitlements = async (userId) => {
-  const now = /* @__PURE__ */ new Date();
-  const filter = {
-    status: "active",
-    expiresAt: {
-      $lte: now
-    }
-  };
-  if (userId) {
-    filter.user = new Types20.ObjectId(userId);
-  }
-  await UserEntitlement.updateMany(filter, {
-    $set: {
-      status: "expired",
-      expiredAt: now
-    }
-  });
-};
-var ensureUserExists2 = async (userId) => {
-  assertValidObjectId6(userId, "User ID");
-  const user = await User.findById(userId).select(
-    "_id fullName email role accessTo accountStatus"
-  );
-  assertFound4(user, "User not found", 404);
-  return user;
-};
-var ensurePillarExists = async (pillarId) => {
-  assertValidObjectId6(pillarId, "Pillar ID");
-  const pillar = await ChallengePillar.findById(pillarId);
-  assertFound4(pillar, "Challenge pillar not found", 404);
-  if (pillar.status === "archived") {
-    throwServiceError4("Cannot grant access to an archived pillar", 400);
-  }
-  return pillar;
-};
-var grantEntitlementInternal = async (input) => {
-  await ensureUserExists2(input.userId);
-  if (input.entitlementType === "pillar") {
-    if (!input.pillarId) {
-      throwServiceError4("Pillar ID is required", 400);
-    }
-    await ensurePillarExists(input.pillarId);
-  } else {
-    if (!input.targetId) {
-      throwServiceError4("Target ID is required", 400);
-    }
-    assertValidObjectId6(input.targetId, "Target ID");
-  }
-  if (input.paymentSessionId) {
-    assertValidObjectId6(input.paymentSessionId, "Payment session ID");
-  }
-  if (input.grantedBy) {
-    assertValidObjectId6(input.grantedBy, "Granted by user ID");
-  }
-  validateDateRange(input.startsAt, input.expiresAt);
-  const entitlementKey = buildEntitlementKey({
-    entitlementType: input.entitlementType,
-    pillarId: input.pillarId,
-    targetId: input.targetId
-  });
-  const existingEntitlement = await UserEntitlement.findOne({
-    user: new Types20.ObjectId(input.userId),
-    entitlementKey
-  });
-  if (existingEntitlement) {
-    existingEntitlement.entitlementType = input.entitlementType;
-    existingEntitlement.entitlementKey = entitlementKey;
-    existingEntitlement.source = input.source;
-    existingEntitlement.status = "active";
-    existingEntitlement.startsAt = input.startsAt;
-    existingEntitlement.set("expiresAt", input.expiresAt);
-    if (input.entitlementType === "pillar") {
-      existingEntitlement.pillar = new Types20.ObjectId(input.pillarId);
-      existingEntitlement.set("targetId", void 0);
-    } else {
-      existingEntitlement.targetId = new Types20.ObjectId(input.targetId);
-      existingEntitlement.set("pillar", void 0);
-    }
-    existingEntitlement.set(
-      "paymentSession",
-      input.paymentSessionId ? new Types20.ObjectId(input.paymentSessionId) : void 0
-    );
-    existingEntitlement.set(
-      "grantedBy",
-      input.grantedBy ? new Types20.ObjectId(input.grantedBy) : void 0
-    );
-    existingEntitlement.set("statusChangedBy", void 0);
-    existingEntitlement.set("statusReason", void 0);
-    existingEntitlement.set("revokedAt", void 0);
-    existingEntitlement.set("refundedAt", void 0);
-    existingEntitlement.set("expiredAt", void 0);
-    await existingEntitlement.save();
-    await safeLogEntitlementEvent({
-      userId: input.userId,
-      entitlementId: existingEntitlement._id.toString(),
-      action: "reactivated",
-      source: input.source,
-      ...input.pillarId ? { pillarId: input.pillarId } : {},
-      ...input.paymentSessionId ? { paymentSessionId: input.paymentSessionId } : {},
-      ...input.grantedBy ? { actorId: input.grantedBy } : {}
-    });
-    const populated = await populateEntitlement(existingEntitlement._id);
-    assertFound4(populated, "Entitlement not found after update", 500);
-    return populated;
-  }
-  const createData = {
-    user: new Types20.ObjectId(input.userId),
-    entitlementType: input.entitlementType,
-    entitlementKey,
-    source: input.source,
-    status: "active",
-    startsAt: input.startsAt
-  };
-  if (input.entitlementType === "pillar") {
-    createData.pillar = new Types20.ObjectId(input.pillarId);
-  } else {
-    createData.targetId = new Types20.ObjectId(input.targetId);
-  }
-  if (input.expiresAt) {
-    createData.expiresAt = input.expiresAt;
-  }
-  if (input.paymentSessionId) {
-    createData.paymentSession = new Types20.ObjectId(input.paymentSessionId);
-  }
-  if (input.grantedBy) {
-    createData.grantedBy = new Types20.ObjectId(input.grantedBy);
-  }
-  try {
-    const entitlement = await UserEntitlement.create(createData);
-    await safeLogEntitlementEvent({
-      userId: input.userId,
-      entitlementId: entitlement._id.toString(),
-      action: "granted",
-      source: input.source,
-      ...input.pillarId ? { pillarId: input.pillarId } : {},
-      ...input.paymentSessionId ? { paymentSessionId: input.paymentSessionId } : {},
-      ...input.grantedBy ? { actorId: input.grantedBy } : {}
-    });
-    const populated = await populateEntitlement(entitlement._id);
-    assertFound4(populated, "Entitlement not found after creation", 500);
-    return populated;
-  } catch (error) {
-    if (isDuplicateKeyError4(error)) {
-      const entitlement = await UserEntitlement.findOne({
-        user: new Types20.ObjectId(input.userId),
-        entitlementKey
-      });
-      assertFound4(
-        entitlement,
-        "Existing entitlement could not be retrieved",
-        409
-      );
-      return entitlement;
-    }
-    throw error;
-  }
-};
-var grantEntitlementByAdmin = async (payload, actorId) => {
-  const entitlementType = payload.entitlementType ?? "pillar";
-  const startsAt = parseOptionalDate(payload.startsAt);
-  const expiresAt = parseNullableDate(payload.expiresAt);
-  return grantEntitlementInternal({
-    userId: payload.user,
-    entitlementType,
-    ...payload.pillar !== void 0 ? {
-      pillarId: payload.pillar
-    } : {},
-    ...payload.targetId !== void 0 ? {
-      targetId: payload.targetId
-    } : {},
-    source: payload.source ?? "admin",
-    ...payload.paymentSession !== void 0 ? {
-      paymentSessionId: payload.paymentSession
-    } : {},
-    startsAt,
-    ...expiresAt !== void 0 ? { expiresAt } : {},
-    grantedBy: actorId
-  });
-};
-var activatePillarEntitlementFromPayment = async (payload) => {
-  return grantEntitlementInternal({
-    userId: payload.userId,
-    entitlementType: "pillar",
-    pillarId: payload.pillarId,
-    source: "stripe",
-    paymentSessionId: payload.paymentSessionId,
-    startsAt: payload.startsAt ?? /* @__PURE__ */ new Date(),
-    ...payload.expiresAt !== void 0 ? {
-      expiresAt: payload.expiresAt
-    } : {}
-  });
-};
-var activateEntitlementFromPayment = async (payload) => {
-  return grantEntitlementInternal({
-    userId: payload.userId,
-    entitlementType: payload.entitlementType,
-    ...payload.pillarId !== void 0 ? { pillarId: payload.pillarId } : {},
-    ...payload.targetId !== void 0 ? { targetId: payload.targetId } : {},
-    source: "stripe",
-    paymentSessionId: payload.paymentSessionId,
-    startsAt: payload.startsAt ?? /* @__PURE__ */ new Date(),
-    ...payload.expiresAt !== void 0 ? { expiresAt: payload.expiresAt } : {}
-  });
-};
-var hasActivePillarEntitlement = async (userId, pillarId) => {
-  assertValidObjectId6(userId, "User ID");
-  assertValidObjectId6(pillarId, "Pillar ID");
-  await expirePastEntitlements(userId);
-  const now = /* @__PURE__ */ new Date();
-  const filter = {
-    user: new Types20.ObjectId(userId),
-    entitlementType: "pillar",
-    pillar: new Types20.ObjectId(pillarId),
-    status: "active",
-    startsAt: {
-      $lte: now
-    },
-    $or: [
-      {
-        expiresAt: {
-          $exists: false
-        }
-      },
-      {
-        expiresAt: {
-          $gt: now
-        }
-      }
-    ]
-  };
-  const entitlement = await UserEntitlement.exists(filter);
-  return Boolean(entitlement);
-};
-var checkPillarAccess = async (userId, pillarId) => {
-  assertValidObjectId6(userId, "User ID");
-  assertValidObjectId6(pillarId, "Pillar ID");
-  const user = await User.findById(userId).select(
-    "_id role accessTo accountStatus"
-  );
-  assertFound4(user, "User not found", 404);
-  const pillar = await ChallengePillar.findOne({
-    _id: pillarId,
-    status: { $ne: "archived" }
-  }).select("name slug title isPaid priceCents currency status");
-  assertFound4(pillar, "Challenge pillar not found or unavailable", 404);
-  if (user.role === "admin" || user.role === "manager" || user.role === "founder") {
-    return {
-      hasAccess: true,
-      accessType: "admin",
-      reason: "admin_override",
-      pillar,
-      entitlement: null
-    };
-  }
-  if (!pillar.isPaid) {
-    return {
-      hasAccess: true,
-      accessType: "free",
-      reason: "free_pillar",
-      pillar,
-      entitlement: null
-    };
-  }
-  await expirePastEntitlements(userId);
-  const now = /* @__PURE__ */ new Date();
-  const entitlement = await UserEntitlement.findOne({
-    user: new Types20.ObjectId(userId),
-    entitlementType: "pillar",
-    pillar: new Types20.ObjectId(pillarId),
-    status: "active",
-    startsAt: {
-      $lte: now
-    },
-    $or: [
-      {
-        expiresAt: {
-          $exists: false
-        }
-      },
-      {
-        expiresAt: {
-          $gt: now
-        }
-      }
-    ]
-  }).populate("paymentSession", "status purpose amountTotal currency");
-  if (!entitlement) {
-    return {
-      hasAccess: false,
-      accessType: "locked",
-      reason: "pillar_purchase_required",
-      pillar,
-      entitlement: null
-    };
-  }
-  return {
-    hasAccess: true,
-    accessType: "purchased",
-    reason: "active_pillar_entitlement",
-    pillar,
-    entitlement
-  };
-};
-var getMyEntitlements = async (userId) => {
-  assertValidObjectId6(userId, "User ID");
-  await expirePastEntitlements(userId);
-  const entitlements = await UserEntitlement.find({
-    user: new Types20.ObjectId(userId)
-  }).sort({
-    createdAt: -1
-  }).populate("pillar", "name slug title isPaid priceCents currency status").populate(
-    "paymentSession",
-    "purpose status amountTotal currency stripeCheckoutSessionId"
-  );
-  const now = /* @__PURE__ */ new Date();
-  return entitlements.map((entitlement) => {
-    const isCurrentlyActive = entitlement.status === "active" && entitlement.startsAt <= now && (!entitlement.expiresAt || entitlement.expiresAt > now);
-    return {
-      ...entitlement.toObject(),
-      hasAccess: isCurrentlyActive
-    };
-  });
-};
-var getAllEntitlements = async (options2) => {
-  await expirePastEntitlements();
-  const page = options2.page ?? 1;
-  const limit = options2.limit ?? 20;
-  const skip = (page - 1) * limit;
-  const filter = {};
-  if (options2.userId) {
-    assertValidObjectId6(options2.userId, "User ID");
-    filter.user = new Types20.ObjectId(options2.userId);
-  }
-  if (options2.pillarId) {
-    assertValidObjectId6(options2.pillarId, "Pillar ID");
-    filter.pillar = new Types20.ObjectId(options2.pillarId);
-  }
-  if (options2.entitlementType) {
-    filter.entitlementType = options2.entitlementType;
-  }
-  if (options2.source) {
-    filter.source = options2.source;
-  }
-  if (options2.status) {
-    filter.status = options2.status;
-  }
-  const [data, total] = await Promise.all([
-    UserEntitlement.find(filter).sort({
-      createdAt: -1
-    }).skip(skip).limit(limit).populate(
-      "user",
-      "fullName email role accessTo profileImage accountStatus"
-    ).populate("pillar", "name slug title isPaid priceCents currency status").populate(
-      "paymentSession",
-      "purpose status amountTotal currency stripeCheckoutSessionId"
-    ).populate("grantedBy", "fullName email role").populate("statusChangedBy", "fullName email role"),
-    UserEntitlement.countDocuments(filter)
-  ]);
-  return {
-    data,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit)
-    }
-  };
-};
-var getSingleEntitlement = async (entitlementId) => {
-  assertValidObjectId6(entitlementId, "Entitlement ID");
-  const entitlement = await populateEntitlement(entitlementId);
-  assertFound4(entitlement, "User entitlement not found", 404);
-  return entitlement;
-};
-var changeEntitlementStatus = async (input) => {
-  assertValidObjectId6(input.entitlementId, "Entitlement ID");
-  assertValidObjectId6(input.actorId, "Actor ID");
-  const entitlement = await UserEntitlement.findById(input.entitlementId);
-  assertFound4(entitlement, "User entitlement not found", 404);
-  entitlement.status = input.status;
-  entitlement.statusChangedBy = new Types20.ObjectId(input.actorId);
-  if (input.reason !== void 0) {
-    entitlement.statusReason = input.reason;
-  } else {
-    entitlement.set("statusReason", void 0);
-  }
-  const now = /* @__PURE__ */ new Date();
-  if (input.status === "revoked") {
-    entitlement.revokedAt = now;
-    entitlement.set("refundedAt", void 0);
-    entitlement.set("expiredAt", void 0);
-  }
-  if (input.status === "refunded") {
-    entitlement.refundedAt = now;
-    entitlement.set("revokedAt", void 0);
-    entitlement.set("expiredAt", void 0);
-  }
-  if (input.status === "expired") {
-    entitlement.expiredAt = now;
-    entitlement.set("revokedAt", void 0);
-    entitlement.set("refundedAt", void 0);
-  }
-  await entitlement.save();
-  await safeLogEntitlementEvent({
-    userId: entitlement.user.toString(),
-    entitlementId: entitlement._id.toString(),
-    action: input.status,
-    source: entitlement.source,
-    ...entitlement.pillar ? { pillarId: entitlement.pillar.toString() } : {},
-    ...entitlement.paymentSession ? { paymentSessionId: entitlement.paymentSession.toString() } : {},
-    actorId: input.actorId,
-    ...input.reason !== void 0 ? { reason: input.reason } : {}
-  });
-  const populated = await populateEntitlement(entitlement._id);
-  assertFound4(populated, "Entitlement not found after status update", 500);
-  return populated;
-};
-var revokeEntitlement = async (entitlementId, payload, actorId) => {
-  return changeEntitlementStatus({
-    entitlementId,
-    status: "revoked",
-    actorId,
-    ...payload.reason !== void 0 ? {
-      reason: payload.reason
-    } : {}
-  });
-};
-var refundEntitlement = async (entitlementId, payload, actorId) => {
-  return changeEntitlementStatus({
-    entitlementId,
-    status: "refunded",
-    actorId,
-    ...payload.reason !== void 0 ? {
-      reason: payload.reason
-    } : {}
-  });
-};
-var expireEntitlement = async (entitlementId, payload, actorId) => {
-  return changeEntitlementStatus({
-    entitlementId,
-    status: "expired",
-    actorId,
-    ...payload.reason !== void 0 ? {
-      reason: payload.reason
-    } : {}
-  });
-};
-var reactivateEntitlement = async (entitlementId, payload, actorId) => {
-  assertValidObjectId6(entitlementId, "Entitlement ID");
-  const entitlement = await UserEntitlement.findById(entitlementId);
-  assertFound4(entitlement, "User entitlement not found", 404);
-  const startsAt = parseOptionalDate(payload.startsAt);
-  const expiresAt = parseNullableDate(payload.expiresAt);
-  validateDateRange(startsAt, expiresAt);
-  entitlement.status = "active";
-  entitlement.source = payload.source ?? "admin";
-  entitlement.startsAt = startsAt;
-  entitlement.set("expiresAt", expiresAt);
-  entitlement.grantedBy = new Types20.ObjectId(actorId);
-  entitlement.set("statusChangedBy", void 0);
-  entitlement.set("statusReason", void 0);
-  entitlement.set("revokedAt", void 0);
-  entitlement.set("refundedAt", void 0);
-  entitlement.set("expiredAt", void 0);
-  entitlement.set("paymentSession", void 0);
-  await entitlement.save();
-  await safeLogEntitlementEvent({
-    userId: entitlement.user.toString(),
-    entitlementId: entitlement._id.toString(),
-    action: "reactivated",
-    source: entitlement.source,
-    ...entitlement.pillar ? { pillarId: entitlement.pillar.toString() } : {},
-    actorId
-  });
-  const populated = await populateEntitlement(entitlement._id);
-  assertFound4(populated, "Entitlement not found after reactivation", 500);
-  return populated;
-};
-var userEntitlementService = {
-  grantEntitlementByAdmin,
-  activatePillarEntitlementFromPayment,
-  activateEntitlementFromPayment,
-  hasActivePillarEntitlement,
-  checkPillarAccess,
-  getMyEntitlements,
-  getAllEntitlements,
-  getSingleEntitlement,
-  revokeEntitlement,
-  refundEntitlement,
-  expireEntitlement,
-  reactivateEntitlement
-};
+// src/modules/invictus-payments/invictus.payment.service.ts
+init_userEntitlements_service();
 
 // src/modules/notifications/notification.service.ts
 init_assertFound();
@@ -15812,6 +16005,7 @@ import { Router as Router14 } from "express";
 // src/modules/courseModules/course.module.service.ts
 init_challenge_pillar_model_schema();
 init_course_module_model_schema();
+init_module_video_model_schema();
 import { Types as Types26 } from "mongoose";
 var throwServiceError7 = (message, statusCode) => {
   const error = new Error(message);
@@ -15891,10 +16085,26 @@ var getAllCourseModules = async ({
       $ne: "archived"
     };
   }
-  return CourseModule.find(filter).sort({
+  const modules = await CourseModule.find(filter).sort({
     pillar: 1,
     moduleNumber: 1
   }).populate("pillar", "name slug title isPaid priceCents currency status").populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage").lean();
+  const publishedVideoCounts = await ModuleVideo.aggregate([
+    {
+      $match: {
+        module: { $in: modules.map((module) => module._id) },
+        status: "published"
+      }
+    },
+    { $group: { _id: "$module", count: { $sum: 1 } } }
+  ]);
+  const countByModuleId = new Map(
+    publishedVideoCounts.map((item) => [String(item._id), item.count])
+  );
+  return modules.map((module) => ({
+    ...module,
+    publishedVideoCount: countByModuleId.get(String(module._id)) ?? 0
+  }));
 };
 var getModulesByPillar = async (pillarId, actorRole) => {
   const pillarFilter = {
@@ -15918,9 +16128,24 @@ var getModulesByPillar = async (pillarId, actorRole) => {
     };
   }
   const modules = await CourseModule.find(moduleFilter).sort({ moduleNumber: 1 }).populate("pillar", "name slug title isPaid priceCents currency status").lean();
+  const publishedVideoCounts = await ModuleVideo.aggregate([
+    {
+      $match: {
+        module: { $in: modules.map((module) => module._id) },
+        status: "published"
+      }
+    },
+    { $group: { _id: "$module", count: { $sum: 1 } } }
+  ]);
+  const countByModuleId = new Map(
+    publishedVideoCounts.map((item) => [String(item._id), item.count])
+  );
   return {
     pillar,
-    modules
+    modules: modules.map((module) => ({
+      ...module,
+      publishedVideoCount: countByModuleId.get(String(module._id)) ?? 0
+    }))
   };
 };
 var getSingleCourseModule = async (moduleId, actorRole) => {
@@ -16555,6 +16780,7 @@ var getUploadedFieldFile = (req, fieldName) => {
 // src/modules/moduleVideos/module.video.service.ts
 init_course_module_model_schema();
 init_module_video_model_schema();
+init_userEntitlements_service();
 import { Types as Types27 } from "mongoose";
 var throwServiceError8 = (message, statusCode) => {
   const error = new Error(message);
@@ -16588,6 +16814,29 @@ var ensureCourseModuleExists = async (moduleId) => {
     );
   }
   return courseModule;
+};
+var syncModuleDuration = async (moduleId) => {
+  const result = await ModuleVideo.aggregate([
+    {
+      $match: {
+        module: moduleId,
+        status: "published"
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        totalDurationSeconds: { $sum: "$durationSeconds" }
+      }
+    }
+  ]);
+  await CourseModule.findByIdAndUpdate(moduleId, {
+    $set: {
+      estimatedDurationMinutes: Math.ceil(
+        (result[0]?.totalDurationSeconds ?? 0) / 60
+      )
+    }
+  });
 };
 var createModuleVideo = async (moduleId, payload, actorId) => {
   await ensureCourseModuleExists(moduleId);
@@ -16670,7 +16919,7 @@ var getAllModuleVideos = async ({
   } else if (!includeArchived) {
     filter.status = { $ne: "archived" };
   }
-  const query = ModuleVideo.find(filter).sort({ module: 1, order: 1 }).populate({
+  const query = ModuleVideo.find().sort({ module: 1, order: 1 }).populate({
     path: "module",
     select: "title slug moduleNumber pillar status",
     populate: {
@@ -16691,10 +16940,7 @@ var getVideosByModule = async (moduleId, actorRole) => {
   if (!isAdminOrManager8(actorRole)) {
     moduleFilter.status = "published";
   }
-  const courseModule = await CourseModule.findOne(moduleFilter).populate(
-    "pillar",
-    "name slug title isPaid priceCents currency status"
-  ).lean();
+  const courseModule = await CourseModule.findOne(moduleFilter).populate("pillar", "name slug title isPaid priceCents currency status").lean();
   assertFound6(courseModule, "Course module not found or unavailable", 404);
   const filter = {
     module: new Types27.ObjectId(moduleId)
@@ -16837,10 +17083,8 @@ var updateModuleVideo = async (videoId, payload, actorId) => {
   if (payload.secureUrl !== void 0) video.secureUrl = payload.secureUrl;
   if (payload.durationSeconds !== void 0) {
     video.durationSeconds = payload.durationSeconds;
-    if (payload.isPaid !== void 0) {
-      video.isPaid = payload.isPaid;
-    }
   }
+  if (payload.isPaid !== void 0) video.isPaid = payload.isPaid;
   if (payload.isRequired !== void 0) video.isRequired = payload.isRequired;
   if (payload.requiredWatchPercent !== void 0) {
     video.requiredWatchPercent = payload.requiredWatchPercent;
@@ -16863,6 +17107,7 @@ var updateModuleVideo = async (videoId, payload, actorId) => {
   setNullableField(video, "height", payload.height);
   video.updatedBy = new Types27.ObjectId(actorId);
   await video.save();
+  await syncModuleDuration(video.module);
   return video.populate([
     {
       path: "module",
@@ -16901,6 +17146,7 @@ var publishModuleVideo = async (videoId, actorId) => {
   video.set("archivedAt", void 0);
   video.updatedBy = new Types27.ObjectId(actorId);
   await video.save();
+  await syncModuleDuration(video.module);
   return video;
 };
 var moveModuleVideoToDraft = async (videoId, actorId) => {
@@ -16913,6 +17159,7 @@ var moveModuleVideoToDraft = async (videoId, actorId) => {
   video.set("publishedAt", void 0);
   video.updatedBy = new Types27.ObjectId(actorId);
   await video.save();
+  await syncModuleDuration(video.module);
   return video;
 };
 var archiveModuleVideo = async (videoId, actorId) => {
@@ -16923,6 +17170,7 @@ var archiveModuleVideo = async (videoId, actorId) => {
   video.set("publishedAt", void 0);
   video.updatedBy = new Types27.ObjectId(actorId);
   await video.save();
+  await syncModuleDuration(video.module);
   return video;
 };
 var moduleVideoService = {
@@ -17314,6 +17562,7 @@ import { Router as Router16 } from "express";
 // src/modules/moduleResources/module.resource.service.ts
 init_course_module_model_schema();
 init_module_resource_model_schema();
+init_userEntitlements_service();
 import { Types as Types28 } from "mongoose";
 var throwServiceError9 = (message, statusCode) => {
   const error = new Error(message);
@@ -17463,14 +17712,9 @@ var getAllModuleResources = async ({
       select: "name slug title isPaid priceCents currency status"
     }
   }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
-  if (!isPrivileged) {
-    query.select(
-      "-secureUrl -externalUrl -cloudinaryPublicId -cloudinaryAssetId"
-    );
-  }
   return query;
 };
-var getResourcesByModule = async (moduleId, actorRole) => {
+var getResourcesByModule = async (moduleId, actorRole, userId) => {
   const moduleFilter = { _id: moduleId };
   if (!isAdminOrManager9(actorRole)) {
     moduleFilter.status = "published";
@@ -17479,11 +17723,19 @@ var getResourcesByModule = async (moduleId, actorRole) => {
     "pillar",
     "name slug title isPaid priceCents currency status"
   );
-  assertFound7(
-    courseModule,
-    "Course module not found or unavailable",
-    404
-  );
+  assertFound7(courseModule, "Course module not found or unavailable", 404);
+  if (userId && !["admin", "manager", "founder"].includes(actorRole ?? "")) {
+    const pillarId = String(
+      typeof courseModule.pillar === "object" ? courseModule.pillar._id : courseModule.pillar
+    );
+    const access = await userEntitlementService.checkPillarAccess(
+      userId,
+      pillarId
+    );
+    if (!access.hasAccess) {
+      throwServiceError9("Purchase this pillar to access its resources", 403);
+    }
+  }
   const filter = {
     module: new Types28.ObjectId(moduleId)
   };
@@ -17494,11 +17746,6 @@ var getResourcesByModule = async (moduleId, actorRole) => {
     filter.status = { $ne: "archived" };
   }
   const query = ModuleResource.find(filter).sort({ order: 1 }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
-  if (!isPrivileged) {
-    query.select(
-      "-secureUrl -externalUrl -cloudinaryPublicId -cloudinaryAssetId"
-    );
-  }
   const resources = await query;
   return {
     module: courseModule,
@@ -17522,11 +17769,6 @@ var getSingleModuleResource = async (resourceId, actorRole) => {
       select: "name slug title isPaid priceCents currency status"
     }
   }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
-  if (!isPrivileged) {
-    query.select(
-      "-secureUrl -externalUrl -cloudinaryPublicId -cloudinaryAssetId"
-    );
-  }
   const resource = await query;
   assertFound7(resource, "Module resource not found", 404);
   return resource;
@@ -17589,16 +17831,8 @@ var updateModuleResource = async (resourceId, payload, actorId) => {
   setNullableField2(resource, "mimeType", payload.mimeType);
   setNullableField2(resource, "format", payload.format);
   setNullableField2(resource, "bytes", payload.bytes);
-  setNullableField2(
-    resource,
-    "cloudinaryPublicId",
-    payload.cloudinaryPublicId
-  );
-  setNullableField2(
-    resource,
-    "cloudinaryAssetId",
-    payload.cloudinaryAssetId
-  );
+  setNullableField2(resource, "cloudinaryPublicId", payload.cloudinaryPublicId);
+  setNullableField2(resource, "cloudinaryAssetId", payload.cloudinaryAssetId);
   setNullableField2(
     resource,
     "cloudinaryResourceType",
@@ -17794,7 +18028,8 @@ var getResourcesByModule2 = async (req, res, next) => {
     const authUser = getAuthUser6(req);
     const result = await moduleResourceService.getResourcesByModule(
       String(req.params.moduleId),
-      authUser.role
+      authUser.role,
+      authUser._id
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -18048,148 +18283,23 @@ import { Router as Router17 } from "express";
 
 // src/modules/quizeQuestions/quiz.question.service.ts
 init_course_module_model_schema();
-import {
-  Types as Types29
-} from "mongoose";
-
-// src/modules/quizeQuestions/quiz.question.model.schema.ts
-import {
-  model as model29,
-  Schema as Schema29
-} from "mongoose";
-
-// src/modules/quizeQuestions/quiz.question.interface.ts
-var QUIZ_QUESTION_TYPES = [
-  "single_choice",
-  "multiple_choice",
-  "true_false"
-];
-var QUIZ_QUESTION_STATUSES = [
-  "draft",
-  "published",
-  "archived"
-];
-
-// src/modules/quizeQuestions/quiz.question.model.schema.ts
-var quizQuestionSchema = new Schema29(
-  {
-    module: {
-      type: Schema29.Types.ObjectId,
-      ref: "CourseModule",
-      required: true,
-      index: true
-    },
-    question: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 2e3
-    },
-    questionType: {
-      type: String,
-      enum: QUIZ_QUESTION_TYPES,
-      required: true
-    },
-    options: {
-      type: [
-        {
-          type: String,
-          trim: true
-        }
-      ],
-      default: void 0
-    },
-    correctOptionIndexes: {
-      type: [
-        {
-          type: Number,
-          min: 0
-        }
-      ],
-      default: void 0
-    },
-    correctBooleanAnswer: {
-      type: Boolean
-    },
-    explanation: {
-      type: String,
-      trim: true,
-      maxlength: 5e3
-    },
-    order: {
-      type: Number,
-      required: true,
-      min: 1
-    },
-    status: {
-      type: String,
-      enum: QUIZ_QUESTION_STATUSES,
-      default: "draft",
-      index: true
-    },
-    publishedAt: {
-      type: Date
-    },
-    archivedAt: {
-      type: Date
-    },
-    createdBy: {
-      type: Schema29.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema29.Types.ObjectId,
-      ref: "User"
-    }
-  },
-  {
-    timestamps: true,
-    collection: "quizquestions"
-  }
-);
-quizQuestionSchema.index(
-  {
-    module: 1,
-    order: 1
-  },
-  {
-    unique: true
-  }
-);
-quizQuestionSchema.index({
-  module: 1,
-  status: 1,
-  order: 1
-});
-var QuizQuestion = model29(
-  "QuizQuestion",
-  quizQuestionSchema
-);
-
-// src/modules/quizeQuestions/quiz.question.service.ts
+init_userEntitlements_service();
+init_quiz_question_model_schema();
+import { Types as Types29 } from "mongoose";
 var MAX_QUESTIONS_PER_MODULE = 5;
 var throwServiceError10 = (message, statusCode) => {
-  const error = new Error(
-    message
-  );
+  const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
 var assertFound8 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError10(
-      message,
-      statusCode
-    );
+    throwServiceError10(message, statusCode);
   }
 };
 var assertValidObjectId8 = (value, fieldName) => {
   if (!Types29.ObjectId.isValid(value)) {
-    throwServiceError10(
-      `${fieldName} is invalid`,
-      400
-    );
+    throwServiceError10(`${fieldName} is invalid`, 400);
   }
 };
 var isAdminOrManager10 = (role) => {
@@ -18229,17 +18339,11 @@ var validateQuestionConfiguration = ({
     (option) => option.trim().toLowerCase()
   );
   if (new Set(normalizedOptions).size !== options2.length) {
-    return throwServiceError10(
-      "Quiz question options must be unique",
-      400
-    );
+    return throwServiceError10("Quiz question options must be unique", 400);
   }
   const uniqueCorrectIndexes = new Set(correctOptionIndexes);
   if (uniqueCorrectIndexes.size !== correctOptionIndexes.length) {
-    return throwServiceError10(
-      "Correct option indexes must be unique",
-      400
-    );
+    return throwServiceError10("Correct option indexes must be unique", 400);
   }
   for (const index of correctOptionIndexes) {
     if (index < 0 || index >= options2.length) {
@@ -18257,18 +18361,9 @@ var validateQuestionConfiguration = ({
   }
 };
 var ensureCourseModuleExists3 = async (moduleId) => {
-  assertValidObjectId8(
-    moduleId,
-    "Course module ID"
-  );
-  const courseModule = await CourseModule.findById(
-    moduleId
-  );
-  assertFound8(
-    courseModule,
-    "Course module not found",
-    404
-  );
+  assertValidObjectId8(moduleId, "Course module ID");
+  const courseModule = await CourseModule.findById(moduleId);
+  assertFound8(courseModule, "Course module not found", 404);
   if (courseModule.status === "archived") {
     throwServiceError10(
       "Cannot manage quiz questions under an archived module",
@@ -18278,9 +18373,7 @@ var ensureCourseModuleExists3 = async (moduleId) => {
   return courseModule;
 };
 var createQuizQuestion = async (moduleId, payload, actorId) => {
-  await ensureCourseModuleExists3(
-    moduleId
-  );
+  await ensureCourseModuleExists3(moduleId);
   validateQuestionConfiguration({
     questionType: payload.questionType,
     options: payload.options,
@@ -18304,10 +18397,7 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
     order: payload.order
   });
   if (existingQuestion) {
-    throwServiceError10(
-      "Question order already exists in this module",
-      409
-    );
+    throwServiceError10("Question order already exists in this module", 409);
   }
   const createData = {
     module: new Types29.ObjectId(moduleId),
@@ -18327,9 +18417,7 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
     createData.explanation = payload.explanation;
   }
   try {
-    const question = await QuizQuestion.create(
-      createData
-    );
+    const question = await QuizQuestion.create(createData);
     return question.populate([
       {
         path: "module",
@@ -18347,10 +18435,7 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
     ]);
   } catch (error) {
     if (isDuplicateKeyError5(error)) {
-      throwServiceError10(
-        "Question order already exists in this module",
-        409
-      );
+      throwServiceError10("Question order already exists in this module", 409);
     }
     throw error;
   }
@@ -18362,10 +18447,7 @@ var getAllQuizQuestions = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    assertValidObjectId8(
-      moduleId,
-      "Course module ID"
-    );
+    assertValidObjectId8(moduleId, "Course module ID");
     filter.module = new Types29.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager10(actorRole);
@@ -18387,29 +18469,18 @@ var getAllQuizQuestions = async ({
       model: "ChallengePillar",
       select: "name slug title status"
     }
-  }).populate(
-    "createdBy",
-    "fullName email role profileImage"
-  ).populate(
-    "updatedBy",
-    "fullName email role profileImage"
-  );
+  }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
   if (!isPrivileged) {
     query.select(
-      [
-        "-correctOptionIndexes",
-        "-correctBooleanAnswer",
-        "-explanation"
-      ].join(" ")
+      ["-correctOptionIndexes", "-correctBooleanAnswer", "-explanation"].join(
+        " "
+      )
     );
   }
   return query;
 };
-var getQuestionsByModule = async (moduleId, actorRole) => {
-  assertValidObjectId8(
-    moduleId,
-    "Course module ID"
-  );
+var getQuestionsByModule = async (moduleId, actorRole, userId) => {
+  assertValidObjectId8(moduleId, "Course module ID");
   const isPrivileged = isAdminOrManager10(actorRole);
   const moduleFilter = {
     _id: moduleId
@@ -18417,17 +18488,23 @@ var getQuestionsByModule = async (moduleId, actorRole) => {
   if (!isPrivileged) {
     moduleFilter.status = "published";
   }
-  const courseModule = await CourseModule.findOne(
-    moduleFilter
-  ).populate(
+  const courseModule = await CourseModule.findOne(moduleFilter).populate(
     "pillar",
     "name slug title status"
   );
-  assertFound8(
-    courseModule,
-    "Course module not found or unavailable",
-    404
-  );
+  assertFound8(courseModule, "Course module not found or unavailable", 404);
+  if (userId && !["admin", "manager", "founder"].includes(actorRole ?? "")) {
+    const pillarId = String(
+      typeof courseModule.pillar === "object" ? courseModule.pillar._id : courseModule.pillar
+    );
+    const access = await userEntitlementService.checkPillarAccess(
+      userId,
+      pillarId
+    );
+    if (!access.hasAccess) {
+      throwServiceError10("Purchase this pillar to access its quiz", 403);
+    }
+  }
   const questionFilter = {
     module: new Types29.ObjectId(moduleId)
   };
@@ -18438,22 +18515,12 @@ var getQuestionsByModule = async (moduleId, actorRole) => {
       $ne: "archived"
     };
   }
-  const query = QuizQuestion.find(
-    questionFilter
-  ).sort({ order: 1 }).populate(
-    "createdBy",
-    "fullName email role profileImage"
-  ).populate(
-    "updatedBy",
-    "fullName email role profileImage"
-  );
+  const query = QuizQuestion.find(questionFilter).sort({ order: 1 }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
   if (!isPrivileged) {
     query.select(
-      [
-        "-correctOptionIndexes",
-        "-correctBooleanAnswer",
-        "-explanation"
-      ].join(" ")
+      ["-correctOptionIndexes", "-correctBooleanAnswer", "-explanation"].join(
+        " "
+      )
     );
   }
   const questions = await query;
@@ -18463,10 +18530,7 @@ var getQuestionsByModule = async (moduleId, actorRole) => {
   };
 };
 var getSingleQuizQuestion = async (questionId, actorRole) => {
-  assertValidObjectId8(
-    questionId,
-    "Quiz question ID"
-  );
+  assertValidObjectId8(questionId, "Quiz question ID");
   const filter = {
     _id: questionId
   };
@@ -18482,48 +18546,24 @@ var getSingleQuizQuestion = async (questionId, actorRole) => {
       model: "ChallengePillar",
       select: "name slug title status"
     }
-  }).populate(
-    "createdBy",
-    "fullName email role profileImage"
-  ).populate(
-    "updatedBy",
-    "fullName email role profileImage"
-  );
+  }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
   if (!isPrivileged) {
     query.select(
-      [
-        "-correctOptionIndexes",
-        "-correctBooleanAnswer",
-        "-explanation"
-      ].join(" ")
+      ["-correctOptionIndexes", "-correctBooleanAnswer", "-explanation"].join(
+        " "
+      )
     );
   }
   const question = await query;
-  assertFound8(
-    question,
-    "Quiz question not found",
-    404
-  );
+  assertFound8(question, "Quiz question not found", 404);
   return question;
 };
 var updateQuizQuestion = async (questionId, payload, actorId) => {
-  assertValidObjectId8(
-    questionId,
-    "Quiz question ID"
-  );
-  const question = await QuizQuestion.findById(
-    questionId
-  );
-  assertFound8(
-    question,
-    "Quiz question not found",
-    404
-  );
+  assertValidObjectId8(questionId, "Quiz question ID");
+  const question = await QuizQuestion.findById(questionId);
+  assertFound8(question, "Quiz question not found", 404);
   if (question.status === "archived") {
-    throwServiceError10(
-      "Archived question cannot be updated",
-      400
-    );
+    throwServiceError10("Archived question cannot be updated", 400);
   }
   if (payload.order !== void 0 && payload.order !== question.order) {
     const duplicateQuestion = await QuizQuestion.findOne({
@@ -18534,10 +18574,7 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
       order: payload.order
     });
     if (duplicateQuestion) {
-      throwServiceError10(
-        "Question order already exists in this module",
-        409
-      );
+      throwServiceError10("Question order already exists in this module", 409);
     }
   }
   const nextQuestionType = payload.questionType ?? question.questionType;
@@ -18555,9 +18592,7 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
   } else if (payload.correctOptionIndexes !== void 0) {
     nextCorrectOptionIndexes = payload.correctOptionIndexes;
   } else {
-    nextCorrectOptionIndexes = question.correctOptionIndexes ? [
-      ...question.correctOptionIndexes
-    ] : void 0;
+    nextCorrectOptionIndexes = question.correctOptionIndexes ? [...question.correctOptionIndexes] : void 0;
   }
   let nextCorrectBooleanAnswer;
   if (payload.correctBooleanAnswer === null) {
@@ -18583,23 +18618,11 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
     question.question = payload.question;
   }
   question.questionType = nextQuestionType;
-  question.set(
-    "options",
-    nextOptions
-  );
-  question.set(
-    "correctOptionIndexes",
-    nextCorrectOptionIndexes
-  );
-  question.set(
-    "correctBooleanAnswer",
-    nextCorrectBooleanAnswer
-  );
+  question.set("options", nextOptions);
+  question.set("correctOptionIndexes", nextCorrectOptionIndexes);
+  question.set("correctBooleanAnswer", nextCorrectBooleanAnswer);
   if (payload.explanation === null) {
-    question.set(
-      "explanation",
-      void 0
-    );
+    question.set("explanation", void 0);
   } else if (payload.explanation !== void 0) {
     question.explanation = payload.explanation;
   }
@@ -18611,10 +18634,7 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
     await question.save();
   } catch (error) {
     if (isDuplicateKeyError5(error)) {
-      throwServiceError10(
-        "Question order already exists in this module",
-        409
-      );
+      throwServiceError10("Question order already exists in this module", 409);
     }
     throw error;
   }
@@ -18635,40 +18655,20 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
   ]);
 };
 var publishQuizQuestion = async (questionId, actorId) => {
-  assertValidObjectId8(
-    questionId,
-    "Quiz question ID"
-  );
-  const question = await QuizQuestion.findById(
-    questionId
-  );
-  assertFound8(
-    question,
-    "Quiz question not found",
-    404
-  );
+  assertValidObjectId8(questionId, "Quiz question ID");
+  const question = await QuizQuestion.findById(questionId);
+  assertFound8(question, "Quiz question not found", 404);
   if (question.status === "archived") {
-    throwServiceError10(
-      "Archived question cannot be published",
-      400
-    );
+    throwServiceError10("Archived question cannot be published", 400);
   }
   validateQuestionConfiguration({
     questionType: question.questionType,
     options: question.options ? [...question.options] : void 0,
-    correctOptionIndexes: question.correctOptionIndexes ? [
-      ...question.correctOptionIndexes
-    ] : void 0,
+    correctOptionIndexes: question.correctOptionIndexes ? [...question.correctOptionIndexes] : void 0,
     correctBooleanAnswer: question.correctBooleanAnswer
   });
-  const courseModule = await CourseModule.findById(
-    question.module
-  );
-  assertFound8(
-    courseModule,
-    "Parent course module not found",
-    404
-  );
+  const courseModule = await CourseModule.findById(question.module);
+  assertFound8(courseModule, "Parent course module not found", 404);
   if (courseModule.status !== "published") {
     throwServiceError10(
       "Publish the parent course module before publishing this question",
@@ -18677,61 +18677,31 @@ var publishQuizQuestion = async (questionId, actorId) => {
   }
   question.status = "published";
   question.publishedAt = /* @__PURE__ */ new Date();
-  question.set(
-    "archivedAt",
-    void 0
-  );
+  question.set("archivedAt", void 0);
   question.updatedBy = new Types29.ObjectId(actorId);
   await question.save();
   return question;
 };
 var moveQuizQuestionToDraft = async (questionId, actorId) => {
-  assertValidObjectId8(
-    questionId,
-    "Quiz question ID"
-  );
-  const question = await QuizQuestion.findById(
-    questionId
-  );
-  assertFound8(
-    question,
-    "Quiz question not found",
-    404
-  );
+  assertValidObjectId8(questionId, "Quiz question ID");
+  const question = await QuizQuestion.findById(questionId);
+  assertFound8(question, "Quiz question not found", 404);
   if (question.status === "archived") {
-    throwServiceError10(
-      "Archived question cannot be moved to draft",
-      400
-    );
+    throwServiceError10("Archived question cannot be moved to draft", 400);
   }
   question.status = "draft";
-  question.set(
-    "publishedAt",
-    void 0
-  );
+  question.set("publishedAt", void 0);
   question.updatedBy = new Types29.ObjectId(actorId);
   await question.save();
   return question;
 };
 var archiveQuizQuestion = async (questionId, actorId) => {
-  assertValidObjectId8(
-    questionId,
-    "Quiz question ID"
-  );
-  const question = await QuizQuestion.findById(
-    questionId
-  );
-  assertFound8(
-    question,
-    "Quiz question not found",
-    404
-  );
+  assertValidObjectId8(questionId, "Quiz question ID");
+  const question = await QuizQuestion.findById(questionId);
+  assertFound8(question, "Quiz question not found", 404);
   question.status = "archived";
   question.archivedAt = /* @__PURE__ */ new Date();
-  question.set(
-    "publishedAt",
-    void 0
-  );
+  question.set("publishedAt", void 0);
   question.updatedBy = new Types29.ObjectId(actorId);
   await question.save();
   return question;
@@ -18767,9 +18737,7 @@ var createQuizQuestion2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser7(req);
     const result = await quizQuestionService.createQuizQuestion(
-      String(
-        req.params.moduleId
-      ),
+      String(req.params.moduleId),
       req.body,
       authUser.id
     );
@@ -18806,10 +18774,9 @@ var getQuestionsByModule2 = async (req, res, next) => {
   try {
     const authUser = getAuthUser7(req);
     const result = await quizQuestionService.getQuestionsByModule(
-      String(
-        req.params.moduleId
-      ),
-      authUser.role
+      String(req.params.moduleId),
+      authUser.role,
+      authUser._id
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -18919,6 +18886,7 @@ var quizQuestionController = {
 };
 
 // src/modules/quizeQuestions/quiz.question.validation.ts
+init_quiz_question_interface();
 import { z as z13 } from "zod";
 var mongoObjectIdSchema5 = z13.string().regex(
   /^[0-9a-fA-F]{24}$/,
@@ -20308,6 +20276,7 @@ var academyProfileRoutes = router22;
 import { Router as Router23 } from "express";
 
 // src/modules/userEntitlements/userEntitlements.controller.ts
+init_userEntitlements_service();
 var throwControllerError5 = (message, status) => {
   const error = new Error(message);
   error.status = status;
@@ -20506,6 +20475,7 @@ var userEntitlementController = {
 };
 
 // src/modules/userEntitlements/userEntitlements.validation.ts
+init_userEntitlements_interface();
 import { z as z15 } from "zod";
 var mongoObjectIdSchema7 = z15.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
 var optionalDateSchema = z15.string().datetime({
@@ -20695,10 +20665,11 @@ import { Router as Router24 } from "express";
 init_course_module_model_schema();
 init_module_video_model_schema();
 init_challenge_pillar_model_schema();
-import { Types as Types33 } from "mongoose";
+init_userEntitlements_service();
 init_video_progress_model_schema();
 init_throwServiceError();
 init_assertFound();
+import { Types as Types33 } from "mongoose";
 var MAX_HEARTBEAT_SEGMENT_SECONDS = 60;
 var VIDEO_DURATION_TOLERANCE_SECONDS = 5;
 var RANGE_MERGE_TOLERANCE_SECONDS = 0.5;
@@ -20933,7 +20904,11 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
     try {
       progress = await VideoProgress.create(createData);
       if (isCompleted) {
-        await awardVideoCompletionPoints(userId, video, courseModule._id.toString());
+        await awardVideoCompletionPoints(
+          userId,
+          video,
+          courseModule._id.toString()
+        );
       }
       return populateVideoProgress(progress);
     } catch (error) {
@@ -20974,7 +20949,11 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
   }
   await progress.save();
   if (newlyCompleted) {
-    await awardVideoCompletionPoints(userId, video, courseModule._id.toString());
+    await awardVideoCompletionPoints(
+      userId,
+      video,
+      courseModule._id.toString()
+    );
   }
   try {
     const { moduleProgressService: moduleProgressService2 } = await Promise.resolve().then(() => (init_module_progress_service(), module_progress_service_exports));
@@ -21123,8 +21102,12 @@ var getMyModuleVideoProgress = async (userId, moduleId) => {
 };
 var getMyAllVideoProgress = async (userId) => {
   assertValidObjectId11(userId, "User ID");
+  const publishedVideoIds = await ModuleVideo.find({
+    status: "published"
+  }).distinct("_id");
   const filter = {
-    user: new Types33.ObjectId(userId)
+    user: new Types33.ObjectId(userId),
+    video: { $in: publishedVideoIds }
   };
   return VideoProgress.find(filter).sort({
     lastWatchedAt: -1
@@ -21782,6 +21765,7 @@ var QuizAttempt = model35(
 );
 
 // src/modules/quizAttempts/quiz.attempt.service.ts
+init_quiz_question_model_schema();
 var MAXIMUM_ATTEMPTS = 2;
 var PASS_SCORE = 70;
 var throwServiceError14 = (message, statusCode) => {
@@ -22398,6 +22382,8 @@ init_assertFound();
 // src/modules/quizCertificates/quiz.certificate.service.ts
 init_course_module_model_schema();
 init_module_progress_model_schema();
+init_module_video_model_schema();
+init_quiz_question_model_schema();
 import { Types as Types35 } from "mongoose";
 
 // src/modules/quizCertificates/quiz.certificate.model.schema.ts
@@ -22455,6 +22441,9 @@ var quizCertificateSchema = new Schema36(
       default: Date.now,
       required: true
     },
+    contentVersionAtIssue: {
+      type: Date
+    },
     certificateUrl: {
       type: String,
       trim: true
@@ -22502,9 +22491,7 @@ var dropLegacyQuizCertificateIndexes = async () => {
     );
     if (legacyIndex) {
       await QuizCertificate.collection.dropIndex("user_1_module_1");
-      console.info(
-        "[QuizCertificate] Dropped legacy index: user_1_module_1"
-      );
+      console.info("[QuizCertificate] Dropped legacy index: user_1_module_1");
     }
   } catch {
   }
@@ -22559,49 +22546,71 @@ var randomAlphaNumeric = (length) => {
   const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let result = "";
   for (let index = 0; index < length; index += 1) {
-    result += characters.charAt(
-      Math.floor(Math.random() * characters.length)
-    );
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   return result;
 };
 var buildCertificateNumber = (pillarSlug) => {
   return ["INV", pillarSlug.toUpperCase(), randomAlphaNumeric(6)].join("-");
 };
+var getPillarContentVersion = async (pillarId) => {
+  const moduleIds = await CourseModule.find({
+    pillar: new Types35.ObjectId(pillarId),
+    status: "published"
+  }).select("_id updatedAt").lean();
+  const ids = moduleIds.map((module) => module._id);
+  const [latestVideo, latestQuestion] = await Promise.all([
+    ModuleVideo.findOne({ module: { $in: ids }, status: "published" }).sort({ updatedAt: -1 }).select("updatedAt").lean(),
+    QuizQuestion.findOne({ module: { $in: ids }, status: "published" }).sort({ updatedAt: -1 }).select("updatedAt").lean()
+  ]);
+  const timestamps = [
+    ...moduleIds.map((module) => module.updatedAt),
+    latestVideo?.updatedAt,
+    latestQuestion?.updatedAt
+  ].filter((value) => value instanceof Date);
+  return timestamps.reduce(
+    (latest, current) => current > latest ? current : latest,
+    /* @__PURE__ */ new Date(0)
+  );
+};
 var issueCertificateIfEligible = async (userId, pillarId) => {
   assertValidObjectId13(userId, "User ID");
   assertValidObjectId13(pillarId, "Pillar ID");
+  const contentVersion = await getPillarContentVersion(pillarId);
   const existingCertificate = await QuizCertificate.findOne({
     user: new Types35.ObjectId(userId),
     pillar: new Types35.ObjectId(pillarId)
   }).populate(CERTIFICATE_POPULATE);
-  if (existingCertificate) {
+  if (existingCertificate?.status === "issued" && (existingCertificate.contentVersionAtIssue ?? existingCertificate.issuedAt) >= contentVersion) {
     return existingCertificate;
+  }
+  if (existingCertificate?.status === "issued") {
+    existingCertificate.status = "revoked";
+    existingCertificate.revokedAt = /* @__PURE__ */ new Date();
+    existingCertificate.revokedReason = "New published academy content requires completion before reissue.";
+    await existingCertificate.save();
   }
   const pillarModules = await CourseModule.find({
     pillar: new Types35.ObjectId(pillarId),
     status: "published"
   }).select("_id title moduleNumber").lean();
   if (pillarModules.length === 0) {
-    throwServiceError15(
-      "No published modules found for this pillar",
-      404
-    );
+    throwServiceError15("No published modules found for this pillar", 404);
   }
   const moduleIds = pillarModules.map((m) => m._id);
   const progressDocs = await ModuleProgress.find({
     user: new Types35.ObjectId(userId),
     module: { $in: moduleIds }
-  }).select("module quizSummary").lean();
+  }).select("module quizSummary videoSummary").lean();
   const progressByModuleId = {};
   for (const p of progressDocs) {
     progressByModuleId[String(p.module)] = p;
   }
   for (const mod of pillarModules) {
     const progress = progressByModuleId[String(mod._id)];
-    if (!progress || !progress.quizSummary?.passed) {
+    if (!progress || !progress.quizSummary?.passed || !progress.videoSummary?.completed || !progress.quizSummary.lastAttemptAt || progress.quizSummary.lastAttemptAt < contentVersion) {
       throwServiceError15(
-        `You must pass the quiz for every module in this pillar before claiming the certificate. Module "${mod.title}" is not yet passed.`,
+        `Complete the latest content and quiz for module "${mod.title}" before claiming the certificate.`,
         403
       );
     }
@@ -22619,16 +22628,25 @@ var issueCertificateIfEligible = async (userId, pillarId) => {
     pillar: new Types35.ObjectId(pillarId),
     status: "issued",
     score: averageScore,
-    issuedAt: /* @__PURE__ */ new Date()
+    issuedAt: /* @__PURE__ */ new Date(),
+    contentVersionAtIssue: contentVersion
   };
   const MAX_ATTEMPTS = 3;
   let lastError;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     try {
-      const certificate = await QuizCertificate.create({
+      const certificate = existingCertificate ? await QuizCertificate.findByIdAndUpdate(
+        existingCertificate._id,
+        {
+          $set: createData,
+          $unset: { revokedAt: 1, revokedReason: 1, revokedBy: 1 }
+        },
+        { new: true }
+      ) : await QuizCertificate.create({
         ...createData,
         certificateNumber: buildCertificateNumber(pillarDoc.slug)
       });
+      assertFound15(certificate, "Certificate could not be issued", 500);
       notificationService.safeCreateFromTemplateOrFallback({
         templateKey: "quiz_certificate_issued",
         fallbackTitle: `Certificate Earned: ${pillarDoc.title || pillarDoc.slug.toUpperCase()}`,
@@ -22660,9 +22678,25 @@ var issueCertificateIfEligible = async (userId, pillarId) => {
 };
 var getMyCertificates = async (userId) => {
   assertValidObjectId13(userId, "User ID");
-  return QuizCertificate.find({
+  const certificates = await QuizCertificate.find({
     user: new Types35.ObjectId(userId)
   }).sort({ issuedAt: -1 }).populate(CERTIFICATE_POPULATE);
+  for (const certificate of certificates) {
+    if (certificate.status !== "issued") {
+      continue;
+    }
+    const contentVersion = await getPillarContentVersion(
+      String(certificate.pillar._id ?? certificate.pillar)
+    );
+    const certificateContentVersion = certificate.contentVersionAtIssue ?? certificate.issuedAt;
+    if (contentVersion > certificateContentVersion) {
+      certificate.status = "revoked";
+      certificate.revokedAt = /* @__PURE__ */ new Date();
+      certificate.revokedReason = "New published academy content requires completion before reissue.";
+      await certificate.save();
+    }
+  }
+  return certificates.filter((certificate) => certificate.status === "issued");
 };
 var getMySingleCertificate = async (userId, certificateId) => {
   assertValidObjectId13(userId, "User ID");
@@ -22686,9 +22720,9 @@ var verifyCertificateByNumber = async (certificateNumber) => {
 };
 var getSingleCertificateAdmin = async (certificateId) => {
   assertValidObjectId13(certificateId, "Certificate ID");
-  const certificate = await QuizCertificate.findById(
-    certificateId
-  ).populate(CERTIFICATE_POPULATE);
+  const certificate = await QuizCertificate.findById(certificateId).populate(
+    CERTIFICATE_POPULATE
+  );
   assertFound15(certificate, "Certificate not found", 404);
   return certificate;
 };
@@ -30738,6 +30772,7 @@ var notificationTemplateRoutes = router39;
 import { Router as Router40 } from "express";
 
 // src/modules/entitlementLogs/entitlementlog.controller.ts
+init_entitlementlog_service();
 var throwControllerError10 = (message, status) => {
   const error = new Error(message);
   error.status = status;
@@ -30844,6 +30879,7 @@ var entitlementLogController = {
 };
 
 // src/modules/entitlementLogs/entitlementlog.validaiton.ts
+init_entitlementlog_interface();
 import { z as z32 } from "zod";
 var mongoObjectIdSchema24 = z32.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
 var createEntitlementLogBodySchema = z32.object({

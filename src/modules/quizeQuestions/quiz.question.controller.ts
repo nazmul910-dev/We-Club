@@ -1,8 +1,4 @@
-import type {
-  NextFunction,
-  Request,
-  Response,
-} from "express";
+import type { NextFunction, Request, Response } from "express";
 
 import sendResponse from "../../utility/sendResponse";
 
@@ -15,7 +11,7 @@ const throwControllerError = (message: string, status: number): never => {
 };
 
 const getAuthUser = (
-  req: Request
+  req: Request,
 ): {
   id: string;
   role: string;
@@ -35,27 +31,21 @@ const getAuthUser = (
 const createQuizQuestion = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const authUser =
-      getAuthUser(req);
+    const authUser = getAuthUser(req);
 
-    const result =
-      await quizQuestionService
-        .createQuizQuestion(
-          String(
-            req.params.moduleId
-          ),
-          req.body,
-          authUser.id
-        );
+    const result = await quizQuestionService.createQuizQuestion(
+      String(req.params.moduleId),
+      req.body,
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 201,
       success: true,
-      message:
-        "Quiz question created successfully",
+      message: "Quiz question created successfully",
       data: result,
     });
   } catch (error) {
@@ -66,39 +56,26 @@ const createQuizQuestion = async (
 const getAllQuizQuestions = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const authUser =
-      getAuthUser(req);
+    const authUser = getAuthUser(req);
 
     const moduleId =
-      typeof req.query.moduleId ===
-      "string"
-        ? req.query.moduleId
-        : undefined;
+      typeof req.query.moduleId === "string" ? req.query.moduleId : undefined;
 
-    const result =
-      await quizQuestionService
-        .getAllQuizQuestions({
-          actorRole:
-            authUser.role,
+    const result = await quizQuestionService.getAllQuizQuestions({
+      actorRole: authUser.role,
 
-          ...(moduleId !== undefined
-            ? { moduleId }
-            : {}),
+      ...(moduleId !== undefined ? { moduleId } : {}),
 
-          includeArchived:
-            req.query
-              .includeArchived ===
-            "true",
-        });
+      includeArchived: req.query.includeArchived === "true",
+    });
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        "Quiz questions retrieved successfully",
+      message: "Quiz questions retrieved successfully",
       data: result,
     });
   } catch (error) {
@@ -106,88 +83,73 @@ const getAllQuizQuestions = async (
   }
 };
 
-const getQuestionsByModule =
-  async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const authUser =
-        getAuthUser(req);
-
-      const result =
-        await quizQuestionService
-          .getQuestionsByModule(
-            String(
-              req.params.moduleId
-            ),
-            authUser.role
-          );
-
-      sendResponse(res, {
-        statusCode: 200,
-        success: true,
-        message:
-          "Module quiz questions retrieved successfully",
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-const getSingleQuizQuestion =
-  async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const authUser =
-        getAuthUser(req);
-
-      const result =
-        await quizQuestionService
-          .getSingleQuizQuestion(
-            String(req.params.id),
-            authUser.role
-          );
-
-      sendResponse(res, {
-        statusCode: 200,
-        success: true,
-        message:
-          "Quiz question retrieved successfully",
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-const updateQuizQuestion = async (
+const getQuestionsByModule = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const authUser =
-      getAuthUser(req);
+    const authUser = getAuthUser(req);
 
-    const result =
-      await quizQuestionService
-        .updateQuizQuestion(
-          String(req.params.id),
-          req.body,
-          authUser.id
-        );
+    const result = await quizQuestionService.getQuestionsByModule(
+      String(req.params.moduleId),
+      authUser.role,
+      authUser._id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        "Quiz question updated successfully",
+      message: "Module quiz questions retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getSingleQuizQuestion = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+
+    const result = await quizQuestionService.getSingleQuizQuestion(
+      String(req.params.id),
+      authUser.role,
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Quiz question retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateQuizQuestion = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+
+    const result = await quizQuestionService.updateQuizQuestion(
+      String(req.params.id),
+      req.body,
+      authUser.id,
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Quiz question updated successfully",
       data: result,
     });
   } catch (error) {
@@ -198,24 +160,20 @@ const updateQuizQuestion = async (
 const publishQuizQuestion = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const authUser =
-      getAuthUser(req);
+    const authUser = getAuthUser(req);
 
-    const result =
-      await quizQuestionService
-        .publishQuizQuestion(
-          String(req.params.id),
-          authUser.id
-        );
+    const result = await quizQuestionService.publishQuizQuestion(
+      String(req.params.id),
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        "Quiz question published successfully",
+      message: "Quiz question published successfully",
       data: result,
     });
   } catch (error) {
@@ -223,56 +181,47 @@ const publishQuizQuestion = async (
   }
 };
 
-const moveQuizQuestionToDraft =
-  async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const authUser =
-        getAuthUser(req);
-
-      const result =
-        await quizQuestionService
-          .moveQuizQuestionToDraft(
-            String(req.params.id),
-            authUser.id
-          );
-
-      sendResponse(res, {
-        statusCode: 200,
-        success: true,
-        message:
-          "Quiz question moved to draft successfully",
-        data: result,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-const archiveQuizQuestion = async (
+const moveQuizQuestionToDraft = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
-    const authUser =
-      getAuthUser(req);
+    const authUser = getAuthUser(req);
 
-    const result =
-      await quizQuestionService
-        .archiveQuizQuestion(
-          String(req.params.id),
-          authUser.id
-        );
+    const result = await quizQuestionService.moveQuizQuestionToDraft(
+      String(req.params.id),
+      authUser.id,
+    );
 
     sendResponse(res, {
       statusCode: 200,
       success: true,
-      message:
-        "Quiz question archived successfully",
+      message: "Quiz question moved to draft successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const archiveQuizQuestion = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+
+    const result = await quizQuestionService.archiveQuizQuestion(
+      String(req.params.id),
+      authUser.id,
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Quiz question archived successfully",
       data: result,
     });
   } catch (error) {

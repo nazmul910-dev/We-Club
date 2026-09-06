@@ -61,6 +61,10 @@ const quizCertificateSchema = new Schema<IQuizCertificate>(
       required: true,
     },
 
+    contentVersionAtIssue: {
+      type: Date,
+    },
+
     certificateUrl: {
       type: String,
       trim: true,
@@ -126,9 +130,7 @@ export const dropLegacyQuizCertificateIndexes = async (): Promise<void> => {
     if (legacyIndex) {
       await QuizCertificate.collection.dropIndex("user_1_module_1");
       // eslint-disable-next-line no-console
-      console.info(
-        "[QuizCertificate] Dropped legacy index: user_1_module_1",
-      );
+      console.info("[QuizCertificate] Dropped legacy index: user_1_module_1");
     }
   } catch {
     // Ignore — index may already be gone

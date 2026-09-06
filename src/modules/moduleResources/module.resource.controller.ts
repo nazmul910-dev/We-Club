@@ -24,10 +24,7 @@ const getAuthUser = (req: Request): { id: string; role: string } => {
   };
 };
 
-const throwControllerError = (
-  message: string,
-  statusCode: number
-): never => {
+const throwControllerError = (message: string, statusCode: number): never => {
   const error = new Error(message) as Error & {
     statusCode?: number;
   };
@@ -39,7 +36,7 @@ const throwControllerError = (
 const createModuleResource = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
@@ -71,20 +68,19 @@ const createModuleResource = async (
       if (!resourceFile) {
         throwControllerError(
           'Cloudinary resource requires a file in multipart field "resource"',
-          400
+          400,
         );
       }
 
       const uploadedResource = await uploadResourceToCloudinary(
         resourceFile,
-        `invictus/module-resources/${moduleId}`
+        `invictus/module-resources/${moduleId}`,
       );
 
       payload.fileName = uploadedResource.fileName;
       payload.mimeType = uploadedResource.mimeType;
       payload.cloudinaryPublicId = uploadedResource.cloudinaryPublicId;
-      payload.cloudinaryResourceType =
-        uploadedResource.cloudinaryResourceType;
+      payload.cloudinaryResourceType = uploadedResource.cloudinaryResourceType;
       payload.secureUrl = uploadedResource.secureUrl;
 
       if (uploadedResource.cloudinaryAssetId !== undefined) {
@@ -102,7 +98,7 @@ const createModuleResource = async (
       if (thumbnailFile) {
         payload.thumbnailUrl = await uploadThumbnailToCloudinary(
           thumbnailFile,
-          `invictus/module-resources/${moduleId}/thumbnails`
+          `invictus/module-resources/${moduleId}/thumbnails`,
         );
       } else if (uploadedResource.thumbnailUrl !== undefined) {
         payload.thumbnailUrl = uploadedResource.thumbnailUrl;
@@ -112,7 +108,7 @@ const createModuleResource = async (
     const result = await moduleResourceService.createModuleResource(
       moduleId,
       payload,
-      authUser.id
+      authUser.id,
     );
 
     sendResponse(res, {
@@ -129,7 +125,7 @@ const createModuleResource = async (
 const getAllModuleResources = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
@@ -137,9 +133,7 @@ const getAllModuleResources = async (
     const result = await moduleResourceService.getAllModuleResources({
       actorRole: authUser.role,
       moduleId:
-        typeof req.query.moduleId === "string"
-          ? req.query.moduleId
-          : undefined,
+        typeof req.query.moduleId === "string" ? req.query.moduleId : undefined,
       includeArchived: req.query.includeArchived === "true",
     });
 
@@ -157,14 +151,15 @@ const getAllModuleResources = async (
 const getResourcesByModule = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
     const result = await moduleResourceService.getResourcesByModule(
       String(req.params.moduleId),
-      authUser.role
+      authUser.role,
+      authUser._id,
     );
 
     sendResponse(res, {
@@ -181,14 +176,14 @@ const getResourcesByModule = async (
 const getSingleModuleResource = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
     const result = await moduleResourceService.getSingleModuleResource(
       String(req.params.id),
-      authUser.role
+      authUser.role,
     );
 
     sendResponse(res, {
@@ -205,7 +200,7 @@ const getSingleModuleResource = async (
 const updateModuleResource = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
@@ -213,7 +208,7 @@ const updateModuleResource = async (
     const result = await moduleResourceService.updateModuleResource(
       String(req.params.id),
       req.body,
-      authUser.id
+      authUser.id,
     );
 
     sendResponse(res, {
@@ -230,14 +225,14 @@ const updateModuleResource = async (
 const publishModuleResource = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
     const result = await moduleResourceService.publishModuleResource(
       String(req.params.id),
-      authUser.id
+      authUser.id,
     );
 
     sendResponse(res, {
@@ -254,14 +249,14 @@ const publishModuleResource = async (
 const moveModuleResourceToDraft = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
     const result = await moduleResourceService.moveModuleResourceToDraft(
       String(req.params.id),
-      authUser.id
+      authUser.id,
     );
 
     sendResponse(res, {
@@ -278,14 +273,14 @@ const moveModuleResourceToDraft = async (
 const archiveModuleResource = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const authUser = getAuthUser(req);
 
     const result = await moduleResourceService.archiveModuleResource(
       String(req.params.id),
-      authUser.id
+      authUser.id,
     );
 
     sendResponse(res, {

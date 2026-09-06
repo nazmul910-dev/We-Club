@@ -7,11 +7,9 @@ import {
   IUpdateModuleResource,
 } from "./module.resource.interface";
 import { ModuleResource } from "./module.resource.model.schema";
+import { userEntitlementService } from "../userEntitlements/userEntitlements.service";
 
-const throwServiceError = (
-  message: string,
-  statusCode: number
-): never => {
+const throwServiceError = (message: string, statusCode: number): never => {
   const error = new Error(message) as Error & {
     statusCode?: number;
   };
@@ -23,7 +21,7 @@ const throwServiceError = (
 const assertFound: <T>(
   value: T | null | undefined,
   message: string,
-  statusCode: number
+  statusCode: number,
 ) => asserts value is T = (value, message, statusCode) => {
   if (value === null || value === undefined) {
     throwServiceError(message, statusCode);
@@ -37,7 +35,7 @@ const isAdminOrManager = (role?: string | undefined): boolean => {
 const setNullableField = (
   document: { set: (path: string, value: unknown) => unknown },
   path: string,
-  value: unknown
+  value: unknown,
 ): void => {
   if (value === null) {
     document.set(path, undefined);
@@ -57,7 +55,7 @@ const ensureCourseModuleExists = async (moduleId: string) => {
   if (courseModule.status === "archived") {
     throwServiceError(
       "Cannot manage resources under an archived course module",
-      400
+      400,
     );
   }
 
@@ -79,7 +77,7 @@ const validateResourceConfiguration = ({
     if (!cloudinaryPublicId || !secureUrl) {
       throwServiceError(
         "Cloudinary resource requires cloudinaryPublicId and secureUrl",
-        400
+        400,
       );
     }
   }
@@ -92,7 +90,7 @@ const validateResourceConfiguration = ({
 const createModuleResource = async (
   moduleId: string,
   payload: ICreateModuleResource,
-  actorId: string
+  actorId: string,
 ) => {
   await ensureCourseModuleExists(moduleId);
 
@@ -121,7 +119,7 @@ const createModuleResource = async (
   if (existingResource) {
     throwServiceError(
       "Resource slug, order or Cloudinary public ID already exists",
-      409
+      409,
     );
   }
 
@@ -214,18 +212,13 @@ const getAllModuleResources = async ({
     .populate("createdBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage");
 
-  if (!isPrivileged) {
-    query.select(
-      "-secureUrl -externalUrl -cloudinaryPublicId -cloudinaryAssetId"
-    );
-  }
-
   return query;
 };
 
 const getResourcesByModule = async (
   moduleId: string,
-  actorRole?: string | undefined
+  actorRole?: string | undefined,
+  userId?: string,
 ) => {
   const moduleFilter: Record<string, unknown> = { _id: moduleId };
 
@@ -235,14 +228,25 @@ const getResourcesByModule = async (
 
   const courseModule = await CourseModule.findOne(moduleFilter).populate(
     "pillar",
-    "name slug title isPaid priceCents currency status"
+    "name slug title isPaid priceCents currency status",
   );
 
-  assertFound(
-    courseModule,
-    "Course module not found or unavailable",
-    404
-  );
+  assertFound(courseModule, "Course module not found or unavailable", 404);
+
+  if (userId && !["admin", "manager", "founder"].includes(actorRole ?? "")) {
+    const pillarId = String(
+      typeof courseModule.pillar === "object"
+        ? courseModule.pillar._id
+        : courseModule.pillar,
+    );
+    const access = await userEntitlementService.checkPillarAccess(
+      userId,
+      pillarId,
+    );
+    if (!access.hasAccess) {
+      throwServiceError("Purchase this pillar to access its resources", 403);
+    }
+  }
 
   const filter: QueryFilter<IModuleResource> = {
     module: new Types.ObjectId(moduleId),
@@ -261,12 +265,6 @@ const getResourcesByModule = async (
     .populate("createdBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage");
 
-  if (!isPrivileged) {
-    query.select(
-      "-secureUrl -externalUrl -cloudinaryPublicId -cloudinaryAssetId"
-    );
-  }
-
   const resources = await query;
 
   return {
@@ -277,7 +275,7 @@ const getResourcesByModule = async (
 
 const getSingleModuleResource = async (
   resourceId: string,
-  actorRole?: string | undefined
+  actorRole?: string | undefined,
 ) => {
   const filter: QueryFilter<IModuleResource> = {
     _id: resourceId,
@@ -302,12 +300,6 @@ const getSingleModuleResource = async (
     .populate("createdBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage");
 
-  if (!isPrivileged) {
-    query.select(
-      "-secureUrl -externalUrl -cloudinaryPublicId -cloudinaryAssetId"
-    );
-  }
-
   const resource = await query;
 
   assertFound(resource, "Module resource not found", 404);
@@ -318,7 +310,7 @@ const getSingleModuleResource = async (
 const updateModuleResource = async (
   resourceId: string,
   payload: IUpdateModuleResource,
-  actorId: string
+  actorId: string,
 ) => {
   const resource = await ModuleResource.findById(resourceId);
 
@@ -332,15 +324,15 @@ const updateModuleResource = async (
   const nextCloudinaryPublicId =
     payload.cloudinaryPublicId === null
       ? undefined
-      : payload.cloudinaryPublicId ?? resource.cloudinaryPublicId;
+      : (payload.cloudinaryPublicId ?? resource.cloudinaryPublicId);
   const nextSecureUrl =
     payload.secureUrl === null
       ? undefined
-      : payload.secureUrl ?? resource.secureUrl;
+      : (payload.secureUrl ?? resource.secureUrl);
   const nextExternalUrl =
     payload.externalUrl === null
       ? undefined
-      : payload.externalUrl ?? resource.externalUrl;
+      : (payload.externalUrl ?? resource.externalUrl);
 
   validateResourceConfiguration({
     provider: nextProvider,
@@ -374,7 +366,7 @@ const updateModuleResource = async (
     if (duplicateResource) {
       throwServiceError(
         "Resource slug, order or Cloudinary public ID already exists",
-        409
+        409,
       );
     }
   }
@@ -398,20 +390,12 @@ const updateModuleResource = async (
   setNullableField(resource, "mimeType", payload.mimeType);
   setNullableField(resource, "format", payload.format);
   setNullableField(resource, "bytes", payload.bytes);
-  setNullableField(
-    resource,
-    "cloudinaryPublicId",
-    payload.cloudinaryPublicId
-  );
-  setNullableField(
-    resource,
-    "cloudinaryAssetId",
-    payload.cloudinaryAssetId
-  );
+  setNullableField(resource, "cloudinaryPublicId", payload.cloudinaryPublicId);
+  setNullableField(resource, "cloudinaryAssetId", payload.cloudinaryAssetId);
   setNullableField(
     resource,
     "cloudinaryResourceType",
-    payload.cloudinaryResourceType
+    payload.cloudinaryResourceType,
   );
   setNullableField(resource, "secureUrl", payload.secureUrl);
   setNullableField(resource, "externalUrl", payload.externalUrl);
@@ -438,10 +422,7 @@ const updateModuleResource = async (
   ]);
 };
 
-const publishModuleResource = async (
-  resourceId: string,
-  actorId: string
-) => {
+const publishModuleResource = async (resourceId: string, actorId: string) => {
   const resource = await ModuleResource.findById(resourceId);
 
   assertFound(resource, "Module resource not found", 404);
@@ -464,7 +445,7 @@ const publishModuleResource = async (
   if (courseModule.status !== "published") {
     throwServiceError(
       "Publish the parent course module before publishing this resource",
-      400
+      400,
     );
   }
 
@@ -480,7 +461,7 @@ const publishModuleResource = async (
 
 const moveModuleResourceToDraft = async (
   resourceId: string,
-  actorId: string
+  actorId: string,
 ) => {
   const resource = await ModuleResource.findById(resourceId);
 
@@ -499,10 +480,7 @@ const moveModuleResourceToDraft = async (
   return resource;
 };
 
-const archiveModuleResource = async (
-  resourceId: string,
-  actorId: string
-) => {
+const archiveModuleResource = async (resourceId: string, actorId: string) => {
   const resource = await ModuleResource.findById(resourceId);
 
   assertFound(resource, "Module resource not found", 404);

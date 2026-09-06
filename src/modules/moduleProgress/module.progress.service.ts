@@ -4,7 +4,9 @@ import { CourseModule } from "../courseModules/course.module.model.schema";
 import { ModuleAction } from "../moduleActions/module.action.model.schema";
 import { ModuleResource } from "../moduleResources/module.resource.model.schema";
 import { ModuleVideo } from "../moduleVideos/module.video.model.schema";
+import { QuizQuestion } from "../quizeQuestions/quiz.question.model.schema";
 import { VideoProgress } from "../videoProgress/video.progress.model.schema";
+import { userEntitlementService } from "../userEntitlements/userEntitlements.service";
 
 import {
   IModuleProgress,
@@ -181,7 +183,8 @@ const getOrCreateModuleProgress = async (
 
 const recalculateDerivedFields = (progress: ModuleProgressDocument): void => {
   // Videos completion unlocks quiz and actions
-  const videosCompleted = progress.videoSummary.completed;
+  const hasPublishedVideos = progress.videoSummary.totalRequired > 0;
+  const videosCompleted = hasPublishedVideos && progress.videoSummary.completed;
 
   progress.actionsUnlocked = videosCompleted;
   progress.actionSummary.completed = true;
@@ -230,7 +233,10 @@ const recalculateDerivedFields = (progress: ModuleProgressDocument): void => {
  * Idempotent via pointsLedgerService.awardPoints (unique per
  * user+module+reason), so a re-computed/duplicate call is a no-op.
  */
-const awardModuleCompletionPoints = async (userId: string, moduleId: string) => {
+const awardModuleCompletionPoints = async (
+  userId: string,
+  moduleId: string,
+) => {
   const courseModule = await CourseModule.findById(moduleId).select(
     "title completionPoints",
   );
@@ -239,9 +245,8 @@ const awardModuleCompletionPoints = async (userId: string, moduleId: string) => 
     return;
   }
 
-  const { pointsLedgerService } = await import(
-    "../pointsLedger/pointsledger.service"
-  );
+  const { pointsLedgerService } =
+    await import("../pointsLedger/pointsledger.service");
 
   await pointsLedgerService.awardPoints({
     user: userId,
@@ -273,12 +278,10 @@ const syncModulesBreakdownForUser = async (userId: string) => {
       isCompleted: true,
     });
 
-    const { Leaderboard } = await import(
-      "../leaderboards/leaderboard.model.schema"
-    );
-    const { leaderboardEntryService } = await import(
-      "../leaderboardEntries/leaderboard.entry.service"
-    );
+    const { Leaderboard } =
+      await import("../leaderboards/leaderboard.model.schema");
+    const { leaderboardEntryService } =
+      await import("../leaderboardEntries/leaderboard.entry.service");
 
     const activeLeaderboards = await Leaderboard.find({
       type: "points",
@@ -328,12 +331,10 @@ const syncQuizSuccessBreakdownForUser = async (userId: string) => {
         ? 0
         : Math.round((passedCount / attemptedCount) * 100);
 
-    const { Leaderboard } = await import(
-      "../leaderboards/leaderboard.model.schema"
-    );
-    const { leaderboardEntryService } = await import(
-      "../leaderboardEntries/leaderboard.entry.service"
-    );
+    const { Leaderboard } =
+      await import("../leaderboards/leaderboard.model.schema");
+    const { leaderboardEntryService } =
+      await import("../leaderboardEntries/leaderboard.entry.service");
 
     const activeLeaderboards = await Leaderboard.find({
       type: "points",
@@ -368,9 +369,8 @@ const QUIZ_PASS_POINTS = 10;
 const awardQuizPassPoints = async (userId: string, moduleId: string) => {
   const courseModule = await CourseModule.findById(moduleId).select("title");
 
-  const { pointsLedgerService } = await import(
-    "../pointsLedger/pointsledger.service"
-  );
+  const { pointsLedgerService } =
+    await import("../pointsLedger/pointsledger.service");
 
   await pointsLedgerService.awardPoints({
     user: userId,
@@ -392,12 +392,74 @@ const refreshModuleProgress = async (userId: string, moduleId: string) => {
 
   const userObjectId = new Types.ObjectId(userId);
 
+  const courseModule = await CourseModule.findById(moduleObjectId)
+    .select("pillar updatedAt")
+    .populate("pillar", "isPaid")
+    .lean();
+
+  const pillar = courseModule?.pillar as
+    | { _id: Types.ObjectId; isPaid?: boolean }
+    | Types.ObjectId
+    | undefined;
+  const pillarId =
+    pillar && typeof pillar === "object" && "_id" in pillar
+      ? String(pillar._id)
+      : pillar
+        ? String(pillar)
+        : undefined;
+  const pillarAccess = pillarId
+    ? await userEntitlementService.checkPillarAccess(userId, pillarId)
+    : { hasAccess: false };
+
   const publishedVideos = await ModuleVideo.find({
     module: moduleObjectId,
     status: "published",
+    ...(pillarAccess.hasAccess ? {} : { isPaid: false }),
   })
-    .select("_id isRequired")
+    .select("_id isRequired durationSeconds updatedAt")
     .lean();
+
+  const latestQuestion = await QuizQuestion.findOne({
+    module: moduleObjectId,
+    status: "published",
+  })
+    .sort({ updatedAt: -1 })
+    .select("updatedAt")
+    .lean();
+
+  const latestContentUpdatedAt = [
+    courseModule?.updatedAt,
+    ...publishedVideos.map((video) => video.updatedAt),
+    latestQuestion?.updatedAt,
+  ].reduce<Date | undefined>(
+    (latest, current) =>
+      current && (!latest || current > latest) ? current : latest,
+    undefined,
+  );
+
+  if (
+    progress.quizSummary.passed &&
+    latestContentUpdatedAt &&
+    progress.quizSummary.lastAttemptAt &&
+    progress.quizSummary.lastAttemptAt < latestContentUpdatedAt
+  ) {
+    progress.quizSummary.passed = false;
+    progress.quizSummary.status = "unlocked";
+    progress.quizSummary.attemptsUsed = 0;
+    progress.quizSummary.bestScore = 0;
+    progress.quizSummary.lastAttemptAt = undefined;
+  }
+
+  const totalDurationSeconds = publishedVideos.reduce(
+    (total, video) => total + Math.max(0, video.durationSeconds ?? 0),
+    0,
+  );
+
+  await CourseModule.findByIdAndUpdate(moduleObjectId, {
+    $set: {
+      estimatedDurationMinutes: Math.ceil(totalDurationSeconds / 60),
+    },
+  });
 
   const requiredVideos = publishedVideos.filter(
     (video) => video.isRequired !== false,
@@ -423,10 +485,7 @@ const refreshModuleProgress = async (userId: string, moduleId: string) => {
   const videoPercent =
     totalRequiredVideos === 0
       ? 100
-      : calculateCompletionPercent(
-          completedVideosCount,
-          totalRequiredVideos,
-        );
+      : calculateCompletionPercent(completedVideosCount, totalRequiredVideos);
 
   progress.set("videoSummary", {
     totalRequired: totalRequiredVideos,
@@ -617,26 +676,22 @@ const getMyModuleProgress = async (userId: string, moduleId: string) => {
 const getMyAllModuleProgress = async (userId: string) => {
   assertValidObjectId(userId, "User ID");
 
-  const filter: QueryFilter<IModuleProgress> = {
+  const progressRecords = await ModuleProgress.find({
     user: new Types.ObjectId(userId),
-  };
+  })
+    .select("module")
+    .lean();
 
-  return ModuleProgress.find(filter)
-    .sort({
-      updatedAt: -1,
-    })
-    .populate({
-      path: "module",
+  const refreshed = await Promise.all(
+    progressRecords.map((record) =>
+      refreshModuleProgress(userId, String(record.module)),
+    ),
+  );
 
-      select: "title slug moduleNumber pillar status",
-
-      populate: {
-        path: "pillar",
-        model: "ChallengePillar",
-
-        select: "name title slug status",
-      },
-    });
+  return refreshed.sort(
+    (left, right) =>
+      (right.updatedAt?.getTime() ?? 0) - (left.updatedAt?.getTime() ?? 0),
+  );
 };
 
 const getUserModuleProgress = async (userId: string, moduleId: string) => {
@@ -813,8 +868,7 @@ const getAllModuleProgressGroupedByUser = async (
       ),
 
       isFullyCompleted:
-        group.totalModules > 0 &&
-        group.completedModules === group.totalModules,
+        group.totalModules > 0 && group.completedModules === group.totalModules,
     };
   });
 

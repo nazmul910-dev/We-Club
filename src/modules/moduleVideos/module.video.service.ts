@@ -62,6 +62,31 @@ const ensureCourseModuleExists = async (moduleId: string) => {
   return courseModule;
 };
 
+const syncModuleDuration = async (moduleId: Types.ObjectId) => {
+  const result = await ModuleVideo.aggregate<{ totalDurationSeconds: number }>([
+    {
+      $match: {
+        module: moduleId,
+        status: "published",
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalDurationSeconds: { $sum: "$durationSeconds" },
+      },
+    },
+  ]);
+
+  await CourseModule.findByIdAndUpdate(moduleId, {
+    $set: {
+      estimatedDurationMinutes: Math.ceil(
+        (result[0]?.totalDurationSeconds ?? 0) / 60,
+      ),
+    },
+  });
+};
+
 const createModuleVideo = async (
   moduleId: string,
   payload: ICreateModuleVideo,
@@ -158,8 +183,7 @@ const getAllModuleVideos = async ({
   const isPrivileged = isAdminOrManager(actorRole);
 
   if (!isPrivileged) {
-    filter.status = "published" ;
-
+    filter.status = "published";
   } else if (!includeArchived) {
     filter.status = { $ne: "archived" };
   }
@@ -197,10 +221,9 @@ const getVideosByModule = async (
     moduleFilter.status = "published";
   }
 
-  const courseModule = await CourseModule.findOne(moduleFilter).populate(
-    "pillar",
-    "name slug title isPaid priceCents currency status"
-  ).lean();
+  const courseModule = await CourseModule.findOne(moduleFilter)
+    .populate("pillar", "name slug title isPaid priceCents currency status")
+    .lean();
 
   assertFound(courseModule, "Course module not found or unavailable", 404);
 
@@ -289,16 +312,18 @@ const checkVideoAccess = async (videoId: string, userId: string) => {
 
   const moduleData = video.module as unknown as {
     _id: Types.ObjectId;
-    pillar?: {
-      _id: Types.ObjectId;
-      name: string;
-      slug: string;
-      title: string;
-      isPaid: boolean;
-      priceCents: number;
-      currency: string;
-      status: string;
-    } | string;
+    pillar?:
+      | {
+          _id: Types.ObjectId;
+          name: string;
+          slug: string;
+          title: string;
+          isPaid: boolean;
+          priceCents: number;
+          currency: string;
+          status: string;
+        }
+      | string;
   };
 
   const pillarObj =
@@ -413,10 +438,8 @@ const updateModuleVideo = async (
   if (payload.secureUrl !== undefined) video.secureUrl = payload.secureUrl;
   if (payload.durationSeconds !== undefined) {
     video.durationSeconds = payload.durationSeconds;
-    if (payload.isPaid !== undefined) {
-      video.isPaid = payload.isPaid;
-    }
   }
+  if (payload.isPaid !== undefined) video.isPaid = payload.isPaid;
   if (payload.isRequired !== undefined) video.isRequired = payload.isRequired;
   if (payload.requiredWatchPercent !== undefined) {
     video.requiredWatchPercent = payload.requiredWatchPercent;
@@ -442,6 +465,7 @@ const updateModuleVideo = async (
   video.updatedBy = new Types.ObjectId(actorId);
 
   await video.save();
+  await syncModuleDuration(video.module);
 
   return video.populate([
     {
@@ -490,6 +514,7 @@ const publishModuleVideo = async (videoId: string, actorId: string) => {
   video.updatedBy = new Types.ObjectId(actorId);
 
   await video.save();
+  await syncModuleDuration(video.module);
 
   return video;
 };
@@ -508,6 +533,7 @@ const moveModuleVideoToDraft = async (videoId: string, actorId: string) => {
   video.updatedBy = new Types.ObjectId(actorId);
 
   await video.save();
+  await syncModuleDuration(video.module);
 
   return video;
 };
@@ -523,6 +549,7 @@ const archiveModuleVideo = async (videoId: string, actorId: string) => {
   video.updatedBy = new Types.ObjectId(actorId);
 
   await video.save();
+  await syncModuleDuration(video.module);
 
   return video;
 };

@@ -22,7 +22,6 @@ const VIDEO_DURATION_TOLERANCE_SECONDS = 5;
 
 const RANGE_MERGE_TOLERANCE_SECONDS = 0.5;
 
-
 const assertValidObjectId = (value: string, fieldName: string): void => {
   if (!Types.ObjectId.isValid(value)) {
     throwServiceError(`${fieldName} is invalid`, 400);
@@ -260,9 +259,8 @@ const awardVideoCompletionPoints = async (
   video: { _id: Types.ObjectId; title?: string; pointsReward?: number },
   moduleId: string,
 ) => {
-  const { pointsLedgerService } = await import(
-    "../pointsLedger/pointsledger.service"
-  );
+  const { pointsLedgerService } =
+    await import("../pointsLedger/pointsledger.service");
 
   await pointsLedgerService.awardPoints({
     user: userId,
@@ -287,17 +285,17 @@ const recordVideoHeartbeat = async (
 
   if (courseModule.pillar) {
     const pillar = await ChallengePillar.findById(courseModule.pillar).select(
-      "isPaid status"
+      "isPaid status",
     );
     if (pillar?.isPaid || video.isPaid) {
       const access = await userEntitlementService.checkPillarAccess(
         userId,
-        String(courseModule.pillar)
+        String(courseModule.pillar),
       );
       if (!access.hasAccess) {
         throwServiceError(
           "Active pillar access required to track video progress",
-          403
+          403,
         );
       }
     }
@@ -372,7 +370,11 @@ const recordVideoHeartbeat = async (
       progress = await VideoProgress.create(createData);
 
       if (isCompleted) {
-        await awardVideoCompletionPoints(userId, video, courseModule._id.toString());
+        await awardVideoCompletionPoints(
+          userId,
+          video,
+          courseModule._id.toString(),
+        );
       }
 
       return populateVideoProgress(progress);
@@ -444,13 +446,16 @@ const recordVideoHeartbeat = async (
   await progress.save();
 
   if (newlyCompleted) {
-    await awardVideoCompletionPoints(userId, video, courseModule._id.toString());
+    await awardVideoCompletionPoints(
+      userId,
+      video,
+      courseModule._id.toString(),
+    );
   }
 
   try {
-    const { moduleProgressService } = await import(
-      "../moduleProgress/module.progress.service"
-    );
+    const { moduleProgressService } =
+      await import("../moduleProgress/module.progress.service");
     await moduleProgressService.refreshModuleProgress(
       userId,
       courseModule._id.toString(),
@@ -682,8 +687,13 @@ const getMyModuleVideoProgress = async (userId: string, moduleId: string) => {
 const getMyAllVideoProgress = async (userId: string) => {
   assertValidObjectId(userId, "User ID");
 
+  const publishedVideoIds = await ModuleVideo.find({
+    status: "published",
+  }).distinct("_id");
+
   const filter: QueryFilter<IVideoProgress> = {
     user: new Types.ObjectId(userId),
+    video: { $in: publishedVideoIds },
   };
 
   return VideoProgress.find(filter)

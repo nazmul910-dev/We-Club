@@ -8,6 +8,7 @@ import {
 } from "./course.module.interface";
 
 import { CourseModule } from "./course.module.model.schema";
+import { ModuleVideo } from "../moduleVideos/module.video.model.schema";
 
 const throwServiceError = (message: string, statusCode: number): never => {
   const error = new Error(message) as Error & {
@@ -125,7 +126,7 @@ const getAllCourseModules = async ({
     };
   }
 
-  return CourseModule.find(filter)
+  const modules = await CourseModule.find(filter)
     .sort({
       pillar: 1,
       moduleNumber: 1,
@@ -134,6 +135,28 @@ const getAllCourseModules = async ({
     .populate("createdBy", "fullName email role profileImage")
     .populate("updatedBy", "fullName email role profileImage")
     .lean();
+
+  const publishedVideoCounts = await ModuleVideo.aggregate<{
+    _id: Types.ObjectId;
+    count: number;
+  }>([
+    {
+      $match: {
+        module: { $in: modules.map((module) => module._id) },
+        status: "published",
+      },
+    },
+    { $group: { _id: "$module", count: { $sum: 1 } } },
+  ]);
+
+  const countByModuleId = new Map(
+    publishedVideoCounts.map((item) => [String(item._id), item.count]),
+  );
+
+  return modules.map((module) => ({
+    ...module,
+    publishedVideoCount: countByModuleId.get(String(module._id)) ?? 0,
+  }));
 };
 
 const getModulesByPillar = async (pillarId: string, actorRole?: string) => {
@@ -168,9 +191,29 @@ const getModulesByPillar = async (pillarId: string, actorRole?: string) => {
     .populate("pillar", "name slug title isPaid priceCents currency status")
     .lean();
 
+  const publishedVideoCounts = await ModuleVideo.aggregate<{
+    _id: Types.ObjectId;
+    count: number;
+  }>([
+    {
+      $match: {
+        module: { $in: modules.map((module) => module._id) },
+        status: "published",
+      },
+    },
+    { $group: { _id: "$module", count: { $sum: 1 } } },
+  ]);
+
+  const countByModuleId = new Map(
+    publishedVideoCounts.map((item) => [String(item._id), item.count]),
+  );
+
   return {
     pillar,
-    modules,
+    modules: modules.map((module) => ({
+      ...module,
+      publishedVideoCount: countByModuleId.get(String(module._id)) ?? 0,
+    })),
   };
 };
 

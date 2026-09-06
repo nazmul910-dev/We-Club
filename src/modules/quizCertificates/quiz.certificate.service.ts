@@ -2,6 +2,8 @@ import { QueryFilter, Types } from "mongoose";
 
 import { CourseModule } from "../courseModules/course.module.model.schema";
 import { ModuleProgress } from "../moduleProgress/module.progress.model.schema";
+import { ModuleVideo } from "../moduleVideos/module.video.model.schema";
+import { QuizQuestion } from "../quizeQuestions/quiz.question.model.schema";
 import { notificationService } from "../notifications/notification.service";
 
 import {
@@ -82,9 +84,7 @@ const randomAlphaNumeric = (length: number): string => {
   let result = "";
 
   for (let index = 0; index < length; index += 1) {
-    result += characters.charAt(
-      Math.floor(Math.random() * characters.length),
-    );
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
 
   return result;
@@ -94,16 +94,47 @@ const buildCertificateNumber = (pillarSlug: string): string => {
   return ["INV", pillarSlug.toUpperCase(), randomAlphaNumeric(6)].join("-");
 };
 
+const getPillarContentVersion = async (pillarId: string): Promise<Date> => {
+  const moduleIds = await CourseModule.find({
+    pillar: new Types.ObjectId(pillarId),
+    status: "published",
+  })
+    .select("_id updatedAt")
+    .lean();
+
+  const ids = moduleIds.map((module) => module._id);
+  const [latestVideo, latestQuestion] = await Promise.all([
+    ModuleVideo.findOne({ module: { $in: ids }, status: "published" })
+      .sort({ updatedAt: -1 })
+      .select("updatedAt")
+      .lean(),
+    QuizQuestion.findOne({ module: { $in: ids }, status: "published" })
+      .sort({ updatedAt: -1 })
+      .select("updatedAt")
+      .lean(),
+  ]);
+
+  const timestamps = [
+    ...moduleIds.map((module) => module.updatedAt),
+    latestVideo?.updatedAt,
+    latestQuestion?.updatedAt,
+  ].filter((value): value is Date => value instanceof Date);
+
+  return timestamps.reduce(
+    (latest, current) => (current > latest ? current : latest),
+    new Date(0),
+  );
+};
+
 /**
  * Issue a pillar certificate when the user has passed the quiz
  * for EVERY published module in the given pillar.
  */
-const issueCertificateIfEligible = async (
-  userId: string,
-  pillarId: string,
-) => {
+const issueCertificateIfEligible = async (userId: string, pillarId: string) => {
   assertValidObjectId(userId, "User ID");
   assertValidObjectId(pillarId, "Pillar ID");
+
+  const contentVersion = await getPillarContentVersion(pillarId);
 
   // 1. Already has a certificate for this pillar?
   const existingCertificate = await QuizCertificate.findOne({
@@ -111,8 +142,20 @@ const issueCertificateIfEligible = async (
     pillar: new Types.ObjectId(pillarId),
   }).populate(CERTIFICATE_POPULATE);
 
-  if (existingCertificate) {
+  if (
+    existingCertificate?.status === "issued" &&
+    (existingCertificate.contentVersionAtIssue ??
+      existingCertificate.issuedAt) >= contentVersion
+  ) {
     return existingCertificate;
+  }
+
+  if (existingCertificate?.status === "issued") {
+    existingCertificate.status = "revoked";
+    existingCertificate.revokedAt = new Date();
+    existingCertificate.revokedReason =
+      "New published academy content requires completion before reissue.";
+    await existingCertificate.save();
   }
 
   // 2. Find all published modules for this pillar
@@ -124,10 +167,7 @@ const issueCertificateIfEligible = async (
     .lean();
 
   if (pillarModules.length === 0) {
-    throwServiceError(
-      "No published modules found for this pillar",
-      404,
-    );
+    throwServiceError("No published modules found for this pillar", 404);
   }
 
   const moduleIds = pillarModules.map((m) => m._id);
@@ -137,20 +177,26 @@ const issueCertificateIfEligible = async (
     user: new Types.ObjectId(userId),
     module: { $in: moduleIds },
   })
-    .select("module quizSummary")
+    .select("module quizSummary videoSummary")
     .lean();
 
   // 4. Check that EVERY module has been passed
-  const progressByModuleId: Record<string, typeof progressDocs[number]> = {};
+  const progressByModuleId: Record<string, (typeof progressDocs)[number]> = {};
   for (const p of progressDocs) {
     progressByModuleId[String(p.module)] = p;
   }
 
   for (const mod of pillarModules) {
     const progress = progressByModuleId[String(mod._id)];
-    if (!progress || !progress.quizSummary?.passed) {
+    if (
+      !progress ||
+      !progress.quizSummary?.passed ||
+      !progress.videoSummary?.completed ||
+      !progress.quizSummary.lastAttemptAt ||
+      progress.quizSummary.lastAttemptAt < contentVersion
+    ) {
       throwServiceError(
-        `You must pass the quiz for every module in this pillar before claiming the certificate. Module "${mod.title}" is not yet passed.`,
+        `Complete the latest content and quiz for module "${mod.title}" before claiming the certificate.`,
         403,
       );
     }
@@ -164,9 +210,8 @@ const issueCertificateIfEligible = async (
   const averageScore = Math.round(totalScore / pillarModules.length);
 
   // 6. Resolve pillar slug for certificate number
-  const { ChallengePillar } = await import(
-    "../challengePillars/challenge.pillar.model.schema"
-  );
+  const { ChallengePillar } =
+    await import("../challengePillars/challenge.pillar.model.schema");
   const pillarDoc = await ChallengePillar.findById(pillarId)
     .select("slug")
     .lean();
@@ -179,6 +224,7 @@ const issueCertificateIfEligible = async (
     status: "issued" as const,
     score: averageScore,
     issuedAt: new Date(),
+    contentVersionAtIssue: contentVersion,
   };
 
   // 7. Issue with duplicate-safe retry loop (handles race conditions)
@@ -187,21 +233,34 @@ const issueCertificateIfEligible = async (
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     try {
-      const certificate = await QuizCertificate.create({
-        ...createData,
-        certificateNumber: buildCertificateNumber(pillarDoc.slug),
-      });
+      const certificate = existingCertificate
+        ? await QuizCertificate.findByIdAndUpdate(
+            existingCertificate._id,
+            {
+              $set: createData,
+              $unset: { revokedAt: 1, revokedReason: 1, revokedBy: 1 },
+            },
+            { new: true },
+          )
+        : await QuizCertificate.create({
+            ...createData,
+            certificateNumber: buildCertificateNumber(pillarDoc.slug),
+          });
 
-      notificationService.safeCreateFromTemplateOrFallback({
-        templateKey: "quiz_certificate_issued",
-        fallbackTitle: `Certificate Earned: ${pillarDoc.title || pillarDoc.slug.toUpperCase()}`,
-        fallbackBody: `Congratulations! You have completed all modules and earned your official certificate.`,
-        recipient: userId,
-        relatedEntityType: "QuizCertificate",
-        relatedEntityId: String(certificate._id),
-        actionUrl: `/invictus/my-profile`,
-        dedupeKey: `quiz_certificate_issued:${certificate._id}`,
-      }).catch(() => {});
+      assertFound(certificate, "Certificate could not be issued", 500);
+
+      notificationService
+        .safeCreateFromTemplateOrFallback({
+          templateKey: "quiz_certificate_issued",
+          fallbackTitle: `Certificate Earned: ${pillarDoc.title || pillarDoc.slug.toUpperCase()}`,
+          fallbackBody: `Congratulations! You have completed all modules and earned your official certificate.`,
+          recipient: userId,
+          relatedEntityType: "QuizCertificate",
+          relatedEntityId: String(certificate._id),
+          actionUrl: `/invictus/my-profile`,
+          dedupeKey: `quiz_certificate_issued:${certificate._id}`,
+        })
+        .catch(() => {});
 
       return certificate.populate(CERTIFICATE_POPULATE);
     } catch (error: any) {
@@ -231,11 +290,33 @@ const issueCertificateIfEligible = async (
 const getMyCertificates = async (userId: string) => {
   assertValidObjectId(userId, "User ID");
 
-  return QuizCertificate.find({
+  const certificates = await QuizCertificate.find({
     user: new Types.ObjectId(userId),
   })
     .sort({ issuedAt: -1 })
     .populate(CERTIFICATE_POPULATE);
+
+  for (const certificate of certificates) {
+    if (certificate.status !== "issued") {
+      continue;
+    }
+
+    const contentVersion = await getPillarContentVersion(
+      String(certificate.pillar._id ?? certificate.pillar),
+    );
+    const certificateContentVersion =
+      certificate.contentVersionAtIssue ?? certificate.issuedAt;
+
+    if (contentVersion > certificateContentVersion) {
+      certificate.status = "revoked";
+      certificate.revokedAt = new Date();
+      certificate.revokedReason =
+        "New published academy content requires completion before reissue.";
+      await certificate.save();
+    }
+  }
+
+  return certificates.filter((certificate) => certificate.status === "issued");
 };
 
 const getMySingleCertificate = async (
@@ -255,7 +336,6 @@ const getMySingleCertificate = async (
   return certificate;
 };
 
-
 const verifyCertificateByNumber = async (certificateNumber: string) => {
   const certificate = await QuizCertificate.findOne({
     certificateNumber: certificateNumber.trim().toUpperCase(),
@@ -272,9 +352,10 @@ const verifyCertificateByNumber = async (certificateNumber: string) => {
 const getSingleCertificateAdmin = async (certificateId: string) => {
   assertValidObjectId(certificateId, "Certificate ID");
 
-  const certificate = await QuizCertificate.findById(
-    certificateId,
-  ).populate(CERTIFICATE_POPULATE);
+  const certificate =
+    await QuizCertificate.findById(certificateId).populate(
+      CERTIFICATE_POPULATE,
+    );
 
   assertFound(certificate, "Certificate not found", 404);
 
