@@ -54,6 +54,7 @@ export interface IListing {
   deleted_at? : Date;  
   created_at: Date;
   updated_at: Date;
+  webflow_item_id?: string;
 }
 
 

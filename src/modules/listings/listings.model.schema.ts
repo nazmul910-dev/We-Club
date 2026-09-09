@@ -60,6 +60,7 @@ const ListingSchema = new Schema<IListing>(
       default: "pending",
     },
 
+    webflow_item_id: { type: String },
     location: { type: LocationSchema, required: true },
     price: { type: PriceSchema, required: true },
     bedrooms: { type: Number, required: true, min: 0 },

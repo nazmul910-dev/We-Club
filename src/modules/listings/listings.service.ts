@@ -6,6 +6,12 @@ import { NotFoundError, UnauthorizedError } from "../../utility/errorResponses";
 import { PromoteRequest } from "../listingPromote/listings.promote.request.model.schema";
 import mongoose from "mongoose";
 import { ListingViewStats } from "./listings.viewsHistory.modal.schema";
+import { mapListingToWebflowFieldData } from "../../integrations/webflow/webflow.mapper";
+import { webflowService } from "../../integrations/webflow/webflow.service";
+import {
+  syncListingToWebflow,
+  archiveListingOnWebflow,
+} from "../../integrations/webflow/webflow.sync";
 
 const generateRefCode = (): string => {
   const digits = Math.floor(100000 + Math.random() * 900000);
@@ -38,7 +44,13 @@ const createListingInDB = async (
         ref_code: generateRefCode(),
         ...(creatorRole === "founder" && { status: "active" }),
       });
-      return await listing.save();
+
+      await listing.save();
+
+      // Webflow sync — এটা fail করলেও listing DB তে থেকে যাবে
+      await syncListingToWebflow(listing.toObject());
+
+      return listing;
     } catch (error: any) {
       if (error.code === 11000 && error.keyPattern?.ref_code) {
         attempts++;
@@ -48,7 +60,9 @@ const createListingInDB = async (
     }
   }
 
-  throw new Error("Failed to generate a unique reference code. Please try again.");
+  throw new Error(
+    "Failed to generate a unique reference code. Please try again.",
+  );
 };
 
 const getAllListingFromDB = async (
@@ -57,17 +71,18 @@ const getAllListingFromDB = async (
   data: IListing[];
   meta: { page: number; limit: number; total: number; totalPage: number };
 }> => {
-
   const queryWithDefaultSort = {
     sort: "-created_at",
     ...query,
   };
   // .populate("associate_id", "fullName email phone city country brokerage profileImage accountStatus role")
   const listingQuery = new QueryBuilder<IListing>(
-    Listing.find().populate(
-      "associate_id",
-      "fullName email bio phone city country brokerage profileImage licenseNumber role accountStatus approvalStatus"
-    ).lean(),
+    Listing.find()
+      .populate(
+        "associate_id",
+        "fullName email bio phone city country brokerage profileImage licenseNumber role accountStatus approvalStatus",
+      )
+      .lean(),
     queryWithDefaultSort,
   )
     .search(["title", "ref_code", "location.country"])
@@ -121,7 +136,9 @@ const getMyListingFromDB = async (
 };
 
 const getListingByIdFromDB = async (id: string): Promise<IListing | null> => {
-  return await Listing.findById(id).populate("associate_id", "name email").lean();
+  return await Listing.findById(id)
+    .populate("associate_id", "name email")
+    .lean();
 };
 
 const getMyPromotersFromDB = async (
@@ -161,7 +178,6 @@ const getMyPromotersFromDB = async (
         },
       },
     },
-
 
     {
       $lookup: {
@@ -219,10 +235,16 @@ const updateListingInDB = async (
   > &
     Partial<IListing>;
 
-  return await Listing.findByIdAndUpdate(id, safePayload, {
+  const updated = await Listing.findByIdAndUpdate(id, safePayload, {
     new: true,
     runValidators: true,
   });
+
+  if (updated) {
+    await syncListingToWebflow(updated.toObject());
+  }
+
+  return updated;
 };
 
 const deleteListingFromDB = async (
@@ -261,6 +283,11 @@ const deleteListingFromDB = async (
     );
 
     await session.commitTransaction();
+
+    // Transaction commit হওয়ার পরে Webflow sync (transaction এর বাইরে,
+    // কারণ external API কল কখনো DB transaction এর অংশ হওয়া উচিত না)
+    await archiveListingOnWebflow(listing.toObject());
+
     return listing;
   } catch (error) {
     await session.abortTransaction();
@@ -289,7 +316,11 @@ const cancelPendingListingInDB = async (
   }
 
   listing.status = "draft";
-  return await listing.save();
+  await listing.save();
+
+  await syncListingToWebflow(listing.toObject());
+
+  return listing;
 };
 
 const deletePendingListingInDB = async (
@@ -312,14 +343,14 @@ const deletePendingListingInDB = async (
 
   listing.is_deleted = true;
   listing.deleted_at = new Date();
-  return await listing.save();
+  await listing.save();
+
+  await archiveListingOnWebflow(listing.toObject());
+
+  return listing;
 };
 
-const manageListings = async (
-  id: string,
-  status: ListingStatus,
-  // message: string
-) => {
+const manageListings = async (id: string, status: ListingStatus) => {
   const listing = await Listing.findById(id);
 
   if (!listing) {
@@ -327,10 +358,12 @@ const manageListings = async (
   }
 
   listing.status = status;
+  await listing.save();
 
-  return await listing.save();
+  await syncListingToWebflow(listing.toObject());
+
+  return listing;
 };
-
 const incrementListingViewCountInDB = async (id: string) => {
   const listing = await Listing.findByIdAndUpdate(
     id,
@@ -347,29 +380,16 @@ const incrementListingViewCountInDB = async (id: string) => {
 
 export const trackListingView = async (listingId: string) => {
   const today = new Date();
-
   today.setHours(0, 0, 0, 0);
 
   await Promise.all([
     Listing.findByIdAndUpdate(listingId, {
-      $inc: {
-        totalViews: 1,
-      },
+      $inc: { totalViews: 1 },
     }),
-
     ListingViewStats.updateOne(
-      {
-        listing: listingId,
-        date: today,
-      },
-      {
-        $inc: {
-          views: 1,
-        },
-      },
-      {
-        upsert: true,
-      },
+      { listing: listingId, date: today },
+      { $inc: { views: 1 } },
+      { upsert: true },
     ),
   ]);
 };
