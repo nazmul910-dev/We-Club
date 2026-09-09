@@ -284,8 +284,8 @@ const deleteListingFromDB = async (
 
     await session.commitTransaction();
 
-    // Transaction commit হওয়ার পরে Webflow sync (transaction এর বাইরে,
-    // কারণ external API কল কখনো DB transaction এর অংশ হওয়া উচিত না)
+    await syncListingToWebflow(listing.toObject());
+    
     await archiveListingOnWebflow(listing.toObject());
 
     return listing;
