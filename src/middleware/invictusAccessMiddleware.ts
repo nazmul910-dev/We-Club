@@ -11,23 +11,14 @@ import {
   ForbiddenError,
 } from "../utility/errorResponses";
 
-/**
- * এই middleware অবশ্যই verifyToken-এর পরে ব্যবহার করতে হবে।
- *
- * এটি শুধু INVICTUS Academy-এর overall platform access check করে।
- *
- * এটি FEARLESS / LIMITLESS / BORDERLESS purchase check করে না।
- * Pillar purchase check করার জন্য পরে আলাদা requirePillarAccess থাকবে।
- */
+
 export const requireInvictusAccess = async (
   req: Request,
   _res: Response,
   next: NextFunction
 ) => {
   try {
-    /**
-     * verifyToken আগে req.user তৈরি করবে।
-     */
+
     if (!req.user) {
       return next(
         new UnauthorizedError(
@@ -46,10 +37,6 @@ export const requireInvictusAccess = async (
       );
     }
 
-    /**
-     * Admin এবং Manager Academy content manage করবে।
-     * তাই তাদের membership/subscription check bypass করা হচ্ছে।
-     */
     if (
       req.user.role === "founder" ||
       req.user.role === "manager"
@@ -57,13 +44,7 @@ export const requireInvictusAccess = async (
       return next();
     }
 
-    /**
-     * শুধু JWT payload-এর accessTo বিশ্বাস না করে
-     * database থেকে latest user information নিচ্ছি।
-     *
-     * কারণ Admin পরে user suspend করতে পারে,
-     * accessTo change করতে পারে অথবা subscription expire হতে পারে।
-     */
+
     const user = await User.findById(userId)
       .select(
         [
@@ -89,10 +70,6 @@ export const requireInvictusAccess = async (
       );
     }
 
-    /**
-     * User-এর membership package-এ
-     * INVICTUS Academy আছে কিনা।
-     */
     const hasInvictusAccess =
       user.accessTo === "invictus" ||
       user.accessTo === "both";
@@ -105,9 +82,7 @@ export const requireInvictusAccess = async (
       );
     }
 
-    /**
-     * Admin approval check।
-     */
+
     if (user.approvalStatus === "pending") {
       return next(
         new ForbiddenError(
@@ -132,9 +107,7 @@ export const requireInvictusAccess = async (
       );
     }
 
-    /**
-     * Account status check।
-     */
+
     if (
       user.accountStatus === "pending_payment"
     ) {
@@ -179,9 +152,6 @@ export const requireInvictusAccess = async (
       );
     }
 
-    /**
-     * Subscription status check।
-     */
     if (
       user.subscriptionStatus !== "active"
     ) {
@@ -192,9 +162,7 @@ export const requireInvictusAccess = async (
       );
     }
 
-    /**
-     * Subscription expiry check।
-     */
+
     if (
       user.subscriptionExpiresAt &&
       new Date(user.subscriptionExpiresAt) <=
@@ -207,10 +175,6 @@ export const requireInvictusAccess = async (
       );
     }
 
-    /**
-     * Database-এর fresh role/accessTo req.user-এ বসিয়ে দিচ্ছি।
-     * পরের middleware/controller updated value পাবে।
-     */
     req.user = {
       ...req.user,
       id: String(user._id),

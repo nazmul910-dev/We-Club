@@ -109,10 +109,10 @@ const seedDefaultChallengePillars = async (actorId: string) => {
 
   const defaultPillars = [
     {
-      name: "FEARLESS",
-      slug: "fearless",
+      name: "FARELESS",
+      slug: "",
 
-      title: "FEARLESS",
+      title: "FARELESS",
 
       tagline: "Conquer what holds you back.",
 

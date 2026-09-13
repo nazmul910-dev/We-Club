@@ -1,8 +1,8 @@
 import { Types } from "mongoose";
 
-export const PILLAR_NAMES = ["FEARLESS", "LIMITLESS", "BORDERLESS"] as const;
+export const PILLAR_NAMES = ["FARELESS", "LIMITLESS", "BORDERLESS"] as const;
 
-export const PILLAR_SLUGS = ["fearless", "limitless", "borderless"] as const;
+export const PILLAR_SLUGS = ["fareless", "limitless", "borderless"] as const;
 
 export const PILLAR_ICONS = ["crown", "infinity", "globe"] as const;
 

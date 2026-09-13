@@ -65,8 +65,8 @@ const createChallengePillarBodySchema = z
   })
   .superRefine((data, context) => {
     const pillarRules = {
-      fearless: {
-        name: "FEARLESS",
+      fareless: {
+        name: "FARELESS",
         icon: "crown",
         order: 1,
       },
