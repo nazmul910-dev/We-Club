@@ -1812,8 +1812,8 @@ var PILLAR_NAMES, PILLAR_SLUGS, PILLAR_ICONS, PILLAR_STATUSES, INTRO_VIDEO_STATU
 var init_challenge_pillar_interface = __esm({
   "src/modules/challengePillars/challenge.pillar.interface.ts"() {
     "use strict";
-    PILLAR_NAMES = ["FEARLESS", "LIMITLESS", "BORDERLESS"];
-    PILLAR_SLUGS = ["fearless", "limitless", "borderless"];
+    PILLAR_NAMES = ["FARELESS", "LIMITLESS", "BORDERLESS"];
+    PILLAR_SLUGS = ["fareless", "limitless", "borderless"];
     PILLAR_ICONS = ["crown", "infinity", "globe"];
     PILLAR_STATUSES = ["draft", "published", "archived"];
     INTRO_VIDEO_STATUSES = [
@@ -4935,7 +4935,10 @@ var config_default = {
   STRIPE_PRICE_BOTH_MONTHLY: process.env.STRIPE_PRICE_BOTH_MONTHLY,
   STRIPE_PRICE_CEO_YEARLY: process.env.STRIPE_PRICE_CEO_YEARLY,
   STRIPE_PRICE_CEO_PARTNER_YEARLY: process.env.STRIPE_PRICE_CEO_PARTNER_YEARLY,
-  STRIPE_PRICE_WE_CLUB_MEMBER_MONTHLY: process.env.STRIPE_PRICE_WE_CLUB_MEMBER_MONTHLY
+  STRIPE_PRICE_WE_CLUB_MEMBER_MONTHLY: process.env.STRIPE_PRICE_WE_CLUB_MEMBER_MONTHLY,
+  WEBFLOW_API_TOKEN: process.env.WEBFLOW_API_TOKEN,
+  WEBFLOW_SITE_ID: process.env.WEBFLOW_SITE_ID,
+  WEBFLOW_PROPERTIES_COLLECTION_ID: process.env.WEBFLOW_PROPERTIES_COLLECTION_ID
 };
 
 // src/utility/passwordUtil.ts
@@ -6228,6 +6231,7 @@ var ListingSchema = new Schema8(
       enum: ["active", "pending", "sold", "draft"],
       default: "pending"
     },
+    webflow_item_id: { type: String },
     location: { type: LocationSchema, required: true },
     price: { type: PriceSchema, required: true },
     bedrooms: { type: Number, required: true, min: 0 },
@@ -6441,6 +6445,335 @@ var ListingViewStats = model10(
   listingViewStatsSchema
 );
 
+// src/integrations/webflow/webflow.service.ts
+var WebflowService = class {
+  baseUrl = "https://api.webflow.com/v2";
+  token;
+  siteId;
+  propertiesCollectionId;
+  PUBLIC_WEBFLOW_STATUSES = [
+    "active",
+    "sold"
+  ];
+  constructor() {
+    const token = config_default.WEBFLOW_API_TOKEN;
+    const siteId = config_default.WEBFLOW_SITE_ID;
+    const collectionId = config_default.WEBFLOW_PROPERTIES_COLLECTION_ID;
+    if (!token) {
+      throw new Error(
+        "WEBFLOW_API_TOKEN is missing"
+      );
+    }
+    if (!siteId) {
+      throw new Error(
+        "WEBFLOW_SITE_ID is missing"
+      );
+    }
+    if (!collectionId) {
+      throw new Error(
+        "WEBFLOW_PROPERTIES_COLLECTION_ID is missing"
+      );
+    }
+    this.token = token;
+    this.siteId = siteId;
+    this.propertiesCollectionId = collectionId;
+  }
+  // =====================================================
+  // GENERIC WEBFLOW REQUEST
+  // =====================================================
+  async request(endpoint, options2 = {}) {
+    const response = await fetch(
+      `${this.baseUrl}${endpoint}`,
+      {
+        ...options2,
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...options2.headers || {}
+        }
+      }
+    );
+    const text = await response.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
+    }
+    if (!response.ok) {
+      console.error("Webflow API Error:", {
+        status: response.status,
+        endpoint,
+        data
+      });
+      throw new Error(
+        data?.message || data?.msg || `Webflow API request failed with status ${response.status}`
+      );
+    }
+    return data;
+  }
+  // =====================================================
+  // CHECK IF STATUS SHOULD BE PUBLIC
+  // =====================================================
+  shouldPublishStatus(status) {
+    return this.PUBLIC_WEBFLOW_STATUSES.includes(
+      status
+    );
+  }
+  // =====================================================
+  // GET ALL SITES
+  // =====================================================
+  async getSites() {
+    const response = await this.request(
+      "/sites"
+    );
+    return response.sites;
+  }
+  // =====================================================
+  // GET ALL COLLECTIONS
+  // =====================================================
+  async getCollections() {
+    const response = await this.request(
+      `/sites/${this.siteId}/collections`
+    );
+    return response.collections;
+  }
+  // =====================================================
+  // GET PROPERTIES COLLECTION
+  // =====================================================
+  async getPropertiesCollection() {
+    return this.request(
+      `/collections/${this.propertiesCollectionId}`
+    );
+  }
+  // =====================================================
+  // CREATE PROPERTY
+  // =====================================================
+  async createProperty(fieldData, status) {
+    const shouldPublish = this.shouldPublishStatus(status);
+    const payload = {
+      isArchived: false,
+      isDraft: !shouldPublish,
+      fieldData
+    };
+    const item = await this.request(
+      `/collections/${this.propertiesCollectionId}/items`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }
+    );
+    if (shouldPublish && item.id) {
+      await this.publishProperty(item.id);
+    }
+    return item;
+  }
+  // =====================================================
+  // UPDATE PROPERTY
+  // =====================================================
+  async updateProperty(webflowItemId, fieldData, status) {
+    const shouldPublish = this.shouldPublishStatus(status);
+    if (shouldPublish) {
+      const payload2 = {
+        isDraft: false,
+        isArchived: false,
+        fieldData
+      };
+      const item2 = await this.request(
+        `/collections/${this.propertiesCollectionId}/items/${webflowItemId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(payload2)
+        }
+      );
+      await this.publishProperty(webflowItemId);
+      return item2;
+    }
+    const payload = {
+      isDraft: true,
+      isArchived: false,
+      fieldData
+    };
+    const item = await this.request(
+      `/collections/${this.propertiesCollectionId}/items/${webflowItemId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload)
+      }
+    );
+    try {
+      await this.unpublishProperty(
+        webflowItemId
+      );
+    } catch (error) {
+      console.log(
+        "Webflow item was not live or already unpublished."
+      );
+    }
+    return item;
+  }
+  // =====================================================
+  // PUBLISH SINGLE PROPERTY
+  // =====================================================
+  async publishProperty(webflowItemId) {
+    return this.request(
+      `/collections/${this.propertiesCollectionId}/items/publish`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          itemIds: [webflowItemId]
+        })
+      }
+    );
+  }
+  // =====================================================
+  // UNPUBLISH SINGLE PROPERTY
+  // =====================================================
+  async unpublishProperty(webflowItemId) {
+    await this.request(
+      `/collections/${this.propertiesCollectionId}/items/${webflowItemId}/live`,
+      {
+        method: "DELETE"
+      }
+    );
+  }
+  // =====================================================
+  // ARCHIVE PROPERTY
+  // =====================================================
+  async archiveProperty(webflowItemId) {
+    const payload = {
+      isArchived: true
+    };
+    return this.request(
+      `/collections/${this.propertiesCollectionId}/items/${webflowItemId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload)
+      }
+    );
+  }
+  // =====================================================
+  // UNARCHIVE PROPERTY
+  // =====================================================
+  async unarchiveProperty(webflowItemId) {
+    const payload = {
+      isArchived: false
+    };
+    return this.request(
+      `/collections/${this.propertiesCollectionId}/items/${webflowItemId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload)
+      }
+    );
+  }
+  // =====================================================
+  // GET SINGLE PROPERTY
+  // =====================================================
+  async getProperty(webflowItemId) {
+    return this.request(
+      `/collections/${this.propertiesCollectionId}/items/${webflowItemId}`
+    );
+  }
+  // =====================================================
+  // DELETE PROPERTY
+  // =====================================================
+  async deleteProperty(webflowItemId) {
+    await this.request(
+      `/collections/${this.propertiesCollectionId}/items/${webflowItemId}`,
+      {
+        method: "DELETE"
+      }
+    );
+  }
+};
+var webflowService = new WebflowService();
+
+// src/integrations/webflow/webflow.mapper.ts
+var toWebflowSlug = (refCode, title) => {
+  const titleSlug = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  return `${titleSlug}-${refCode.toLowerCase()}`;
+};
+var mapListingToWebflowFieldData = (listing) => {
+  const fieldData = {
+    name: listing.title,
+    slug: toWebflowSlug(listing.ref_code, listing.title),
+    "backend-id": listing.id.toString(),
+    "reference-code": listing.ref_code,
+    status: listing.status,
+    city: listing.location.city,
+    region: listing.location.region,
+    country: listing.location.country,
+    price: listing.price.amount,
+    "price-currency": listing.price.currency,
+    bedrooms: listing.bedrooms,
+    bathrooms: listing.bathrooms,
+    views: listing.listings_view,
+    "is-deleted": listing.is_deleted,
+    "associate-id": listing.associate_id.toString(),
+    gallery: (listing.images || []).map((url) => ({ url })),
+    "sold-at": listing.sold_at ? listing.sold_at.toISOString() : null
+  };
+  if (listing.area_sqm?.value !== void 0) {
+    fieldData.area = listing.area_sqm.value;
+  }
+  if (listing.area_sqm?.unit !== void 0) {
+    fieldData["area-unit"] = listing.area_sqm.unit;
+  }
+  if (listing.referral_commission?.offered_amount !== void 0) {
+    fieldData["referral-commission"] = listing.referral_commission.offered_amount;
+  }
+  if (listing.cover_image) {
+    fieldData["cover-image"] = { url: listing.cover_image };
+  }
+  if (listing.created_at) {
+    fieldData["created-at"] = listing.created_at.toISOString();
+  }
+  if (listing.updated_at) {
+    fieldData["updated-at"] = listing.updated_at.toISOString();
+  }
+  return fieldData;
+};
+
+// src/integrations/webflow/webflow.sync.ts
+var syncListingToWebflow = async (listing) => {
+  try {
+    const fieldData = mapListingToWebflowFieldData(listing);
+    if (listing.webflow_item_id) {
+      await webflowService.updateProperty(
+        listing.webflow_item_id,
+        fieldData,
+        listing.status
+      );
+    } else {
+      const item = await webflowService.createProperty(
+        fieldData,
+        listing.status
+      );
+      await Listing.findByIdAndUpdate(listing._id, {
+        webflow_item_id: item.id
+      });
+    }
+  } catch (err) {
+    console.error(
+      `Webflow sync failed for listing ${listing._id}:`,
+      err
+    );
+  }
+};
+var archiveListingOnWebflow = async (listing) => {
+  if (!listing.webflow_item_id) return;
+  try {
+    await webflowService.archiveProperty(listing.webflow_item_id);
+  } catch (err) {
+    console.error(
+      `Webflow archive failed for listing ${listing._id}:`,
+      err
+    );
+  }
+};
+
 // src/modules/listings/listings.service.ts
 var generateRefCode = () => {
   const digits = Math.floor(1e5 + Math.random() * 9e5);
@@ -6456,7 +6789,9 @@ var createListingInDB = async (payload, creatorRole) => {
         ref_code: generateRefCode(),
         ...creatorRole === "founder" && { status: "active" }
       });
-      return await listing.save();
+      await listing.save();
+      await syncListingToWebflow(listing.toObject());
+      return listing;
     } catch (error) {
       if (error.code === 11e3 && error.keyPattern?.ref_code) {
         attempts++;
@@ -6465,7 +6800,9 @@ var createListingInDB = async (payload, creatorRole) => {
       throw error;
     }
   }
-  throw new Error("Failed to generate a unique reference code. Please try again.");
+  throw new Error(
+    "Failed to generate a unique reference code. Please try again."
+  );
 };
 var getAllListingFromDB = async (query) => {
   const queryWithDefaultSort = {
@@ -6568,10 +6905,14 @@ var updateListingInDB = async (id3, associateId, payload) => {
     );
   }
   const { promoters, associate_id, ...safePayload } = payload;
-  return await Listing.findByIdAndUpdate(id3, safePayload, {
+  const updated = await Listing.findByIdAndUpdate(id3, safePayload, {
     new: true,
     runValidators: true
   });
+  if (updated) {
+    await syncListingToWebflow(updated.toObject());
+  }
+  return updated;
 };
 var deleteListingFromDB = async (id3, userId, role) => {
   const listing = await Listing.findById(id3);
@@ -6597,6 +6938,8 @@ var deleteListingFromDB = async (id3, userId, role) => {
       { session }
     );
     await session.commitTransaction();
+    await syncListingToWebflow(listing.toObject());
+    await archiveListingOnWebflow(listing.toObject());
     return listing;
   } catch (error) {
     await session.abortTransaction();
@@ -6617,7 +6960,9 @@ var cancelPendingListingInDB = async (id3, userId) => {
     );
   }
   listing.status = "draft";
-  return await listing.save();
+  await listing.save();
+  await syncListingToWebflow(listing.toObject());
+  return listing;
 };
 var deletePendingListingInDB = async (id3, userId) => {
   const listing = await Listing.findById(id3);
@@ -6632,7 +6977,9 @@ var deletePendingListingInDB = async (id3, userId) => {
   }
   listing.is_deleted = true;
   listing.deleted_at = /* @__PURE__ */ new Date();
-  return await listing.save();
+  await listing.save();
+  await archiveListingOnWebflow(listing.toObject());
+  return listing;
 };
 var manageListings = async (id3, status) => {
   const listing = await Listing.findById(id3);
@@ -6640,7 +6987,9 @@ var manageListings = async (id3, status) => {
     throw new NotFoundError("Listing not found");
   }
   listing.status = status;
-  return await listing.save();
+  await listing.save();
+  await syncListingToWebflow(listing.toObject());
+  return listing;
 };
 var incrementListingViewCountInDB = async (id3) => {
   const listing = await Listing.findByIdAndUpdate(
@@ -6659,23 +7008,12 @@ var trackListingView = async (listingId) => {
   today.setHours(0, 0, 0, 0);
   await Promise.all([
     Listing.findByIdAndUpdate(listingId, {
-      $inc: {
-        totalViews: 1
-      }
+      $inc: { totalViews: 1 }
     }),
     ListingViewStats.updateOne(
-      {
-        listing: listingId,
-        date: today
-      },
-      {
-        $inc: {
-          views: 1
-        }
-      },
-      {
-        upsert: true
-      }
+      { listing: listingId, date: today },
+      { $inc: { views: 1 } },
+      { upsert: true }
     )
   ]);
 };
@@ -15845,9 +16183,9 @@ var seedDefaultChallengePillars = async (actorId) => {
   const createdBy = new Types26.ObjectId(actorId);
   const defaultPillars = [
     {
-      name: "FEARLESS",
-      slug: "fearless",
-      title: "FEARLESS",
+      name: "FARELESS",
+      slug: "",
+      title: "FARELESS",
       tagline: "Conquer what holds you back.",
       description: "Conquer fear, build confidence and take decisive action.",
       icon: "crown",
@@ -16232,8 +16570,8 @@ var createChallengePillarBodySchema = z9.object({
   order: z9.number().int().min(1).max(3)
 }).superRefine((data, context) => {
   const pillarRules = {
-    fearless: {
-      name: "FEARLESS",
+    fareless: {
+      name: "FARELESS",
       icon: "crown",
       order: 1
     },
