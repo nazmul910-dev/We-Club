@@ -4,6 +4,7 @@ import config from "./config";
 import { initSocket } from "./socket/socket";
 import http from "http";
 import { dropLegacyQuizCertificateIndexes } from "./modules/quizCertificates/quiz.certificate.model.schema";
+import { dropLegacyOrderIndexes } from "./modules/common/dropLegacyOrderIndexes";
 import { startSessionReminderCron } from "./modules/sessionSchedules/session.reminder.job";
 import { ensurePrivateRooms } from "./modules/room/room.service";
 
@@ -17,6 +18,7 @@ const main = async () => {
 
     // Drop any stale indexes left over from previous schema designs
     await dropLegacyQuizCertificateIndexes();
+    await dropLegacyOrderIndexes();
 
     const httpServer = http.createServer(app);
     initSocket(httpServer);

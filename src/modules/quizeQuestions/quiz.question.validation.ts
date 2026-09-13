@@ -58,7 +58,8 @@ const createQuizQuestionBodySchema =
       order: z
         .number()
         .int()
-        .min(1),
+        .min(1)
+        .optional(),
     })
     .superRefine(
       (data, context) => {

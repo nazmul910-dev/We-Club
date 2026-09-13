@@ -375,6 +375,22 @@ const recordVideoHeartbeat = async (
           video,
           courseModule._id.toString(),
         );
+
+        try {
+          const { onboardingTaskService } = await import(
+            "../onboardingTasks/onboarding.task.service"
+          );
+          await onboardingTaskService.completeVideoWatchTasksForUser(
+            userId,
+            video._id.toString(),
+          );
+        } catch (onboardingErr) {
+          // eslint-disable-next-line no-console
+          console.error(
+            "Auto complete onboarding video_watch tasks failed on initial heartbeat:",
+            onboardingErr,
+          );
+        }
       }
 
       return populateVideoProgress(progress);
@@ -451,6 +467,22 @@ const recordVideoHeartbeat = async (
       video,
       courseModule._id.toString(),
     );
+
+    try {
+      const { onboardingTaskService } = await import(
+        "../onboardingTasks/onboarding.task.service"
+      );
+      await onboardingTaskService.completeVideoWatchTasksForUser(
+        userId,
+        video._id.toString(),
+      );
+    } catch (onboardingErr) {
+      // eslint-disable-next-line no-console
+      console.error(
+        "Auto complete onboarding video_watch tasks failed on heartbeat:",
+        onboardingErr,
+      );
+    }
   }
 
   try {

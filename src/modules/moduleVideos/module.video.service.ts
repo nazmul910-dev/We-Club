@@ -121,17 +121,39 @@ const createModuleVideo = async (
 ) => {
   await ensureCourseModuleExists(moduleId);
 
+  let videoOrder = payload.order;
+  if (videoOrder === undefined) {
+    // Shift all active videos in this module so the new video takes order 1 (top of table)
+    await ModuleVideo.updateMany(
+      { module: moduleId, status: { $ne: "archived" } },
+      { $inc: { order: 1 } },
+    );
+    videoOrder = 1;
+  }
+
+  const duplicateConditions: Record<string, unknown>[] = [
+    { module: moduleId, slug: payload.slug },
+  ];
+
+  if (payload.order !== undefined) {
+    duplicateConditions.push({
+      module: moduleId,
+      order: videoOrder,
+      status: { $ne: "archived" },
+    });
+  }
+
+  if (payload.cloudinaryPublicId) {
+    duplicateConditions.push({ cloudinaryPublicId: payload.cloudinaryPublicId });
+  }
+
   const existingVideo = await ModuleVideo.findOne({
-    $or: [
-      { module: moduleId, slug: payload.slug },
-      { module: moduleId, order: payload.order },
-      { cloudinaryPublicId: payload.cloudinaryPublicId },
-    ],
+    $or: duplicateConditions,
   });
 
   if (existingVideo) {
     throwServiceError(
-      "Video slug, order or Cloudinary public ID already exists",
+      "Video slug or Cloudinary public ID already exists",
       409,
     );
   }
@@ -149,7 +171,7 @@ const createModuleVideo = async (
     isRequired: payload.isRequired ?? true,
     requiredWatchPercent: payload.requiredWatchPercent ?? 80,
     pointsReward: payload.pointsReward ?? 10,
-    order: payload.order,
+    order: videoOrder,
     uploadStatus: payload.uploadStatus ?? "ready",
     status: "draft",
     uploadedBy: new Types.ObjectId(actorId),
@@ -540,6 +562,18 @@ const publishModuleVideo = async (videoId: string, actorId: string) => {
   video.set("archivedAt", undefined);
   video.updatedBy = new Types.ObjectId(actorId);
 
+  if (video.order >= 1000000) {
+    const lastActive = await ModuleVideo.findOne({
+      module: video.module,
+      _id: { $ne: video._id },
+      status: { $ne: "archived" },
+    })
+      .sort({ order: -1 })
+      .select("order")
+      .lean();
+    video.order = (lastActive?.order ?? 0) + 1;
+  }
+
   await video.save();
   await syncModuleDuration(video.module);
 
@@ -574,9 +608,29 @@ const archiveModuleVideo = async (videoId: string, actorId: string) => {
   video.archivedAt = new Date();
   video.set("publishedAt", undefined);
   video.updatedBy = new Types.ObjectId(actorId);
+  video.order = 1000000 + (Date.now() % 1000000) + Math.floor(Math.random() * 10000);
 
   await video.save();
   await syncModuleDuration(video.module);
+
+  // Re-sequence remaining active videos in this module in ascending order (1..N)
+  const remainingVideos = await ModuleVideo.find({
+    module: video.module,
+    _id: { $ne: video._id },
+    status: { $ne: "archived" },
+  }).sort({ order: 1 });
+
+  for (let i = 0; i < remainingVideos.length; i++) {
+    const item = remainingVideos[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await ModuleVideo.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } },
+      );
+    }
+  }
 
   return video;
 };

@@ -35,7 +35,7 @@ export interface ICreateModuleAction {
   title: string;
   description?: string | undefined;
 
-  order: number;
+  order?: number | undefined;
 
   isRequired?: boolean | undefined;
   pointsReward?: number | undefined;

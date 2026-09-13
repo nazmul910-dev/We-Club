@@ -121,17 +121,28 @@ const createModuleAction = async (
     moduleId
   );
 
-  const existingAction =
-    await ModuleAction.findOne({
-      module: moduleId,
-      order: payload.order,
-    }).lean();
-
-  if (existingAction) {
-    throwServiceError(
-      "Action order already exists in this module",
-      409
+  let actionOrder = payload.order;
+  if (actionOrder === undefined) {
+    // Shift all active actions in this module so the new action takes order 1 (top of table)
+    await ModuleAction.updateMany(
+      { module: moduleId, status: { $ne: "archived" } },
+      { $inc: { order: 1 } },
     );
+    actionOrder = 1;
+  } else {
+    const existingAction =
+      await ModuleAction.findOne({
+        module: moduleId,
+        order: actionOrder,
+        status: { $ne: "archived" },
+      }).lean();
+
+    if (existingAction) {
+      throwServiceError(
+        "Action order already exists in this module",
+        409
+      );
+    }
   }
 
   const createData: Record<
@@ -143,7 +154,7 @@ const createModuleAction = async (
 
     title: payload.title,
 
-    order: payload.order,
+    order: actionOrder,
 
     isRequired:
       payload.isRequired ?? true,
@@ -578,6 +589,18 @@ const publishModuleAction = async (
   action.updatedBy =
     new Types.ObjectId(actorId);
 
+  if (action.order >= 1000000) {
+    const lastActive = await ModuleAction.findOne({
+      module: action.module,
+      _id: { $ne: action._id },
+      status: { $ne: "archived" },
+    })
+      .sort({ order: -1 })
+      .select("order")
+      .lean();
+    action.order = (lastActive?.order ?? 0) + 1;
+  }
+
   await action.save();
 
   return action;
@@ -659,8 +682,28 @@ const archiveModuleAction = async (
 
   action.updatedBy =
     new Types.ObjectId(actorId);
+  action.order = 1000000 + (Date.now() % 1000000) + Math.floor(Math.random() * 10000);
 
   await action.save();
+
+  // Re-sequence remaining active actions in this module in ascending order (1..N)
+  const remainingActions = await ModuleAction.find({
+    module: action.module,
+    _id: { $ne: action._id },
+    status: { $ne: "archived" },
+  }).sort({ order: 1 });
+
+  for (let i = 0; i < remainingActions.length; i++) {
+    const item = remainingActions[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await ModuleAction.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } },
+      );
+    }
+  }
 
   return action;
 };

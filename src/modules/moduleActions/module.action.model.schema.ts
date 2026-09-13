@@ -81,15 +81,10 @@ const moduleActionSchema =
     }
   );
 
-moduleActionSchema.index(
-  {
-    module: 1,
-    order: 1,
-  },
-  {
-    unique: true,
-  }
-);
+moduleActionSchema.index({
+  module: 1,
+  order: 1,
+});
 
 moduleActionSchema.index({
   module: 1,

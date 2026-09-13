@@ -1603,6 +1603,143 @@ var init_pointsledger_service = __esm({
   }
 });
 
+// src/modules/videoProgress/video.progress.model.schema.ts
+var video_progress_model_schema_exports = {};
+__export(video_progress_model_schema_exports, {
+  VideoProgress: () => VideoProgress
+});
+import { model as model8, Schema as Schema8 } from "mongoose";
+var watchedRangeSchema, videoProgressSchema, VideoProgress;
+var init_video_progress_model_schema = __esm({
+  "src/modules/videoProgress/video.progress.model.schema.ts"() {
+    "use strict";
+    watchedRangeSchema = new Schema8(
+      {
+        startSeconds: {
+          type: Number,
+          required: true,
+          min: 0
+        },
+        endSeconds: {
+          type: Number,
+          required: true,
+          min: 0
+        }
+      },
+      {
+        _id: false
+      }
+    );
+    videoProgressSchema = new Schema8(
+      {
+        user: {
+          type: Schema8.Types.ObjectId,
+          ref: "User",
+          required: true,
+          index: true
+        },
+        video: {
+          type: Schema8.Types.ObjectId,
+          ref: "ModuleVideo",
+          required: true,
+          index: true
+        },
+        module: {
+          type: Schema8.Types.ObjectId,
+          ref: "CourseModule",
+          required: true,
+          index: true
+        },
+        durationSecondsSnapshot: {
+          type: Number,
+          required: true,
+          min: 0
+        },
+        requiredWatchPercentSnapshot: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 100
+        },
+        watchedRanges: {
+          type: [watchedRangeSchema],
+          default: []
+        },
+        totalWatchedSeconds: {
+          type: Number,
+          default: 0,
+          min: 0
+        },
+        watchPercent: {
+          type: Number,
+          default: 0,
+          min: 0,
+          max: 100
+        },
+        lastPositionSeconds: {
+          type: Number,
+          default: 0,
+          min: 0
+        },
+        isCompleted: {
+          type: Boolean,
+          default: false,
+          required: true,
+          index: true
+        },
+        startedAt: {
+          type: Date,
+          default: Date.now,
+          required: true
+        },
+        lastWatchedAt: {
+          type: Date,
+          default: Date.now,
+          required: true
+        },
+        completedAt: {
+          type: Date
+        }
+      },
+      {
+        timestamps: true,
+        collection: "videoprogress",
+        /**
+         * Prevent silent concurrent overwrites.
+         */
+        optimisticConcurrency: true
+      }
+    );
+    videoProgressSchema.index(
+      {
+        user: 1,
+        video: 1
+      },
+      {
+        unique: true
+      }
+    );
+    videoProgressSchema.index({
+      user: 1,
+      module: 1,
+      isCompleted: 1
+    });
+    videoProgressSchema.index({
+      module: 1,
+      isCompleted: 1,
+      updatedAt: -1
+    });
+    videoProgressSchema.index({
+      user: 1,
+      lastWatchedAt: -1
+    });
+    VideoProgress = model8(
+      "VideoProgress",
+      videoProgressSchema
+    );
+  }
+});
+
 // src/modules/onboardingTasks/onboarding.task.service.ts
 var onboarding_task_service_exports = {};
 __export(onboarding_task_service_exports, {
@@ -1658,7 +1795,7 @@ var init_onboarding_task_service = __esm({
       if (!isAdminOrManager(actorRole)) {
         filter.status = "published";
       }
-      return OnboardingTask.find(filter).sort({ order: 1 }).populate("createdBy", "fullName email role").populate("updatedBy", "fullName email role").lean();
+      return OnboardingTask.find(filter).sort({ order: 1 }).populate("linkedVideo", "title slug module").populate("createdBy", "fullName email role").populate("updatedBy", "fullName email role").lean();
     };
     updateOnboardingTask = async (taskId, payload, actorId) => {
       assertValidObjectId3(taskId, "Onboarding task ID");
@@ -1777,6 +1914,34 @@ var init_onboarding_task_service = __esm({
       const completionMap = new Map(
         completions.map((completion) => [completion.task.toString(), completion])
       );
+      const uncompletedVideoTasks = tasks.filter(
+        (task) => task.trigger === "video_watch" && task.linkedVideo && !completionMap.has(task._id.toString())
+      );
+      if (uncompletedVideoTasks.length > 0) {
+        try {
+          const { VideoProgress: VideoProgress2 } = await Promise.resolve().then(() => (init_video_progress_model_schema(), video_progress_model_schema_exports));
+          for (const task of uncompletedVideoTasks) {
+            if (!task.linkedVideo) continue;
+            const watched = await VideoProgress2.findOne({
+              user: new Types5.ObjectId(userId),
+              video: new Types5.ObjectId(task.linkedVideo.toString()),
+              isCompleted: true
+            }).select("_id").lean();
+            if (watched) {
+              await completeTaskForUser(userId, task._id.toString());
+              const completion = await OnboardingTaskCompletion.findOne({
+                user: new Types5.ObjectId(userId),
+                task: task._id
+              }).lean();
+              if (completion) {
+                completionMap.set(task._id.toString(), completion);
+              }
+            }
+          }
+        } catch (checkErr) {
+          console.error("Error auto-completing previously watched onboarding video tasks:", checkErr);
+        }
+      }
       return tasks.map((task) => {
         const completion = completionMap.get(task._id.toString());
         return {
@@ -1830,13 +1995,13 @@ var challenge_pillar_model_schema_exports = {};
 __export(challenge_pillar_model_schema_exports, {
   ChallengePillar: () => ChallengePillar
 });
-import { Schema as Schema17, model as model17 } from "mongoose";
+import { Schema as Schema18, model as model18 } from "mongoose";
 var pillarIntroVideoSchema, challengePillarSchema, ChallengePillar;
 var init_challenge_pillar_model_schema = __esm({
   "src/modules/challengePillars/challenge.pillar.model.schema.ts"() {
     "use strict";
     init_challenge_pillar_interface();
-    pillarIntroVideoSchema = new Schema17(
+    pillarIntroVideoSchema = new Schema18(
       {
         cloudinaryPublicId: {
           type: String,
@@ -1880,7 +2045,7 @@ var init_challenge_pillar_model_schema = __esm({
         _id: false
       }
     );
-    challengePillarSchema = new Schema17(
+    challengePillarSchema = new Schema18(
       {
         name: {
           type: String,
@@ -1971,12 +2136,12 @@ var init_challenge_pillar_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema17.Types.ObjectId,
+          type: Schema18.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema17.Types.ObjectId,
+          type: Schema18.Types.ObjectId,
           ref: "User"
         }
       },
@@ -1993,7 +2158,7 @@ var init_challenge_pillar_model_schema = __esm({
       isPaid: 1,
       status: 1
     });
-    ChallengePillar = model17(
+    ChallengePillar = model18(
       "ChallengePillar",
       challengePillarSchema
     );
@@ -2034,16 +2199,16 @@ var init_userEntitlements_interface = __esm({
 });
 
 // src/modules/userEntitlements/userEntitlements.model.schema.ts
-import { model as model20, Schema as Schema20 } from "mongoose";
+import { model as model21, Schema as Schema21 } from "mongoose";
 var userEntitlementSchema, UserEntitlement;
 var init_userEntitlements_model_schema = __esm({
   "src/modules/userEntitlements/userEntitlements.model.schema.ts"() {
     "use strict";
     init_userEntitlements_interface();
-    userEntitlementSchema = new Schema20(
+    userEntitlementSchema = new Schema21(
       {
         user: {
-          type: Schema20.Types.ObjectId,
+          type: Schema21.Types.ObjectId,
           ref: "User",
           required: true,
           index: true
@@ -2060,12 +2225,12 @@ var init_userEntitlements_model_schema = __esm({
           trim: true
         },
         pillar: {
-          type: Schema20.Types.ObjectId,
+          type: Schema21.Types.ObjectId,
           ref: "ChallengePillar",
           index: true
         },
         targetId: {
-          type: Schema20.Types.ObjectId,
+          type: Schema21.Types.ObjectId,
           index: true
         },
         source: {
@@ -2082,7 +2247,7 @@ var init_userEntitlements_model_schema = __esm({
           index: true
         },
         paymentSession: {
-          type: Schema20.Types.ObjectId,
+          type: Schema21.Types.ObjectId,
           ref: "PaymentSession",
           index: true
         },
@@ -2096,11 +2261,11 @@ var init_userEntitlements_model_schema = __esm({
           index: true
         },
         grantedBy: {
-          type: Schema20.Types.ObjectId,
+          type: Schema21.Types.ObjectId,
           ref: "User"
         },
         statusChangedBy: {
-          type: Schema20.Types.ObjectId,
+          type: Schema21.Types.ObjectId,
           ref: "User"
         },
         statusReason: {
@@ -2148,7 +2313,7 @@ var init_userEntitlements_model_schema = __esm({
       status: 1,
       createdAt: -1
     });
-    UserEntitlement = model20(
+    UserEntitlement = model21(
       "UserEntitlement",
       userEntitlementSchema
     );
@@ -2179,33 +2344,33 @@ var init_entitlementlog_interface = __esm({
 });
 
 // src/modules/entitlementLogs/entitlement.model.schema.ts
-import { model as model21, Schema as Schema21 } from "mongoose";
+import { model as model22, Schema as Schema22 } from "mongoose";
 var entitlementLogSchema, EntitlementLog;
 var init_entitlement_model_schema = __esm({
   "src/modules/entitlementLogs/entitlement.model.schema.ts"() {
     "use strict";
     init_entitlementlog_interface();
-    entitlementLogSchema = new Schema21(
+    entitlementLogSchema = new Schema22(
       {
         user: {
-          type: Schema21.Types.ObjectId,
+          type: Schema22.Types.ObjectId,
           ref: "User",
           required: true,
           index: true
         },
         entitlement: {
-          type: Schema21.Types.ObjectId,
+          type: Schema22.Types.ObjectId,
           ref: "UserEntitlement",
           required: true,
           index: true
         },
         pillar: {
-          type: Schema21.Types.ObjectId,
+          type: Schema22.Types.ObjectId,
           ref: "ChallengePillar",
           index: true
         },
         paymentSession: {
-          type: Schema21.Types.ObjectId,
+          type: Schema22.Types.ObjectId,
           ref: "PaymentSession",
           index: true
         },
@@ -2227,12 +2392,12 @@ var init_entitlement_model_schema = __esm({
           maxlength: 1e3
         },
         actor: {
-          type: Schema21.Types.ObjectId,
+          type: Schema22.Types.ObjectId,
           ref: "User",
           index: true
         },
         metadata: {
-          type: Schema21.Types.Mixed
+          type: Schema22.Types.Mixed
         }
       },
       {
@@ -2252,7 +2417,7 @@ var init_entitlement_model_schema = __esm({
       action: 1,
       createdAt: -1
     });
-    EntitlementLog = model21(
+    EntitlementLog = model22(
       "EntitlementLog",
       entitlementLogSchema
     );
@@ -2987,16 +3152,16 @@ var init_course_module_interface = __esm({
 });
 
 // src/modules/courseModules/course.module.model.schema.ts
-import { Schema as Schema27, model as model27 } from "mongoose";
+import { Schema as Schema28, model as model28 } from "mongoose";
 var courseModuleSchema, CourseModule;
 var init_course_module_model_schema = __esm({
   "src/modules/courseModules/course.module.model.schema.ts"() {
     "use strict";
     init_course_module_interface();
-    courseModuleSchema = new Schema27(
+    courseModuleSchema = new Schema28(
       {
         pillar: {
-          type: Schema27.Types.ObjectId,
+          type: Schema28.Types.ObjectId,
           ref: "ChallengePillar",
           required: true,
           index: true
@@ -3081,12 +3246,12 @@ var init_course_module_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema27.Types.ObjectId,
+          type: Schema28.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema27.Types.ObjectId,
+          type: Schema28.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3118,7 +3283,7 @@ var init_course_module_model_schema = __esm({
       status: 1,
       moduleNumber: 1
     });
-    CourseModule = model27(
+    CourseModule = model28(
       "CourseModule",
       courseModuleSchema
     );
@@ -3144,16 +3309,16 @@ var init_module_video_interface = __esm({
 });
 
 // src/modules/moduleVideos/module.video.model.schema.ts
-import { model as model28, Schema as Schema28 } from "mongoose";
+import { model as model29, Schema as Schema29 } from "mongoose";
 var moduleVideoSchema, ModuleVideo;
 var init_module_video_model_schema = __esm({
   "src/modules/moduleVideos/module.video.model.schema.ts"() {
     "use strict";
     init_module_video_interface();
-    moduleVideoSchema = new Schema28(
+    moduleVideoSchema = new Schema29(
       {
         module: {
-          type: Schema28.Types.ObjectId,
+          type: Schema29.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3280,12 +3445,12 @@ var init_module_video_model_schema = __esm({
           type: Date
         },
         uploadedBy: {
-          type: Schema28.Types.ObjectId,
+          type: Schema29.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema28.Types.ObjectId,
+          type: Schema29.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3302,7 +3467,7 @@ var init_module_video_model_schema = __esm({
       status: 1,
       order: 1
     });
-    ModuleVideo = model28(
+    ModuleVideo = model29(
       "ModuleVideo",
       moduleVideoSchema
     );
@@ -3325,13 +3490,13 @@ var init_module_progress_interface = __esm({
 });
 
 // src/modules/moduleProgress/module.progress.model.schema.ts
-import { model as model29, Schema as Schema29 } from "mongoose";
+import { model as model30, Schema as Schema30 } from "mongoose";
 var requirementSummarySchema, quizSummarySchema, moduleProgressSchema, ModuleProgress;
 var init_module_progress_model_schema = __esm({
   "src/modules/moduleProgress/module.progress.model.schema.ts"() {
     "use strict";
     init_module_progress_interface();
-    requirementSummarySchema = new Schema29(
+    requirementSummarySchema = new Schema30(
       {
         totalRequired: {
           type: Number,
@@ -3362,7 +3527,7 @@ var init_module_progress_model_schema = __esm({
         _id: false
       }
     );
-    quizSummarySchema = new Schema29(
+    quizSummarySchema = new Schema30(
       {
         status: {
           type: String,
@@ -3411,16 +3576,16 @@ var init_module_progress_model_schema = __esm({
         _id: false
       }
     );
-    moduleProgressSchema = new Schema29(
+    moduleProgressSchema = new Schema30(
       {
         user: {
-          type: Schema29.Types.ObjectId,
+          type: Schema30.Types.ObjectId,
           ref: "User",
           required: true,
           index: true
         },
         module: {
-          type: Schema29.Types.ObjectId,
+          type: Schema30.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3520,7 +3685,7 @@ var init_module_progress_model_schema = __esm({
       module: 1,
       isCompleted: 1
     });
-    ModuleProgress = model29(
+    ModuleProgress = model30(
       "ModuleProgress",
       moduleProgressSchema
     );
@@ -3557,16 +3722,16 @@ var init_module_resource_interface = __esm({
 });
 
 // src/modules/moduleResources/module.resource.model.schema.ts
-import { model as model30, Schema as Schema30 } from "mongoose";
+import { model as model31, Schema as Schema31 } from "mongoose";
 var moduleResourceSchema, ModuleResource;
 var init_module_resource_model_schema = __esm({
   "src/modules/moduleResources/module.resource.model.schema.ts"() {
     "use strict";
     init_module_resource_interface();
-    moduleResourceSchema = new Schema30(
+    moduleResourceSchema = new Schema31(
       {
         module: {
-          type: Schema30.Types.ObjectId,
+          type: Schema31.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3667,12 +3832,12 @@ var init_module_resource_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema30.Types.ObjectId,
+          type: Schema31.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema30.Types.ObjectId,
+          type: Schema31.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3701,7 +3866,7 @@ var init_module_resource_model_schema = __esm({
       status: 1,
       order: 1
     });
-    ModuleResource = model30(
+    ModuleResource = model31(
       "ModuleResource",
       moduleResourceSchema
     );
@@ -3728,18 +3893,18 @@ var init_quiz_question_interface = __esm({
 
 // src/modules/quizeQuestions/quiz.question.model.schema.ts
 import {
-  model as model31,
-  Schema as Schema31
+  model as model32,
+  Schema as Schema32
 } from "mongoose";
 var quizQuestionSchema, QuizQuestion;
 var init_quiz_question_model_schema = __esm({
   "src/modules/quizeQuestions/quiz.question.model.schema.ts"() {
     "use strict";
     init_quiz_question_interface();
-    quizQuestionSchema = new Schema31(
+    quizQuestionSchema = new Schema32(
       {
         module: {
-          type: Schema31.Types.ObjectId,
+          type: Schema32.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3799,12 +3964,12 @@ var init_quiz_question_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema31.Types.ObjectId,
+          type: Schema32.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema31.Types.ObjectId,
+          type: Schema32.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3827,7 +3992,7 @@ var init_quiz_question_model_schema = __esm({
       status: 1,
       order: 1
     });
-    QuizQuestion = model31(
+    QuizQuestion = model32(
       "QuizQuestion",
       quizQuestionSchema
     );
@@ -3849,18 +4014,18 @@ var init_module_action_interface = __esm({
 
 // src/modules/moduleActions/module.action.model.schema.ts
 import {
-  model as model32,
-  Schema as Schema32
+  model as model33,
+  Schema as Schema33
 } from "mongoose";
 var moduleActionSchema, ModuleAction;
 var init_module_action_model_schema = __esm({
   "src/modules/moduleActions/module.action.model.schema.ts"() {
     "use strict";
     init_module_action_interface();
-    moduleActionSchema = new Schema32(
+    moduleActionSchema = new Schema33(
       {
         module: {
-          type: Schema32.Types.ObjectId,
+          type: Schema33.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3904,12 +4069,12 @@ var init_module_action_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema32.Types.ObjectId,
+          type: Schema33.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema32.Types.ObjectId,
+          type: Schema33.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3937,142 +4102,9 @@ var init_module_action_model_schema = __esm({
       isRequired: 1,
       status: 1
     });
-    ModuleAction = model32(
+    ModuleAction = model33(
       "ModuleAction",
       moduleActionSchema
-    );
-  }
-});
-
-// src/modules/videoProgress/video.progress.model.schema.ts
-import { model as model35, Schema as Schema35 } from "mongoose";
-var watchedRangeSchema, videoProgressSchema, VideoProgress;
-var init_video_progress_model_schema = __esm({
-  "src/modules/videoProgress/video.progress.model.schema.ts"() {
-    "use strict";
-    watchedRangeSchema = new Schema35(
-      {
-        startSeconds: {
-          type: Number,
-          required: true,
-          min: 0
-        },
-        endSeconds: {
-          type: Number,
-          required: true,
-          min: 0
-        }
-      },
-      {
-        _id: false
-      }
-    );
-    videoProgressSchema = new Schema35(
-      {
-        user: {
-          type: Schema35.Types.ObjectId,
-          ref: "User",
-          required: true,
-          index: true
-        },
-        video: {
-          type: Schema35.Types.ObjectId,
-          ref: "ModuleVideo",
-          required: true,
-          index: true
-        },
-        module: {
-          type: Schema35.Types.ObjectId,
-          ref: "CourseModule",
-          required: true,
-          index: true
-        },
-        durationSecondsSnapshot: {
-          type: Number,
-          required: true,
-          min: 0
-        },
-        requiredWatchPercentSnapshot: {
-          type: Number,
-          required: true,
-          min: 1,
-          max: 100
-        },
-        watchedRanges: {
-          type: [watchedRangeSchema],
-          default: []
-        },
-        totalWatchedSeconds: {
-          type: Number,
-          default: 0,
-          min: 0
-        },
-        watchPercent: {
-          type: Number,
-          default: 0,
-          min: 0,
-          max: 100
-        },
-        lastPositionSeconds: {
-          type: Number,
-          default: 0,
-          min: 0
-        },
-        isCompleted: {
-          type: Boolean,
-          default: false,
-          required: true,
-          index: true
-        },
-        startedAt: {
-          type: Date,
-          default: Date.now,
-          required: true
-        },
-        lastWatchedAt: {
-          type: Date,
-          default: Date.now,
-          required: true
-        },
-        completedAt: {
-          type: Date
-        }
-      },
-      {
-        timestamps: true,
-        collection: "videoprogress",
-        /**
-         * Prevent silent concurrent overwrites.
-         */
-        optimisticConcurrency: true
-      }
-    );
-    videoProgressSchema.index(
-      {
-        user: 1,
-        video: 1
-      },
-      {
-        unique: true
-      }
-    );
-    videoProgressSchema.index({
-      user: 1,
-      module: 1,
-      isCompleted: 1
-    });
-    videoProgressSchema.index({
-      module: 1,
-      isCompleted: 1,
-      updatedAt: -1
-    });
-    videoProgressSchema.index({
-      user: 1,
-      lastWatchedAt: -1
-    });
-    VideoProgress = model35(
-      "VideoProgress",
-      videoProgressSchema
     );
   }
 });
@@ -6184,8 +6216,8 @@ var authRoutes = router2;
 import { Router as Router3 } from "express";
 
 // src/modules/listings/listings.model.schema.ts
-import { Schema as Schema8, model as model8 } from "mongoose";
-var LocationSchema = new Schema8(
+import { Schema as Schema9, model as model9 } from "mongoose";
+var LocationSchema = new Schema9(
   {
     city: { type: String, required: true },
     region: { type: String, required: true },
@@ -6193,14 +6225,14 @@ var LocationSchema = new Schema8(
   },
   { _id: false }
 );
-var PriceSchema = new Schema8(
+var PriceSchema = new Schema9(
   {
     amount: { type: Number, required: true },
     currency: { type: String, required: true }
   },
   { _id: false }
 );
-var AreaSchema = new Schema8(
+var AreaSchema = new Schema9(
   {
     value: {
       type: Number,
@@ -6215,14 +6247,14 @@ var AreaSchema = new Schema8(
   },
   { _id: false }
 );
-var ReferralCommissionSchema = new Schema8(
+var ReferralCommissionSchema = new Schema9(
   {
     offered_amount: { type: Number, required: true },
     confirmed_amount: { type: Number }
   },
   { _id: false }
 );
-var ListingSchema = new Schema8(
+var ListingSchema = new Schema9(
   {
     title: { type: String, required: true, trim: true },
     ref_code: { type: String, required: true, unique: true, trim: true },
@@ -6244,7 +6276,7 @@ var ListingSchema = new Schema8(
     cover_image: { type: String, required: true },
     images: { type: [String], default: [] },
     associate_id: {
-      type: Schema8.Types.ObjectId,
+      type: Schema9.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -6252,7 +6284,7 @@ var ListingSchema = new Schema8(
       type: [
         {
           _id: false,
-          user_id: { type: Schema8.Types.ObjectId, ref: "User" },
+          user_id: { type: Schema9.Types.ObjectId, ref: "User" },
           tier: { type: String, enum: ["tier_1", "tier_2", "tier_3"] }
         }
       ],
@@ -6294,24 +6326,24 @@ ListingSchema.pre(/^find/, function() {
     this.where({ is_deleted: false });
   }
 });
-var Listing = model8("Listing", ListingSchema);
+var Listing = model9("Listing", ListingSchema);
 
 // src/modules/listingPromote/listings.promote.request.model.schema.ts
-import { Schema as Schema9, model as model9 } from "mongoose";
-var PromoteRequestSchema = new Schema9(
+import { Schema as Schema10, model as model10 } from "mongoose";
+var PromoteRequestSchema = new Schema10(
   {
     listing_id: {
-      type: Schema9.Types.ObjectId,
+      type: Schema10.Types.ObjectId,
       ref: "Listing",
       required: true
     },
     requester: {
       user: {
-        type: Schema9.Types.ObjectId,
+        type: Schema10.Types.ObjectId,
         ref: "User"
       },
       user_id: {
-        type: Schema9.Types.ObjectId,
+        type: Schema10.Types.ObjectId,
         ref: "User",
         require: true
       },
@@ -6399,7 +6431,7 @@ PromoteRequestSchema.pre("save", function() {
     this.resolved_at = this.resolved_at ?? /* @__PURE__ */ new Date();
   }
 });
-var PromoteRequest = model9(
+var PromoteRequest = model10(
   "PromoteRequest",
   PromoteRequestSchema
 );
@@ -6408,8 +6440,8 @@ var PromoteRequest = model9(
 import mongoose3 from "mongoose";
 
 // src/modules/listings/listings.viewsHistory.modal.schema.ts
-import { Schema as Schema10, model as model10, Types as Types8 } from "mongoose";
-var listingViewStatsSchema = new Schema10(
+import { Schema as Schema11, model as model11, Types as Types8 } from "mongoose";
+var listingViewStatsSchema = new Schema11(
   {
     listing: {
       type: Types8.ObjectId,
@@ -6440,7 +6472,7 @@ listingViewStatsSchema.index(
     unique: true
   }
 );
-var ListingViewStats = model10(
+var ListingViewStats = model11(
   "ListingViewStats",
   listingViewStatsSchema
 );
@@ -7621,7 +7653,7 @@ import mongoose4 from "mongoose";
 import { Types as Types9 } from "mongoose";
 
 // src/modules/commissionLedger/commission.ledger.model.schema.ts
-import { Schema as Schema11, model as model11 } from "mongoose";
+import { Schema as Schema12, model as model12 } from "mongoose";
 
 // src/modules/commissionLedger/commision.ledger.interface.ts
 var COMMISSION_STATUSES = [
@@ -7647,7 +7679,7 @@ var PLATFORM_FEE_STATUSES = [
 ];
 
 // src/modules/commissionLedger/commission.ledger.model.schema.ts
-var CommissionStatusHistorySchema = new Schema11(
+var CommissionStatusHistorySchema = new Schema12(
   {
     status: {
       type: String,
@@ -7655,7 +7687,7 @@ var CommissionStatusHistorySchema = new Schema11(
       required: true
     },
     changed_by: {
-      type: Schema11.Types.ObjectId,
+      type: Schema12.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -7671,33 +7703,33 @@ var CommissionStatusHistorySchema = new Schema11(
   },
   { _id: false }
 );
-var CommissionLedgerSchema = new Schema11(
+var CommissionLedgerSchema = new Schema12(
   {
     listing_id: {
-      type: Schema11.Types.ObjectId,
+      type: Schema12.Types.ObjectId,
       ref: "Listing",
       required: true,
       index: true
     },
     promotion_request_id: {
-      type: Schema11.Types.ObjectId,
+      type: Schema12.Types.ObjectId,
       ref: "PromoteRequest",
       index: true
     },
     listing_owner_id: {
-      type: Schema11.Types.ObjectId,
+      type: Schema12.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     promoter_id: {
-      type: Schema11.Types.ObjectId,
+      type: Schema12.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     created_by: {
-      type: Schema11.Types.ObjectId,
+      type: Schema12.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -7743,21 +7775,21 @@ var CommissionLedgerSchema = new Schema11(
     },
     payment_tracking: {
       sent_by: {
-        type: Schema11.Types.ObjectId,
+        type: Schema12.Types.ObjectId,
         ref: "User"
       },
       sent_at: {
         type: Date
       },
       marked_paid_by: {
-        type: Schema11.Types.ObjectId,
+        type: Schema12.Types.ObjectId,
         ref: "User"
       },
       marked_paid_at: {
         type: Date
       },
       receiver_confirmed_by: {
-        type: Schema11.Types.ObjectId,
+        type: Schema12.Types.ObjectId,
         ref: "User"
       },
       receiver_confirmed_at: {
@@ -7780,7 +7812,7 @@ var CommissionLedgerSchema = new Schema11(
     },
     dispute: {
       opened_by: {
-        type: Schema11.Types.ObjectId,
+        type: Schema12.Types.ObjectId,
         ref: "User"
       },
       opened_at: {
@@ -7792,7 +7824,7 @@ var CommissionLedgerSchema = new Schema11(
         maxlength: 1e3
       },
       resolved_by: {
-        type: Schema11.Types.ObjectId,
+        type: Schema12.Types.ObjectId,
         ref: "User"
       },
       resolved_at: {
@@ -7866,7 +7898,7 @@ CommissionLedgerSchema.index(
     }
   }
 );
-var CommissionLedger = model11(
+var CommissionLedger = model12(
   "CommissionLedger",
   CommissionLedgerSchema
 );
@@ -8640,11 +8672,11 @@ Access link: ${accessUrl}
 };
 
 // src/modules/promoters/promoters.model.schema.ts
-import { Schema as Schema12, model as model12 } from "mongoose";
-var promotedListingSchema = new Schema12(
+import { Schema as Schema13, model as model13 } from "mongoose";
+var promotedListingSchema = new Schema13(
   {
     listing_id: {
-      type: Schema12.Types.ObjectId,
+      type: Schema13.Types.ObjectId,
       ref: "Listing",
       required: true
     },
@@ -8659,12 +8691,12 @@ var promotedListingSchema = new Schema12(
       required: true
     },
     listing_owner_id: {
-      type: Schema12.Types.ObjectId,
+      type: Schema13.Types.ObjectId,
       ref: "User",
       required: true
     },
     promotion_request_id: {
-      type: Schema12.Types.ObjectId,
+      type: Schema13.Types.ObjectId,
       ref: "PromoteRequest",
       required: true
     },
@@ -8674,7 +8706,7 @@ var promotedListingSchema = new Schema12(
       required: true
     },
     approved_by: {
-      type: Schema12.Types.ObjectId,
+      type: Schema13.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -8692,16 +8724,16 @@ var promotedListingSchema = new Schema12(
     _id: false
   }
 );
-var promoterSchema = new Schema12(
+var promoterSchema = new Schema13(
   {
     user: {
-      type: Schema12.Types.ObjectId,
+      type: Schema13.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true
     },
     user_id: {
-      type: Schema12.Types.ObjectId,
+      type: Schema13.Types.ObjectId,
       ref: "User"
     },
     listings: {
@@ -8717,7 +8749,7 @@ var promoterSchema = new Schema12(
     timestamps: true
   }
 );
-var Promoter = model12("Promoter", promoterSchema);
+var Promoter = model13("Promoter", promoterSchema);
 
 // src/modules/listingPromote/listing.promote.service.ts
 var isAdminOrManager3 = (role) => {
@@ -10128,7 +10160,7 @@ init_users_model_schema();
 import { Types as Types13 } from "mongoose";
 
 // src/modules/activitylogs/activity.model.schema.ts
-import { model as model13, Schema as Schema13 } from "mongoose";
+import { model as model14, Schema as Schema14 } from "mongoose";
 
 // src/modules/activitylogs/activitylog.interface.ts
 var ACTIVITY_LOG_ACTIONS = [
@@ -10212,10 +10244,10 @@ var stripSensitiveKeys = (value) => {
   }
   return cleaned;
 };
-var activityLogSchema = new Schema13(
+var activityLogSchema = new Schema14(
   {
     actor: {
-      type: Schema13.Types.ObjectId,
+      type: Schema14.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
@@ -10233,7 +10265,7 @@ var activityLogSchema = new Schema13(
       index: true
     },
     targetEntityId: {
-      type: Schema13.Types.ObjectId,
+      type: Schema14.Types.ObjectId,
       index: true
     },
     changeSummary: {
@@ -10242,7 +10274,7 @@ var activityLogSchema = new Schema13(
       maxlength: 1e3
     },
     changes: {
-      type: Schema13.Types.Mixed
+      type: Schema14.Types.Mixed
     },
     ipAddress: {
       type: String,
@@ -10278,7 +10310,7 @@ activityLogSchema.index({
   action: 1,
   createdAt: -1
 });
-var ActivityLog = model13(
+var ActivityLog = model14(
   "ActivityLog",
   activityLogSchema
 );
@@ -10733,23 +10765,23 @@ import { Types as Types16 } from "mongoose";
 
 // src/modules/listingAssets/listing.assets.model.schema.ts
 init_user_interface();
-import { Schema as Schema14, model as model14 } from "mongoose";
-var ListingAssetDownloadSchema = new Schema14(
+import { Schema as Schema15, model as model15 } from "mongoose";
+var ListingAssetDownloadSchema = new Schema15(
   {
     listing_id: {
-      type: Schema14.Types.ObjectId,
+      type: Schema15.Types.ObjectId,
       ref: "Listing",
       required: true,
       index: true
     },
     downloaded_by: {
-      type: Schema14.Types.ObjectId,
+      type: Schema15.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     promotion_request_id: {
-      type: Schema14.Types.ObjectId,
+      type: Schema15.Types.ObjectId,
       ref: "PromoteRequest"
     },
     user_role: {
@@ -10803,7 +10835,7 @@ ListingAssetDownloadSchema.index({
   downloaded_by: 1,
   downloaded_at: -1
 });
-var ListingAssetDownload = model14(
+var ListingAssetDownload = model15(
   "ListingAssetDownload",
   ListingAssetDownloadSchema
 );
@@ -11220,7 +11252,7 @@ import Stripe2 from "stripe";
 init_users_model_schema();
 
 // src/modules/payment/payment.model.schema.ts
-import { Schema as Schema15, model as model15 } from "mongoose";
+import { Schema as Schema16, model as model16 } from "mongoose";
 
 // src/modules/payment/payment.interface.ts
 var PAYMENT_PURPOSES = ["registration", "upgrade", "invictus_purchase", "access_upgrade"];
@@ -11233,10 +11265,10 @@ var PAYMENT_SESSION_STATUSES = [
 
 // src/modules/payment/payment.model.schema.ts
 init_user_interface();
-var PaymentSessionSchema = new Schema15(
+var PaymentSessionSchema = new Schema16(
   {
     user: {
-      type: Schema15.Types.ObjectId,
+      type: Schema16.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
@@ -11307,12 +11339,12 @@ var PaymentSessionSchema = new Schema15(
       trim: true
     },
     paymentPlan: {
-      type: Schema15.Types.ObjectId,
+      type: Schema16.Types.ObjectId,
       ref: "PaymentPlan",
       index: true
     },
     product: {
-      type: Schema15.Types.ObjectId,
+      type: Schema16.Types.ObjectId,
       refPath: "productRefModel"
     },
     productRefModel: {
@@ -11327,7 +11359,7 @@ var PaymentSessionSchema = new Schema15(
     timestamps: true
   }
 );
-var PaymentSession = model15(
+var PaymentSession = model16(
   "PaymentSession",
   PaymentSessionSchema
 );
@@ -11381,8 +11413,8 @@ var sendDiscountCodeMail = async ({
 
 // src/modules/discount/discount.model.schema.ts
 init_user_interface();
-import { Schema as Schema16, model as model16 } from "mongoose";
-var DiscountCodeSchema = new Schema16(
+import { Schema as Schema17, model as model17 } from "mongoose";
+var DiscountCodeSchema = new Schema17(
   {
     code: {
       type: String,
@@ -11424,7 +11456,7 @@ var DiscountCodeSchema = new Schema16(
       type: Date
     },
     createdBy: {
-      type: Schema16.Types.ObjectId,
+      type: Schema17.Types.ObjectId,
       ref: "User"
     },
     note: {
@@ -11441,10 +11473,10 @@ var DiscountCodeSchema = new Schema16(
     timestamps: true
   }
 );
-var DiscountRedemptionSchema = new Schema16(
+var DiscountRedemptionSchema = new Schema17(
   {
     discountCode: {
-      type: Schema16.Types.ObjectId,
+      type: Schema17.Types.ObjectId,
       ref: "DiscountCode",
       required: true,
       index: true
@@ -11457,7 +11489,7 @@ var DiscountRedemptionSchema = new Schema16(
       index: true
     },
     user: {
-      type: Schema16.Types.ObjectId,
+      type: Schema17.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
@@ -11496,11 +11528,11 @@ DiscountRedemptionSchema.index(
     unique: true
   }
 );
-var DiscountCode = model16(
+var DiscountCode = model17(
   "DiscountCode",
   DiscountCodeSchema
 );
-var DiscountRedemption = model16(
+var DiscountRedemption = model17(
   "DiscountRedemption",
   DiscountRedemptionSchema
 );
@@ -11954,7 +11986,7 @@ import { Types as Types24 } from "mongoose";
 init_challenge_pillar_model_schema();
 
 // src/modules/retreatBatches/retreat.batch.model.schema.ts
-import { model as model18, Schema as Schema18 } from "mongoose";
+import { model as model19, Schema as Schema19 } from "mongoose";
 
 // src/modules/retreatBatches/retreat.batch.interface.ts
 var RETREAT_BATCH_STATUSES = [
@@ -11967,10 +11999,10 @@ var RETREAT_BATCH_STATUSES = [
 ];
 
 // src/modules/retreatBatches/retreat.batch.model.schema.ts
-var retreatBatchSchema = new Schema18(
+var retreatBatchSchema = new Schema19(
   {
     retreatLocation: {
-      type: Schema18.Types.ObjectId,
+      type: Schema19.Types.ObjectId,
       ref: "RetreatLocation",
       required: true,
       index: true
@@ -12059,12 +12091,12 @@ var retreatBatchSchema = new Schema18(
       maxlength: 2e3
     },
     createdBy: {
-      type: Schema18.Types.ObjectId,
+      type: Schema19.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema18.Types.ObjectId,
+      type: Schema19.Types.ObjectId,
       ref: "User"
     }
   },
@@ -12081,15 +12113,15 @@ retreatBatchSchema.index({
   startDate: 1,
   endDate: 1
 });
-var RetreatBatch = model18(
+var RetreatBatch = model19(
   "RetreatBatch",
   retreatBatchSchema
 );
 
 // src/modules/paymentPlans/payment.plan.model.schema.ts
 import {
-  model as model19,
-  Schema as Schema19
+  model as model20,
+  Schema as Schema20
 } from "mongoose";
 
 // src/modules/paymentPlans/payment.plan.interface.ts
@@ -12121,7 +12153,7 @@ var PAYMENT_PLAN_STATUSES = [
 ];
 
 // src/modules/paymentPlans/payment.plan.model.schema.ts
-var paymentPlanSchema = new Schema19(
+var paymentPlanSchema = new Schema20(
   {
     name: {
       type: String,
@@ -12150,7 +12182,7 @@ var paymentPlanSchema = new Schema19(
       index: true
     },
     product: {
-      type: Schema19.Types.ObjectId,
+      type: Schema20.Types.ObjectId,
       refPath: "productRefModel"
     },
     productRefModel: {
@@ -12213,12 +12245,12 @@ var paymentPlanSchema = new Schema19(
       type: Date
     },
     createdBy: {
-      type: Schema19.Types.ObjectId,
+      type: Schema20.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema19.Types.ObjectId,
+      type: Schema20.Types.ObjectId,
       ref: "User"
     }
   },
@@ -12252,7 +12284,7 @@ paymentPlanSchema.index(
     }
   }
 );
-var PaymentPlan = model19(
+var PaymentPlan = model20(
   "PaymentPlan",
   paymentPlanSchema
 );
@@ -12271,8 +12303,8 @@ import jwt4 from "jsonwebtoken";
 init_users_model_schema();
 
 // src/modules/room/room.modal.ts
-import { Schema as Schema22, model as model22 } from "mongoose";
-var roomSchema = new Schema22(
+import { Schema as Schema23, model as model23 } from "mongoose";
+var roomSchema = new Schema23(
   {
     name: {
       type: String,
@@ -12287,12 +12319,12 @@ var roomSchema = new Schema22(
     },
     members: [
       {
-        type: Schema22.Types.ObjectId,
+        type: Schema23.Types.ObjectId,
         ref: "User"
       }
     ],
     createdBy: {
-      type: Schema22.Types.ObjectId,
+      type: Schema23.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -12316,7 +12348,7 @@ var roomSchema = new Schema22(
     timestamps: true
   }
 );
-var Room = model22("Room", roomSchema);
+var Room = model23("Room", roomSchema);
 
 // src/utility/country.ts
 import { createRequire as createNodeRequire } from "module";
@@ -12341,7 +12373,7 @@ init_users_model_schema();
 import { Types as Types21 } from "mongoose";
 
 // src/modules/room/country.room.request.model.ts
-import { model as model23, Schema as Schema23 } from "mongoose";
+import { model as model24, Schema as Schema24 } from "mongoose";
 
 // src/modules/room/country.room.request.interface.ts
 var COUNTRY_ROOM_REQUEST_STATUSES = [
@@ -12351,10 +12383,10 @@ var COUNTRY_ROOM_REQUEST_STATUSES = [
 ];
 
 // src/modules/room/country.room.request.model.ts
-var countryRoomRequestSchema = new Schema23(
+var countryRoomRequestSchema = new Schema24(
   {
-    user: { type: Schema23.Types.ObjectId, ref: "User", required: true },
-    room: { type: Schema23.Types.ObjectId, ref: "Room", required: true },
+    user: { type: Schema24.Types.ObjectId, ref: "User", required: true },
+    room: { type: Schema24.Types.ObjectId, ref: "Room", required: true },
     countryName: { type: String, required: true, trim: true },
     countryCode: { type: String, required: true, uppercase: true, trim: true },
     status: {
@@ -12363,7 +12395,7 @@ var countryRoomRequestSchema = new Schema23(
       default: "pending",
       required: true
     },
-    reviewedBy: { type: Schema23.Types.ObjectId, ref: "User" },
+    reviewedBy: { type: Schema24.Types.ObjectId, ref: "User" },
     reviewedAt: Date
   },
   { timestamps: true, collection: "countryroomrequests" }
@@ -12373,7 +12405,7 @@ countryRoomRequestSchema.index(
   { unique: true }
 );
 countryRoomRequestSchema.index({ status: 1, createdAt: -1 });
-var CountryRoomRequest = model23(
+var CountryRoomRequest = model24(
   "CountryRoomRequest",
   countryRoomRequestSchema
 );
@@ -12542,17 +12574,17 @@ var reviewCountryRoomRequest = async (requestId, reviewerId, status) => {
 import { Types as Types22 } from "mongoose";
 
 // src/modules/message/message.model.ts
-import { Schema as Schema24, model as model24 } from "mongoose";
-var messageSchema = new Schema24(
+import { Schema as Schema25, model as model25 } from "mongoose";
+var messageSchema = new Schema25(
   {
     room: {
-      type: Schema24.Types.ObjectId,
+      type: Schema25.Types.ObjectId,
       ref: "Room",
       required: true,
       index: true
     },
     sender: {
-      type: Schema24.Types.ObjectId,
+      type: Schema25.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -12564,7 +12596,7 @@ var messageSchema = new Schema24(
     },
     // NEW: reply support
     replyTo: {
-      type: Schema24.Types.ObjectId,
+      type: Schema25.Types.ObjectId,
       ref: "Message",
       default: null
     },
@@ -12576,7 +12608,7 @@ var messageSchema = new Schema24(
     timestamps: true
   }
 );
-var Message = model24("Message", messageSchema);
+var Message = model25("Message", messageSchema);
 
 // src/modules/message/message.services.ts
 var getMessageHistory = async (roomId, page, limit) => {
@@ -12838,13 +12870,13 @@ var initSocket = (httpServer) => {
 };
 
 // src/modules/notificationTemplates/notification.template.model.schema.ts
-import { model as model25, Schema as Schema25 } from "mongoose";
+import { model as model26, Schema as Schema26 } from "mongoose";
 
 // src/modules/notifications/notification.interface.ts
 var NOTIFICATION_CHANNELS = ["in_app", "email", "push"];
 
 // src/modules/notificationTemplates/notification.template.model.schema.ts
-var notificationTemplateSchema = new Schema25(
+var notificationTemplateSchema = new Schema26(
   {
     key: {
       type: String,
@@ -12890,12 +12922,12 @@ var notificationTemplateSchema = new Schema25(
       index: true
     },
     createdBy: {
-      type: Schema25.Types.ObjectId,
+      type: Schema26.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema25.Types.ObjectId,
+      type: Schema26.Types.ObjectId,
       ref: "User",
       required: true
     }
@@ -12909,7 +12941,7 @@ notificationTemplateSchema.index({
   enabled: 1,
   createdAt: -1
 });
-var NotificationTemplate = model25(
+var NotificationTemplate = model26(
   "NotificationTemplate",
   notificationTemplateSchema
 );
@@ -12918,21 +12950,21 @@ var NotificationTemplate = model25(
 init_users_model_schema();
 
 // src/modules/notifications/notification.model.schema.ts
-import { model as model26, Schema as Schema26 } from "mongoose";
-var notificationSchema = new Schema26(
+import { model as model27, Schema as Schema27 } from "mongoose";
+var notificationSchema = new Schema27(
   {
     recipient: {
-      type: Schema26.Types.ObjectId,
+      type: Schema27.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     actor: {
-      type: Schema26.Types.ObjectId,
+      type: Schema27.Types.ObjectId,
       ref: "User"
     },
     template: {
-      type: Schema26.Types.ObjectId,
+      type: Schema27.Types.ObjectId,
       ref: "NotificationTemplate"
     },
     type: {
@@ -12966,7 +12998,7 @@ var notificationSchema = new Schema26(
       maxlength: 120
     },
     relatedEntityId: {
-      type: Schema26.Types.ObjectId
+      type: Schema27.Types.ObjectId
     },
     actionUrl: {
       type: String,
@@ -12974,7 +13006,7 @@ var notificationSchema = new Schema26(
       maxlength: 1e3
     },
     metadata: {
-      type: Schema26.Types.Mixed
+      type: Schema27.Types.Mixed
     },
     isRead: {
       type: Boolean,
@@ -13015,7 +13047,7 @@ notificationSchema.index(
     sparse: true
   }
 );
-var Notification = model26(
+var Notification = model27(
   "Notification",
   notificationSchema
 );
@@ -16184,7 +16216,7 @@ var seedDefaultChallengePillars = async (actorId) => {
   const defaultPillars = [
     {
       name: "FARELESS",
-      slug: "",
+      slug: "fareless",
       title: "FARELESS",
       tagline: "Conquer what holds you back.",
       description: "Conquer fear, build confidence and take decisive action.",
@@ -20801,8 +20833,8 @@ var message_route_default = router20;
 import { Router as Router21 } from "express";
 
 // src/modules/manageLogo/logo.model.schema.ts
-import { model as model33, Schema as Schema33 } from "mongoose";
-var logoSchema = new Schema33(
+import { model as model34, Schema as Schema34 } from "mongoose";
+var logoSchema = new Schema34(
   {
     logo: {
       type: String,
@@ -20811,7 +20843,7 @@ var logoSchema = new Schema33(
     }
   }
 );
-var logo = model33("logo", logoSchema);
+var logo = model34("logo", logoSchema);
 
 // src/modules/manageLogo/logo.service.ts
 var uploadLogoIntoDB = async (userId, file) => {
@@ -20937,22 +20969,22 @@ import { Router as Router22 } from "express";
 import { Types as Types32 } from "mongoose";
 
 // src/modules/academyProfiles/academy.profile.model.schema.ts
-import { Schema as Schema34, model as model34 } from "mongoose";
-var AcademyProfileSchema = new Schema34(
+import { Schema as Schema35, model as model35 } from "mongoose";
+var AcademyProfileSchema = new Schema35(
   {
     user: {
-      type: Schema34.Types.ObjectId,
+      type: Schema35.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
       index: true
     },
     mentor: {
-      type: Schema34.Types.ObjectId,
+      type: Schema35.Types.ObjectId,
       ref: "User"
     },
     currentPillar: {
-      type: Schema34.Types.ObjectId,
+      type: Schema35.Types.ObjectId,
       ref: "ChallengePillar"
     },
     academyName: {
@@ -21009,7 +21041,7 @@ var AcademyProfileSchema = new Schema34(
     timestamps: true
   }
 );
-var AcademyProfile = model34(
+var AcademyProfile = model35(
   "AcademyProfile",
   AcademyProfileSchema
 );
@@ -21799,6 +21831,18 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
           video,
           courseModule._id.toString()
         );
+        try {
+          const { onboardingTaskService: onboardingTaskService2 } = await Promise.resolve().then(() => (init_onboarding_task_service(), onboarding_task_service_exports));
+          await onboardingTaskService2.completeVideoWatchTasksForUser(
+            userId,
+            video._id.toString()
+          );
+        } catch (onboardingErr) {
+          console.error(
+            "Auto complete onboarding video_watch tasks failed on initial heartbeat:",
+            onboardingErr
+          );
+        }
       }
       return populateVideoProgress(progress);
     } catch (error) {
@@ -21844,6 +21888,18 @@ var recordVideoHeartbeat = async (userId, videoId, payload) => {
       video,
       courseModule._id.toString()
     );
+    try {
+      const { onboardingTaskService: onboardingTaskService2 } = await Promise.resolve().then(() => (init_onboarding_task_service(), onboarding_task_service_exports));
+      await onboardingTaskService2.completeVideoWatchTasksForUser(
+        userId,
+        video._id.toString()
+      );
+    } catch (onboardingErr) {
+      console.error(
+        "Auto complete onboarding video_watch tasks failed on heartbeat:",
+        onboardingErr
+      );
+    }
   }
   try {
     const { moduleProgressService: moduleProgressService2 } = await Promise.resolve().then(() => (init_module_progress_service(), module_progress_service_exports));

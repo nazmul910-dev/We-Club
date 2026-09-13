@@ -26,7 +26,7 @@ const createModuleVideoBodySchema = z.object({
   isRequired: z.boolean().default(true),
   requiredWatchPercent: z.number().min(1).max(100).default(80),
   pointsReward: z.number().int().nonnegative().default(10),
-  order: z.number().int().min(1),
+  order: z.number().int().min(1).optional(),
 });
 
 const updateModuleVideoBodySchema = z

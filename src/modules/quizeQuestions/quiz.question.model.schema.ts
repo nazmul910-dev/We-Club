@@ -100,15 +100,10 @@ const quizQuestionSchema =
     }
   );
 
-quizQuestionSchema.index(
-  {
-    module: 1,
-    order: 1,
-  },
-  {
-    unique: true,
-  }
-);
+quizQuestionSchema.index({
+  module: 1,
+  order: 1,
+});
 
 quizQuestionSchema.index({
   module: 1,

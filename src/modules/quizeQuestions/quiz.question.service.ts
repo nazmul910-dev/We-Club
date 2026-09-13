@@ -173,13 +173,24 @@ const createQuizQuestion = async (
     );
   }
 
-  const existingQuestion = await QuizQuestion.findOne({
-    module: moduleId,
-    order: payload.order,
-  });
+  let questionOrder = payload.order;
+  if (questionOrder === undefined) {
+    // Shift all active quiz questions in this module so the new question takes order 1 (top of table)
+    await QuizQuestion.updateMany(
+      { module: moduleId, status: { $ne: "archived" } },
+      { $inc: { order: 1 } },
+    );
+    questionOrder = 1;
+  } else {
+    const existingQuestion = await QuizQuestion.findOne({
+      module: moduleId,
+      order: questionOrder,
+      status: { $ne: "archived" },
+    });
 
-  if (existingQuestion) {
-    throwServiceError("Question order already exists in this module", 409);
+    if (existingQuestion) {
+      throwServiceError("Question order already exists in this module", 409);
+    }
   }
 
   const createData: Record<string, unknown> = {
@@ -189,7 +200,7 @@ const createQuizQuestion = async (
 
     questionType: payload.questionType,
 
-    order: payload.order,
+    order: questionOrder,
 
     status: "draft",
 
@@ -586,6 +597,18 @@ const publishQuizQuestion = async (questionId: string, actorId: string) => {
 
   question.updatedBy = new Types.ObjectId(actorId);
 
+  if (question.order >= 1000000) {
+    const lastActive = await QuizQuestion.findOne({
+      module: question.module,
+      _id: { $ne: question._id },
+      status: { $ne: "archived" },
+    })
+      .sort({ order: -1 })
+      .select("order")
+      .lean();
+    question.order = (lastActive?.order ?? 0) + 1;
+  }
+
   await question.save();
 
   return question;
@@ -627,8 +650,28 @@ const archiveQuizQuestion = async (questionId: string, actorId: string) => {
   question.set("publishedAt", undefined);
 
   question.updatedBy = new Types.ObjectId(actorId);
+  question.order = 1000000 + (Date.now() % 1000000) + Math.floor(Math.random() * 10000);
 
   await question.save();
+
+  // Re-sequence remaining active questions in this module in ascending order (1..N)
+  const remainingQuestions = await QuizQuestion.find({
+    module: question.module,
+    _id: { $ne: question._id },
+    status: { $ne: "archived" },
+  }).sort({ order: 1 });
+
+  for (let i = 0; i < remainingQuestions.length; i++) {
+    const item = remainingQuestions[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await QuizQuestion.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } },
+      );
+    }
+  }
 
   return question;
 };

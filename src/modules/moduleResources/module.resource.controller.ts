@@ -159,7 +159,7 @@ const getResourcesByModule = async (
     const result = await moduleResourceService.getResourcesByModule(
       String(req.params.moduleId),
       authUser.role,
-      authUser._id,
+      authUser.id,
     );
 
     sendResponse(res, {

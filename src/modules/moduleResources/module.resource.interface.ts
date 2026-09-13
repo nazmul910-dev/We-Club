@@ -86,7 +86,7 @@ export interface ICreateModuleResourceInput {
 
   isRequired?: boolean | undefined;
   pointsReward?: number | undefined;
-  order: number;
+  order?: number | undefined;
 }
 
 export interface ICreateModuleResource extends ICreateModuleResourceInput {

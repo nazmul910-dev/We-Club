@@ -39,17 +39,29 @@ const createOnboardingTask = async (
   payload: ICreateOnboardingTask,
   actorId: string,
 ) => {
-  const existing = await OnboardingTask.findOne({ order: payload.order }).lean();
-
-  if (existing) {
-    throwServiceError("A task with this order already exists", 409);
+  let taskOrder = payload.order;
+  if (taskOrder === undefined) {
+    // Shift all active tasks so the new task takes order 1 (top of table)
+    await OnboardingTask.updateMany(
+      { status: { $ne: "archived" } },
+      { $inc: { order: 1 } },
+    );
+    taskOrder = 1;
+  } else {
+    const existing = await OnboardingTask.findOne({
+      order: taskOrder,
+      status: { $ne: "archived" },
+    }).lean();
+    if (existing) {
+      throwServiceError("A task with this order already exists", 409);
+    }
   }
 
   try {
     const task = await OnboardingTask.create({
       title: payload.title,
       description: payload.description,
-      order: payload.order,
+      order: taskOrder,
       trigger: payload.trigger ?? "manual",
       actionLabel: payload.actionLabel,
       actionUrl: payload.actionUrl,
@@ -78,6 +90,7 @@ const getAllOnboardingTasks = async (actorRole?: string | undefined) => {
 
   return OnboardingTask.find(filter)
     .sort({ order: 1 })
+    .populate("linkedVideo", "title slug module")
     .populate("createdBy", "fullName email role")
     .populate("updatedBy", "fullName email role")
     .lean();
@@ -147,6 +160,17 @@ const publishOnboardingTask = async (taskId: string, actorId: string) => {
   task.set("archivedAt", undefined);
   task.updatedBy = new Types.ObjectId(actorId);
 
+  if (task.order >= 1000000) {
+    const lastActive = await OnboardingTask.findOne({
+      _id: { $ne: task._id },
+      status: { $ne: "archived" },
+    })
+      .sort({ order: -1 })
+      .select("order")
+      .lean();
+    task.order = (lastActive?.order ?? 0) + 1;
+  }
+
   await task.save();
 
   return task;
@@ -162,8 +186,28 @@ const archiveOnboardingTask = async (taskId: string, actorId: string) => {
   task.status = "archived";
   task.archivedAt = new Date();
   task.updatedBy = new Types.ObjectId(actorId);
+  // Assign out-of-band order to avoid unique constraint collision
+  task.order = 1000000 + (Date.now() % 1000000) + Math.floor(Math.random() * 10000);
 
   await task.save();
+
+  // Re-sequence remaining non-archived tasks in ascending order (1..N)
+  const remainingTasks = await OnboardingTask.find({
+    _id: { $ne: task._id },
+    status: { $ne: "archived" },
+  }).sort({ order: 1 });
+
+  for (let i = 0; i < remainingTasks.length; i++) {
+    const item = remainingTasks[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await OnboardingTask.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } },
+      );
+    }
+  }
 
   return task;
 };
@@ -268,6 +312,48 @@ const getMyChecklist = async (userId: string): Promise<IMyOnboardingChecklistIte
   const completionMap = new Map(
     completions.map((completion) => [completion.task.toString(), completion]),
   );
+
+  const uncompletedVideoTasks = tasks.filter(
+    (task) =>
+      task.trigger === "video_watch" &&
+      task.linkedVideo &&
+      !completionMap.has(task._id.toString()),
+  );
+
+  if (uncompletedVideoTasks.length > 0) {
+    try {
+      const { VideoProgress } = await import(
+        "../videoProgress/video.progress.model.schema"
+      );
+
+      for (const task of uncompletedVideoTasks) {
+        if (!task.linkedVideo) continue;
+
+        const watched = await VideoProgress.findOne({
+          user: new Types.ObjectId(userId),
+          video: new Types.ObjectId(task.linkedVideo.toString()),
+          isCompleted: true,
+        })
+          .select("_id")
+          .lean();
+
+        if (watched) {
+          await completeTaskForUser(userId, task._id.toString());
+          const completion = await OnboardingTaskCompletion.findOne({
+            user: new Types.ObjectId(userId),
+            task: task._id,
+          }).lean();
+
+          if (completion) {
+            completionMap.set(task._id.toString(), completion);
+          }
+        }
+      }
+    } catch (checkErr) {
+      // eslint-disable-next-line no-console
+      console.error("Error auto-completing previously watched onboarding video tasks:", checkErr);
+    }
+  }
 
   return tasks.map((task) => {
     const completion = completionMap.get(task._id.toString());

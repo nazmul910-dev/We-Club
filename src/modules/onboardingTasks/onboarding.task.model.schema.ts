@@ -91,7 +91,7 @@ const onboardingTaskSchema = new Schema<IOnboardingTask>(
   },
 );
 
-onboardingTaskSchema.index({ order: 1 }, { unique: true });
+onboardingTaskSchema.index({ order: 1 });
 onboardingTaskSchema.index({ status: 1, order: 1 });
 
 export const OnboardingTask = model<IOnboardingTask>(

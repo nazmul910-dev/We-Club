@@ -176,7 +176,7 @@ const moduleVideoSchema = new Schema<IModuleVideo>(
   },
 );
 
-moduleVideoSchema.index({ module: 1, order: 1 }, { unique: true });
+moduleVideoSchema.index({ module: 1, order: 1 });
 
 moduleVideoSchema.index({ module: 1, slug: 1 }, { unique: true });
 

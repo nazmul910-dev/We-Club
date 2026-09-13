@@ -55,7 +55,7 @@ export interface IOnboardingTask {
 export interface ICreateOnboardingTask {
   title: string;
   description?: string | undefined;
-  order: number;
+  order?: number | undefined;
   trigger?: OnboardingTaskTrigger | undefined;
   actionLabel?: string | undefined;
   actionUrl?: string | undefined;

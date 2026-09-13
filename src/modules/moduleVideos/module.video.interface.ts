@@ -72,7 +72,7 @@ export interface ICreateModuleVideoInput {
   isRequired?: boolean | undefined;
   requiredWatchPercent?: number | undefined;
   pointsReward?: number | undefined;
-  order: number;
+  order?: number | undefined;
 }
 
 export interface ICreateModuleVideo extends ICreateModuleVideoInput {

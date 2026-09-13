@@ -110,7 +110,7 @@ const seedDefaultChallengePillars = async (actorId: string) => {
   const defaultPillars = [
     {
       name: "FARELESS",
-      slug: "",
+      slug: "fareless",
 
       title: "FARELESS",
 

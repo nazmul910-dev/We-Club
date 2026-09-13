@@ -32,7 +32,7 @@ const createModuleResourceBodySchema = z
 
     isRequired: z.boolean().default(true),
     pointsReward: z.number().int().nonnegative().default(5),
-    order: z.number().int().min(1),
+    order: z.number().int().min(1).optional(),
   })
   .superRefine((data, context) => {
     if (data.provider === "external" && !data.externalUrl) {

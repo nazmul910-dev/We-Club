@@ -94,7 +94,7 @@ const getQuestionsByModule = async (
     const result = await quizQuestionService.getQuestionsByModule(
       String(req.params.moduleId),
       authUser.role,
-      authUser._id,
+      authUser.id,
     );
 
     sendResponse(res, {

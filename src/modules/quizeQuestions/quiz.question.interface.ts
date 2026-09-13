@@ -68,7 +68,7 @@ export interface ICreateQuizQuestion {
 
   explanation?: string | undefined;
 
-  order: number;
+  order?: number | undefined;
 }
 
 export interface IUpdateQuizQuestion {

@@ -24,7 +24,8 @@ const createModuleActionBodySchema =
     order: z
       .number()
       .int()
-      .min(1),
+      .min(1)
+      .optional(),
 
     isRequired: z
       .boolean()

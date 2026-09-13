@@ -150,10 +150,7 @@ const moduleResourceSchema = new Schema<IModuleResource>(
   }
 );
 
-moduleResourceSchema.index(
-  { module: 1, order: 1 },
-  { unique: true }
-);
+moduleResourceSchema.index({ module: 1, order: 1 });
 
 moduleResourceSchema.index(
   { module: 1, slug: 1 },

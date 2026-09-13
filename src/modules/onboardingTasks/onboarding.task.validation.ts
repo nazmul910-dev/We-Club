@@ -9,7 +9,7 @@ const mongoObjectIdSchema = z
 const createOnboardingTaskBodySchema = z.object({
   title: z.string().trim().min(2).max(300),
   description: z.string().trim().max(2000).optional(),
-  order: z.number().int().min(1),
+  order: z.number().int().min(1).optional(),
   trigger: z.enum(ONBOARDING_TASK_TRIGGERS).default("manual"),
   actionLabel: z.string().trim().max(60).optional(),
   actionUrl: z.string().trim().max(500).optional(),

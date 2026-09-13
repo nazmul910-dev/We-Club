@@ -101,10 +101,27 @@ const createModuleResource = async (
     externalUrl: payload.externalUrl,
   });
 
+  let resourceOrder = payload.order;
+  if (resourceOrder === undefined) {
+    // Shift all active resources in this module so the new resource takes order 1 (top of table)
+    await ModuleResource.updateMany(
+      { module: moduleId, status: { $ne: "archived" } },
+      { $inc: { order: 1 } },
+    );
+    resourceOrder = 1;
+  }
+
   const duplicateConditions: Record<string, unknown>[] = [
     { module: moduleId, slug: payload.slug },
-    { module: moduleId, order: payload.order },
   ];
+
+  if (payload.order !== undefined) {
+    duplicateConditions.push({
+      module: moduleId,
+      order: resourceOrder,
+      status: { $ne: "archived" },
+    });
+  }
 
   if (payload.cloudinaryPublicId) {
     duplicateConditions.push({
@@ -118,7 +135,7 @@ const createModuleResource = async (
 
   if (existingResource) {
     throwServiceError(
-      "Resource slug, order or Cloudinary public ID already exists",
+      "Resource slug or Cloudinary public ID already exists",
       409,
     );
   }
@@ -131,7 +148,7 @@ const createModuleResource = async (
     provider: payload.provider,
     isRequired: payload.isRequired ?? true,
     pointsReward: payload.pointsReward ?? 5,
-    order: payload.order,
+    order: resourceOrder,
     status: "draft",
     createdBy: new Types.ObjectId(actorId),
   };
@@ -454,6 +471,18 @@ const publishModuleResource = async (resourceId: string, actorId: string) => {
   resource.set("archivedAt", undefined);
   resource.updatedBy = new Types.ObjectId(actorId);
 
+  if (resource.order >= 1000000) {
+    const lastActive = await ModuleResource.findOne({
+      module: resource.module,
+      _id: { $ne: resource._id },
+      status: { $ne: "archived" },
+    })
+      .sort({ order: -1 })
+      .select("order")
+      .lean();
+    resource.order = (lastActive?.order ?? 0) + 1;
+  }
+
   await resource.save();
 
   return resource;
@@ -489,8 +518,28 @@ const archiveModuleResource = async (resourceId: string, actorId: string) => {
   resource.archivedAt = new Date();
   resource.set("publishedAt", undefined);
   resource.updatedBy = new Types.ObjectId(actorId);
+  resource.order = 1000000 + (Date.now() % 1000000) + Math.floor(Math.random() * 10000);
 
   await resource.save();
+
+  // Re-sequence remaining active resources in this module in ascending order (1..N)
+  const remainingResources = await ModuleResource.find({
+    module: resource.module,
+    _id: { $ne: resource._id },
+    status: { $ne: "archived" },
+  }).sort({ order: 1 });
+
+  for (let i = 0; i < remainingResources.length; i++) {
+    const item = remainingResources[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await ModuleResource.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } },
+      );
+    }
+  }
 
   return resource;
 };
