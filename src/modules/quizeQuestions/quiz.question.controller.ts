@@ -66,7 +66,7 @@ const getAllQuizQuestions = async (
 
     const result = await quizQuestionService.getAllQuizQuestions({
       actorRole: authUser.role,
-
+      userId: authUser.id,
       ...(moduleId !== undefined ? { moduleId } : {}),
 
       includeArchived: req.query.includeArchived === "true",

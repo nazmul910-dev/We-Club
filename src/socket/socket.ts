@@ -79,12 +79,13 @@ export const initSocket = (httpServer: HttpServer) => {
     try {
       const userId = socket.data.user.id as string;
 
+      // Always join user's private notification channel
+      socket.join(getUserRoom(userId));
+
       // fetch display info once per connection so events don't need extra queries
       const userDoc = await User.findById(userId).select(
         "fullName profileImage country",
       );
-
-     
 
       socket.data.user.fullName = userDoc?.fullName ?? "Unknown";
       socket.data.user.profileImage = userDoc?.profileImage ?? null;
@@ -94,6 +95,14 @@ export const initSocket = (httpServer: HttpServer) => {
         | undefined;
       const privateRoomSlug = socket.handshake.auth?.privateRoomSlug as string | undefined;
 
+      const isPrivilegedRole =
+        socket.data.user.role === "founder" ||
+        socket.data.user.role === "admin" ||
+        socket.data.user.role === "manager" ||
+        socket.data.user.role === "ceo";
+
+      let roomId: string | null = null;
+
       if (privateRoomSlug) {
         const privateRoom = await getPrivateRoom(
           privateRoomSlug,
@@ -101,73 +110,46 @@ export const initSocket = (httpServer: HttpServer) => {
           socket.data.user.role,
         );
         const privateRoomId = privateRoom._id.toString();
+        roomId = privateRoomId;
         socket.data.roomId = privateRoomId;
         socket.join(privateRoomId);
         socket.emit("room:joined", { roomId: privateRoomId, name: privateRoom.name });
-      }
-
-      // founders/admins/managers aren't tied to a single country room, so they
-      // shouldn't be booted for lacking one — fall back to a default room and
-      // let them switch via room:join instead.
-      const isPrivilegedRole =
-        socket.data.user.role === "founder" ||
-        socket.data.user.role === "admin" ||
-        socket.data.user.role === "manager" ||
-        socket.data.user.role === "ceo";
-
-      let country = privateRoomSlug
-        ? null
-        : requestedCountryName
+      } else {
+        let country = requestedCountryName
           ? resolveCountry(requestedCountryName)
           : countryName
             ? resolveCountry(countryName)
             : null;
 
-      if (!privateRoomSlug && requestedCountryName && country) {
-        const access = await getCountryRoomAccess(
-          userId,
-          socket.data.user.role,
-          requestedCountryName,
-        );
-        if (!access.canEnter) {
-          socket.emit("error", "You do not have access to this country room");
-          return socket.disconnect();
+        if (requestedCountryName && country) {
+          const access = await getCountryRoomAccess(
+            userId,
+            socket.data.user.role,
+            requestedCountryName,
+          );
+          if (!access.canEnter) {
+            socket.emit("error", "You do not have access to this country room");
+          }
+        }
+
+        if (!country && isPrivilegedRole) {
+          country = resolveCountry("United States");
+        }
+
+        if (country) {
+          const room = await getOrCreateCountryRoom(country.name, userId);
+          roomId = room._id.toString();
+          socket.data.roomId = roomId;
+          socket.join(roomId);
+
+          socket.emit("room:joined", {
+            roomId,
+            countryCode: room.countryCode,
+            countryName: room.countryName,
+            name: room.name,
+          });
         }
       }
-
-      if (!privateRoomSlug && !country && !isPrivilegedRole) {
-        socket.emit(
-          "error",
-          countryName ? "Invalid country on your profile" : "No country set on your profile",
-        );
-        return socket.disconnect();
-      }
-
-      if (!privateRoomSlug && !country) {
-        // privileged role with no/invalid country on file — default them
-        // into a fallback room so the connection still succeeds.
-        // (swap "United States" for whatever your default/global room should be)
-        country = resolveCountry("United States");
-      }
-
-      if (!privateRoomSlug && !country) {
-        socket.emit("error", "No default community room is configured");
-        return socket.disconnect();
-      }
-
-      const room = privateRoomSlug
-        ? await getPrivateRoom(privateRoomSlug, userId, socket.data.user.role)
-        : await getOrCreateCountryRoom(country!.name, userId);
-      let roomId = room._id.toString();
-      socket.data.roomId = roomId;
-      socket.join(roomId);
-
-      socket.emit("room:joined", {
-        roomId,
-        countryCode: room.countryCode,
-        countryName: room.countryName,
-        name: room.name,
-      });
 
       socket.on("room:join", async (requestedCountryName: string) => {
         try {
@@ -225,7 +207,7 @@ export const initSocket = (httpServer: HttpServer) => {
       }
       onlineUsers.get(userId)!.add(socket.id);
 
-      if (isFirstConnectionForUser) {
+      if (roomId && isFirstConnectionForUser) {
         socket.to(roomId).emit("presence:update", { userId, online: true });
       }
 
@@ -305,7 +287,10 @@ export const initSocket = (httpServer: HttpServer) => {
 
         if (userSockets && userSockets.size === 0) {
           onlineUsers.delete(userId);
-          socket.to(roomId).emit("presence:update", { userId, online: false });
+          const currentRoomId = socket.data.roomId || roomId;
+          if (currentRoomId) {
+            socket.to(currentRoomId).emit("presence:update", { userId, online: false });
+          }
         }
 
         console.log(`Socket disconnected: ${socket.id}`);

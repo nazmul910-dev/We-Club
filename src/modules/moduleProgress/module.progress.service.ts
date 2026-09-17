@@ -428,35 +428,62 @@ const refreshModuleProgress = async (userId: string, moduleId: string) => {
     .select("_id isRequired durationSeconds updatedAt")
     .lean();
 
+  // Ensure quizSummary reflects user's attempts covering the latest published questions
+  const { QuizAttempt } = await import("../quizAttempts/quiz.attempt.model.schema");
+  const previousAttempts = await QuizAttempt.find({
+    user: userObjectId,
+    module: moduleObjectId,
+  })
+    .sort({ attemptNumber: 1 })
+    .select("attemptNumber score passed submittedAt")
+    .lean();
+
   const latestQuestion = await QuizQuestion.findOne({
     module: moduleObjectId,
     status: "published",
   })
     .sort({ updatedAt: -1 })
-    .select("updatedAt")
+    .select("updatedAt createdAt")
     .lean();
 
-  const latestContentUpdatedAt = [
-    courseModule?.updatedAt,
-    ...publishedVideos.map((video) => video.updatedAt),
-    latestQuestion?.updatedAt,
-  ].reduce<Date | undefined>(
-    (latest, current) =>
-      current && (!latest || current > latest) ? current : latest,
-    undefined,
-  );
+  const latestQuestionTime =
+    latestQuestion?.updatedAt ?? latestQuestion?.createdAt;
 
-  if (
-    progress.quizSummary.passed &&
-    latestContentUpdatedAt &&
-    progress.quizSummary.lastAttemptAt &&
-    progress.quizSummary.lastAttemptAt < latestContentUpdatedAt
-  ) {
-    progress.quizSummary.passed = false;
-    progress.quizSummary.status = "unlocked";
-    progress.quizSummary.attemptsUsed = 0;
-    progress.quizSummary.bestScore = 0;
-    progress.quizSummary.lastAttemptAt = undefined;
+  if (latestQuestion) {
+    // Only attempts made at or after the latest question update count toward current pass
+    const currentAttempts = latestQuestionTime
+      ? previousAttempts.filter(
+          (a) => a.submittedAt && a.submittedAt >= latestQuestionTime,
+        )
+      : previousAttempts;
+
+    const hasPassedCurrent = currentAttempts.some((attempt) => attempt.passed);
+    const bestScoreCurrent = currentAttempts.reduce(
+      (max, attempt) => Math.max(max, attempt.score ?? 0),
+      0,
+    );
+    const latestAttemptAt = (
+      currentAttempts.length > 0 ? currentAttempts : previousAttempts
+    ).reduce<Date | undefined>(
+      (latest, attempt) =>
+        !latest || (attempt.submittedAt && attempt.submittedAt > latest)
+          ? attempt.submittedAt
+          : latest,
+      undefined,
+    );
+
+    progress.quizSummary.attemptsUsed = currentAttempts.length;
+    progress.quizSummary.maximumAttempts = MAXIMUM_QUIZ_ATTEMPTS;
+    progress.quizSummary.bestScore = bestScoreCurrent;
+    progress.quizSummary.passScore = QUIZ_PASS_SCORE;
+    progress.quizSummary.passed = hasPassedCurrent;
+    if (latestAttemptAt) {
+      progress.quizSummary.lastAttemptAt = latestAttemptAt;
+    }
+  } else {
+    // No published quiz questions exist for this module
+    progress.quizSummary.passed = true;
+    progress.quizSummary.status = "passed";
   }
 
   const totalDurationSeconds = publishedVideos.reduce(
@@ -464,11 +491,17 @@ const refreshModuleProgress = async (userId: string, moduleId: string) => {
     0,
   );
 
-  await CourseModule.findByIdAndUpdate(moduleObjectId, {
-    $set: {
-      estimatedDurationMinutes: Math.ceil(totalDurationSeconds / 60),
-    },
-  });
+  const estimatedDurationMinutes = Math.ceil(totalDurationSeconds / 60);
+  if (
+    courseModule &&
+    (courseModule as any).estimatedDurationMinutes !== estimatedDurationMinutes
+  ) {
+    await CourseModule.findByIdAndUpdate(
+      moduleObjectId,
+      { $set: { estimatedDurationMinutes } },
+      { timestamps: false },
+    );
+  }
 
   const requiredVideos = publishedVideos.filter(
     (video) => video.isRequired !== false,

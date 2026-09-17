@@ -356,6 +356,30 @@ const checkVideoAccess = async (
   }
 };
 
+const deleteModuleVideo = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authUser = getAuthUser(req);
+
+    const result = await moduleVideoService.deleteModuleVideo(
+      String(req.params.id),
+      authUser.id
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Module video deleted successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const moduleVideoController = {
   createModuleVideo,
   getAllModuleVideos,
@@ -365,5 +389,6 @@ export const moduleVideoController = {
   publishModuleVideo,
   moveModuleVideoToDraft,
   archiveModuleVideo,
+  deleteModuleVideo,
   checkVideoAccess
 };

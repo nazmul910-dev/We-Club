@@ -1242,7 +1242,7 @@ var init_onboarding_task_model_schema = __esm({
         collection: "onboardingtasks"
       }
     );
-    onboardingTaskSchema.index({ order: 1 }, { unique: true });
+    onboardingTaskSchema.index({ order: 1 });
     onboardingTaskSchema.index({ status: 1, order: 1 });
     OnboardingTask = model6(
       "OnboardingTask",
@@ -1765,15 +1765,27 @@ var init_onboarding_task_service = __esm({
       return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
     };
     createOnboardingTask = async (payload, actorId) => {
-      const existing = await OnboardingTask.findOne({ order: payload.order }).lean();
-      if (existing) {
-        throwServiceError_default("A task with this order already exists", 409);
+      let taskOrder = payload.order;
+      if (taskOrder === void 0) {
+        await OnboardingTask.updateMany(
+          { status: { $ne: "archived" } },
+          { $inc: { order: 1 } }
+        );
+        taskOrder = 1;
+      } else {
+        const existing = await OnboardingTask.findOne({
+          order: taskOrder,
+          status: { $ne: "archived" }
+        }).lean();
+        if (existing) {
+          throwServiceError_default("A task with this order already exists", 409);
+        }
       }
       try {
         const task = await OnboardingTask.create({
           title: payload.title,
           description: payload.description,
-          order: payload.order,
+          order: taskOrder,
           trigger: payload.trigger ?? "manual",
           actionLabel: payload.actionLabel,
           actionUrl: payload.actionUrl,
@@ -1838,6 +1850,13 @@ var init_onboarding_task_service = __esm({
       task.publishedAt = /* @__PURE__ */ new Date();
       task.set("archivedAt", void 0);
       task.updatedBy = new Types5.ObjectId(actorId);
+      if (task.order >= 1e6) {
+        const lastActive = await OnboardingTask.findOne({
+          _id: { $ne: task._id },
+          status: { $ne: "archived" }
+        }).sort({ order: -1 }).select("order").lean();
+        task.order = (lastActive?.order ?? 0) + 1;
+      }
       await task.save();
       return task;
     };
@@ -1848,7 +1867,23 @@ var init_onboarding_task_service = __esm({
       task.status = "archived";
       task.archivedAt = /* @__PURE__ */ new Date();
       task.updatedBy = new Types5.ObjectId(actorId);
+      task.order = 1e6 + Date.now() % 1e6 + Math.floor(Math.random() * 1e4);
       await task.save();
+      const remainingTasks = await OnboardingTask.find({
+        _id: { $ne: task._id },
+        status: { $ne: "archived" }
+      }).sort({ order: 1 });
+      for (let i = 0; i < remainingTasks.length; i++) {
+        const item = remainingTasks[i];
+        if (!item) continue;
+        const targetOrder = i + 1;
+        if (item.order !== targetOrder) {
+          await OnboardingTask.updateOne(
+            { _id: item._id },
+            { $set: { order: targetOrder } }
+          );
+        }
+      }
       return task;
     };
     completeTaskForUser = async (userId, taskId) => {
@@ -3459,7 +3494,7 @@ var init_module_video_model_schema = __esm({
         collection: "modulevideos"
       }
     );
-    moduleVideoSchema.index({ module: 1, order: 1 }, { unique: true });
+    moduleVideoSchema.index({ module: 1, order: 1 });
     moduleVideoSchema.index({ module: 1, slug: 1 }, { unique: true });
     moduleVideoSchema.index({ cloudinaryPublicId: 1 }, { unique: true });
     moduleVideoSchema.index({
@@ -3692,6 +3727,111 @@ var init_module_progress_model_schema = __esm({
   }
 });
 
+// src/modules/moduleActions/module.action.interface.ts
+var MODULE_ACTION_STATUSES;
+var init_module_action_interface = __esm({
+  "src/modules/moduleActions/module.action.interface.ts"() {
+    "use strict";
+    MODULE_ACTION_STATUSES = [
+      "draft",
+      "published",
+      "archived"
+    ];
+  }
+});
+
+// src/modules/moduleActions/module.action.model.schema.ts
+import {
+  model as model31,
+  Schema as Schema31
+} from "mongoose";
+var moduleActionSchema, ModuleAction;
+var init_module_action_model_schema = __esm({
+  "src/modules/moduleActions/module.action.model.schema.ts"() {
+    "use strict";
+    init_module_action_interface();
+    moduleActionSchema = new Schema31(
+      {
+        module: {
+          type: Schema31.Types.ObjectId,
+          ref: "CourseModule",
+          required: true,
+          index: true
+        },
+        title: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 300
+        },
+        description: {
+          type: String,
+          trim: true,
+          maxlength: 5e3
+        },
+        order: {
+          type: Number,
+          required: true,
+          min: 1
+        },
+        isRequired: {
+          type: Boolean,
+          default: true,
+          required: true
+        },
+        pointsReward: {
+          type: Number,
+          default: 5,
+          min: 0
+        },
+        status: {
+          type: String,
+          enum: MODULE_ACTION_STATUSES,
+          default: "draft",
+          index: true
+        },
+        publishedAt: {
+          type: Date
+        },
+        archivedAt: {
+          type: Date
+        },
+        createdBy: {
+          type: Schema31.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        updatedBy: {
+          type: Schema31.Types.ObjectId,
+          ref: "User"
+        }
+      },
+      {
+        timestamps: true,
+        collection: "moduleactions"
+      }
+    );
+    moduleActionSchema.index({
+      module: 1,
+      order: 1
+    });
+    moduleActionSchema.index({
+      module: 1,
+      status: 1,
+      order: 1
+    });
+    moduleActionSchema.index({
+      module: 1,
+      isRequired: 1,
+      status: 1
+    });
+    ModuleAction = model31(
+      "ModuleAction",
+      moduleActionSchema
+    );
+  }
+});
+
 // src/modules/moduleResources/module.resource.interface.ts
 var MODULE_RESOURCE_STATUSES, MODULE_RESOURCE_TYPES, MODULE_RESOURCE_PROVIDERS, CLOUDINARY_RESOURCE_TYPES;
 var init_module_resource_interface = __esm({
@@ -3722,16 +3862,16 @@ var init_module_resource_interface = __esm({
 });
 
 // src/modules/moduleResources/module.resource.model.schema.ts
-import { model as model31, Schema as Schema31 } from "mongoose";
+import { model as model32, Schema as Schema32 } from "mongoose";
 var moduleResourceSchema, ModuleResource;
 var init_module_resource_model_schema = __esm({
   "src/modules/moduleResources/module.resource.model.schema.ts"() {
     "use strict";
     init_module_resource_interface();
-    moduleResourceSchema = new Schema31(
+    moduleResourceSchema = new Schema32(
       {
         module: {
-          type: Schema31.Types.ObjectId,
+          type: Schema32.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3832,12 +3972,12 @@ var init_module_resource_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema31.Types.ObjectId,
+          type: Schema32.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema31.Types.ObjectId,
+          type: Schema32.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3846,10 +3986,7 @@ var init_module_resource_model_schema = __esm({
         collection: "moduleresources"
       }
     );
-    moduleResourceSchema.index(
-      { module: 1, order: 1 },
-      { unique: true }
-    );
+    moduleResourceSchema.index({ module: 1, order: 1 });
     moduleResourceSchema.index(
       { module: 1, slug: 1 },
       { unique: true }
@@ -3866,7 +4003,7 @@ var init_module_resource_model_schema = __esm({
       status: 1,
       order: 1
     });
-    ModuleResource = model31(
+    ModuleResource = model32(
       "ModuleResource",
       moduleResourceSchema
     );
@@ -3893,18 +4030,18 @@ var init_quiz_question_interface = __esm({
 
 // src/modules/quizeQuestions/quiz.question.model.schema.ts
 import {
-  model as model32,
-  Schema as Schema32
+  model as model33,
+  Schema as Schema33
 } from "mongoose";
 var quizQuestionSchema, QuizQuestion;
 var init_quiz_question_model_schema = __esm({
   "src/modules/quizeQuestions/quiz.question.model.schema.ts"() {
     "use strict";
     init_quiz_question_interface();
-    quizQuestionSchema = new Schema32(
+    quizQuestionSchema = new Schema33(
       {
         module: {
-          type: Schema32.Types.ObjectId,
+          type: Schema33.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
@@ -3964,12 +4101,12 @@ var init_quiz_question_model_schema = __esm({
           type: Date
         },
         createdBy: {
-          type: Schema32.Types.ObjectId,
+          type: Schema33.Types.ObjectId,
           ref: "User",
           required: true
         },
         updatedBy: {
-          type: Schema32.Types.ObjectId,
+          type: Schema33.Types.ObjectId,
           ref: "User"
         }
       },
@@ -3978,133 +4115,138 @@ var init_quiz_question_model_schema = __esm({
         collection: "quizquestions"
       }
     );
-    quizQuestionSchema.index(
-      {
-        module: 1,
-        order: 1
-      },
-      {
-        unique: true
-      }
-    );
+    quizQuestionSchema.index({
+      module: 1,
+      order: 1
+    });
     quizQuestionSchema.index({
       module: 1,
       status: 1,
       order: 1
     });
-    QuizQuestion = model32(
+    QuizQuestion = model33(
       "QuizQuestion",
       quizQuestionSchema
     );
   }
 });
 
-// src/modules/moduleActions/module.action.interface.ts
-var MODULE_ACTION_STATUSES;
-var init_module_action_interface = __esm({
-  "src/modules/moduleActions/module.action.interface.ts"() {
-    "use strict";
-    MODULE_ACTION_STATUSES = [
-      "draft",
-      "published",
-      "archived"
-    ];
-  }
+// src/modules/quizAttempts/quiz.attempt.model.schema.ts
+var quiz_attempt_model_schema_exports = {};
+__export(quiz_attempt_model_schema_exports, {
+  QuizAttempt: () => QuizAttempt
 });
-
-// src/modules/moduleActions/module.action.model.schema.ts
-import {
-  model as model33,
-  Schema as Schema33
-} from "mongoose";
-var moduleActionSchema, ModuleAction;
-var init_module_action_model_schema = __esm({
-  "src/modules/moduleActions/module.action.model.schema.ts"() {
+import { model as model34, Schema as Schema34 } from "mongoose";
+var quizAttemptAnswerSchema, quizAttemptSchema, QuizAttempt;
+var init_quiz_attempt_model_schema = __esm({
+  "src/modules/quizAttempts/quiz.attempt.model.schema.ts"() {
     "use strict";
-    init_module_action_interface();
-    moduleActionSchema = new Schema33(
+    quizAttemptAnswerSchema = new Schema34(
       {
+        question: {
+          type: Schema34.Types.ObjectId,
+          ref: "QuizQuestion",
+          required: true
+        },
+        selectedOptionIndexes: {
+          type: [
+            {
+              type: Number,
+              min: 0
+            }
+          ],
+          default: void 0
+        },
+        booleanAnswer: {
+          type: Boolean
+        },
+        isCorrect: {
+          type: Boolean,
+          required: true
+        }
+      },
+      {
+        _id: false
+      }
+    );
+    quizAttemptSchema = new Schema34(
+      {
+        user: {
+          type: Schema34.Types.ObjectId,
+          ref: "User",
+          required: true,
+          index: true
+        },
         module: {
-          type: Schema33.Types.ObjectId,
+          type: Schema34.Types.ObjectId,
           ref: "CourseModule",
           required: true,
           index: true
         },
-        title: {
-          type: String,
+        attemptNumber: {
+          type: Number,
           required: true,
-          trim: true,
-          maxlength: 300
+          min: 1,
+          max: 2
         },
-        description: {
-          type: String,
-          trim: true,
-          maxlength: 5e3
+        answers: {
+          type: [quizAttemptAnswerSchema],
+          required: true
         },
-        order: {
+        totalQuestions: {
           type: Number,
           required: true,
           min: 1
         },
-        isRequired: {
-          type: Boolean,
-          default: true,
-          required: true
-        },
-        pointsReward: {
+        correctAnswers: {
           type: Number,
-          default: 5,
+          required: true,
           min: 0
         },
-        status: {
-          type: String,
-          enum: MODULE_ACTION_STATUSES,
-          default: "draft",
+        score: {
+          type: Number,
+          required: true,
+          min: 0,
+          max: 100
+        },
+        passed: {
+          type: Boolean,
+          required: true,
           index: true
         },
-        publishedAt: {
-          type: Date
-        },
-        archivedAt: {
-          type: Date
-        },
-        createdBy: {
-          type: Schema33.Types.ObjectId,
-          ref: "User",
+        submittedAt: {
+          type: Date,
+          default: Date.now,
           required: true
-        },
-        updatedBy: {
-          type: Schema33.Types.ObjectId,
-          ref: "User"
         }
       },
       {
         timestamps: true,
-        collection: "moduleactions"
+        collection: "quizattempts"
       }
     );
-    moduleActionSchema.index(
+    quizAttemptSchema.index(
       {
+        user: 1,
         module: 1,
-        order: 1
+        attemptNumber: 1
       },
       {
         unique: true
       }
     );
-    moduleActionSchema.index({
+    quizAttemptSchema.index({
+      user: 1,
       module: 1,
-      status: 1,
-      order: 1
+      submittedAt: -1
     });
-    moduleActionSchema.index({
+    quizAttemptSchema.index({
       module: 1,
-      isRequired: 1,
-      status: 1
+      passed: 1
     });
-    ModuleAction = model33(
-      "ModuleAction",
-      moduleActionSchema
+    QuizAttempt = model34(
+      "QuizAttempt",
+      quizAttemptSchema
     );
   }
 });
@@ -4114,8 +4256,8 @@ var module_progress_service_exports = {};
 __export(module_progress_service_exports, {
   moduleProgressService: () => moduleProgressService
 });
-import { Types as Types33 } from "mongoose";
-var ACTION_COMPLETION_REQUIREMENT, QUIZ_PASS_SCORE, MAXIMUM_QUIZ_ATTEMPTS, throwServiceError13, assertFound12, assertValidObjectId10, isDuplicateKeyError7, roundToTwoDecimals, clamp, calculateCompletionPercent, ensureCourseModuleExists5, createDefaultProgressData, getOrCreateModuleProgress, recalculateDerivedFields, awardModuleCompletionPoints, syncModulesBreakdownForUser, syncQuizSuccessBreakdownForUser, QUIZ_PASS_POINTS, awardQuizPassPoints, refreshModuleProgress, syncResourceSummary, syncActionSummary, syncQuizSummary, getMyModuleProgress, getMyAllModuleProgress, getUserModuleProgress, getAllModuleProgress, getAllModuleProgressGroupedByUser, moduleProgressService;
+import { Types as Types28 } from "mongoose";
+var ACTION_COMPLETION_REQUIREMENT, QUIZ_PASS_SCORE, MAXIMUM_QUIZ_ATTEMPTS, throwServiceError8, assertFound6, assertValidObjectId8, isDuplicateKeyError5, roundToTwoDecimals, clamp, calculateCompletionPercent, ensureCourseModuleExists, createDefaultProgressData, getOrCreateModuleProgress, recalculateDerivedFields, awardModuleCompletionPoints, syncModulesBreakdownForUser, syncQuizSuccessBreakdownForUser, QUIZ_PASS_POINTS, awardQuizPassPoints, refreshModuleProgress, syncResourceSummary, syncActionSummary, syncQuizSummary, getMyModuleProgress, getMyAllModuleProgress, getUserModuleProgress, getAllModuleProgress, getAllModuleProgressGroupedByUser, moduleProgressService;
 var init_module_progress_service = __esm({
   "src/modules/moduleProgress/module.progress.service.ts"() {
     "use strict";
@@ -4130,22 +4272,22 @@ var init_module_progress_service = __esm({
     ACTION_COMPLETION_REQUIREMENT = 80;
     QUIZ_PASS_SCORE = 70;
     MAXIMUM_QUIZ_ATTEMPTS = 2;
-    throwServiceError13 = (message, statusCode) => {
+    throwServiceError8 = (message, statusCode) => {
       const error = new Error(message);
       error.statusCode = statusCode;
       throw error;
     };
-    assertFound12 = (value, message, statusCode) => {
+    assertFound6 = (value, message, statusCode) => {
       if (value === null || value === void 0) {
-        throwServiceError13(message, statusCode);
+        throwServiceError8(message, statusCode);
       }
     };
-    assertValidObjectId10 = (value, fieldName) => {
-      if (!Types33.ObjectId.isValid(value)) {
-        throwServiceError13(`${fieldName} is invalid`, 400);
+    assertValidObjectId8 = (value, fieldName) => {
+      if (!Types28.ObjectId.isValid(value)) {
+        throwServiceError8(`${fieldName} is invalid`, 400);
       }
     };
-    isDuplicateKeyError7 = (error) => {
+    isDuplicateKeyError5 = (error) => {
       return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
     };
     roundToTwoDecimals = (value) => {
@@ -4160,21 +4302,21 @@ var init_module_progress_service = __esm({
       }
       return roundToTwoDecimals(clamp(completed / total * 100, 0, 100));
     };
-    ensureCourseModuleExists5 = async (moduleId) => {
-      assertValidObjectId10(moduleId, "Course module ID");
+    ensureCourseModuleExists = async (moduleId) => {
+      assertValidObjectId8(moduleId, "Course module ID");
       const courseModule = await CourseModule.findById(moduleId).select(
         "_id pillar title slug moduleNumber status"
       );
-      assertFound12(courseModule, "Course module not found", 404);
+      assertFound6(courseModule, "Course module not found", 404);
       if (courseModule.status === "archived") {
-        throwServiceError13("Archived module progress cannot be managed", 400);
+        throwServiceError8("Archived module progress cannot be managed", 400);
       }
       return courseModule;
     };
     createDefaultProgressData = (userId, moduleId) => {
       return {
-        user: new Types33.ObjectId(userId),
-        module: new Types33.ObjectId(moduleId),
+        user: new Types28.ObjectId(userId),
+        module: new Types28.ObjectId(moduleId),
         videoSummary: {
           totalRequired: 0,
           completedRequired: 0,
@@ -4209,11 +4351,11 @@ var init_module_progress_service = __esm({
       };
     };
     getOrCreateModuleProgress = async (userId, moduleId) => {
-      assertValidObjectId10(userId, "User ID");
-      await ensureCourseModuleExists5(moduleId);
+      assertValidObjectId8(userId, "User ID");
+      await ensureCourseModuleExists(moduleId);
       const filter = {
-        user: new Types33.ObjectId(userId),
-        module: new Types33.ObjectId(moduleId)
+        user: new Types28.ObjectId(userId),
+        module: new Types28.ObjectId(moduleId)
       };
       const existingProgress = await ModuleProgress.findOne(filter);
       if (existingProgress) {
@@ -4224,11 +4366,11 @@ var init_module_progress_service = __esm({
           createDefaultProgressData(userId, moduleId)
         );
       } catch (error) {
-        if (!isDuplicateKeyError7(error)) {
+        if (!isDuplicateKeyError5(error)) {
           throw error;
         }
         const progress = await ModuleProgress.findOne(filter);
-        assertFound12(progress, "Module progress could not be created", 500);
+        assertFound6(progress, "Module progress could not be created", 500);
         return progress;
       }
     };
@@ -4294,7 +4436,7 @@ var init_module_progress_service = __esm({
     syncModulesBreakdownForUser = async (userId) => {
       try {
         const completedModulesCount = await ModuleProgress.countDocuments({
-          user: new Types33.ObjectId(userId),
+          user: new Types28.ObjectId(userId),
           isCompleted: true
         });
         const { Leaderboard: Leaderboard2 } = await Promise.resolve().then(() => (init_leaderboard_model_schema(), leaderboard_model_schema_exports));
@@ -4317,7 +4459,7 @@ var init_module_progress_service = __esm({
     };
     syncQuizSuccessBreakdownForUser = async (userId) => {
       try {
-        const userObjectId = new Types33.ObjectId(userId);
+        const userObjectId = new Types28.ObjectId(userId);
         const [attemptedCount, passedCount] = await Promise.all([
           ModuleProgress.countDocuments({
             user: userObjectId,
@@ -4363,8 +4505,8 @@ var init_module_progress_service = __esm({
     };
     refreshModuleProgress = async (userId, moduleId) => {
       const progress = await getOrCreateModuleProgress(userId, moduleId);
-      const moduleObjectId = new Types33.ObjectId(moduleId);
-      const userObjectId = new Types33.ObjectId(userId);
+      const moduleObjectId = new Types28.ObjectId(moduleId);
+      const userObjectId = new Types28.ObjectId(userId);
       const courseModule = await CourseModule.findById(moduleObjectId).select("pillar updatedAt").populate("pillar", "isPaid").lean();
       const pillar = courseModule?.pillar;
       const pillarId = pillar && typeof pillar === "object" && "_id" in pillar ? String(pillar._id) : pillar ? String(pillar) : void 0;
@@ -4374,34 +4516,53 @@ var init_module_progress_service = __esm({
         status: "published",
         ...pillarAccess.hasAccess ? {} : { isPaid: false }
       }).select("_id isRequired durationSeconds updatedAt").lean();
+      const { QuizAttempt: QuizAttempt2 } = await Promise.resolve().then(() => (init_quiz_attempt_model_schema(), quiz_attempt_model_schema_exports));
+      const previousAttempts = await QuizAttempt2.find({
+        user: userObjectId,
+        module: moduleObjectId
+      }).sort({ attemptNumber: 1 }).select("attemptNumber score passed submittedAt").lean();
       const latestQuestion = await QuizQuestion.findOne({
         module: moduleObjectId,
         status: "published"
-      }).sort({ updatedAt: -1 }).select("updatedAt").lean();
-      const latestContentUpdatedAt = [
-        courseModule?.updatedAt,
-        ...publishedVideos.map((video) => video.updatedAt),
-        latestQuestion?.updatedAt
-      ].reduce(
-        (latest, current) => current && (!latest || current > latest) ? current : latest,
-        void 0
-      );
-      if (progress.quizSummary.passed && latestContentUpdatedAt && progress.quizSummary.lastAttemptAt && progress.quizSummary.lastAttemptAt < latestContentUpdatedAt) {
-        progress.quizSummary.passed = false;
-        progress.quizSummary.status = "unlocked";
-        progress.quizSummary.attemptsUsed = 0;
-        progress.quizSummary.bestScore = 0;
-        progress.quizSummary.lastAttemptAt = void 0;
+      }).sort({ updatedAt: -1 }).select("updatedAt createdAt").lean();
+      const latestQuestionTime = latestQuestion?.updatedAt ?? latestQuestion?.createdAt;
+      if (latestQuestion) {
+        const currentAttempts = latestQuestionTime ? previousAttempts.filter(
+          (a) => a.submittedAt && a.submittedAt >= latestQuestionTime
+        ) : previousAttempts;
+        const hasPassedCurrent = currentAttempts.some((attempt) => attempt.passed);
+        const bestScoreCurrent = currentAttempts.reduce(
+          (max, attempt) => Math.max(max, attempt.score ?? 0),
+          0
+        );
+        const latestAttemptAt = (currentAttempts.length > 0 ? currentAttempts : previousAttempts).reduce(
+          (latest, attempt) => !latest || attempt.submittedAt && attempt.submittedAt > latest ? attempt.submittedAt : latest,
+          void 0
+        );
+        progress.quizSummary.attemptsUsed = currentAttempts.length;
+        progress.quizSummary.maximumAttempts = MAXIMUM_QUIZ_ATTEMPTS;
+        progress.quizSummary.bestScore = bestScoreCurrent;
+        progress.quizSummary.passScore = QUIZ_PASS_SCORE;
+        progress.quizSummary.passed = hasPassedCurrent;
+        if (latestAttemptAt) {
+          progress.quizSummary.lastAttemptAt = latestAttemptAt;
+        }
+      } else {
+        progress.quizSummary.passed = true;
+        progress.quizSummary.status = "passed";
       }
       const totalDurationSeconds = publishedVideos.reduce(
         (total, video) => total + Math.max(0, video.durationSeconds ?? 0),
         0
       );
-      await CourseModule.findByIdAndUpdate(moduleObjectId, {
-        $set: {
-          estimatedDurationMinutes: Math.ceil(totalDurationSeconds / 60)
-        }
-      });
+      const estimatedDurationMinutes = Math.ceil(totalDurationSeconds / 60);
+      if (courseModule && courseModule.estimatedDurationMinutes !== estimatedDurationMinutes) {
+        await CourseModule.findByIdAndUpdate(
+          moduleObjectId,
+          { $set: { estimatedDurationMinutes } },
+          { timestamps: false }
+        );
+      }
       const requiredVideos = publishedVideos.filter(
         (video) => video.isRequired !== false
       );
@@ -4537,9 +4698,9 @@ var init_module_progress_service = __esm({
       return refreshModuleProgress(userId, moduleId);
     };
     getMyAllModuleProgress = async (userId) => {
-      assertValidObjectId10(userId, "User ID");
+      assertValidObjectId8(userId, "User ID");
       const progressRecords = await ModuleProgress.find({
-        user: new Types33.ObjectId(userId)
+        user: new Types28.ObjectId(userId)
       }).select("module").lean();
       const refreshed = await Promise.all(
         progressRecords.map(
@@ -4556,12 +4717,12 @@ var init_module_progress_service = __esm({
     getAllModuleProgress = async (query) => {
       const filter = {};
       if (query.userId) {
-        assertValidObjectId10(query.userId, "User ID");
-        filter.user = new Types33.ObjectId(query.userId);
+        assertValidObjectId8(query.userId, "User ID");
+        filter.user = new Types28.ObjectId(query.userId);
       }
       if (query.moduleId) {
-        assertValidObjectId10(query.moduleId, "Course module ID");
-        filter.module = new Types33.ObjectId(query.moduleId);
+        assertValidObjectId8(query.moduleId, "Course module ID");
+        filter.module = new Types28.ObjectId(query.moduleId);
       }
       if (query.isCompleted !== void 0) {
         filter.isCompleted = query.isCompleted;
@@ -4596,12 +4757,12 @@ var init_module_progress_service = __esm({
     getAllModuleProgressGroupedByUser = async (query) => {
       const filter = {};
       if (query.userId) {
-        assertValidObjectId10(query.userId, "User ID");
-        filter.user = new Types33.ObjectId(query.userId);
+        assertValidObjectId8(query.userId, "User ID");
+        filter.user = new Types28.ObjectId(query.userId);
       }
       if (query.moduleId) {
-        assertValidObjectId10(query.moduleId, "Course module ID");
-        filter.module = new Types33.ObjectId(query.moduleId);
+        assertValidObjectId8(query.moduleId, "Course module ID");
+        filter.module = new Types28.ObjectId(query.moduleId);
       }
       if (query.isCompleted !== void 0) {
         filter.isCompleted = query.isCompleted;
@@ -7238,6 +7399,12 @@ var uploadThumbnailToCloudinary = async (file, folder) => {
     ]
   });
   return result.secure_url;
+};
+var deleteCloudinaryAsset = async (publicId, resourceType) => {
+  await cloudinary.uploader.destroy(publicId, {
+    resource_type: resourceType,
+    invalidate: true
+  });
 };
 
 // src/utility/cloudinaryUpload.ts
@@ -12700,6 +12867,7 @@ var initSocket = (httpServer) => {
   io.on("connection", async (socket) => {
     try {
       const userId = socket.data.user.id;
+      socket.join(getUserRoom(userId));
       const userDoc = await User.findById(userId).select(
         "fullName profileImage country"
       );
@@ -12708,6 +12876,8 @@ var initSocket = (httpServer) => {
       const countryName = userDoc?.country?.trim();
       const requestedCountryName = socket.handshake.auth?.countryName;
       const privateRoomSlug = socket.handshake.auth?.privateRoomSlug;
+      const isPrivilegedRole = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager" || socket.data.user.role === "ceo";
+      let roomId = null;
       if (privateRoomSlug) {
         const privateRoom = await getPrivateRoom(
           privateRoomSlug,
@@ -12715,47 +12885,38 @@ var initSocket = (httpServer) => {
           socket.data.user.role
         );
         const privateRoomId = privateRoom._id.toString();
+        roomId = privateRoomId;
         socket.data.roomId = privateRoomId;
         socket.join(privateRoomId);
         socket.emit("room:joined", { roomId: privateRoomId, name: privateRoom.name });
-      }
-      const isPrivilegedRole = socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager" || socket.data.user.role === "ceo";
-      let country = privateRoomSlug ? null : requestedCountryName ? resolveCountry(requestedCountryName) : countryName ? resolveCountry(countryName) : null;
-      if (!privateRoomSlug && requestedCountryName && country) {
-        const access = await getCountryRoomAccess(
-          userId,
-          socket.data.user.role,
-          requestedCountryName
-        );
-        if (!access.canEnter) {
-          socket.emit("error", "You do not have access to this country room");
-          return socket.disconnect();
+      } else {
+        let country = requestedCountryName ? resolveCountry(requestedCountryName) : countryName ? resolveCountry(countryName) : null;
+        if (requestedCountryName && country) {
+          const access = await getCountryRoomAccess(
+            userId,
+            socket.data.user.role,
+            requestedCountryName
+          );
+          if (!access.canEnter) {
+            socket.emit("error", "You do not have access to this country room");
+          }
+        }
+        if (!country && isPrivilegedRole) {
+          country = resolveCountry("United States");
+        }
+        if (country) {
+          const room = await getOrCreateCountryRoom(country.name, userId);
+          roomId = room._id.toString();
+          socket.data.roomId = roomId;
+          socket.join(roomId);
+          socket.emit("room:joined", {
+            roomId,
+            countryCode: room.countryCode,
+            countryName: room.countryName,
+            name: room.name
+          });
         }
       }
-      if (!privateRoomSlug && !country && !isPrivilegedRole) {
-        socket.emit(
-          "error",
-          countryName ? "Invalid country on your profile" : "No country set on your profile"
-        );
-        return socket.disconnect();
-      }
-      if (!privateRoomSlug && !country) {
-        country = resolveCountry("United States");
-      }
-      if (!privateRoomSlug && !country) {
-        socket.emit("error", "No default community room is configured");
-        return socket.disconnect();
-      }
-      const room = privateRoomSlug ? await getPrivateRoom(privateRoomSlug, userId, socket.data.user.role) : await getOrCreateCountryRoom(country.name, userId);
-      let roomId = room._id.toString();
-      socket.data.roomId = roomId;
-      socket.join(roomId);
-      socket.emit("room:joined", {
-        roomId,
-        countryCode: room.countryCode,
-        countryName: room.countryName,
-        name: room.name
-      });
       socket.on("room:join", async (requestedCountryName2) => {
         try {
           const canSwitchRooms = !privateRoomSlug && (socket.data.user.role === "founder" || socket.data.user.role === "admin" || socket.data.user.role === "manager");
@@ -12801,7 +12962,7 @@ var initSocket = (httpServer) => {
         onlineUsers.set(userId, /* @__PURE__ */ new Set());
       }
       onlineUsers.get(userId).add(socket.id);
-      if (isFirstConnectionForUser) {
+      if (roomId && isFirstConnectionForUser) {
         socket.to(roomId).emit("presence:update", { userId, online: true });
       }
       socket.emit("presence:list", Array.from(onlineUsers.keys()));
@@ -12857,7 +13018,10 @@ var initSocket = (httpServer) => {
         userSockets?.delete(socket.id);
         if (userSockets && userSockets.size === 0) {
           onlineUsers.delete(userId);
-          socket.to(roomId).emit("presence:update", { userId, online: false });
+          const currentRoomId = socket.data.roomId || roomId;
+          if (currentRoomId) {
+            socket.to(currentRoomId).emit("presence:update", { userId, online: false });
+          }
         }
         console.log(`Socket disconnected: ${socket.id}`);
       });
@@ -17534,17 +17698,19 @@ var getUploadedFieldFile = (req, fieldName) => {
 // src/modules/moduleVideos/module.video.service.ts
 init_course_module_model_schema();
 init_module_progress_model_schema();
+init_video_progress_model_schema();
+import { Types as Types29 } from "mongoose";
+init_module_progress_service();
 init_module_video_model_schema();
 init_userEntitlements_service();
-import { Types as Types28 } from "mongoose";
-var throwServiceError8 = (message, statusCode) => {
+var throwServiceError9 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound6 = (value, message, statusCode) => {
+var assertFound7 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError8(message, statusCode);
+    throwServiceError9(message, statusCode);
   }
 };
 var isAdminOrManager8 = (role) => {
@@ -17559,11 +17725,11 @@ var setNullableField = (document, path3, value) => {
     document.set(path3, value);
   }
 };
-var ensureCourseModuleExists = async (moduleId) => {
+var ensureCourseModuleExists2 = async (moduleId) => {
   const courseModule = await CourseModule.findById(moduleId);
-  assertFound6(courseModule, "Course module not found", 404);
+  assertFound7(courseModule, "Course module not found", 404);
   if (courseModule.status === "archived") {
-    throwServiceError8(
+    throwServiceError9(
       "Cannot manage videos under an archived course module",
       400
     );
@@ -17615,22 +17781,39 @@ var syncModuleDuration = async (moduleId) => {
   }
 };
 var createModuleVideo = async (moduleId, payload, actorId) => {
-  await ensureCourseModuleExists(moduleId);
+  await ensureCourseModuleExists2(moduleId);
+  let videoOrder = payload.order;
+  if (videoOrder === void 0) {
+    await ModuleVideo.updateMany(
+      { module: moduleId, status: { $ne: "archived" } },
+      { $inc: { order: 1 } }
+    );
+    videoOrder = 1;
+  }
+  const duplicateConditions = [
+    { module: moduleId, slug: payload.slug }
+  ];
+  if (payload.order !== void 0) {
+    duplicateConditions.push({
+      module: moduleId,
+      order: videoOrder,
+      status: { $ne: "archived" }
+    });
+  }
+  if (payload.cloudinaryPublicId) {
+    duplicateConditions.push({ cloudinaryPublicId: payload.cloudinaryPublicId });
+  }
   const existingVideo = await ModuleVideo.findOne({
-    $or: [
-      { module: moduleId, slug: payload.slug },
-      { module: moduleId, order: payload.order },
-      { cloudinaryPublicId: payload.cloudinaryPublicId }
-    ]
+    $or: duplicateConditions
   });
   if (existingVideo) {
-    throwServiceError8(
-      "Video slug, order or Cloudinary public ID already exists",
+    throwServiceError9(
+      "Video slug or Cloudinary public ID already exists",
       409
     );
   }
   const createData = {
-    module: new Types28.ObjectId(moduleId),
+    module: new Types29.ObjectId(moduleId),
     title: payload.title,
     slug: payload.slug,
     provider: "cloudinary",
@@ -17642,10 +17825,10 @@ var createModuleVideo = async (moduleId, payload, actorId) => {
     isRequired: payload.isRequired ?? true,
     requiredWatchPercent: payload.requiredWatchPercent ?? 80,
     pointsReward: payload.pointsReward ?? 10,
-    order: payload.order,
+    order: videoOrder,
     uploadStatus: payload.uploadStatus ?? "ready",
     status: "draft",
-    uploadedBy: new Types28.ObjectId(actorId)
+    uploadedBy: new Types29.ObjectId(actorId)
   };
   const optionalValues = [
     ["description", payload.description],
@@ -17687,7 +17870,7 @@ var getAllModuleVideos = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    filter.module = new Types28.ObjectId(moduleId);
+    filter.module = new Types29.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager8(actorRole);
   if (!isPrivileged) {
@@ -17717,9 +17900,9 @@ var getVideosByModule = async (moduleId, actorRole) => {
     moduleFilter.status = "published";
   }
   const courseModule = await CourseModule.findOne(moduleFilter).populate("pillar", "name slug title isPaid priceCents currency status").lean();
-  assertFound6(courseModule, "Course module not found or unavailable", 404);
+  assertFound7(courseModule, "Course module not found or unavailable", 404);
   const filter = {
-    module: new Types28.ObjectId(moduleId)
+    module: new Types29.ObjectId(moduleId)
   };
   const isPrivileged = isAdminOrManager8(actorRole);
   if (!isPrivileged) {
@@ -17761,7 +17944,7 @@ var getSingleModuleVideo = async (videoId, actorRole) => {
     query.select(" -cloudinaryPublicId -cloudinaryAssetId");
   }
   const video = await query.lean();
-  assertFound6(video, "Module video not found", 404);
+  assertFound7(video, "Module video not found", 404);
   return video;
 };
 var checkVideoAccess = async (videoId, userId) => {
@@ -17774,7 +17957,7 @@ var checkVideoAccess = async (videoId, userId) => {
       select: "name slug title isPaid priceCents currency status"
     }
   });
-  assertFound6(video, "Module video not found", 404);
+  assertFound7(video, "Module video not found", 404);
   const moduleData = video.module;
   const pillarObj = typeof moduleData?.pillar === "object" && moduleData?.pillar !== null ? moduleData.pillar : null;
   const isPillarPaid = pillarObj?.isPaid === true;
@@ -17823,9 +18006,9 @@ var checkVideoAccess = async (videoId, userId) => {
 };
 var updateModuleVideo = async (videoId, payload, actorId) => {
   const video = await ModuleVideo.findById(videoId);
-  assertFound6(video, "Module video not found", 404);
+  assertFound7(video, "Module video not found", 404);
   if (video.status === "archived") {
-    throwServiceError8("Archived video cannot be updated", 400);
+    throwServiceError9("Archived video cannot be updated", 400);
   }
   const duplicateConditions = [];
   if (payload.slug !== void 0) {
@@ -17845,7 +18028,7 @@ var updateModuleVideo = async (videoId, payload, actorId) => {
       $or: duplicateConditions
     });
     if (duplicateVideo) {
-      throwServiceError8(
+      throwServiceError9(
         "Video slug, order or Cloudinary public ID already exists",
         409
       );
@@ -17881,7 +18064,7 @@ var updateModuleVideo = async (videoId, payload, actorId) => {
   setNullableField(video, "bytes", payload.bytes);
   setNullableField(video, "width", payload.width);
   setNullableField(video, "height", payload.height);
-  video.updatedBy = new Types28.ObjectId(actorId);
+  video.updatedBy = new Types29.ObjectId(actorId);
   await video.save();
   await syncModuleDuration(video.module);
   return video.populate([
@@ -17902,17 +18085,17 @@ var updateModuleVideo = async (videoId, payload, actorId) => {
 };
 var publishModuleVideo = async (videoId, actorId) => {
   const video = await ModuleVideo.findById(videoId);
-  assertFound6(video, "Module video not found", 404);
+  assertFound7(video, "Module video not found", 404);
   if (video.status === "archived") {
-    throwServiceError8("Archived video cannot be published", 400);
+    throwServiceError9("Archived video cannot be published", 400);
   }
   if (video.uploadStatus !== "ready") {
-    throwServiceError8("Video upload must be ready before publishing", 400);
+    throwServiceError9("Video upload must be ready before publishing", 400);
   }
   const courseModule = await CourseModule.findById(video.module);
-  assertFound6(courseModule, "Parent course module not found", 404);
+  assertFound7(courseModule, "Parent course module not found", 404);
   if (courseModule.status !== "published") {
-    throwServiceError8(
+    throwServiceError9(
       "Publish the parent course module before publishing this video",
       400
     );
@@ -17920,34 +18103,105 @@ var publishModuleVideo = async (videoId, actorId) => {
   video.status = "published";
   video.publishedAt = /* @__PURE__ */ new Date();
   video.set("archivedAt", void 0);
-  video.updatedBy = new Types28.ObjectId(actorId);
+  video.updatedBy = new Types29.ObjectId(actorId);
+  if (video.order >= 1e6) {
+    const lastActive = await ModuleVideo.findOne({
+      module: video.module,
+      _id: { $ne: video._id },
+      status: { $ne: "archived" }
+    }).sort({ order: -1 }).select("order").lean();
+    video.order = (lastActive?.order ?? 0) + 1;
+  }
   await video.save();
   await syncModuleDuration(video.module);
   return video;
 };
 var moveModuleVideoToDraft = async (videoId, actorId) => {
   const video = await ModuleVideo.findById(videoId);
-  assertFound6(video, "Module video not found", 404);
+  assertFound7(video, "Module video not found", 404);
   if (video.status === "archived") {
-    throwServiceError8("Archived video cannot be moved to draft", 400);
+    throwServiceError9("Archived video cannot be moved to draft", 400);
   }
   video.status = "draft";
   video.set("publishedAt", void 0);
-  video.updatedBy = new Types28.ObjectId(actorId);
+  video.updatedBy = new Types29.ObjectId(actorId);
   await video.save();
   await syncModuleDuration(video.module);
   return video;
 };
 var archiveModuleVideo = async (videoId, actorId) => {
   const video = await ModuleVideo.findById(videoId);
-  assertFound6(video, "Module video not found", 404);
+  assertFound7(video, "Module video not found", 404);
   video.status = "archived";
   video.archivedAt = /* @__PURE__ */ new Date();
   video.set("publishedAt", void 0);
-  video.updatedBy = new Types28.ObjectId(actorId);
+  video.updatedBy = new Types29.ObjectId(actorId);
+  video.order = 1e6 + Date.now() % 1e6 + Math.floor(Math.random() * 1e4);
   await video.save();
   await syncModuleDuration(video.module);
+  const remainingVideos = await ModuleVideo.find({
+    module: video.module,
+    _id: { $ne: video._id },
+    status: { $ne: "archived" }
+  }).sort({ order: 1 });
+  for (let i = 0; i < remainingVideos.length; i++) {
+    const item = remainingVideos[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await ModuleVideo.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } }
+      );
+    }
+  }
   return video;
+};
+var deleteModuleVideo = async (videoId, _actorId) => {
+  const video = await ModuleVideo.findById(videoId);
+  assertFound7(video, "Module video not found", 404);
+  const moduleId = video.module;
+  if (video.cloudinaryPublicId) {
+    try {
+      await deleteCloudinaryAsset(video.cloudinaryPublicId, "video");
+    } catch (cloudErr) {
+      console.error("Failed to delete video asset from Cloudinary:", cloudErr);
+    }
+  }
+  await VideoProgress.deleteMany({ video: video._id });
+  await ModuleVideo.findByIdAndDelete(videoId);
+  const remainingVideos = await ModuleVideo.find({
+    module: moduleId,
+    status: { $ne: "archived" }
+  }).sort({ order: 1 });
+  for (let i = 0; i < remainingVideos.length; i++) {
+    const item = remainingVideos[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await ModuleVideo.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } }
+      );
+    }
+  }
+  await syncModuleDuration(moduleId);
+  try {
+    const progressRecords = await ModuleProgress.find({
+      module: moduleId
+    }).select("user");
+    await Promise.all(
+      progressRecords.map(
+        (rec) => moduleProgressService.refreshModuleProgress(
+          rec.user.toString(),
+          moduleId.toString()
+        )
+      )
+    );
+  } catch (progErr) {
+    console.error("Failed to refresh module progress after video deletion:", progErr);
+  }
+  return { message: "Module video deleted successfully", videoId };
 };
 var moduleVideoService = {
   createModuleVideo,
@@ -17958,7 +18212,8 @@ var moduleVideoService = {
   updateModuleVideo,
   publishModuleVideo,
   moveModuleVideoToDraft,
-  archiveModuleVideo
+  archiveModuleVideo,
+  deleteModuleVideo
 };
 
 // src/modules/moduleVideos/module.video.controller.ts
@@ -18187,6 +18442,23 @@ var checkVideoAccess2 = async (req, res, next) => {
     next(error);
   }
 };
+var deleteModuleVideo2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser5(req);
+    const result = await moduleVideoService.deleteModuleVideo(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Module video deleted successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var moduleVideoController = {
   createModuleVideo: createModuleVideo2,
   getAllModuleVideos: getAllModuleVideos2,
@@ -18196,6 +18468,7 @@ var moduleVideoController = {
   publishModuleVideo: publishModuleVideo2,
   moveModuleVideoToDraft: moveModuleVideoToDraft2,
   archiveModuleVideo: archiveModuleVideo2,
+  deleteModuleVideo: deleteModuleVideo2,
   checkVideoAccess: checkVideoAccess2
 };
 
@@ -18215,7 +18488,7 @@ var createModuleVideoBodySchema = z11.object({
   isRequired: z11.boolean().default(true),
   requiredWatchPercent: z11.number().min(1).max(100).default(80),
   pointsReward: z11.number().int().nonnegative().default(10),
-  order: z11.number().int().min(1)
+  order: z11.number().int().min(1).optional()
 });
 var updateModuleVideoBodySchema = z11.object({
   title: z11.string().trim().min(2).max(200).optional(),
@@ -18330,6 +18603,13 @@ router15.patch(
   validateRequest_default(moduleVideoIdValidation),
   moduleVideoController.archiveModuleVideo
 );
+router15.delete(
+  "/:id",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  validateRequest_default(moduleVideoIdValidation),
+  moduleVideoController.deleteModuleVideo
+);
 var moduleVideoRoutes = router15;
 
 // src/modules/moduleResources/module.resource.route.ts
@@ -18339,15 +18619,15 @@ import { Router as Router16 } from "express";
 init_course_module_model_schema();
 init_module_resource_model_schema();
 init_userEntitlements_service();
-import { Types as Types29 } from "mongoose";
-var throwServiceError9 = (message, statusCode) => {
+import { Types as Types30 } from "mongoose";
+var throwServiceError10 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound7 = (value, message, statusCode) => {
+var assertFound8 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError9(message, statusCode);
+    throwServiceError10(message, statusCode);
   }
 };
 var isAdminOrManager9 = (role) => {
@@ -18362,11 +18642,11 @@ var setNullableField2 = (document, path3, value) => {
     document.set(path3, value);
   }
 };
-var ensureCourseModuleExists2 = async (moduleId) => {
+var ensureCourseModuleExists3 = async (moduleId) => {
   const courseModule = await CourseModule.findById(moduleId);
-  assertFound7(courseModule, "Course module not found", 404);
+  assertFound8(courseModule, "Course module not found", 404);
   if (courseModule.status === "archived") {
-    throwServiceError9(
+    throwServiceError10(
       "Cannot manage resources under an archived course module",
       400
     );
@@ -18381,28 +18661,42 @@ var validateResourceConfiguration = ({
 }) => {
   if (provider === "cloudinary") {
     if (!cloudinaryPublicId || !secureUrl) {
-      throwServiceError9(
+      throwServiceError10(
         "Cloudinary resource requires cloudinaryPublicId and secureUrl",
         400
       );
     }
   }
   if (provider === "external" && !externalUrl) {
-    throwServiceError9("External resource requires externalUrl", 400);
+    throwServiceError10("External resource requires externalUrl", 400);
   }
 };
 var createModuleResource = async (moduleId, payload, actorId) => {
-  await ensureCourseModuleExists2(moduleId);
+  await ensureCourseModuleExists3(moduleId);
   validateResourceConfiguration({
     provider: payload.provider,
     cloudinaryPublicId: payload.cloudinaryPublicId,
     secureUrl: payload.secureUrl,
     externalUrl: payload.externalUrl
   });
+  let resourceOrder = payload.order;
+  if (resourceOrder === void 0) {
+    await ModuleResource.updateMany(
+      { module: moduleId, status: { $ne: "archived" } },
+      { $inc: { order: 1 } }
+    );
+    resourceOrder = 1;
+  }
   const duplicateConditions = [
-    { module: moduleId, slug: payload.slug },
-    { module: moduleId, order: payload.order }
+    { module: moduleId, slug: payload.slug }
   ];
+  if (payload.order !== void 0) {
+    duplicateConditions.push({
+      module: moduleId,
+      order: resourceOrder,
+      status: { $ne: "archived" }
+    });
+  }
   if (payload.cloudinaryPublicId) {
     duplicateConditions.push({
       cloudinaryPublicId: payload.cloudinaryPublicId
@@ -18412,22 +18706,22 @@ var createModuleResource = async (moduleId, payload, actorId) => {
     $or: duplicateConditions
   });
   if (existingResource) {
-    throwServiceError9(
-      "Resource slug, order or Cloudinary public ID already exists",
+    throwServiceError10(
+      "Resource slug or Cloudinary public ID already exists",
       409
     );
   }
   const createData = {
-    module: new Types29.ObjectId(moduleId),
+    module: new Types30.ObjectId(moduleId),
     title: payload.title,
     slug: payload.slug,
     resourceType: payload.resourceType,
     provider: payload.provider,
     isRequired: payload.isRequired ?? true,
     pointsReward: payload.pointsReward ?? 5,
-    order: payload.order,
+    order: resourceOrder,
     status: "draft",
-    createdBy: new Types29.ObjectId(actorId)
+    createdBy: new Types30.ObjectId(actorId)
   };
   const optionalValues = [
     ["description", payload.description],
@@ -18471,7 +18765,7 @@ var getAllModuleResources = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    filter.module = new Types29.ObjectId(moduleId);
+    filter.module = new Types30.ObjectId(moduleId);
   }
   const isPrivileged = isAdminOrManager9(actorRole);
   if (!isPrivileged) {
@@ -18499,7 +18793,7 @@ var getResourcesByModule = async (moduleId, actorRole, userId) => {
     "pillar",
     "name slug title isPaid priceCents currency status"
   );
-  assertFound7(courseModule, "Course module not found or unavailable", 404);
+  assertFound8(courseModule, "Course module not found or unavailable", 404);
   if (userId && !["admin", "manager", "founder"].includes(actorRole ?? "")) {
     const pillarId = String(
       typeof courseModule.pillar === "object" ? courseModule.pillar._id : courseModule.pillar
@@ -18509,11 +18803,11 @@ var getResourcesByModule = async (moduleId, actorRole, userId) => {
       pillarId
     );
     if (!access.hasAccess) {
-      throwServiceError9("Purchase this pillar to access its resources", 403);
+      throwServiceError10("Purchase this pillar to access its resources", 403);
     }
   }
   const filter = {
-    module: new Types29.ObjectId(moduleId)
+    module: new Types30.ObjectId(moduleId)
   };
   const isPrivileged = isAdminOrManager9(actorRole);
   if (!isPrivileged) {
@@ -18546,14 +18840,14 @@ var getSingleModuleResource = async (resourceId, actorRole) => {
     }
   }).populate("createdBy", "fullName email role profileImage").populate("updatedBy", "fullName email role profileImage");
   const resource = await query;
-  assertFound7(resource, "Module resource not found", 404);
+  assertFound8(resource, "Module resource not found", 404);
   return resource;
 };
 var updateModuleResource = async (resourceId, payload, actorId) => {
   const resource = await ModuleResource.findById(resourceId);
-  assertFound7(resource, "Module resource not found", 404);
+  assertFound8(resource, "Module resource not found", 404);
   if (resource.status === "archived") {
-    throwServiceError9("Archived resource cannot be updated", 400);
+    throwServiceError10("Archived resource cannot be updated", 400);
   }
   const nextProvider = payload.provider ?? resource.provider;
   const nextCloudinaryPublicId = payload.cloudinaryPublicId === null ? void 0 : payload.cloudinaryPublicId ?? resource.cloudinaryPublicId;
@@ -18583,7 +18877,7 @@ var updateModuleResource = async (resourceId, payload, actorId) => {
       $or: duplicateConditions
     });
     if (duplicateResource) {
-      throwServiceError9(
+      throwServiceError10(
         "Resource slug, order or Cloudinary public ID already exists",
         409
       );
@@ -18617,7 +18911,7 @@ var updateModuleResource = async (resourceId, payload, actorId) => {
   setNullableField2(resource, "secureUrl", payload.secureUrl);
   setNullableField2(resource, "externalUrl", payload.externalUrl);
   setNullableField2(resource, "thumbnailUrl", payload.thumbnailUrl);
-  resource.updatedBy = new Types29.ObjectId(actorId);
+  resource.updatedBy = new Types30.ObjectId(actorId);
   await resource.save();
   return resource.populate([
     {
@@ -18637,9 +18931,9 @@ var updateModuleResource = async (resourceId, payload, actorId) => {
 };
 var publishModuleResource = async (resourceId, actorId) => {
   const resource = await ModuleResource.findById(resourceId);
-  assertFound7(resource, "Module resource not found", 404);
+  assertFound8(resource, "Module resource not found", 404);
   if (resource.status === "archived") {
-    throwServiceError9("Archived resource cannot be published", 400);
+    throwServiceError10("Archived resource cannot be published", 400);
   }
   validateResourceConfiguration({
     provider: resource.provider,
@@ -18648,9 +18942,9 @@ var publishModuleResource = async (resourceId, actorId) => {
     externalUrl: resource.externalUrl
   });
   const courseModule = await CourseModule.findById(resource.module);
-  assertFound7(courseModule, "Parent course module not found", 404);
+  assertFound8(courseModule, "Parent course module not found", 404);
   if (courseModule.status !== "published") {
-    throwServiceError9(
+    throwServiceError10(
       "Publish the parent course module before publishing this resource",
       400
     );
@@ -18658,30 +18952,55 @@ var publishModuleResource = async (resourceId, actorId) => {
   resource.status = "published";
   resource.publishedAt = /* @__PURE__ */ new Date();
   resource.set("archivedAt", void 0);
-  resource.updatedBy = new Types29.ObjectId(actorId);
+  resource.updatedBy = new Types30.ObjectId(actorId);
+  if (resource.order >= 1e6) {
+    const lastActive = await ModuleResource.findOne({
+      module: resource.module,
+      _id: { $ne: resource._id },
+      status: { $ne: "archived" }
+    }).sort({ order: -1 }).select("order").lean();
+    resource.order = (lastActive?.order ?? 0) + 1;
+  }
   await resource.save();
   return resource;
 };
 var moveModuleResourceToDraft = async (resourceId, actorId) => {
   const resource = await ModuleResource.findById(resourceId);
-  assertFound7(resource, "Module resource not found", 404);
+  assertFound8(resource, "Module resource not found", 404);
   if (resource.status === "archived") {
-    throwServiceError9("Archived resource cannot be moved to draft", 400);
+    throwServiceError10("Archived resource cannot be moved to draft", 400);
   }
   resource.status = "draft";
   resource.set("publishedAt", void 0);
-  resource.updatedBy = new Types29.ObjectId(actorId);
+  resource.updatedBy = new Types30.ObjectId(actorId);
   await resource.save();
   return resource;
 };
 var archiveModuleResource = async (resourceId, actorId) => {
   const resource = await ModuleResource.findById(resourceId);
-  assertFound7(resource, "Module resource not found", 404);
+  assertFound8(resource, "Module resource not found", 404);
   resource.status = "archived";
   resource.archivedAt = /* @__PURE__ */ new Date();
   resource.set("publishedAt", void 0);
-  resource.updatedBy = new Types29.ObjectId(actorId);
+  resource.updatedBy = new Types30.ObjectId(actorId);
+  resource.order = 1e6 + Date.now() % 1e6 + Math.floor(Math.random() * 1e4);
   await resource.save();
+  const remainingResources = await ModuleResource.find({
+    module: resource.module,
+    _id: { $ne: resource._id },
+    status: { $ne: "archived" }
+  }).sort({ order: 1 });
+  for (let i = 0; i < remainingResources.length; i++) {
+    const item = remainingResources[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await ModuleResource.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } }
+      );
+    }
+  }
   return resource;
 };
 var moduleResourceService = {
@@ -18805,7 +19124,7 @@ var getResourcesByModule2 = async (req, res, next) => {
     const result = await moduleResourceService.getResourcesByModule(
       String(req.params.moduleId),
       authUser.role,
-      authUser._id
+      authUser.id
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -18931,7 +19250,7 @@ var createModuleResourceBodySchema = z12.object({
   externalUrl: z12.string().url().optional(),
   isRequired: z12.boolean().default(true),
   pointsReward: z12.number().int().nonnegative().default(5),
-  order: z12.number().int().min(1)
+  order: z12.number().int().min(1).optional()
 }).superRefine((data, context) => {
   if (data.provider === "external" && !data.externalUrl) {
     context.addIssue({
@@ -19061,27 +19380,27 @@ import { Router as Router17 } from "express";
 init_course_module_model_schema();
 init_userEntitlements_service();
 init_quiz_question_model_schema();
-import { Types as Types30 } from "mongoose";
+import { Types as Types31 } from "mongoose";
 var MAX_QUESTIONS_PER_MODULE = 5;
-var throwServiceError10 = (message, statusCode) => {
+var throwServiceError11 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound8 = (value, message, statusCode) => {
+var assertFound9 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError10(message, statusCode);
+    throwServiceError11(message, statusCode);
   }
 };
-var assertValidObjectId8 = (value, fieldName) => {
-  if (!Types30.ObjectId.isValid(value)) {
-    throwServiceError10(`${fieldName} is invalid`, 400);
+var assertValidObjectId9 = (value, fieldName) => {
+  if (!Types31.ObjectId.isValid(value)) {
+    throwServiceError11(`${fieldName} is invalid`, 400);
   }
 };
 var isAdminOrManager10 = (role) => {
   return role === "admin" || role === "manager";
 };
-var isDuplicateKeyError5 = (error) => {
+var isDuplicateKeyError6 = (error) => {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
 };
 var validateQuestionConfiguration = ({
@@ -19092,7 +19411,7 @@ var validateQuestionConfiguration = ({
 }) => {
   if (questionType === "true_false") {
     if (typeof correctBooleanAnswer !== "boolean") {
-      return throwServiceError10(
+      return throwServiceError11(
         "True/false question requires correctBooleanAnswer",
         400
       );
@@ -19100,13 +19419,13 @@ var validateQuestionConfiguration = ({
     return;
   }
   if (!options2 || options2.length < 2) {
-    return throwServiceError10(
+    return throwServiceError11(
       "Choice question requires at least two options",
       400
     );
   }
   if (!correctOptionIndexes || correctOptionIndexes.length === 0) {
-    return throwServiceError10(
+    return throwServiceError11(
       "Choice question requires correct option indexes",
       400
     );
@@ -19115,33 +19434,33 @@ var validateQuestionConfiguration = ({
     (option) => option.trim().toLowerCase()
   );
   if (new Set(normalizedOptions).size !== options2.length) {
-    return throwServiceError10("Quiz question options must be unique", 400);
+    return throwServiceError11("Quiz question options must be unique", 400);
   }
   const uniqueCorrectIndexes = new Set(correctOptionIndexes);
   if (uniqueCorrectIndexes.size !== correctOptionIndexes.length) {
-    return throwServiceError10("Correct option indexes must be unique", 400);
+    return throwServiceError11("Correct option indexes must be unique", 400);
   }
   for (const index of correctOptionIndexes) {
     if (index < 0 || index >= options2.length) {
-      return throwServiceError10(
+      return throwServiceError11(
         "Correct option index is outside the available options",
         400
       );
     }
   }
   if (questionType === "single_choice" && correctOptionIndexes.length !== 1) {
-    return throwServiceError10(
+    return throwServiceError11(
       "Single-choice question requires exactly one correct option",
       400
     );
   }
 };
-var ensureCourseModuleExists3 = async (moduleId) => {
-  assertValidObjectId8(moduleId, "Course module ID");
+var ensureCourseModuleExists4 = async (moduleId) => {
+  assertValidObjectId9(moduleId, "Course module ID");
   const courseModule = await CourseModule.findById(moduleId);
-  assertFound8(courseModule, "Course module not found", 404);
+  assertFound9(courseModule, "Course module not found", 404);
   if (courseModule.status === "archived") {
-    throwServiceError10(
+    throwServiceError11(
       "Cannot manage quiz questions under an archived module",
       400
     );
@@ -19149,7 +19468,7 @@ var ensureCourseModuleExists3 = async (moduleId) => {
   return courseModule;
 };
 var createQuizQuestion = async (moduleId, payload, actorId) => {
-  await ensureCourseModuleExists3(moduleId);
+  await ensureCourseModuleExists4(moduleId);
   validateQuestionConfiguration({
     questionType: payload.questionType,
     options: payload.options,
@@ -19163,25 +19482,35 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
     }
   });
   if (activeQuestionCount >= MAX_QUESTIONS_PER_MODULE) {
-    throwServiceError10(
+    throwServiceError11(
       `A module can contain a maximum of ${MAX_QUESTIONS_PER_MODULE} active quiz questions`,
       400
     );
   }
-  const existingQuestion = await QuizQuestion.findOne({
-    module: moduleId,
-    order: payload.order
-  });
-  if (existingQuestion) {
-    throwServiceError10("Question order already exists in this module", 409);
+  let questionOrder = payload.order;
+  if (questionOrder === void 0) {
+    await QuizQuestion.updateMany(
+      { module: moduleId, status: { $ne: "archived" } },
+      { $inc: { order: 1 } }
+    );
+    questionOrder = 1;
+  } else {
+    const existingQuestion = await QuizQuestion.findOne({
+      module: moduleId,
+      order: questionOrder,
+      status: { $ne: "archived" }
+    });
+    if (existingQuestion) {
+      throwServiceError11("Question order already exists in this module", 409);
+    }
   }
   const createData = {
-    module: new Types30.ObjectId(moduleId),
+    module: new Types31.ObjectId(moduleId),
     question: payload.question,
     questionType: payload.questionType,
-    order: payload.order,
+    order: questionOrder,
     status: "draft",
-    createdBy: new Types30.ObjectId(actorId)
+    createdBy: new Types31.ObjectId(actorId)
   };
   if (payload.questionType === "true_false") {
     createData.correctBooleanAnswer = payload.correctBooleanAnswer;
@@ -19210,8 +19539,8 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
       }
     ]);
   } catch (error) {
-    if (isDuplicateKeyError5(error)) {
-      throwServiceError10("Question order already exists in this module", 409);
+    if (isDuplicateKeyError6(error)) {
+      throwServiceError11("Question order already exists in this module", 409);
     }
     throw error;
   }
@@ -19219,14 +19548,33 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
 var getAllQuizQuestions = async ({
   actorRole,
   moduleId,
+  userId,
   includeArchived = false
 }) => {
+  const isPrivileged = isAdminOrManager10(actorRole);
+  if (moduleId) {
+    assertValidObjectId9(moduleId, "Course module ID");
+    if (!isPrivileged && userId) {
+      const { QuizAttempt: QuizAttempt2 } = await Promise.resolve().then(() => (init_quiz_attempt_model_schema(), quiz_attempt_model_schema_exports));
+      const latestQuestion = await QuizQuestion.findOne({
+        module: new Types31.ObjectId(moduleId),
+        status: "published"
+      }).sort({ updatedAt: -1 }).select("updatedAt createdAt").lean();
+      const latestQuestionTime = latestQuestion?.updatedAt ?? latestQuestion?.createdAt;
+      const lastPassedAttempt = await QuizAttempt2.findOne({
+        user: new Types31.ObjectId(userId),
+        module: new Types31.ObjectId(moduleId),
+        passed: true
+      }).sort({ submittedAt: -1 }).select("submittedAt").lean();
+      if (lastPassedAttempt && latestQuestionTime && lastPassedAttempt.submittedAt >= latestQuestionTime) {
+        return [];
+      }
+    }
+  }
   const filter = {};
   if (moduleId) {
-    assertValidObjectId8(moduleId, "Course module ID");
-    filter.module = new Types30.ObjectId(moduleId);
+    filter.module = new Types31.ObjectId(moduleId);
   }
-  const isPrivileged = isAdminOrManager10(actorRole);
   if (!isPrivileged) {
     filter.status = "published";
   } else if (!includeArchived) {
@@ -19256,7 +19604,7 @@ var getAllQuizQuestions = async ({
   return query;
 };
 var getQuestionsByModule = async (moduleId, actorRole, userId) => {
-  assertValidObjectId8(moduleId, "Course module ID");
+  assertValidObjectId9(moduleId, "Course module ID");
   const isPrivileged = isAdminOrManager10(actorRole);
   const moduleFilter = {
     _id: moduleId
@@ -19268,7 +19616,7 @@ var getQuestionsByModule = async (moduleId, actorRole, userId) => {
     "pillar",
     "name slug title status"
   );
-  assertFound8(courseModule, "Course module not found or unavailable", 404);
+  assertFound9(courseModule, "Course module not found or unavailable", 404);
   if (userId && !["admin", "manager", "founder"].includes(actorRole ?? "")) {
     const pillarId = String(
       typeof courseModule.pillar === "object" ? courseModule.pillar._id : courseModule.pillar
@@ -19278,11 +19626,30 @@ var getQuestionsByModule = async (moduleId, actorRole, userId) => {
       pillarId
     );
     if (!access.hasAccess) {
-      throwServiceError10("Purchase this pillar to access its quiz", 403);
+      throwServiceError11("Purchase this pillar to access its quiz", 403);
+    }
+  }
+  if (!isPrivileged && userId) {
+    const { QuizAttempt: QuizAttempt2 } = await Promise.resolve().then(() => (init_quiz_attempt_model_schema(), quiz_attempt_model_schema_exports));
+    const latestQuestion = await QuizQuestion.findOne({
+      module: new Types31.ObjectId(moduleId),
+      status: "published"
+    }).sort({ updatedAt: -1 }).select("updatedAt createdAt").lean();
+    const latestQuestionTime = latestQuestion?.updatedAt ?? latestQuestion?.createdAt;
+    const lastPassedAttempt = await QuizAttempt2.findOne({
+      user: new Types31.ObjectId(userId),
+      module: new Types31.ObjectId(moduleId),
+      passed: true
+    }).sort({ submittedAt: -1 }).select("submittedAt").lean();
+    if (lastPassedAttempt && latestQuestionTime && lastPassedAttempt.submittedAt >= latestQuestionTime) {
+      return {
+        module: courseModule,
+        questions: []
+      };
     }
   }
   const questionFilter = {
-    module: new Types30.ObjectId(moduleId)
+    module: new Types31.ObjectId(moduleId)
   };
   if (!isPrivileged) {
     questionFilter.status = "published";
@@ -19306,7 +19673,7 @@ var getQuestionsByModule = async (moduleId, actorRole, userId) => {
   };
 };
 var getSingleQuizQuestion = async (questionId, actorRole) => {
-  assertValidObjectId8(questionId, "Quiz question ID");
+  assertValidObjectId9(questionId, "Quiz question ID");
   const filter = {
     _id: questionId
   };
@@ -19331,15 +19698,15 @@ var getSingleQuizQuestion = async (questionId, actorRole) => {
     );
   }
   const question = await query;
-  assertFound8(question, "Quiz question not found", 404);
+  assertFound9(question, "Quiz question not found", 404);
   return question;
 };
 var updateQuizQuestion = async (questionId, payload, actorId) => {
-  assertValidObjectId8(questionId, "Quiz question ID");
+  assertValidObjectId9(questionId, "Quiz question ID");
   const question = await QuizQuestion.findById(questionId);
-  assertFound8(question, "Quiz question not found", 404);
+  assertFound9(question, "Quiz question not found", 404);
   if (question.status === "archived") {
-    throwServiceError10("Archived question cannot be updated", 400);
+    throwServiceError11("Archived question cannot be updated", 400);
   }
   if (payload.order !== void 0 && payload.order !== question.order) {
     const duplicateQuestion = await QuizQuestion.findOne({
@@ -19350,7 +19717,7 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
       order: payload.order
     });
     if (duplicateQuestion) {
-      throwServiceError10("Question order already exists in this module", 409);
+      throwServiceError11("Question order already exists in this module", 409);
     }
   }
   const nextQuestionType = payload.questionType ?? question.questionType;
@@ -19405,12 +19772,12 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
   if (payload.order !== void 0) {
     question.order = payload.order;
   }
-  question.updatedBy = new Types30.ObjectId(actorId);
+  question.updatedBy = new Types31.ObjectId(actorId);
   try {
     await question.save();
   } catch (error) {
-    if (isDuplicateKeyError5(error)) {
-      throwServiceError10("Question order already exists in this module", 409);
+    if (isDuplicateKeyError6(error)) {
+      throwServiceError11("Question order already exists in this module", 409);
     }
     throw error;
   }
@@ -19431,11 +19798,11 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
   ]);
 };
 var publishQuizQuestion = async (questionId, actorId) => {
-  assertValidObjectId8(questionId, "Quiz question ID");
+  assertValidObjectId9(questionId, "Quiz question ID");
   const question = await QuizQuestion.findById(questionId);
-  assertFound8(question, "Quiz question not found", 404);
+  assertFound9(question, "Quiz question not found", 404);
   if (question.status === "archived") {
-    throwServiceError10("Archived question cannot be published", 400);
+    throwServiceError11("Archived question cannot be published", 400);
   }
   validateQuestionConfiguration({
     questionType: question.questionType,
@@ -19444,9 +19811,9 @@ var publishQuizQuestion = async (questionId, actorId) => {
     correctBooleanAnswer: question.correctBooleanAnswer
   });
   const courseModule = await CourseModule.findById(question.module);
-  assertFound8(courseModule, "Parent course module not found", 404);
+  assertFound9(courseModule, "Parent course module not found", 404);
   if (courseModule.status !== "published") {
-    throwServiceError10(
+    throwServiceError11(
       "Publish the parent course module before publishing this question",
       400
     );
@@ -19454,32 +19821,57 @@ var publishQuizQuestion = async (questionId, actorId) => {
   question.status = "published";
   question.publishedAt = /* @__PURE__ */ new Date();
   question.set("archivedAt", void 0);
-  question.updatedBy = new Types30.ObjectId(actorId);
+  question.updatedBy = new Types31.ObjectId(actorId);
+  if (question.order >= 1e6) {
+    const lastActive = await QuizQuestion.findOne({
+      module: question.module,
+      _id: { $ne: question._id },
+      status: { $ne: "archived" }
+    }).sort({ order: -1 }).select("order").lean();
+    question.order = (lastActive?.order ?? 0) + 1;
+  }
   await question.save();
   return question;
 };
 var moveQuizQuestionToDraft = async (questionId, actorId) => {
-  assertValidObjectId8(questionId, "Quiz question ID");
+  assertValidObjectId9(questionId, "Quiz question ID");
   const question = await QuizQuestion.findById(questionId);
-  assertFound8(question, "Quiz question not found", 404);
+  assertFound9(question, "Quiz question not found", 404);
   if (question.status === "archived") {
-    throwServiceError10("Archived question cannot be moved to draft", 400);
+    throwServiceError11("Archived question cannot be moved to draft", 400);
   }
   question.status = "draft";
   question.set("publishedAt", void 0);
-  question.updatedBy = new Types30.ObjectId(actorId);
+  question.updatedBy = new Types31.ObjectId(actorId);
   await question.save();
   return question;
 };
 var archiveQuizQuestion = async (questionId, actorId) => {
-  assertValidObjectId8(questionId, "Quiz question ID");
+  assertValidObjectId9(questionId, "Quiz question ID");
   const question = await QuizQuestion.findById(questionId);
-  assertFound8(question, "Quiz question not found", 404);
+  assertFound9(question, "Quiz question not found", 404);
   question.status = "archived";
   question.archivedAt = /* @__PURE__ */ new Date();
   question.set("publishedAt", void 0);
-  question.updatedBy = new Types30.ObjectId(actorId);
+  question.updatedBy = new Types31.ObjectId(actorId);
+  question.order = 1e6 + Date.now() % 1e6 + Math.floor(Math.random() * 1e4);
   await question.save();
+  const remainingQuestions = await QuizQuestion.find({
+    module: question.module,
+    _id: { $ne: question._id },
+    status: { $ne: "archived" }
+  }).sort({ order: 1 });
+  for (let i = 0; i < remainingQuestions.length; i++) {
+    const item = remainingQuestions[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await QuizQuestion.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } }
+      );
+    }
+  }
   return question;
 };
 var quizQuestionService = {
@@ -19533,6 +19925,7 @@ var getAllQuizQuestions2 = async (req, res, next) => {
     const moduleId = typeof req.query.moduleId === "string" ? req.query.moduleId : void 0;
     const result = await quizQuestionService.getAllQuizQuestions({
       actorRole: authUser.role,
+      userId: authUser.id,
       ...moduleId !== void 0 ? { moduleId } : {},
       includeArchived: req.query.includeArchived === "true"
     });
@@ -19552,7 +19945,7 @@ var getQuestionsByModule2 = async (req, res, next) => {
     const result = await quizQuestionService.getQuestionsByModule(
       String(req.params.moduleId),
       authUser.role,
-      authUser._id
+      authUser.id
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -19680,7 +20073,7 @@ var createQuizQuestionBodySchema = z13.object({
   ).min(1).max(8).optional(),
   correctBooleanAnswer: z13.boolean().optional(),
   explanation: z13.string().trim().max(5e3).optional(),
-  order: z13.number().int().min(1)
+  order: z13.number().int().min(1).optional()
 }).superRefine(
   (data, context) => {
     if (data.questionType === "true_false") {
@@ -19863,26 +20256,26 @@ import { Router as Router18 } from "express";
 init_course_module_model_schema();
 init_module_action_model_schema();
 import {
-  Types as Types31
+  Types as Types32
 } from "mongoose";
-var throwServiceError11 = (message, statusCode) => {
+var throwServiceError12 = (message, statusCode) => {
   const error = new Error(
     message
   );
   error.statusCode = statusCode;
   throw error;
 };
-var assertFound9 = (value, message, statusCode) => {
+var assertFound10 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
-    throwServiceError11(
+    throwServiceError12(
       message,
       statusCode
     );
   }
 };
-var assertValidObjectId9 = (value, fieldName) => {
-  if (!Types31.ObjectId.isValid(value)) {
-    throwServiceError11(
+var assertValidObjectId10 = (value, fieldName) => {
+  if (!Types32.ObjectId.isValid(value)) {
+    throwServiceError12(
       `${fieldName} is invalid`,
       400
     );
@@ -19891,24 +20284,24 @@ var assertValidObjectId9 = (value, fieldName) => {
 var isAdminOrManager11 = (role) => {
   return role === "admin" || role === "manager";
 };
-var isDuplicateKeyError6 = (error) => {
+var isDuplicateKeyError7 = (error) => {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11e3;
 };
-var ensureCourseModuleExists4 = async (moduleId) => {
-  assertValidObjectId9(
+var ensureCourseModuleExists5 = async (moduleId) => {
+  assertValidObjectId10(
     moduleId,
     "Course module ID"
   );
   const courseModule = await CourseModule.findById(
     moduleId
   );
-  assertFound9(
+  assertFound10(
     courseModule,
     "Course module not found",
     404
   );
   if (courseModule.status === "archived") {
-    throwServiceError11(
+    throwServiceError12(
       "Cannot manage actions under an archived course module",
       400
     );
@@ -19916,27 +20309,37 @@ var ensureCourseModuleExists4 = async (moduleId) => {
   return courseModule;
 };
 var createModuleAction = async (moduleId, payload, actorId) => {
-  await ensureCourseModuleExists4(
+  await ensureCourseModuleExists5(
     moduleId
   );
-  const existingAction = await ModuleAction.findOne({
-    module: moduleId,
-    order: payload.order
-  }).lean();
-  if (existingAction) {
-    throwServiceError11(
-      "Action order already exists in this module",
-      409
+  let actionOrder = payload.order;
+  if (actionOrder === void 0) {
+    await ModuleAction.updateMany(
+      { module: moduleId, status: { $ne: "archived" } },
+      { $inc: { order: 1 } }
     );
+    actionOrder = 1;
+  } else {
+    const existingAction = await ModuleAction.findOne({
+      module: moduleId,
+      order: actionOrder,
+      status: { $ne: "archived" }
+    }).lean();
+    if (existingAction) {
+      throwServiceError12(
+        "Action order already exists in this module",
+        409
+      );
+    }
   }
   const createData = {
-    module: new Types31.ObjectId(moduleId),
+    module: new Types32.ObjectId(moduleId),
     title: payload.title,
-    order: payload.order,
+    order: actionOrder,
     isRequired: payload.isRequired ?? true,
     pointsReward: payload.pointsReward ?? 5,
     status: "draft",
-    createdBy: new Types31.ObjectId(actorId)
+    createdBy: new Types32.ObjectId(actorId)
   };
   if (payload.description !== void 0) {
     createData.description = payload.description;
@@ -19961,8 +20364,8 @@ var createModuleAction = async (moduleId, payload, actorId) => {
       }
     ]);
   } catch (error) {
-    if (isDuplicateKeyError6(error)) {
-      throwServiceError11(
+    if (isDuplicateKeyError7(error)) {
+      throwServiceError12(
         "Action order already exists in this module",
         409
       );
@@ -19977,11 +20380,11 @@ var getAllModuleActions = async ({
 }) => {
   const filter = {};
   if (moduleId) {
-    assertValidObjectId9(
+    assertValidObjectId10(
       moduleId,
       "Course module ID"
     );
-    filter.module = new Types31.ObjectId(moduleId);
+    filter.module = new Types32.ObjectId(moduleId);
   }
   if (!isAdminOrManager11(actorRole)) {
     filter.status = "published";
@@ -20010,7 +20413,7 @@ var getAllModuleActions = async ({
   ).lean();
 };
 var getActionsByModule = async (moduleId, actorRole) => {
-  assertValidObjectId9(
+  assertValidObjectId10(
     moduleId,
     "Course module ID"
   );
@@ -20027,13 +20430,13 @@ var getActionsByModule = async (moduleId, actorRole) => {
     "pillar",
     "name slug title status"
   ).lean();
-  assertFound9(
+  assertFound10(
     courseModule,
     "Course module not found or unavailable",
     404
   );
   const actionFilter = {
-    module: new Types31.ObjectId(moduleId)
+    module: new Types32.ObjectId(moduleId)
   };
   if (!isPrivileged) {
     actionFilter.status = "published";
@@ -20057,7 +20460,7 @@ var getActionsByModule = async (moduleId, actorRole) => {
   };
 };
 var getSingleModuleAction = async (actionId, actorRole) => {
-  assertValidObjectId9(
+  assertValidObjectId10(
     actionId,
     "Module action ID"
   );
@@ -20082,7 +20485,7 @@ var getSingleModuleAction = async (actionId, actorRole) => {
     "updatedBy",
     "fullName email role profileImage"
   ).lean();
-  assertFound9(
+  assertFound10(
     action,
     "Module action not found",
     404
@@ -20090,20 +20493,20 @@ var getSingleModuleAction = async (actionId, actorRole) => {
   return action;
 };
 var updateModuleAction = async (actionId, payload, actorId) => {
-  assertValidObjectId9(
+  assertValidObjectId10(
     actionId,
     "Module action ID"
   );
   const action = await ModuleAction.findById(
     actionId
   );
-  assertFound9(
+  assertFound10(
     action,
     "Module action not found",
     404
   );
   if (action.status === "archived") {
-    throwServiceError11(
+    throwServiceError12(
       "Archived action cannot be updated",
       400
     );
@@ -20117,7 +20520,7 @@ var updateModuleAction = async (actionId, payload, actorId) => {
       order: payload.order
     }).lean();
     if (duplicateAction) {
-      throwServiceError11(
+      throwServiceError12(
         "Action order already exists in this module",
         409
       );
@@ -20143,12 +20546,12 @@ var updateModuleAction = async (actionId, payload, actorId) => {
   if (payload.pointsReward !== void 0) {
     action.pointsReward = payload.pointsReward;
   }
-  action.updatedBy = new Types31.ObjectId(actorId);
+  action.updatedBy = new Types32.ObjectId(actorId);
   try {
     await action.save();
   } catch (error) {
-    if (isDuplicateKeyError6(error)) {
-      throwServiceError11(
+    if (isDuplicateKeyError7(error)) {
+      throwServiceError12(
         "Action order already exists in this module",
         409
       );
@@ -20172,20 +20575,20 @@ var updateModuleAction = async (actionId, payload, actorId) => {
   ]);
 };
 var publishModuleAction = async (actionId, actorId) => {
-  assertValidObjectId9(
+  assertValidObjectId10(
     actionId,
     "Module action ID"
   );
   const action = await ModuleAction.findById(
     actionId
   );
-  assertFound9(
+  assertFound10(
     action,
     "Module action not found",
     404
   );
   if (action.status === "archived") {
-    throwServiceError11(
+    throwServiceError12(
       "Archived action cannot be published",
       400
     );
@@ -20193,13 +20596,13 @@ var publishModuleAction = async (actionId, actorId) => {
   const courseModule = await CourseModule.findById(
     action.module
   ).lean();
-  assertFound9(
+  assertFound10(
     courseModule,
     "Parent course module not found",
     404
   );
   if (courseModule.status !== "published") {
-    throwServiceError11(
+    throwServiceError12(
       "Publish the parent course module before publishing this action",
       400
     );
@@ -20210,25 +20613,33 @@ var publishModuleAction = async (actionId, actorId) => {
     "archivedAt",
     void 0
   );
-  action.updatedBy = new Types31.ObjectId(actorId);
+  action.updatedBy = new Types32.ObjectId(actorId);
+  if (action.order >= 1e6) {
+    const lastActive = await ModuleAction.findOne({
+      module: action.module,
+      _id: { $ne: action._id },
+      status: { $ne: "archived" }
+    }).sort({ order: -1 }).select("order").lean();
+    action.order = (lastActive?.order ?? 0) + 1;
+  }
   await action.save();
   return action;
 };
 var moveModuleActionToDraft = async (actionId, actorId) => {
-  assertValidObjectId9(
+  assertValidObjectId10(
     actionId,
     "Module action ID"
   );
   const action = await ModuleAction.findById(
     actionId
   );
-  assertFound9(
+  assertFound10(
     action,
     "Module action not found",
     404
   );
   if (action.status === "archived") {
-    throwServiceError11(
+    throwServiceError12(
       "Archived action cannot be moved to draft",
       400
     );
@@ -20238,19 +20649,19 @@ var moveModuleActionToDraft = async (actionId, actorId) => {
     "publishedAt",
     void 0
   );
-  action.updatedBy = new Types31.ObjectId(actorId);
+  action.updatedBy = new Types32.ObjectId(actorId);
   await action.save();
   return action;
 };
 var archiveModuleAction = async (actionId, actorId) => {
-  assertValidObjectId9(
+  assertValidObjectId10(
     actionId,
     "Module action ID"
   );
   const action = await ModuleAction.findById(
     actionId
   );
-  assertFound9(
+  assertFound10(
     action,
     "Module action not found",
     404
@@ -20261,8 +20672,25 @@ var archiveModuleAction = async (actionId, actorId) => {
     "publishedAt",
     void 0
   );
-  action.updatedBy = new Types31.ObjectId(actorId);
+  action.updatedBy = new Types32.ObjectId(actorId);
+  action.order = 1e6 + Date.now() % 1e6 + Math.floor(Math.random() * 1e4);
   await action.save();
+  const remainingActions = await ModuleAction.find({
+    module: action.module,
+    _id: { $ne: action._id },
+    status: { $ne: "archived" }
+  }).sort({ order: 1 });
+  for (let i = 0; i < remainingActions.length; i++) {
+    const item = remainingActions[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await ModuleAction.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } }
+      );
+    }
+  }
   return action;
 };
 var moduleActionService = {
@@ -20456,7 +20884,7 @@ var mongoObjectIdSchema6 = z14.string().regex(
 var createModuleActionBodySchema = z14.object({
   title: z14.string().trim().min(2).max(300),
   description: z14.string().trim().max(5e3).optional(),
-  order: z14.number().int().min(1),
+  order: z14.number().int().min(1).optional(),
   isRequired: z14.boolean().default(true),
   pointsReward: z14.number().int().nonnegative().max(1e3).default(5)
 });
@@ -20833,8 +21261,8 @@ var message_route_default = router20;
 import { Router as Router21 } from "express";
 
 // src/modules/manageLogo/logo.model.schema.ts
-import { model as model34, Schema as Schema34 } from "mongoose";
-var logoSchema = new Schema34(
+import { model as model35, Schema as Schema35 } from "mongoose";
+var logoSchema = new Schema35(
   {
     logo: {
       type: String,
@@ -20843,7 +21271,7 @@ var logoSchema = new Schema34(
     }
   }
 );
-var logo = model34("logo", logoSchema);
+var logo = model35("logo", logoSchema);
 
 // src/modules/manageLogo/logo.service.ts
 var uploadLogoIntoDB = async (userId, file) => {
@@ -20966,25 +21394,25 @@ var LogoRoutes = router21;
 import { Router as Router22 } from "express";
 
 // src/modules/academyProfiles/academy.profile.service.ts
-import { Types as Types32 } from "mongoose";
+import { Types as Types33 } from "mongoose";
 
 // src/modules/academyProfiles/academy.profile.model.schema.ts
-import { Schema as Schema35, model as model35 } from "mongoose";
-var AcademyProfileSchema = new Schema35(
+import { Schema as Schema36, model as model36 } from "mongoose";
+var AcademyProfileSchema = new Schema36(
   {
     user: {
-      type: Schema35.Types.ObjectId,
+      type: Schema36.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
       index: true
     },
     mentor: {
-      type: Schema35.Types.ObjectId,
+      type: Schema36.Types.ObjectId,
       ref: "User"
     },
     currentPillar: {
-      type: Schema35.Types.ObjectId,
+      type: Schema36.Types.ObjectId,
       ref: "ChallengePillar"
     },
     academyName: {
@@ -21041,20 +21469,20 @@ var AcademyProfileSchema = new Schema35(
     timestamps: true
   }
 );
-var AcademyProfile = model35(
+var AcademyProfile = model36(
   "AcademyProfile",
   AcademyProfileSchema
 );
 
 // src/modules/academyProfiles/academy.profile.service.ts
-var throwServiceError12 = (message, statusCode) => {
+var throwServiceError13 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
   throw error;
 };
-function assertFound10(value, message, statusCode) {
+function assertFound11(value, message, statusCode) {
   if (value === null || value === void 0) {
-    throwServiceError12(message, statusCode);
+    throwServiceError13(message, statusCode);
   }
 }
 var createProfile = async (userId, payload) => {
@@ -21062,27 +21490,27 @@ var createProfile = async (userId, payload) => {
     user: userId
   });
   if (existing) {
-    throwServiceError12("Academy profile already exists", 409);
+    throwServiceError13("Academy profile already exists", 409);
   }
   const profile = await AcademyProfile.create({
-    user: new Types32.ObjectId(userId),
+    user: new Types33.ObjectId(userId),
     ...payload
   });
   return profile;
 };
 var getMyProfile2 = async (userId) => {
   const filter = {
-    user: new Types32.ObjectId(userId)
+    user: new Types33.ObjectId(userId)
   };
   const profile = await AcademyProfile.findOne(filter).populate("currentPillar", "name slug title").populate("mentor", "fullName email profileImage").lean();
-  assertFound10(profile, "Academy profile not found", 404);
+  assertFound11(profile, "Academy profile not found", 404);
   return profile;
 };
 var updateProfile = async (userId, payload) => {
   const profile = await AcademyProfile.findOne({
-    user: new Types32.ObjectId(userId)
+    user: new Types33.ObjectId(userId)
   });
-  assertFound10(profile, "Academy profile not found", 404);
+  assertFound11(profile, "Academy profile not found", 404);
   if (payload.academyName !== void 0)
     profile.academyName = payload.academyName;
   if (payload.bio !== void 0) profile.bio = payload.bio;
@@ -21204,14 +21632,14 @@ var throwControllerError5 = (message, status) => {
   error.status = status;
   throw error;
 };
-var assertFound11 = (value, message, statusCode) => {
+var assertFound12 = (value, message, statusCode) => {
   if (value === null || value === void 0) {
     throwControllerError5(message, statusCode);
   }
 };
 var getAuthUser10 = (req) => {
   const user = req.user;
-  assertFound11(user, "Authentication required", 401);
+  assertFound12(user, "Authentication required", 401);
   return {
     id: user.id,
     role: user.role
@@ -22598,120 +23026,9 @@ import { Router as Router26 } from "express";
 // src/modules/quizAttempts/quiz.attempt.service.ts
 init_course_module_model_schema();
 init_module_progress_service();
-import { Types as Types35 } from "mongoose";
-
-// src/modules/quizAttempts/quiz.attempt.model.schema.ts
-import { model as model36, Schema as Schema36 } from "mongoose";
-var quizAttemptAnswerSchema = new Schema36(
-  {
-    question: {
-      type: Schema36.Types.ObjectId,
-      ref: "QuizQuestion",
-      required: true
-    },
-    selectedOptionIndexes: {
-      type: [
-        {
-          type: Number,
-          min: 0
-        }
-      ],
-      default: void 0
-    },
-    booleanAnswer: {
-      type: Boolean
-    },
-    isCorrect: {
-      type: Boolean,
-      required: true
-    }
-  },
-  {
-    _id: false
-  }
-);
-var quizAttemptSchema = new Schema36(
-  {
-    user: {
-      type: Schema36.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    module: {
-      type: Schema36.Types.ObjectId,
-      ref: "CourseModule",
-      required: true,
-      index: true
-    },
-    attemptNumber: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 2
-    },
-    answers: {
-      type: [quizAttemptAnswerSchema],
-      required: true
-    },
-    totalQuestions: {
-      type: Number,
-      required: true,
-      min: 1
-    },
-    correctAnswers: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    score: {
-      type: Number,
-      required: true,
-      min: 0,
-      max: 100
-    },
-    passed: {
-      type: Boolean,
-      required: true,
-      index: true
-    },
-    submittedAt: {
-      type: Date,
-      default: Date.now,
-      required: true
-    }
-  },
-  {
-    timestamps: true,
-    collection: "quizattempts"
-  }
-);
-quizAttemptSchema.index(
-  {
-    user: 1,
-    module: 1,
-    attemptNumber: 1
-  },
-  {
-    unique: true
-  }
-);
-quizAttemptSchema.index({
-  user: 1,
-  module: 1,
-  submittedAt: -1
-});
-quizAttemptSchema.index({
-  module: 1,
-  passed: 1
-});
-var QuizAttempt = model36(
-  "QuizAttempt",
-  quizAttemptSchema
-);
-
-// src/modules/quizAttempts/quiz.attempt.service.ts
+init_quiz_attempt_model_schema();
 init_quiz_question_model_schema();
+import { Types as Types35 } from "mongoose";
 var MAXIMUM_ATTEMPTS = 2;
 var PASS_SCORE = 70;
 var throwServiceError14 = (message, statusCode) => {
@@ -22788,12 +23105,6 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
   }).sort({
     attemptNumber: 1
   }).select("attemptNumber score passed submittedAt").lean();
-  if (previousAttempts.some((attempt2) => attempt2.passed)) {
-    throwServiceError14("This quiz has already been passed", 409);
-  }
-  if (previousAttempts.length >= MAXIMUM_ATTEMPTS) {
-    throwServiceError14("Maximum two quiz attempts have already been used", 400);
-  }
   const questions = await QuizQuestion.find({
     module: new Types35.ObjectId(moduleId),
     status: "published"
@@ -22807,11 +23118,39 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
       "options",
       "correctOptionIndexes",
       "correctBooleanAnswer",
-      "order"
+      "order",
+      "updatedAt",
+      "createdAt"
     ].join(" ")
   ).lean();
   if (questions.length === 0) {
     throwServiceError14("No published quiz questions are available", 400);
+  }
+  const latestQuestionTime = questions.reduce((latest, q) => {
+    const t = q.updatedAt ?? q.createdAt;
+    return t && (!latest || t > latest) ? t : latest;
+  }, void 0);
+  const currentVersionAttempts = latestQuestionTime ? previousAttempts.filter(
+    (a) => a.submittedAt && a.submittedAt >= latestQuestionTime
+  ) : previousAttempts;
+  if (currentVersionAttempts.some((attempt2) => attempt2.passed)) {
+    const bestScore = currentVersionAttempts.reduce(
+      (max, a) => Math.max(max, a.score ?? 0),
+      0
+    );
+    const lastAttempt = currentVersionAttempts[currentVersionAttempts.length - 1];
+    await moduleProgressService.syncQuizSummary({
+      userId,
+      moduleId,
+      attemptsUsed: currentVersionAttempts.length,
+      bestScore,
+      passed: true,
+      lastAttemptAt: lastAttempt?.submittedAt
+    });
+    throwServiceError14("This quiz has already been passed", 409);
+  }
+  if (currentVersionAttempts.length >= MAXIMUM_ATTEMPTS) {
+    throwServiceError14("Maximum two quiz attempts have already been used", 400);
   }
   const answerMap = new Map(
     payload.answers.map((answer) => [answer.questionId, answer])
@@ -22819,8 +23158,28 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
   if (answerMap.size !== payload.answers.length) {
     throwServiceError14("A question cannot be answered more than once", 400);
   }
-  if (payload.answers.length !== questions.length) {
-    throwServiceError14("Every published quiz question must be answered", 400);
+  const previouslyPassedAttempts = previousAttempts.filter((a) => a.passed);
+  const previouslyCorrectAnswersMap = /* @__PURE__ */ new Map();
+  for (const a of previouslyPassedAttempts) {
+    for (const ans of a.answers ?? []) {
+      if (ans.isCorrect) {
+        const qId = ans.question?._id ? ans.question._id.toString() : ans.question?.toString();
+        if (qId) {
+          previouslyCorrectAnswersMap.set(qId, ans);
+        }
+      }
+    }
+  }
+  for (const question of questions) {
+    const qId = question._id.toString();
+    const hasSubmitted = answerMap.has(qId);
+    const wasPassed = previouslyCorrectAnswersMap.has(qId);
+    if (!hasSubmitted && !wasPassed) {
+      throwServiceError14(
+        `Question ${question.order} requires an answer`,
+        400
+      );
+    }
   }
   const validQuestionIds = new Set(
     questions.map((question) => question._id.toString())
@@ -22834,85 +23193,99 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     }
   }
   const calculatedAnswers = [];
+  const submittedQuestionIds = /* @__PURE__ */ new Set();
   let correctAnswers = 0;
   for (const question of questions) {
     const questionId = question._id.toString();
     const submittedAnswer = answerMap.get(questionId);
-    assertFound14(submittedAnswer, "A required quiz answer is missing", 400);
-    let isCorrect = false;
-    const answerData = {
-      question: question._id
-    };
-    if (question.questionType === "true_false") {
-      if (typeof submittedAnswer.booleanAnswer !== "boolean") {
-        throwServiceError14(
-          `Question ${question.order} requires a boolean answer`,
-          400
-        );
-      }
-      if (submittedAnswer.selectedOptionIndexes !== void 0) {
-        throwServiceError14(
-          `Question ${question.order} does not accept option indexes`,
-          400
-        );
-      }
-      if (typeof question.correctBooleanAnswer !== "boolean") {
-        throwServiceError14(
-          `Question ${question.order} has an invalid answer configuration`,
-          500
-        );
-      }
-      isCorrect = submittedAnswer.booleanAnswer === question.correctBooleanAnswer;
-      answerData.booleanAnswer = submittedAnswer.booleanAnswer;
-    } else {
-      const selectedIndexes = submittedAnswer.selectedOptionIndexes;
-      if (!selectedIndexes || selectedIndexes.length === 0) {
-        throwServiceError14(
+    if (submittedAnswer) {
+      submittedQuestionIds.add(questionId);
+      let isCorrect = false;
+      const answerData = {
+        question: question._id
+      };
+      if (question.questionType === "true_false") {
+        if (typeof submittedAnswer.booleanAnswer !== "boolean") {
+          throwServiceError14(
+            `Question ${question.order} requires a boolean answer`,
+            400
+          );
+        }
+        if (submittedAnswer.selectedOptionIndexes !== void 0) {
+          throwServiceError14(
+            `Question ${question.order} does not accept option indexes`,
+            400
+          );
+        }
+        if (typeof question.correctBooleanAnswer !== "boolean") {
+          throwServiceError14(
+            `Question ${question.order} has an invalid answer configuration`,
+            500
+          );
+        }
+        isCorrect = submittedAnswer.booleanAnswer === question.correctBooleanAnswer;
+        answerData.booleanAnswer = submittedAnswer.booleanAnswer;
+      } else {
+        const selectedIndexes = submittedAnswer.selectedOptionIndexes;
+        if (!selectedIndexes || selectedIndexes.length === 0) {
+          throwServiceError14(
+            `Question ${question.order} requires selected option indexes`,
+            400
+          );
+        }
+        if (submittedAnswer.booleanAnswer !== void 0) {
+          throwServiceError14(
+            `Question ${question.order} does not accept a boolean answer`,
+            400
+          );
+        }
+        const options2 = question.options ? [...question.options] : [];
+        assertFound14(
+          selectedIndexes,
           `Question ${question.order} requires selected option indexes`,
           400
         );
-      }
-      if (submittedAnswer.booleanAnswer !== void 0) {
-        throwServiceError14(
-          `Question ${question.order} does not accept a boolean answer`,
-          400
+        validateSelectedIndexes(selectedIndexes, options2.length);
+        if (question.questionType === "single_choice" && selectedIndexes?.length !== 1) {
+          throwServiceError14(
+            `Question ${question.order} requires exactly one selected option`,
+            400
+          );
+        }
+        const correctIndexes = question.correctOptionIndexes ? [...question.correctOptionIndexes] : [];
+        if (correctIndexes.length === 0) {
+          throwServiceError14(
+            `Question ${question.order} has no configured correct answer`,
+            500
+          );
+        }
+        isCorrect = arraysAreEqual(
+          normalizeIndexes(selectedIndexes),
+          normalizeIndexes(correctIndexes)
         );
+        answerData.selectedOptionIndexes = selectedIndexes;
       }
-      const options2 = question.options ? [...question.options] : [];
-      assertFound14(
-        selectedIndexes,
-        `Question ${question.order} requires selected option indexes`,
-        400
-      );
-      validateSelectedIndexes(selectedIndexes, options2.length);
-      if (question.questionType === "single_choice" && selectedIndexes?.length !== 1) {
-        throwServiceError14(
-          `Question ${question.order} requires exactly one selected option`,
-          400
-        );
+      answerData.isCorrect = isCorrect;
+      calculatedAnswers.push(answerData);
+      if (isCorrect) {
+        correctAnswers += 1;
       }
-      const correctIndexes = question.correctOptionIndexes ? [...question.correctOptionIndexes] : [];
-      if (correctIndexes.length === 0) {
-        throwServiceError14(
-          `Question ${question.order} has no configured correct answer`,
-          500
-        );
-      }
-      isCorrect = arraysAreEqual(
-        normalizeIndexes(selectedIndexes),
-        normalizeIndexes(correctIndexes)
-      );
-      answerData.selectedOptionIndexes = selectedIndexes;
-    }
-    answerData.isCorrect = isCorrect;
-    calculatedAnswers.push(answerData);
-    if (isCorrect) {
+    } else {
+      const prevAns = previouslyCorrectAnswersMap.get(questionId);
+      assertFound14(prevAns, "A required quiz answer is missing", 400);
+      calculatedAnswers.push({
+        question: question._id,
+        selectedOptionIndexes: prevAns.selectedOptionIndexes,
+        booleanAnswer: prevAns.booleanAnswer,
+        isCorrect: true
+      });
       correctAnswers += 1;
     }
   }
   const totalQuestions = questions.length;
   const score = roundToTwoDecimals2(correctAnswers / totalQuestions * 100);
-  const passed = score >= PASS_SCORE;
+  const newQuestionsAllCorrect = submittedQuestionIds.size === 0 || calculatedAnswers.filter((a) => submittedQuestionIds.has(a.question.toString())).every((a) => a.isCorrect);
+  const passed = score >= PASS_SCORE && newQuestionsAllCorrect;
   const previousHighestAttempt = previousAttempts.reduce(
     (highest, attempt2) => Math.max(highest, attempt2.attemptNumber),
     0
@@ -22941,34 +23314,7 @@ var submitQuizAttempt = async (userId, moduleId, payload) => {
     }
     throw error;
   }
-  const allAttempts = await QuizAttempt.find({
-    user: new Types35.ObjectId(userId),
-    module: new Types35.ObjectId(moduleId)
-  }).select("score passed submittedAt").lean();
-  const bestScore = allAttempts.reduce(
-    (highestScore, item) => Math.max(highestScore, item.score),
-    0
-  );
-  const hasPassed = allAttempts.some((item) => item.passed);
-  const latestAttemptAt = allAttempts.reduce(
-    (latestDate, item) => {
-      if (!latestDate) {
-        return item.submittedAt;
-      }
-      return item.submittedAt > latestDate ? item.submittedAt : latestDate;
-    },
-    void 0
-  );
-  await moduleProgressService.syncQuizSummary({
-    userId,
-    moduleId,
-    attemptsUsed: allAttempts.length,
-    bestScore,
-    passed: hasPassed,
-    ...latestAttemptAt !== void 0 ? {
-      lastAttemptAt: latestAttemptAt
-    } : {}
-  });
+  await moduleProgressService.refreshModuleProgress(userId, moduleId);
   return attempt.populate([
     {
       path: "module",
@@ -23327,7 +23673,7 @@ init_assertFound();
 
 // src/modules/quizCertificates/quiz.certificate.service.ts
 init_course_module_model_schema();
-init_module_progress_model_schema();
+init_module_progress_service();
 init_module_video_model_schema();
 init_quiz_question_model_schema();
 import { Types as Types36 } from "mongoose";
@@ -23510,9 +23856,9 @@ var getPillarContentVersion = async (pillarId) => {
     QuizQuestion.findOne({ module: { $in: ids }, status: "published" }).sort({ updatedAt: -1 }).select("updatedAt").lean()
   ]);
   const timestamps = [
-    ...moduleIds.map((module) => module.updatedAt),
-    latestVideo?.updatedAt,
-    latestQuestion?.updatedAt
+    ...moduleIds.map((module) => module.updatedAt ?? module.createdAt),
+    latestVideo?.updatedAt ?? latestVideo?.createdAt,
+    latestQuestion?.updatedAt ?? latestQuestion?.createdAt
   ].filter((value) => value instanceof Date);
   return timestamps.reduce(
     (latest, current) => current > latest ? current : latest,
@@ -23543,18 +23889,19 @@ var issueCertificateIfEligible = async (userId, pillarId) => {
   if (pillarModules.length === 0) {
     throwServiceError15("No published modules found for this pillar", 404);
   }
-  const moduleIds = pillarModules.map((m) => m._id);
-  const progressDocs = await ModuleProgress.find({
-    user: new Types36.ObjectId(userId),
-    module: { $in: moduleIds }
-  }).select("module quizSummary videoSummary").lean();
+  const progressDocs = await Promise.all(
+    pillarModules.map(
+      (mod) => moduleProgressService.refreshModuleProgress(userId, String(mod._id))
+    )
+  );
   const progressByModuleId = {};
   for (const p of progressDocs) {
-    progressByModuleId[String(p.module)] = p;
+    const mId = String(p.module?._id ?? p.module);
+    progressByModuleId[mId] = p;
   }
   for (const mod of pillarModules) {
     const progress = progressByModuleId[String(mod._id)];
-    if (!progress || !progress.quizSummary?.passed || !progress.videoSummary?.completed || !progress.quizSummary.lastAttemptAt || progress.quizSummary.lastAttemptAt < contentVersion) {
+    if (!progress || !progress.quizSummary?.passed || !progress.videoSummary?.completed) {
       throwServiceError15(
         `Complete the latest content and quiz for module "${mod.title}" before claiming the certificate.`,
         403
@@ -34120,7 +34467,7 @@ var mongoObjectIdSchema30 = z40.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Mon
 var createOnboardingTaskBodySchema = z40.object({
   title: z40.string().trim().min(2).max(300),
   description: z40.string().trim().max(2e3).optional(),
-  order: z40.number().int().min(1),
+  order: z40.number().int().min(1).optional(),
   trigger: z40.enum(ONBOARDING_TASK_TRIGGERS).default("manual"),
   actionLabel: z40.string().trim().max(60).optional(),
   actionUrl: z40.string().trim().max(500).optional(),
@@ -34759,6 +35106,36 @@ var app_default = app;
 // src/server.ts
 import http from "http";
 
+// src/modules/common/dropLegacyOrderIndexes.ts
+init_onboarding_task_model_schema();
+init_module_video_model_schema();
+init_module_resource_model_schema();
+init_quiz_question_model_schema();
+init_module_action_model_schema();
+var dropLegacyOrderIndexes = async () => {
+  const models = [
+    { name: "OnboardingTask", model: OnboardingTask },
+    { name: "ModuleVideo", model: ModuleVideo },
+    { name: "ModuleResource", model: ModuleResource },
+    { name: "QuizQuestion", model: QuizQuestion },
+    { name: "ModuleAction", model: ModuleAction }
+  ];
+  for (const { name, model: model47 } of models) {
+    try {
+      const existingIndexes = await model47.collection.listIndexes().toArray();
+      for (const idx of existingIndexes) {
+        if (idx.unique && idx.key && "order" in idx.key) {
+          await model47.collection.dropIndex(idx.name);
+          console.info(
+            `[IndexMigration] Dropped legacy unique index "${idx.name}" on ${model47.collection.name} (${name})`
+          );
+        }
+      }
+    } catch {
+    }
+  }
+};
+
 // src/modules/sessionSchedules/session.reminder.job.ts
 import cron from "node-cron";
 var REMINDER_WINDOW_MINUTES = 30;
@@ -34815,6 +35192,7 @@ var main = async () => {
     const systemUser = await mongoose6.connection.collection("users").findOne({}, { projection: { _id: 1 } });
     if (systemUser?._id) await ensurePrivateRooms(String(systemUser._id));
     await dropLegacyQuizCertificateIndexes();
+    await dropLegacyOrderIndexes();
     const httpServer = http.createServer(app_default);
     initSocket(httpServer);
     startSessionReminderCron();

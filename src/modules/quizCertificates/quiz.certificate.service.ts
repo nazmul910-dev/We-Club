@@ -1,6 +1,7 @@
 import { QueryFilter, Types } from "mongoose";
 
 import { CourseModule } from "../courseModules/course.module.model.schema";
+import { moduleProgressService } from "../moduleProgress/module.progress.service";
 import { ModuleProgress } from "../moduleProgress/module.progress.model.schema";
 import { ModuleVideo } from "../moduleVideos/module.video.model.schema";
 import { QuizQuestion } from "../quizeQuestions/quiz.question.model.schema";
@@ -115,9 +116,9 @@ const getPillarContentVersion = async (pillarId: string): Promise<Date> => {
   ]);
 
   const timestamps = [
-    ...moduleIds.map((module) => module.updatedAt),
-    latestVideo?.updatedAt,
-    latestQuestion?.updatedAt,
+    ...moduleIds.map((module) => module.updatedAt ?? (module as any).createdAt),
+    latestVideo?.updatedAt ?? (latestVideo as any)?.createdAt,
+    latestQuestion?.updatedAt ?? (latestQuestion as any)?.createdAt,
   ].filter((value): value is Date => value instanceof Date);
 
   return timestamps.reduce(
@@ -170,20 +171,18 @@ const issueCertificateIfEligible = async (userId: string, pillarId: string) => {
     throwServiceError("No published modules found for this pillar", 404);
   }
 
-  const moduleIds = pillarModules.map((m) => m._id);
-
-  // 3. Fetch user progress for all those modules
-  const progressDocs = await ModuleProgress.find({
-    user: new Types.ObjectId(userId),
-    module: { $in: moduleIds },
-  })
-    .select("module quizSummary videoSummary")
-    .lean();
+  // 3. Refresh user progress for all those modules to guarantee version accuracy
+  const progressDocs = await Promise.all(
+    pillarModules.map((mod) =>
+      moduleProgressService.refreshModuleProgress(userId, String(mod._id)),
+    ),
+  );
 
   // 4. Check that EVERY module has been passed
   const progressByModuleId: Record<string, (typeof progressDocs)[number]> = {};
   for (const p of progressDocs) {
-    progressByModuleId[String(p.module)] = p;
+    const mId = String((p as any).module?._id ?? (p as any).module);
+    progressByModuleId[mId] = p;
   }
 
   for (const mod of pillarModules) {
@@ -191,9 +190,7 @@ const issueCertificateIfEligible = async (userId: string, pillarId: string) => {
     if (
       !progress ||
       !progress.quizSummary?.passed ||
-      !progress.videoSummary?.completed ||
-      !progress.quizSummary.lastAttemptAt ||
-      progress.quizSummary.lastAttemptAt < contentVersion
+      !progress.videoSummary?.completed
     ) {
       throwServiceError(
         `Complete the latest content and quiz for module "${mod.title}" before claiming the certificate.`,

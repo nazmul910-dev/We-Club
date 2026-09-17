@@ -250,21 +250,59 @@ const createQuizQuestion = async (
 const getAllQuizQuestions = async ({
   actorRole,
   moduleId,
+  userId,
   includeArchived = false,
 }: {
   actorRole?: string | undefined;
   moduleId?: string | undefined;
+  userId?: string | undefined;
   includeArchived?: boolean | undefined;
 }) => {
-  const filter: QueryFilter<IQuizQuestion> = {};
+  const isPrivileged = isAdminOrManager(actorRole);
 
   if (moduleId) {
     assertValidObjectId(moduleId, "Course module ID");
 
-    filter.module = new Types.ObjectId(moduleId);
+    // If user already passed the quiz for this module covering the current questions, do not return questions to them
+    if (!isPrivileged && userId) {
+      const { QuizAttempt } = await import(
+        "../quizAttempts/quiz.attempt.model.schema"
+      );
+      const latestQuestion = await QuizQuestion.findOne({
+        module: new Types.ObjectId(moduleId),
+        status: "published",
+      })
+        .sort({ updatedAt: -1 })
+        .select("updatedAt createdAt")
+        .lean();
+
+      const latestQuestionTime =
+        latestQuestion?.updatedAt ?? latestQuestion?.createdAt;
+
+      const lastPassedAttempt = await QuizAttempt.findOne({
+        user: new Types.ObjectId(userId),
+        module: new Types.ObjectId(moduleId),
+        passed: true,
+      })
+        .sort({ submittedAt: -1 })
+        .select("submittedAt")
+        .lean();
+
+      if (
+        lastPassedAttempt &&
+        latestQuestionTime &&
+        lastPassedAttempt.submittedAt >= latestQuestionTime
+      ) {
+        return [];
+      }
+    }
   }
 
-  const isPrivileged = isAdminOrManager(actorRole);
+  const filter: QueryFilter<IQuizQuestion> = {};
+
+  if (moduleId) {
+    filter.module = new Types.ObjectId(moduleId);
+  }
 
   if (!isPrivileged) {
     filter.status = "published";
@@ -339,6 +377,42 @@ const getQuestionsByModule = async (
     );
     if (!access.hasAccess) {
       throwServiceError("Purchase this pillar to access its quiz", 403);
+    }
+  }
+
+  if (!isPrivileged && userId) {
+    const { QuizAttempt } = await import(
+      "../quizAttempts/quiz.attempt.model.schema"
+    );
+    const latestQuestion = await QuizQuestion.findOne({
+      module: new Types.ObjectId(moduleId),
+      status: "published",
+    })
+      .sort({ updatedAt: -1 })
+      .select("updatedAt createdAt")
+      .lean();
+
+    const latestQuestionTime =
+      latestQuestion?.updatedAt ?? latestQuestion?.createdAt;
+
+    const lastPassedAttempt = await QuizAttempt.findOne({
+      user: new Types.ObjectId(userId),
+      module: new Types.ObjectId(moduleId),
+      passed: true,
+    })
+      .sort({ submittedAt: -1 })
+      .select("submittedAt")
+      .lean();
+
+    if (
+      lastPassedAttempt &&
+      latestQuestionTime &&
+      lastPassedAttempt.submittedAt >= latestQuestionTime
+    ) {
+      return {
+        module: courseModule,
+        questions: [],
+      };
     }
   }
 

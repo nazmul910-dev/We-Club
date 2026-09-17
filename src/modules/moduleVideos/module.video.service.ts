@@ -2,6 +2,9 @@ import { QueryFilter, Types } from "mongoose";
 
 import { CourseModule } from "../courseModules/course.module.model.schema";
 import { ModuleProgress } from "../moduleProgress/module.progress.model.schema";
+import { VideoProgress } from "../videoProgress/video.progress.model.schema";
+import { deleteCloudinaryAsset } from "../../utility/cloudinaryMedia";
+import { moduleProgressService } from "../moduleProgress/module.progress.service";
 import {
   ICreateModuleVideo,
   IModuleVideo,
@@ -635,6 +638,72 @@ const archiveModuleVideo = async (videoId: string, actorId: string) => {
   return video;
 };
 
+const deleteModuleVideo = async (videoId: string, _actorId?: string) => {
+  const video = await ModuleVideo.findById(videoId);
+
+  assertFound(video, "Module video not found", 404);
+
+  const moduleId = video.module;
+
+  // 1. Delete from Cloudinary if public ID exists
+  if (video.cloudinaryPublicId) {
+    try {
+      await deleteCloudinaryAsset(video.cloudinaryPublicId, "video");
+    } catch (cloudErr) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to delete video asset from Cloudinary:", cloudErr);
+    }
+  }
+
+  // 2. Remove all related VideoProgress documents
+  await VideoProgress.deleteMany({ video: video._id });
+
+  // 3. Remove the ModuleVideo document
+  await ModuleVideo.findByIdAndDelete(videoId);
+
+  // 4. Re-sequence remaining active videos in this module so orders are 1..N
+  const remainingVideos = await ModuleVideo.find({
+    module: moduleId,
+    status: { $ne: "archived" },
+  }).sort({ order: 1 });
+
+  for (let i = 0; i < remainingVideos.length; i++) {
+    const item = remainingVideos[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await ModuleVideo.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } },
+      );
+    }
+  }
+
+  // 5. Update parent module's estimated duration
+  await syncModuleDuration(moduleId);
+
+  // 6. Recalculate progress for users who had progress in this module
+  try {
+    const progressRecords = await ModuleProgress.find({
+      module: moduleId,
+    }).select("user");
+
+    await Promise.all(
+      progressRecords.map((rec) =>
+        moduleProgressService.refreshModuleProgress(
+          rec.user.toString(),
+          moduleId.toString(),
+        ),
+      ),
+    );
+  } catch (progErr) {
+    // eslint-disable-next-line no-console
+    console.error("Failed to refresh module progress after video deletion:", progErr);
+  }
+
+  return { message: "Module video deleted successfully", videoId };
+};
+
 export const moduleVideoService = {
   createModuleVideo,
   getAllModuleVideos,
@@ -645,4 +714,5 @@ export const moduleVideoService = {
   publishModuleVideo,
   moveModuleVideoToDraft,
   archiveModuleVideo,
+  deleteModuleVideo,
 };

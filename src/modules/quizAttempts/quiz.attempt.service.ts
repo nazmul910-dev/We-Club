@@ -140,14 +140,6 @@ const submitQuizAttempt = async (
     .select("attemptNumber score passed submittedAt")
     .lean();
 
-  if (previousAttempts.some((attempt) => attempt.passed)) {
-    throwServiceError("This quiz has already been passed", 409);
-  }
-
-  if (previousAttempts.length >= MAXIMUM_ATTEMPTS) {
-    throwServiceError("Maximum two quiz attempts have already been used", 400);
-  }
-
   const questions = await QuizQuestion.find({
     module: new Types.ObjectId(moduleId),
 
@@ -165,12 +157,48 @@ const submitQuizAttempt = async (
         "correctOptionIndexes",
         "correctBooleanAnswer",
         "order",
+        "updatedAt",
+        "createdAt",
       ].join(" "),
     )
     .lean();
 
   if (questions.length === 0) {
     throwServiceError("No published quiz questions are available", 400);
+  }
+
+  const latestQuestionTime = questions.reduce<Date | undefined>((latest, q) => {
+    const t = (q as any).updatedAt ?? (q as any).createdAt;
+    return t && (!latest || t > latest) ? t : latest;
+  }, undefined);
+
+  // Filter previous attempts that were submitted at or after the latest question update
+  const currentVersionAttempts = latestQuestionTime
+    ? previousAttempts.filter(
+        (a) => a.submittedAt && a.submittedAt >= latestQuestionTime,
+      )
+    : previousAttempts;
+
+  if (currentVersionAttempts.some((attempt) => attempt.passed)) {
+    const bestScore = currentVersionAttempts.reduce(
+      (max, a) => Math.max(max, a.score ?? 0),
+      0,
+    );
+    const lastAttempt =
+      currentVersionAttempts[currentVersionAttempts.length - 1];
+    await moduleProgressService.syncQuizSummary({
+      userId,
+      moduleId,
+      attemptsUsed: currentVersionAttempts.length,
+      bestScore,
+      passed: true,
+      lastAttemptAt: lastAttempt?.submittedAt,
+    });
+    throwServiceError("This quiz has already been passed", 409);
+  }
+
+  if (currentVersionAttempts.length >= MAXIMUM_ATTEMPTS) {
+    throwServiceError("Maximum two quiz attempts have already been used", 400);
   }
 
   const answerMap = new Map(
@@ -181,12 +209,37 @@ const submitQuizAttempt = async (
     throwServiceError("A question cannot be answered more than once", 400);
   }
 
-  if (payload.answers.length !== questions.length) {
-    throwServiceError("Every published quiz question must be answered", 400);
+  // Map of questions already answered correctly in any previous passed attempt
+  const previouslyPassedAttempts = previousAttempts.filter((a) => a.passed);
+  const previouslyCorrectAnswersMap = new Map<string, any>();
+  for (const a of previouslyPassedAttempts) {
+    for (const ans of a.answers ?? []) {
+      if (ans.isCorrect) {
+        const qId = ans.question?._id
+          ? ans.question._id.toString()
+          : ans.question?.toString();
+        if (qId) {
+          previouslyCorrectAnswersMap.set(qId, ans);
+        }
+      }
+    }
+  }
+
+  // Ensure every published question is either submitted or was previously passed
+  for (const question of questions) {
+    const qId = question._id.toString();
+    const hasSubmitted = answerMap.has(qId);
+    const wasPassed = previouslyCorrectAnswersMap.has(qId);
+    if (!hasSubmitted && !wasPassed) {
+      throwServiceError(
+        `Question ${question.order} requires an answer`,
+        400,
+      );
+    }
   }
 
   const validQuestionIds = new Set(
-    questions.map((question:any) => question._id.toString()),
+    questions.map((question: any) => question._id.toString()),
   );
 
   for (const submittedAnswer of payload.answers) {
@@ -199,115 +252,124 @@ const submitQuizAttempt = async (
   }
 
   const calculatedAnswers: IQuizAttemptAnswer[] = [];
+  const submittedQuestionIds = new Set<string>();
 
   let correctAnswers = 0;
 
   for (const question of questions) {
     const questionId = question._id.toString();
-
     const submittedAnswer = answerMap.get(questionId);
 
-    assertFound(submittedAnswer, "A required quiz answer is missing", 400);
+    if (submittedAnswer) {
+      submittedQuestionIds.add(questionId);
 
-    let isCorrect = false;
+      let isCorrect = false;
 
-    const answerData: Record<string, unknown> = {
-      question: question._id,
-    };
+      const answerData: Record<string, unknown> = {
+        question: question._id,
+      };
 
-    if (question.questionType === "true_false") {
-      if (typeof submittedAnswer.booleanAnswer !== "boolean") {
-        throwServiceError(
-          `Question ${question.order} requires a boolean answer`,
-          400,
-        );
-      }
+      if (question.questionType === "true_false") {
+        if (typeof submittedAnswer.booleanAnswer !== "boolean") {
+          throwServiceError(
+            `Question ${question.order} requires a boolean answer`,
+            400,
+          );
+        }
 
-      if (submittedAnswer.selectedOptionIndexes !== undefined) {
-        throwServiceError(
-          `Question ${question.order} does not accept option indexes`,
-          400,
-        );
-      }
+        if (submittedAnswer.selectedOptionIndexes !== undefined) {
+          throwServiceError(
+            `Question ${question.order} does not accept option indexes`,
+            400,
+          );
+        }
 
-      if (typeof question.correctBooleanAnswer !== "boolean") {
-        throwServiceError(
-          `Question ${question.order} has an invalid answer configuration`,
-          500,
-        );
-      }
+        if (typeof question.correctBooleanAnswer !== "boolean") {
+          throwServiceError(
+            `Question ${question.order} has an invalid answer configuration`,
+            500,
+          );
+        }
 
-      isCorrect =
-        submittedAnswer.booleanAnswer === question.correctBooleanAnswer;
+        isCorrect =
+          submittedAnswer.booleanAnswer === question.correctBooleanAnswer;
 
-      answerData.booleanAnswer = submittedAnswer.booleanAnswer;
-    } else {
-      const selectedIndexes = submittedAnswer.selectedOptionIndexes;
+        answerData.booleanAnswer = submittedAnswer.booleanAnswer;
+      } else {
+        const selectedIndexes = submittedAnswer.selectedOptionIndexes;
 
-      if (!selectedIndexes || selectedIndexes.length === 0) {
-        throwServiceError(
+        if (!selectedIndexes || selectedIndexes.length === 0) {
+          throwServiceError(
+            `Question ${question.order} requires selected option indexes`,
+            400,
+          );
+        }
+
+        if (submittedAnswer.booleanAnswer !== undefined) {
+          throwServiceError(
+            `Question ${question.order} does not accept a boolean answer`,
+            400,
+          );
+        }
+
+        const options = question.options ? [...question.options] : [];
+
+        assertFound(
+          selectedIndexes,
           `Question ${question.order} requires selected option indexes`,
           400,
         );
-      }
 
-      if (submittedAnswer.booleanAnswer !== undefined) {
-        throwServiceError( 
-          `Question ${question.order} does not accept a boolean answer`,
-          400,
+        validateSelectedIndexes(selectedIndexes, options.length);
+
+        if (
+          question.questionType === "single_choice" &&
+          selectedIndexes?.length !== 1
+        ) {
+          throwServiceError(
+            `Question ${question.order} requires exactly one selected option`,
+            400,
+          );
+        }
+
+        const correctIndexes = question.correctOptionIndexes
+          ? [...question.correctOptionIndexes]
+          : [];
+
+        if (correctIndexes.length === 0) {
+          throwServiceError(
+            `Question ${question.order} has no configured correct answer`,
+            500,
+          );
+        }
+
+        isCorrect = arraysAreEqual(
+          normalizeIndexes(selectedIndexes),
+          normalizeIndexes(correctIndexes),
         );
+
+        answerData.selectedOptionIndexes = selectedIndexes;
       }
 
-      const options = question.options ? [...question.options] : [];
+      answerData.isCorrect = isCorrect;
 
-    //   if (options.length < 2) {
-    //     throwServiceError(
-    //       `Question ${question.order} has invalid options`,
-    //       500,
-    //     );
-    //   }
+      calculatedAnswers.push(answerData as unknown as IQuizAttemptAnswer);
 
-      assertFound(selectedIndexes,
-  `Question ${question.order} requires selected option indexes`,
-  400,)
-
-      validateSelectedIndexes(selectedIndexes, options.length);
-
-      if (
-        question.questionType === "single_choice" &&
-        selectedIndexes?.length !== 1
-      ) {
-        throwServiceError(
-          `Question ${question.order} requires exactly one selected option`,
-          400,
-        );
+      if (isCorrect) {
+        correctAnswers += 1;
       }
+    } else {
+      // Carry forward previously correct answer
+      const prevAns = previouslyCorrectAnswersMap.get(questionId);
+      assertFound(prevAns, "A required quiz answer is missing", 400);
 
-      const correctIndexes = question.correctOptionIndexes
-        ? [...question.correctOptionIndexes]
-        : [];
+      calculatedAnswers.push({
+        question: question._id,
+        selectedOptionIndexes: prevAns.selectedOptionIndexes,
+        booleanAnswer: prevAns.booleanAnswer,
+        isCorrect: true,
+      });
 
-      if (correctIndexes.length === 0) {
-        throwServiceError(
-          `Question ${question.order} has no configured correct answer`,
-          500,
-        );
-      }
-
-      isCorrect = arraysAreEqual(
-        normalizeIndexes(selectedIndexes),
-
-        normalizeIndexes(correctIndexes),
-      );
-
-      answerData.selectedOptionIndexes = selectedIndexes;
-    }
-
-    answerData.isCorrect = isCorrect;
-
-    calculatedAnswers.push(answerData as unknown as IQuizAttemptAnswer);
-
-    if (isCorrect) {
       correctAnswers += 1;
     }
   }
@@ -319,7 +381,14 @@ const submitQuizAttempt = async (
    */
   const score = roundToTwoDecimals((correctAnswers / totalQuestions) * 100);
 
-  const passed = score >= PASS_SCORE;
+  // All newly submitted questions must be correct to pass
+  const newQuestionsAllCorrect =
+    submittedQuestionIds.size === 0 ||
+    calculatedAnswers
+      .filter((a) => submittedQuestionIds.has(a.question.toString()))
+      .every((a) => a.isCorrect);
+
+  const passed = score >= PASS_SCORE && newQuestionsAllCorrect;
 
   const previousHighestAttempt = previousAttempts.reduce(
     (highest, attempt) => Math.max(highest, attempt.attemptNumber),
@@ -363,48 +432,7 @@ const submitQuizAttempt = async (
     throw error;
   }
 
-  const allAttempts = await QuizAttempt.find({
-    user: new Types.ObjectId(userId),
-
-    module: new Types.ObjectId(moduleId),
-  })
-    .select("score passed submittedAt")
-    .lean();
-
-  const bestScore = allAttempts.reduce(
-    (highestScore, item) => Math.max(highestScore, item.score),
-    0,
-  );
-
-  const hasPassed = allAttempts.some((item) => item.passed);
-
-  const latestAttemptAt = allAttempts.reduce<Date | undefined>(
-    (latestDate, item) => {
-      if (!latestDate) {
-        return item.submittedAt;
-      }
-
-      return item.submittedAt > latestDate ? item.submittedAt : latestDate;
-    },
-    undefined,
-  );
-
-  await moduleProgressService.syncQuizSummary({
-    userId,
-    moduleId,
-
-    attemptsUsed: allAttempts.length,
-
-    bestScore,
-
-    passed: hasPassed,
-
-    ...(latestAttemptAt !== undefined
-      ? {
-          lastAttemptAt: latestAttemptAt,
-        }
-      : {}),
-  });
+  await moduleProgressService.refreshModuleProgress(userId, moduleId);
 
   return attempt.populate([
     {

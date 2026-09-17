@@ -93,4 +93,12 @@ router.patch(
   moduleVideoController.archiveModuleVideo
 );
 
+router.delete(
+  "/:id",
+  verifyToken,
+  authorizeRoles("admin", "manager", "founder"),
+  validateRequest(moduleVideoIdValidation),
+  moduleVideoController.deleteModuleVideo
+);
+
 export const moduleVideoRoutes = router;
