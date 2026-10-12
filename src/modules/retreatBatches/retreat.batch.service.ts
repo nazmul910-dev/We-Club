@@ -1,6 +1,7 @@
 import { QueryFilter, Types } from "mongoose";
 
 import { RetreatLocation } from "../retreatLocations/retreat.location.model.schema";
+import { RetreatBooking } from "../retreatBookings/retreat.booking.model.schema";
 import {
   ICreateRetreatBatch,
   IRetreatBatch,
@@ -338,10 +339,14 @@ const deleteRetreatBatch = async (batchId: string) => {
   const batch = await RetreatBatch.findById(batchId);
   assertFound(batch, "Retreat batch not found", 404);
 
-  if (batch.confirmedBookingsCount > 0) {
+  const bookingCount = await RetreatBooking.countDocuments({
+    retreatBatch: batch._id,
+  });
+
+  if (bookingCount > 0) {
     throwServiceError(
-      "Cannot delete a retreat batch with active confirmed bookings. Please cancel or refund bookings first.",
-      400,
+      "Cannot delete a retreat batch with booking history. Cancel or refund active bookings and keep the batch to preserve its records.",
+      409,
     );
   }
 

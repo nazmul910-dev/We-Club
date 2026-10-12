@@ -244,6 +244,30 @@ const archiveMentorshipProfile = async (
   }
 };
 
+const restoreMentorshipProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const authUser = getAuthUser(req);
+
+    const profile = await mentorshipProfileService.restoreMentorshipProfile(
+      String(req.params.id),
+      authUser.id,
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Mentorship profile restored successfully",
+      data: profile,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const selectCoMentor = async (
   req: Request,
   res: Response,
@@ -350,6 +374,7 @@ export const mentorshipProfileController = {
   publishMentorshipProfile,
   moveMentorshipProfileToDraft,
   archiveMentorshipProfile,
+  restoreMentorshipProfile,
 
   selectCoMentor,
   getMyCoMentor,

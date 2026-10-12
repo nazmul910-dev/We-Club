@@ -229,6 +229,29 @@ const archiveQuizQuestion = async (
   }
 };
 
+const deleteQuizQuestion = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    getAuthUser(req);
+
+    const result = await quizQuestionService.deleteQuizQuestion(
+      String(req.params.id),
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Quiz question deleted successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const quizQuestionController = {
   createQuizQuestion,
 
@@ -241,4 +264,5 @@ export const quizQuestionController = {
   publishQuizQuestion,
   moveQuizQuestionToDraft,
   archiveQuizQuestion,
+  deleteQuizQuestion,
 };

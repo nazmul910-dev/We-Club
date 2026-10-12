@@ -17,13 +17,24 @@ const createOnboardingTaskBodySchema = z.object({
   pointsReward: z.number().int().nonnegative().max(1000).default(5),
 });
 
+// On update the frontend may send null to explicitly clear an optional field.
+// z.string().nullish() accepts string | null | undefined.
+const updateOnboardingTaskBodySchema = createOnboardingTaskBodySchema
+  .partial()
+  .extend({
+    description: z.string().trim().max(2000).nullish(),
+    actionLabel: z.string().trim().max(60).nullish(),
+    actionUrl: z.string().trim().max(500).nullish(),
+    linkedVideo: mongoObjectIdSchema.nullish(),
+  });
+
 export const createOnboardingTaskValidation = z.object({
   body: createOnboardingTaskBodySchema,
 });
 
 export const updateOnboardingTaskValidation = z.object({
   params: z.object({ id: mongoObjectIdSchema }),
-  body: createOnboardingTaskBodySchema.partial(),
+  body: updateOnboardingTaskBodySchema,
 });
 
 export const onboardingTaskIdValidation = z.object({

@@ -490,21 +490,45 @@ const getMyMentor = async (memberUserId: string) => {
     404,
   );
 
-  const coMentorProfile =
+  const assignedCoMentorProfile =
     (member as { assignedCoMentorProfile?: unknown } | null)
       ?.assignedCoMentorProfile ?? null;
+  const selectedProfile = assignedCoMentorProfile as {
+    _id?: Types.ObjectId;
+    status?: string;
+    isActive?: boolean;
+    mentor?: { _id?: Types.ObjectId } | Types.ObjectId | null;
+  } | null;
+  const isAssignedProfileAvailable =
+    selectedProfile !== null &&
+    selectedProfile.status !== "archived" &&
+    selectedProfile.isActive !== false &&
+    Boolean(selectedProfile.mentor);
+  const now = new Date();
+  const coMentorChangeLocked = Boolean(
+    await MentorBooking.findOne({
+      member: memberObjectId,
+      status: { $in: ["requested", "confirmed"] },
+      scheduledStartTime: { $lte: now },
+      scheduledEndTime: { $gt: now },
+      coMentor: { $exists: true, $ne: null },
+    })
+      .select("_id")
+      .lean(),
+  );
 
   return {
     primaryMentor: {
       mentor: primaryProfile.mentor,
       mentorProfile: primaryProfile,
     },
-    coMentor: coMentorProfile
+    coMentor: isAssignedProfileAvailable && selectedProfile
       ? {
-          mentor: (coMentorProfile as { mentor: unknown }).mentor,
-          mentorProfile: coMentorProfile,
+          mentor: selectedProfile.mentor,
+          mentorProfile: selectedProfile,
         }
       : null,
+    coMentorChangeLocked,
     nextSession: nextSession ?? null,
   };
 };

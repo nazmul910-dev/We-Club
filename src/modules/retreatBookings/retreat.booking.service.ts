@@ -92,12 +92,36 @@ const createRetreatBooking = async (
 
   const batch = await RetreatBatch.findById(payload.retreatBatch).populate({
     path: "retreatLocation",
-    select: "_id title slug country city",
+    select: "_id title slug country city status isActive",
   });
   assertFound(batch, "Retreat batch not found", 404);
 
   if (batch.status === "cancelled" || batch.status === "completed") {
     throwServiceError(`Cannot join a retreat batch that is ${batch.status}`, 400);
+  }
+
+  if (!batch.isActive) {
+    throwServiceError("Cannot join an inactive retreat batch", 400);
+  }
+
+  const retreatLocation = batch.retreatLocation as unknown as {
+    _id?: Types.ObjectId;
+    status?: string;
+    isActive?: boolean;
+  } | null;
+
+  if (!retreatLocation?._id) {
+    throwServiceError(
+      "This retreat batch has no valid location. Please contact the retreat team.",
+      409,
+    );
+  }
+
+  if (
+    retreatLocation.status !== "published" ||
+    retreatLocation.isActive === false
+  ) {
+    throwServiceError("This retreat location is not available for booking", 400);
   }
 
   // Prevent duplicate active booking for the same user and batch
@@ -114,12 +138,10 @@ const createRetreatBooking = async (
     );
   }
 
-  const locationId = (batch.retreatLocation as unknown as { _id: Types.ObjectId })._id;
-
   const createData: Record<string, unknown> = {
     user: user._id,
     retreatBatch: batch._id,
-    retreatLocation: locationId,
+    retreatLocation: retreatLocation._id,
     status: "waitlisted",
     amount: batch.price,
     currency: batch.currency,
@@ -225,7 +247,9 @@ const createRetreatBookingCheckoutSession = async ({
     capacity: number;
     confirmedBookingsCount: number;
     status: string;
-    retreatLocation?: { title?: string; city?: string; country?: string };
+    retreatLocation?:
+      | { title?: string; city?: string; country?: string }
+      | null;
   };
 
   // Prevent overbooking

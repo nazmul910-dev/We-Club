@@ -72,6 +72,28 @@ const getAllRetreatBatches = async (
   }
 };
 
+const getManagementRetreatBatches = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await retreatBatchService.getAllRetreatBatches(
+      req.query as IRetreatBatchQuery,
+      false,
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat batches retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getSingleRetreatBatch = async (
   req: Request,
   res: Response,
@@ -147,6 +169,7 @@ const deleteRetreatBatch = async (
 export const retreatBatchController = {
   createRetreatBatch,
   getAllRetreatBatches,
+  getManagementRetreatBatches,
   getSingleRetreatBatch,
   updateRetreatBatch,
   deleteRetreatBatch,

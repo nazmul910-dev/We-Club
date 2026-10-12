@@ -4702,11 +4702,12 @@ var init_module_progress_service = __esm({
       const progressRecords = await ModuleProgress.find({
         user: new Types28.ObjectId(userId)
       }).select("module").lean();
-      const refreshed = await Promise.all(
+      const results = await Promise.allSettled(
         progressRecords.map(
           (record) => refreshModuleProgress(userId, String(record.module))
         )
       );
+      const refreshed = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
       return refreshed.sort(
         (left, right) => (right.updatedAt?.getTime() ?? 0) - (left.updatedAt?.getTime() ?? 0)
       );
@@ -4769,7 +4770,7 @@ var init_module_progress_service = __esm({
       }
       const page = query.page ?? 1;
       const limit = query.limit ?? 20;
-      const records = await ModuleProgress.find(filter).sort({
+      const allRecords = await ModuleProgress.find(filter).sort({
         updatedAt: -1
       }).populate("user", "fullName email role profileImage").populate({
         path: "module",
@@ -4779,6 +4780,10 @@ var init_module_progress_service = __esm({
           model: "ChallengePillar",
           select: "name title slug status"
         }
+      });
+      const records = allRecords.filter((record) => {
+        const mod = record.module;
+        return mod?.status !== "archived";
       });
       const groupsByUserId = /* @__PURE__ */ new Map();
       for (const record of records) {
@@ -18773,7 +18778,7 @@ var getAllModuleResources = async ({
   } else if (!includeArchived) {
     filter.status = { $ne: "archived" };
   }
-  const query = ModuleResource.find(filter).sort({ module: 1, order: 1 }).populate({
+  const query = ModuleResource.find().sort({ module: 1, order: 1 }).populate({
     path: "module",
     select: "title slug moduleNumber pillar status",
     populate: {
@@ -19467,6 +19472,24 @@ var ensureCourseModuleExists4 = async (moduleId) => {
   }
   return courseModule;
 };
+var resequenceActiveQuestions = async (moduleId) => {
+  const activeQuestions = await QuizQuestion.find({
+    module: new Types31.ObjectId(String(moduleId)),
+    status: { $ne: "archived" }
+  }).sort({ order: 1, createdAt: -1 });
+  for (let i = 0; i < activeQuestions.length; i++) {
+    const item = activeQuestions[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await QuizQuestion.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } }
+      );
+      item.order = targetOrder;
+    }
+  }
+};
 var createQuizQuestion = async (moduleId, payload, actorId) => {
   await ensureCourseModuleExists4(moduleId);
   validateQuestionConfiguration({
@@ -19488,21 +19511,21 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
     );
   }
   let questionOrder = payload.order;
-  if (questionOrder === void 0) {
+  if (questionOrder === void 0 || questionOrder === null) {
     await QuizQuestion.updateMany(
       { module: moduleId, status: { $ne: "archived" } },
       { $inc: { order: 1 } }
     );
     questionOrder = 1;
   } else {
-    const existingQuestion = await QuizQuestion.findOne({
-      module: moduleId,
-      order: questionOrder,
-      status: { $ne: "archived" }
-    });
-    if (existingQuestion) {
-      throwServiceError11("Question order already exists in this module", 409);
-    }
+    await QuizQuestion.updateMany(
+      {
+        module: moduleId,
+        status: { $ne: "archived" },
+        order: { $gte: questionOrder }
+      },
+      { $inc: { order: 1 } }
+    );
   }
   const createData = {
     module: new Types31.ObjectId(moduleId),
@@ -19523,6 +19546,7 @@ var createQuizQuestion = async (moduleId, payload, actorId) => {
   }
   try {
     const question = await QuizQuestion.create(createData);
+    await resequenceActiveQuestions(moduleId);
     return question.populate([
       {
         path: "module",
@@ -19582,7 +19606,7 @@ var getAllQuizQuestions = async ({
       $ne: "archived"
     };
   }
-  const query = QuizQuestion.find(filter).sort({
+  const query = QuizQuestion.find().sort({
     module: 1,
     order: 1
   }).populate({
@@ -19709,16 +19733,15 @@ var updateQuizQuestion = async (questionId, payload, actorId) => {
     throwServiceError11("Archived question cannot be updated", 400);
   }
   if (payload.order !== void 0 && payload.order !== question.order) {
-    const duplicateQuestion = await QuizQuestion.findOne({
-      _id: {
-        $ne: question._id
+    await QuizQuestion.updateMany(
+      {
+        _id: { $ne: question._id },
+        module: question.module,
+        status: { $ne: "archived" },
+        order: { $gte: payload.order }
       },
-      module: question.module,
-      order: payload.order
-    });
-    if (duplicateQuestion) {
-      throwServiceError11("Question order already exists in this module", 409);
-    }
+      { $inc: { order: 1 } }
+    );
   }
   const nextQuestionType = payload.questionType ?? question.questionType;
   let nextOptions;
@@ -19831,6 +19854,7 @@ var publishQuizQuestion = async (questionId, actorId) => {
     question.order = (lastActive?.order ?? 0) + 1;
   }
   await question.save();
+  await resequenceActiveQuestions(question.module);
   return question;
 };
 var moveQuizQuestionToDraft = async (questionId, actorId) => {
@@ -19856,23 +19880,20 @@ var archiveQuizQuestion = async (questionId, actorId) => {
   question.updatedBy = new Types31.ObjectId(actorId);
   question.order = 1e6 + Date.now() % 1e6 + Math.floor(Math.random() * 1e4);
   await question.save();
-  const remainingQuestions = await QuizQuestion.find({
-    module: question.module,
-    _id: { $ne: question._id },
-    status: { $ne: "archived" }
-  }).sort({ order: 1 });
-  for (let i = 0; i < remainingQuestions.length; i++) {
-    const item = remainingQuestions[i];
-    if (!item) continue;
-    const targetOrder = i + 1;
-    if (item.order !== targetOrder) {
-      await QuizQuestion.updateOne(
-        { _id: item._id },
-        { $set: { order: targetOrder } }
-      );
-    }
-  }
+  await resequenceActiveQuestions(question.module);
   return question;
+};
+var deleteQuizQuestion = async (questionId) => {
+  assertValidObjectId9(questionId, "Quiz question ID");
+  const question = await QuizQuestion.findById(questionId);
+  assertFound9(question, "Quiz question not found", 404);
+  const moduleId = question.module;
+  await QuizQuestion.findByIdAndDelete(questionId);
+  await resequenceActiveQuestions(moduleId);
+  return {
+    message: "Quiz question deleted successfully",
+    questionId
+  };
 };
 var quizQuestionService = {
   createQuizQuestion,
@@ -19882,7 +19903,8 @@ var quizQuestionService = {
   updateQuizQuestion,
   publishQuizQuestion,
   moveQuizQuestionToDraft,
-  archiveQuizQuestion
+  archiveQuizQuestion,
+  deleteQuizQuestion
 };
 
 // src/modules/quizeQuestions/quiz.question.controller.ts
@@ -20043,6 +20065,22 @@ var archiveQuizQuestion2 = async (req, res, next) => {
     next(error);
   }
 };
+var deleteQuizQuestion2 = async (req, res, next) => {
+  try {
+    getAuthUser7(req);
+    const result = await quizQuestionService.deleteQuizQuestion(
+      String(req.params.id)
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Quiz question deleted successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var quizQuestionController = {
   createQuizQuestion: createQuizQuestion2,
   getAllQuizQuestions: getAllQuizQuestions2,
@@ -20051,7 +20089,8 @@ var quizQuestionController = {
   updateQuizQuestion: updateQuizQuestion2,
   publishQuizQuestion: publishQuizQuestion2,
   moveQuizQuestionToDraft: moveQuizQuestionToDraft2,
-  archiveQuizQuestion: archiveQuizQuestion2
+  archiveQuizQuestion: archiveQuizQuestion2,
+  deleteQuizQuestion: deleteQuizQuestion2
 };
 
 // src/modules/quizeQuestions/quiz.question.validation.ts
@@ -20247,6 +20286,19 @@ router17.patch(
   ),
   quizQuestionController.archiveQuizQuestion
 );
+router17.delete(
+  "/:id",
+  verifyToken,
+  authorizeRoles(
+    "admin",
+    "manager",
+    "founder"
+  ),
+  validateRequest_default(
+    quizQuestionIdValidation
+  ),
+  quizQuestionController.deleteQuizQuestion
+);
 var quizQuestionRoutes = router17;
 
 // src/modules/moduleActions/module.action.route.ts
@@ -20393,7 +20445,7 @@ var getAllModuleActions = async ({
       $ne: "archived"
     };
   }
-  return ModuleAction.find(filter).sort({
+  return ModuleAction.find().sort({
     module: 1,
     order: 1
   }).populate({
@@ -24378,8 +24430,219 @@ init_assertFound();
 init_users_model_schema();
 import { Types as Types37 } from "mongoose";
 
-// src/modules/mentorshipProfiles/mentorship.profile.model.schema.ts
+// src/modules/mentorBookings/mentor.booking.model.schema.ts
 import { model as model38, Schema as Schema38 } from "mongoose";
+
+// src/modules/mentorBookings/mentor.booking.interface.ts
+var MENTOR_BOOKING_STATUSES = [
+  "requested",
+  "confirmed",
+  "completed",
+  "cancelled",
+  "no_show"
+];
+var NO_SHOW_PARTIES = ["member", "mentor", "both"];
+
+// src/modules/mentorBookings/mentor.booking.model.schema.ts
+var mentorBookingRecordingSchema = new Schema38(
+  {
+    provider: {
+      type: String,
+      enum: ["cloudinary"],
+      default: "cloudinary",
+      required: true
+    },
+    cloudinaryPublicId: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    cloudinaryAssetId: {
+      type: String,
+      trim: true
+    },
+    secureUrl: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    playbackUrl: {
+      type: String,
+      trim: true
+    },
+    thumbnailUrl: {
+      type: String,
+      trim: true
+    },
+    durationSeconds: {
+      type: Number,
+      min: 0
+    },
+    format: {
+      type: String,
+      trim: true
+    },
+    bytes: {
+      type: Number,
+      min: 0
+    }
+  },
+  { _id: false }
+);
+var mentorBookingSchema = new Schema38(
+  {
+    member: {
+      type: Schema38.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    leadMentor: {
+      type: Schema38.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    leadMentorProfile: {
+      type: Schema38.Types.ObjectId,
+      ref: "MentorshipProfile",
+      index: true
+    },
+    coMentor: {
+      type: Schema38.Types.ObjectId,
+      ref: "User",
+      index: true
+    },
+    coMentorProfile: {
+      type: Schema38.Types.ObjectId,
+      ref: "MentorshipProfile",
+      index: true
+    },
+    scheduledStartTime: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    scheduledEndTime: {
+      type: Date,
+      required: true,
+      index: true
+    },
+    durationMinutes: {
+      type: Number,
+      default: 60,
+      min: 15,
+      max: 180,
+      required: true
+    },
+    timezone: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    meetingUrl: {
+      type: String,
+      trim: true
+    },
+    sessionTopic: {
+      type: String,
+      trim: true,
+      maxlength: 500
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2e3
+    },
+    status: {
+      type: String,
+      enum: MENTOR_BOOKING_STATUSES,
+      default: "requested",
+      index: true,
+      required: true
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    cancelledBy: {
+      type: Schema38.Types.ObjectId,
+      ref: "User"
+    },
+    cancelledAt: {
+      type: Date
+    },
+    completedAt: {
+      type: Date
+    },
+    recordingTitle: {
+      type: String,
+      trim: true,
+      maxlength: 200
+    },
+    recording: {
+      type: mentorBookingRecordingSchema
+    },
+    noShowAt: {
+      type: Date
+    },
+    noShowBy: {
+      type: String,
+      enum: NO_SHOW_PARTIES
+    },
+    noShowReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    mentorFeedback: {
+      type: String,
+      trim: true,
+      maxlength: 3e3
+    },
+    createdBy: {
+      type: Schema38.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema38.Types.ObjectId,
+      ref: "User"
+    }
+  },
+  {
+    timestamps: true,
+    collection: "mentorbookings"
+  }
+);
+mentorBookingSchema.index({
+  member: 1,
+  status: 1
+});
+mentorBookingSchema.index({
+  leadMentor: 1,
+  status: 1
+});
+mentorBookingSchema.index({
+  coMentor: 1,
+  status: 1
+});
+mentorBookingSchema.index({
+  scheduledStartTime: 1,
+  scheduledEndTime: 1
+});
+mentorBookingSchema.index({
+  status: 1,
+  scheduledStartTime: 1
+});
+var MentorBooking = model38(
+  "MentorBooking",
+  mentorBookingSchema
+);
+
+// src/modules/mentorshipProfiles/mentorship.profile.model.schema.ts
+import { model as model39, Schema as Schema39 } from "mongoose";
 
 // src/modules/mentorshipProfiles/mentorship.profile.interface.ts
 var MENTORSHIP_PROFILE_STATUSES = [
@@ -24398,7 +24661,7 @@ var AVAILABILITY_DAYS = [
 ];
 
 // src/modules/mentorshipProfiles/mentorship.profile.model.schema.ts
-var availabilitySlotSchema = new Schema38(
+var availabilitySlotSchema = new Schema39(
   {
     day: {
       type: String,
@@ -24427,10 +24690,10 @@ var availabilitySlotSchema = new Schema38(
     _id: false
   }
 );
-var mentorshipProfileSchema = new Schema38(
+var mentorshipProfileSchema = new Schema39(
   {
     mentor: {
-      type: Schema38.Types.ObjectId,
+      type: Schema39.Types.ObjectId,
       ref: "User",
       required: true,
       unique: true,
@@ -24498,12 +24761,12 @@ var mentorshipProfileSchema = new Schema38(
       type: Date
     },
     createdBy: {
-      type: Schema38.Types.ObjectId,
+      type: Schema39.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema38.Types.ObjectId,
+      type: Schema39.Types.ObjectId,
       ref: "User"
     }
   },
@@ -24529,7 +24792,7 @@ mentorshipProfileSchema.index(
     name: "one_primary_mentor"
   }
 );
-var MentorshipProfile = model38(
+var MentorshipProfile = model39(
   "MentorshipProfile",
   mentorshipProfileSchema
 );
@@ -24763,6 +25026,22 @@ var archiveMentorshipProfile = async (profileId, actorId) => {
   await profile.save();
   return profile.populate(PROFILE_POPULATE);
 };
+var restoreMentorshipProfile = async (profileId, actorId) => {
+  assertValidObjectId14(profileId, "Mentorship profile ID");
+  const profile = await MentorshipProfile.findById(profileId);
+  assertFound16(profile, "Mentorship profile not found", 404);
+  if (profile.status !== "archived") {
+    throwServiceError16("Only archived mentorship profiles can be restored", 400);
+  }
+  profile.status = "draft";
+  profile.isActive = true;
+  profile.isPrimaryMentor = false;
+  profile.set("archivedAt", void 0);
+  profile.set("publishedAt", void 0);
+  profile.updatedBy = new Types37.ObjectId(actorId);
+  await profile.save();
+  return profile.populate(PROFILE_POPULATE);
+};
 var MENTOR_FIELD_POPULATE = {
   path: "mentor",
   select: "fullName email role profileImage"
@@ -24772,12 +25051,6 @@ var selectMyCoMentor = async (memberUserId, mentorshipProfileId) => {
   assertValidObjectId14(mentorshipProfileId, "Mentorship profile ID");
   const member = await User.findById(memberUserId).select("_id fullName email role assignedCoMentorProfile coMentorAssignedAt").lean();
   assertFound16(member, "Member not found", 404);
-  if (member.assignedCoMentorProfile) {
-    throwServiceError16(
-      "Your co_mentor has already been selected and cannot be changed",
-      409
-    );
-  }
   const profile = await MentorshipProfile.findOne({
     _id: mentorshipProfileId,
     status: "published",
@@ -24806,23 +25079,38 @@ var selectMyCoMentor = async (memberUserId, mentorshipProfileId) => {
       400
     );
   }
+  if (member.assignedCoMentorProfile && String(member.assignedCoMentorProfile) === String(profile._id)) {
+    return profile;
+  }
+  const now = /* @__PURE__ */ new Date();
+  const currentSession = await MentorBooking.findOne({
+    member: new Types37.ObjectId(memberUserId),
+    status: { $in: ["requested", "confirmed"] },
+    scheduledStartTime: { $lte: now },
+    scheduledEndTime: { $gt: now },
+    coMentor: { $exists: true, $ne: null }
+  }).select("_id").lean();
+  if (currentSession) {
+    throwServiceError16(
+      "Your co_mentor cannot be changed while a session is in progress",
+      409
+    );
+  }
   const updatedMember = await User.findOneAndUpdate(
     {
-      _id: memberUserId,
-      assignedCoMentorProfile: { $exists: false }
+      _id: memberUserId
     },
     {
-      assignedCoMentorProfile: profile._id,
-      coMentorAssignedAt: /* @__PURE__ */ new Date(),
-      coMentorAssignedBy: new Types37.ObjectId(memberUserId)
+      $set: {
+        assignedCoMentorProfile: profile._id,
+        coMentorAssignedAt: /* @__PURE__ */ new Date(),
+        coMentorAssignedBy: new Types37.ObjectId(memberUserId)
+      }
     },
     { new: true }
   );
   if (!updatedMember) {
-    throwServiceError16(
-      "Your co_mentor has already been selected and cannot be changed",
-      409
-    );
+    throwServiceError16("Member not found", 404);
   }
   return profile;
 };
@@ -24946,6 +25234,7 @@ var mentorshipProfileService = {
   publishMentorshipProfile,
   moveMentorshipProfileToDraft,
   archiveMentorshipProfile,
+  restoreMentorshipProfile,
   selectMyCoMentor,
   getMyCoMentor,
   getAvailabilityForProfileOwner,
@@ -25114,6 +25403,23 @@ var archiveMentorshipProfile2 = async (req, res, next) => {
     next(error);
   }
 };
+var restoreMentorshipProfile2 = async (req, res, next) => {
+  try {
+    const authUser = getAuthUser15(req);
+    const profile = await mentorshipProfileService.restoreMentorshipProfile(
+      String(req.params.id),
+      authUser.id
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Mentorship profile restored successfully",
+      data: profile
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var selectCoMentor = async (req, res, next) => {
   try {
     const authUser = getAuthUser15(req);
@@ -25189,6 +25495,7 @@ var mentorshipProfileController = {
   publishMentorshipProfile: publishMentorshipProfile2,
   moveMentorshipProfileToDraft: moveMentorshipProfileToDraft2,
   archiveMentorshipProfile: archiveMentorshipProfile2,
+  restoreMentorshipProfile: restoreMentorshipProfile2,
   selectCoMentor,
   getMyCoMentor: getMyCoMentor2,
   getMyPrimaryMentorAvailability,
@@ -25355,6 +25662,13 @@ router28.patch(
   validateRequest_default(mentorshipProfileIdValidation),
   mentorshipProfileController.archiveMentorshipProfile
 );
+router28.patch(
+  "/:id/restore",
+  verifyToken,
+  authorizeRoles("founder", "manager"),
+  validateRequest_default(mentorshipProfileIdValidation),
+  mentorshipProfileController.restoreMentorshipProfile
+);
 var mentorshipProfileRoutes = router28;
 
 // src/modules/mentorshipReviews/mentorship.review.route.ts
@@ -25368,7 +25682,7 @@ init_users_model_schema();
 import mongoose5, { Types as Types38 } from "mongoose";
 
 // src/modules/mentorshipReviews/mentorship.review.model.schema.ts
-import { model as model39, Schema as Schema39 } from "mongoose";
+import { model as model40, Schema as Schema40 } from "mongoose";
 
 // src/modules/mentorshipReviews/mentorship.review.interface.ts
 var MENTORSHIP_REVIEW_STATUSES = [
@@ -25378,29 +25692,29 @@ var MENTORSHIP_REVIEW_STATUSES = [
 ];
 
 // src/modules/mentorshipReviews/mentorship.review.model.schema.ts
-var mentorshipReviewSchema = new Schema39(
+var mentorshipReviewSchema = new Schema40(
   {
     booking: {
-      type: Schema39.Types.ObjectId,
+      type: Schema40.Types.ObjectId,
       ref: "MentorBooking",
       required: true,
       unique: true,
       index: true
     },
     user: {
-      type: Schema39.Types.ObjectId,
+      type: Schema40.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     mentor: {
-      type: Schema39.Types.ObjectId,
+      type: Schema40.Types.ObjectId,
       ref: "User",
       required: true,
       index: true
     },
     mentorshipProfile: {
-      type: Schema39.Types.ObjectId,
+      type: Schema40.Types.ObjectId,
       ref: "MentorshipProfile",
       index: true
     },
@@ -25436,7 +25750,7 @@ var mentorshipReviewSchema = new Schema39(
       maxlength: 1e3
     },
     moderatedBy: {
-      type: Schema39.Types.ObjectId,
+      type: Schema40.Types.ObjectId,
       ref: "User"
     },
     moderatedAt: {
@@ -25465,7 +25779,7 @@ mentorshipReviewSchema.index({
   rating: 1,
   status: 1
 });
-var MentorshipReview = model39(
+var MentorshipReview = model40(
   "MentorshipReview",
   mentorshipReviewSchema
 );
@@ -26133,8 +26447,167 @@ init_assertFound();
 // src/modules/retreatLocations/retreat.location.service.ts
 import { Types as Types39 } from "mongoose";
 
+// src/modules/retreatBookings/retreat.booking.model.schema.ts
+import { model as model41, Schema as Schema41 } from "mongoose";
+
+// src/modules/retreatBookings/retreat.booking.interface.ts
+var RETREAT_BOOKING_STATUSES = [
+  "waitlisted",
+  "invited",
+  "payment_pending",
+  "confirmed",
+  "cancelled",
+  "refunded"
+];
+
+// src/modules/retreatBookings/retreat.booking.model.schema.ts
+var emergencyContactSchema = new Schema41(
+  {
+    name: { type: String, trim: true, maxlength: 100 },
+    phone: { type: String, trim: true, maxlength: 50 },
+    relationship: { type: String, trim: true, maxlength: 50 }
+  },
+  { _id: false }
+);
+var retreatBookingSchema = new Schema41(
+  {
+    user: {
+      type: Schema41.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
+    },
+    retreatBatch: {
+      type: Schema41.Types.ObjectId,
+      ref: "RetreatBatch",
+      required: true,
+      index: true
+    },
+    retreatLocation: {
+      type: Schema41.Types.ObjectId,
+      ref: "RetreatLocation",
+      required: true,
+      index: true
+    },
+    paymentSession: {
+      type: Schema41.Types.ObjectId,
+      ref: "PaymentSession"
+    },
+    status: {
+      type: String,
+      enum: RETREAT_BOOKING_STATUSES,
+      default: "waitlisted",
+      index: true
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    amountPaid: {
+      type: Number,
+      min: 0
+    },
+    currency: {
+      type: String,
+      default: "usd",
+      lowercase: true,
+      trim: true
+    },
+    stripeCheckoutSessionId: {
+      type: String,
+      trim: true,
+      index: true
+    },
+    stripePaymentIntentId: {
+      type: String,
+      trim: true
+    },
+    checkoutUrl: {
+      type: String,
+      trim: true
+    },
+    invitationExpiresAt: {
+      type: Date
+    },
+    paidAt: {
+      type: Date
+    },
+    confirmedAt: {
+      type: Date
+    },
+    cancelledAt: {
+      type: Date
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    refundedAt: {
+      type: Date
+    },
+    refundAmount: {
+      type: Number,
+      min: 0
+    },
+    refundReason: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: 2e3
+    },
+    specialRequests: {
+      type: String,
+      trim: true,
+      maxlength: 2e3
+    },
+    dietaryRequirements: {
+      type: String,
+      trim: true,
+      maxlength: 1e3
+    },
+    emergencyContact: {
+      type: emergencyContactSchema
+    },
+    createdBy: {
+      type: Schema41.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+    updatedBy: {
+      type: Schema41.Types.ObjectId,
+      ref: "User"
+    }
+  },
+  {
+    timestamps: true,
+    collection: "retreatbookings"
+  }
+);
+retreatBookingSchema.index({
+  user: 1,
+  retreatBatch: 1
+});
+retreatBookingSchema.index({
+  retreatBatch: 1,
+  status: 1
+});
+retreatBookingSchema.index({
+  user: 1,
+  status: 1
+});
+var RetreatBooking = model41(
+  "RetreatBooking",
+  retreatBookingSchema
+);
+
 // src/modules/retreatLocations/retreat.location.model.schema.ts
-import { model as model40, Schema as Schema40 } from "mongoose";
+import { model as model42, Schema as Schema42 } from "mongoose";
 
 // src/modules/retreatLocations/retreat.location.interface.ts
 var RETREAT_LOCATION_STATUSES = [
@@ -26144,7 +26617,7 @@ var RETREAT_LOCATION_STATUSES = [
 ];
 
 // src/modules/retreatLocations/retreat.location.model.schema.ts
-var retreatLocationSchema = new Schema40(
+var retreatLocationSchema = new Schema42(
   {
     title: {
       type: String,
@@ -26220,12 +26693,12 @@ var retreatLocationSchema = new Schema40(
       default: 0
     },
     createdBy: {
-      type: Schema40.Types.ObjectId,
+      type: Schema42.Types.ObjectId,
       ref: "User",
       required: true
     },
     updatedBy: {
-      type: Schema40.Types.ObjectId,
+      type: Schema42.Types.ObjectId,
       ref: "User"
     }
   },
@@ -26239,7 +26712,7 @@ retreatLocationSchema.index({
   status: 1,
   order: 1
 });
-var RetreatLocation = model40(
+var RetreatLocation = model42(
   "RetreatLocation",
   retreatLocationSchema
 );
@@ -26425,6 +26898,16 @@ var deleteRetreatLocation = async (locationId) => {
   assertValidObjectId16(locationId, "Retreat location ID");
   const location = await RetreatLocation.findById(locationId);
   assertFound18(location, "Retreat location not found", 404);
+  const [batchCount, bookingCount] = await Promise.all([
+    RetreatBatch.countDocuments({ retreatLocation: location._id }),
+    RetreatBooking.countDocuments({ retreatLocation: location._id })
+  ]);
+  if (batchCount > 0 || bookingCount > 0) {
+    throwServiceError18(
+      "Cannot delete a retreat location while batches or bookings are linked to it. Delete eligible batches first, or archive the location to keep its history.",
+      409
+    );
+  }
   await location.deleteOne();
   return { success: true, message: "Retreat location deleted successfully" };
 };
@@ -26485,6 +26968,22 @@ var getAllRetreatLocations2 = async (req, res, next) => {
     const result = await retreatLocationService.getAllRetreatLocations(
       req.query,
       isPublicOnly
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat locations retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getManagementRetreatLocations = async (req, res, next) => {
+  try {
+    const result = await retreatLocationService.getAllRetreatLocations(
+      req.query,
+      false
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -26576,6 +27075,7 @@ var deleteRetreatLocation2 = async (req, res, next) => {
 var retreatLocationController = {
   createRetreatLocation: createRetreatLocation2,
   getAllRetreatLocations: getAllRetreatLocations2,
+  getManagementRetreatLocations,
   getSingleRetreatLocation: getSingleRetreatLocation2,
   updateRetreatLocation: updateRetreatLocation2,
   deleteRetreatLocation: deleteRetreatLocation2
@@ -26704,6 +27204,13 @@ var queryRetreatLocationValidation = z22.object({
 
 // src/modules/retreatLocations/retreat.location.route.ts
 var router30 = Router30();
+router30.get(
+  "/management",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(queryRetreatLocationValidation),
+  retreatLocationController.getManagementRetreatLocations
+);
 router30.get(
   "/",
   validateRequest_default(queryRetreatLocationValidation),
@@ -27207,18 +27714,6 @@ import { Router as Router33 } from "express";
 
 // src/modules/mentorBookings/mentor.booking.validation.ts
 import { z as z25 } from "zod";
-
-// src/modules/mentorBookings/mentor.booking.interface.ts
-var MENTOR_BOOKING_STATUSES = [
-  "requested",
-  "confirmed",
-  "completed",
-  "cancelled",
-  "no_show"
-];
-var NO_SHOW_PARTIES = ["member", "mentor", "both"];
-
-// src/modules/mentorBookings/mentor.booking.validation.ts
 var mongoObjectIdSchema17 = z25.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId");
 var createMentorBookingValidation = z25.object({
   body: z25.object({
@@ -27312,207 +27807,6 @@ init_assertFound();
 // src/modules/mentorBookings/mentor.booking.service.ts
 init_users_model_schema();
 import { Types as Types40 } from "mongoose";
-
-// src/modules/mentorBookings/mentor.booking.model.schema.ts
-import { model as model41, Schema as Schema41 } from "mongoose";
-var mentorBookingRecordingSchema = new Schema41(
-  {
-    provider: {
-      type: String,
-      enum: ["cloudinary"],
-      default: "cloudinary",
-      required: true
-    },
-    cloudinaryPublicId: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    cloudinaryAssetId: {
-      type: String,
-      trim: true
-    },
-    secureUrl: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    playbackUrl: {
-      type: String,
-      trim: true
-    },
-    thumbnailUrl: {
-      type: String,
-      trim: true
-    },
-    durationSeconds: {
-      type: Number,
-      min: 0
-    },
-    format: {
-      type: String,
-      trim: true
-    },
-    bytes: {
-      type: Number,
-      min: 0
-    }
-  },
-  { _id: false }
-);
-var mentorBookingSchema = new Schema41(
-  {
-    member: {
-      type: Schema41.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    leadMentor: {
-      type: Schema41.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    leadMentorProfile: {
-      type: Schema41.Types.ObjectId,
-      ref: "MentorshipProfile",
-      index: true
-    },
-    coMentor: {
-      type: Schema41.Types.ObjectId,
-      ref: "User",
-      index: true
-    },
-    coMentorProfile: {
-      type: Schema41.Types.ObjectId,
-      ref: "MentorshipProfile",
-      index: true
-    },
-    scheduledStartTime: {
-      type: Date,
-      required: true,
-      index: true
-    },
-    scheduledEndTime: {
-      type: Date,
-      required: true,
-      index: true
-    },
-    durationMinutes: {
-      type: Number,
-      default: 60,
-      min: 15,
-      max: 180,
-      required: true
-    },
-    timezone: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    meetingUrl: {
-      type: String,
-      trim: true
-    },
-    sessionTopic: {
-      type: String,
-      trim: true,
-      maxlength: 500
-    },
-    notes: {
-      type: String,
-      trim: true,
-      maxlength: 2e3
-    },
-    status: {
-      type: String,
-      enum: MENTOR_BOOKING_STATUSES,
-      default: "requested",
-      index: true,
-      required: true
-    },
-    cancellationReason: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    cancelledBy: {
-      type: Schema41.Types.ObjectId,
-      ref: "User"
-    },
-    cancelledAt: {
-      type: Date
-    },
-    completedAt: {
-      type: Date
-    },
-    recordingTitle: {
-      type: String,
-      trim: true,
-      maxlength: 200
-    },
-    recording: {
-      type: mentorBookingRecordingSchema
-    },
-    noShowAt: {
-      type: Date
-    },
-    noShowBy: {
-      type: String,
-      enum: NO_SHOW_PARTIES
-    },
-    noShowReason: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    mentorFeedback: {
-      type: String,
-      trim: true,
-      maxlength: 3e3
-    },
-    createdBy: {
-      type: Schema41.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema41.Types.ObjectId,
-      ref: "User"
-    }
-  },
-  {
-    timestamps: true,
-    collection: "mentorbookings"
-  }
-);
-mentorBookingSchema.index({
-  member: 1,
-  status: 1
-});
-mentorBookingSchema.index({
-  leadMentor: 1,
-  status: 1
-});
-mentorBookingSchema.index({
-  coMentor: 1,
-  status: 1
-});
-mentorBookingSchema.index({
-  scheduledStartTime: 1,
-  scheduledEndTime: 1
-});
-mentorBookingSchema.index({
-  status: 1,
-  scheduledStartTime: 1
-});
-var MentorBooking = model41(
-  "MentorBooking",
-  mentorBookingSchema
-);
-
-// src/modules/mentorBookings/mentor.booking.service.ts
 var throwServiceError19 = (message, statusCode) => {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -27836,16 +28130,29 @@ var getMyMentor = async (memberUserId) => {
     "No primary mentor is currently configured",
     404
   );
-  const coMentorProfile = member?.assignedCoMentorProfile ?? null;
+  const assignedCoMentorProfile = member?.assignedCoMentorProfile ?? null;
+  const selectedProfile = assignedCoMentorProfile;
+  const isAssignedProfileAvailable = selectedProfile !== null && selectedProfile.status !== "archived" && selectedProfile.isActive !== false && Boolean(selectedProfile.mentor);
+  const now = /* @__PURE__ */ new Date();
+  const coMentorChangeLocked = Boolean(
+    await MentorBooking.findOne({
+      member: memberObjectId,
+      status: { $in: ["requested", "confirmed"] },
+      scheduledStartTime: { $lte: now },
+      scheduledEndTime: { $gt: now },
+      coMentor: { $exists: true, $ne: null }
+    }).select("_id").lean()
+  );
   return {
     primaryMentor: {
       mentor: primaryProfile.mentor,
       mentorProfile: primaryProfile
     },
-    coMentor: coMentorProfile ? {
-      mentor: coMentorProfile.mentor,
-      mentorProfile: coMentorProfile
+    coMentor: isAssignedProfileAvailable && selectedProfile ? {
+      mentor: selectedProfile.mentor,
+      mentorProfile: selectedProfile
     } : null,
+    coMentorChangeLocked,
     nextSession: nextSession ?? null
   };
 };
@@ -29083,10 +29390,13 @@ var deleteRetreatBatch = async (batchId) => {
   assertValidObjectId18(batchId, "Retreat batch ID");
   const batch = await RetreatBatch.findById(batchId);
   assertFound20(batch, "Retreat batch not found", 404);
-  if (batch.confirmedBookingsCount > 0) {
+  const bookingCount = await RetreatBooking.countDocuments({
+    retreatBatch: batch._id
+  });
+  if (bookingCount > 0) {
     throwServiceError20(
-      "Cannot delete a retreat batch with active confirmed bookings. Please cancel or refund bookings first.",
-      400
+      "Cannot delete a retreat batch with booking history. Cancel or refund active bookings and keep the batch to preserve its records.",
+      409
     );
   }
   await batch.deleteOne();
@@ -29131,6 +29441,22 @@ var getAllRetreatBatches2 = async (req, res, next) => {
     const result = await retreatBatchService.getAllRetreatBatches(
       req.query,
       isPublicOnly
+    );
+    sendResponse_default(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat batches retrieved successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getManagementRetreatBatches = async (req, res, next) => {
+  try {
+    const result = await retreatBatchService.getAllRetreatBatches(
+      req.query,
+      false
     );
     sendResponse_default(res, {
       statusCode: 200,
@@ -29196,6 +29522,7 @@ var deleteRetreatBatch2 = async (req, res, next) => {
 var retreatBatchController = {
   createRetreatBatch: createRetreatBatch2,
   getAllRetreatBatches: getAllRetreatBatches2,
+  getManagementRetreatBatches,
   getSingleRetreatBatch: getSingleRetreatBatch2,
   updateRetreatBatch: updateRetreatBatch2,
   deleteRetreatBatch: deleteRetreatBatch2
@@ -29276,6 +29603,13 @@ var queryRetreatBatchValidation = z26.object({
 // src/modules/retreatBatches/retreat.batch.route.ts
 var router34 = Router34();
 router34.get(
+  "/management",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest_default(queryRetreatBatchValidation),
+  retreatBatchController.getManagementRetreatBatches
+);
+router34.get(
   "/",
   validateRequest_default(queryRetreatBatchValidation),
   retreatBatchController.getAllRetreatBatches
@@ -29317,167 +29651,6 @@ init_assertFound();
 import { Types as Types42 } from "mongoose";
 import Stripe3 from "stripe";
 init_users_model_schema();
-
-// src/modules/retreatBookings/retreat.booking.model.schema.ts
-import { model as model42, Schema as Schema42 } from "mongoose";
-
-// src/modules/retreatBookings/retreat.booking.interface.ts
-var RETREAT_BOOKING_STATUSES = [
-  "waitlisted",
-  "invited",
-  "payment_pending",
-  "confirmed",
-  "cancelled",
-  "refunded"
-];
-
-// src/modules/retreatBookings/retreat.booking.model.schema.ts
-var emergencyContactSchema = new Schema42(
-  {
-    name: { type: String, trim: true, maxlength: 100 },
-    phone: { type: String, trim: true, maxlength: 50 },
-    relationship: { type: String, trim: true, maxlength: 50 }
-  },
-  { _id: false }
-);
-var retreatBookingSchema = new Schema42(
-  {
-    user: {
-      type: Schema42.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true
-    },
-    retreatBatch: {
-      type: Schema42.Types.ObjectId,
-      ref: "RetreatBatch",
-      required: true,
-      index: true
-    },
-    retreatLocation: {
-      type: Schema42.Types.ObjectId,
-      ref: "RetreatLocation",
-      required: true,
-      index: true
-    },
-    paymentSession: {
-      type: Schema42.Types.ObjectId,
-      ref: "PaymentSession"
-    },
-    status: {
-      type: String,
-      enum: RETREAT_BOOKING_STATUSES,
-      default: "waitlisted",
-      index: true
-    },
-    amount: {
-      type: Number,
-      required: true,
-      min: 0
-    },
-    amountPaid: {
-      type: Number,
-      min: 0
-    },
-    currency: {
-      type: String,
-      default: "usd",
-      lowercase: true,
-      trim: true
-    },
-    stripeCheckoutSessionId: {
-      type: String,
-      trim: true,
-      index: true
-    },
-    stripePaymentIntentId: {
-      type: String,
-      trim: true
-    },
-    checkoutUrl: {
-      type: String,
-      trim: true
-    },
-    invitationExpiresAt: {
-      type: Date
-    },
-    paidAt: {
-      type: Date
-    },
-    confirmedAt: {
-      type: Date
-    },
-    cancelledAt: {
-      type: Date
-    },
-    cancellationReason: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    refundedAt: {
-      type: Date
-    },
-    refundAmount: {
-      type: Number,
-      min: 0
-    },
-    refundReason: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    notes: {
-      type: String,
-      trim: true,
-      maxlength: 2e3
-    },
-    specialRequests: {
-      type: String,
-      trim: true,
-      maxlength: 2e3
-    },
-    dietaryRequirements: {
-      type: String,
-      trim: true,
-      maxlength: 1e3
-    },
-    emergencyContact: {
-      type: emergencyContactSchema
-    },
-    createdBy: {
-      type: Schema42.Types.ObjectId,
-      ref: "User",
-      required: true
-    },
-    updatedBy: {
-      type: Schema42.Types.ObjectId,
-      ref: "User"
-    }
-  },
-  {
-    timestamps: true,
-    collection: "retreatbookings"
-  }
-);
-retreatBookingSchema.index({
-  user: 1,
-  retreatBatch: 1
-});
-retreatBookingSchema.index({
-  retreatBatch: 1,
-  status: 1
-});
-retreatBookingSchema.index({
-  user: 1,
-  status: 1
-});
-var RetreatBooking = model42(
-  "RetreatBooking",
-  retreatBookingSchema
-);
-
-// src/modules/retreatBookings/retreat.booking.service.ts
 var stripeSecretKey3 = config_default.STRIPE_SECRET_KEY;
 var stripe3 = stripeSecretKey3 ? new Stripe3(stripeSecretKey3) : null;
 var getStripeClient3 = () => {
@@ -29535,11 +29708,24 @@ var createRetreatBooking = async (payload, userId, actorId) => {
   assertFound21(user, "User account not found", 404);
   const batch = await RetreatBatch.findById(payload.retreatBatch).populate({
     path: "retreatLocation",
-    select: "_id title slug country city"
+    select: "_id title slug country city status isActive"
   });
   assertFound21(batch, "Retreat batch not found", 404);
   if (batch.status === "cancelled" || batch.status === "completed") {
     throwServiceError21(`Cannot join a retreat batch that is ${batch.status}`, 400);
+  }
+  if (!batch.isActive) {
+    throwServiceError21("Cannot join an inactive retreat batch", 400);
+  }
+  const retreatLocation = batch.retreatLocation;
+  if (!retreatLocation?._id) {
+    throwServiceError21(
+      "This retreat batch has no valid location. Please contact the retreat team.",
+      409
+    );
+  }
+  if (retreatLocation.status !== "published" || retreatLocation.isActive === false) {
+    throwServiceError21("This retreat location is not available for booking", 400);
   }
   const activeExistingBooking = await RetreatBooking.findOne({
     user: new Types42.ObjectId(userId),
@@ -29552,11 +29738,10 @@ var createRetreatBooking = async (payload, userId, actorId) => {
       409
     );
   }
-  const locationId = batch.retreatLocation._id;
   const createData = {
     user: user._id,
     retreatBatch: batch._id,
-    retreatLocation: locationId,
+    retreatLocation: retreatLocation._id,
     status: "waitlisted",
     amount: batch.price,
     currency: batch.currency,
@@ -34474,12 +34659,18 @@ var createOnboardingTaskBodySchema = z40.object({
   linkedVideo: mongoObjectIdSchema30.optional(),
   pointsReward: z40.number().int().nonnegative().max(1e3).default(5)
 });
+var updateOnboardingTaskBodySchema = createOnboardingTaskBodySchema.partial().extend({
+  description: z40.string().trim().max(2e3).nullish(),
+  actionLabel: z40.string().trim().max(60).nullish(),
+  actionUrl: z40.string().trim().max(500).nullish(),
+  linkedVideo: mongoObjectIdSchema30.nullish()
+});
 var createOnboardingTaskValidation = z40.object({
   body: createOnboardingTaskBodySchema
 });
 var updateOnboardingTaskValidation = z40.object({
   params: z40.object({ id: mongoObjectIdSchema30 }),
-  body: createOnboardingTaskBodySchema.partial()
+  body: updateOnboardingTaskBodySchema
 });
 var onboardingTaskIdValidation = z40.object({
   params: z40.object({ id: mongoObjectIdSchema30 })

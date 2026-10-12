@@ -1,6 +1,7 @@
 import { ClientSession, QueryFilter, Types } from "mongoose";
 
 import { User } from "../users/users.model.schema";
+import { MentorBooking } from "../mentorBookings/mentor.booking.model.schema";
 
 import {
   ICreateMentorInput,
@@ -396,6 +397,32 @@ const archiveMentorshipProfile = async (
   return profile.populate(PROFILE_POPULATE);
 };
 
+const restoreMentorshipProfile = async (
+  profileId: string,
+  actorId: string,
+) => {
+  assertValidObjectId(profileId, "Mentorship profile ID");
+
+  const profile = await MentorshipProfile.findById(profileId);
+
+  assertFound(profile, "Mentorship profile not found", 404);
+
+  if (profile.status !== "archived") {
+    throwServiceError("Only archived mentorship profiles can be restored", 400);
+  }
+
+  profile.status = "draft";
+  profile.isActive = true;
+  profile.isPrimaryMentor = false;
+  profile.set("archivedAt", undefined);
+  profile.set("publishedAt", undefined);
+  profile.updatedBy = new Types.ObjectId(actorId);
+
+  await profile.save();
+
+  return profile.populate(PROFILE_POPULATE);
+};
+
 const MENTOR_FIELD_POPULATE = {
   path: "mentor",
   select: "fullName email role profileImage",
@@ -418,13 +445,6 @@ const selectMyCoMentor = async (
     .lean();
 
   assertFound(member, "Member not found", 404);
-
-  if (member.assignedCoMentorProfile) {
-    throwServiceError(
-      "Your co_mentor has already been selected and cannot be changed",
-      409,
-    );
-  }
 
   const profile = await MentorshipProfile.findOne({
     _id: mentorshipProfileId,
@@ -461,24 +481,47 @@ const selectMyCoMentor = async (
     );
   }
 
+  if (
+    member.assignedCoMentorProfile &&
+    String(member.assignedCoMentorProfile) === String(profile._id)
+  ) {
+    return profile;
+  }
+
+  const now = new Date();
+  const currentSession = await MentorBooking.findOne({
+    member: new Types.ObjectId(memberUserId),
+    status: { $in: ["requested", "confirmed"] },
+    scheduledStartTime: { $lte: now },
+    scheduledEndTime: { $gt: now },
+    coMentor: { $exists: true, $ne: null },
+  })
+    .select("_id")
+    .lean();
+
+  if (currentSession) {
+    throwServiceError(
+      "Your co_mentor cannot be changed while a session is in progress",
+      409,
+    );
+  }
+
   const updatedMember = await User.findOneAndUpdate(
     {
       _id: memberUserId,
-      assignedCoMentorProfile: { $exists: false },
     },
     {
-      assignedCoMentorProfile: profile._id,
-      coMentorAssignedAt: new Date(),
-      coMentorAssignedBy: new Types.ObjectId(memberUserId),
+      $set: {
+        assignedCoMentorProfile: profile._id,
+        coMentorAssignedAt: new Date(),
+        coMentorAssignedBy: new Types.ObjectId(memberUserId),
+      },
     },
     { new: true },
   );
 
   if (!updatedMember) {
-    throwServiceError(
-      "Your co_mentor has already been selected and cannot be changed",
-      409,
-    );
+    throwServiceError("Member not found", 404);
   }
 
   return profile;
@@ -686,6 +729,7 @@ export const mentorshipProfileService = {
   publishMentorshipProfile,
   moveMentorshipProfileToDraft,
   archiveMentorshipProfile,
+  restoreMentorshipProfile,
 
   selectMyCoMentor,
   getMyCoMentor,

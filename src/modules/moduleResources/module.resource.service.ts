@@ -215,7 +215,7 @@ const getAllModuleResources = async ({
     filter.status = { $ne: "archived" };
   }
 
-  const query = ModuleResource.find(filter)
+  const query = ModuleResource.find()
     .sort({ module: 1, order: 1 })
     .populate({
       path: "module",

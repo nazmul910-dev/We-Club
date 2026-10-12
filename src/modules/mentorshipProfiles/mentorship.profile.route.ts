@@ -132,4 +132,16 @@ router.patch(
   mentorshipProfileController.archiveMentorshipProfile,
 );
 
+router.patch(
+  "/:id/restore",
+
+  verifyToken,
+
+  authorizeRoles("founder", "manager"),
+
+  validateRequest(mentorshipProfileIdValidation),
+
+  mentorshipProfileController.restoreMentorshipProfile,
+);
+
 export const mentorshipProfileRoutes = router;

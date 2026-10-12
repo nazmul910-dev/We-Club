@@ -243,7 +243,7 @@ const getAllModuleActions = async ({
     };
   }
 
-  return ModuleAction.find(filter)
+  return ModuleAction.find()
     .sort({
       module: 1,
       order: 1,

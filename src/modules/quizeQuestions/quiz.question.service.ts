@@ -141,6 +141,28 @@ const ensureCourseModuleExists = async (moduleId: string) => {
   return courseModule;
 };
 
+const resequenceActiveQuestions = async (
+  moduleId: Types.ObjectId | string,
+): Promise<void> => {
+  const activeQuestions = await QuizQuestion.find({
+    module: new Types.ObjectId(String(moduleId)),
+    status: { $ne: "archived" },
+  }).sort({ order: 1, createdAt: -1 });
+
+  for (let i = 0; i < activeQuestions.length; i++) {
+    const item = activeQuestions[i];
+    if (!item) continue;
+    const targetOrder = i + 1;
+    if (item.order !== targetOrder) {
+      await QuizQuestion.updateOne(
+        { _id: item._id },
+        { $set: { order: targetOrder } },
+      );
+      item.order = targetOrder;
+    }
+  }
+};
+
 const createQuizQuestion = async (
   moduleId: string,
   payload: ICreateQuizQuestion,
@@ -174,7 +196,7 @@ const createQuizQuestion = async (
   }
 
   let questionOrder = payload.order;
-  if (questionOrder === undefined) {
+  if (questionOrder === undefined || questionOrder === null) {
     // Shift all active quiz questions in this module so the new question takes order 1 (top of table)
     await QuizQuestion.updateMany(
       { module: moduleId, status: { $ne: "archived" } },
@@ -182,15 +204,15 @@ const createQuizQuestion = async (
     );
     questionOrder = 1;
   } else {
-    const existingQuestion = await QuizQuestion.findOne({
-      module: moduleId,
-      order: questionOrder,
-      status: { $ne: "archived" },
-    });
-
-    if (existingQuestion) {
-      throwServiceError("Question order already exists in this module", 409);
-    }
+    // If order was explicitly provided, shift any existing active questions with order >= questionOrder
+    await QuizQuestion.updateMany(
+      {
+        module: moduleId,
+        status: { $ne: "archived" },
+        order: { $gte: questionOrder },
+      },
+      { $inc: { order: 1 } },
+    );
   }
 
   const createData: Record<string, unknown> = {
@@ -221,6 +243,8 @@ const createQuizQuestion = async (
 
   try {
     const question = await QuizQuestion.create(createData);
+
+    await resequenceActiveQuestions(moduleId);
 
     return question.populate([
       {
@@ -312,7 +336,7 @@ const getAllQuizQuestions = async ({
     };
   }
 
-  const query = QuizQuestion.find(filter)
+  const query = QuizQuestion.find()
     .sort({
       module: 1,
       order: 1,
@@ -510,19 +534,15 @@ const updateQuizQuestion = async (
   }
 
   if (payload.order !== undefined && payload.order !== question.order) {
-    const duplicateQuestion = await QuizQuestion.findOne({
-      _id: {
-        $ne: question._id,
+    await QuizQuestion.updateMany(
+      {
+        _id: { $ne: question._id },
+        module: question.module,
+        status: { $ne: "archived" },
+        order: { $gte: payload.order },
       },
-
-      module: question.module,
-
-      order: payload.order,
-    });
-
-    if (duplicateQuestion) {
-      throwServiceError("Question order already exists in this module", 409);
-    }
+      { $inc: { order: 1 } },
+    );
   }
 
   const nextQuestionType = payload.questionType ?? question.questionType;
@@ -684,6 +704,7 @@ const publishQuizQuestion = async (questionId: string, actorId: string) => {
   }
 
   await question.save();
+  await resequenceActiveQuestions(question.module);
 
   return question;
 };
@@ -728,26 +749,30 @@ const archiveQuizQuestion = async (questionId: string, actorId: string) => {
 
   await question.save();
 
-  // Re-sequence remaining active questions in this module in ascending order (1..N)
-  const remainingQuestions = await QuizQuestion.find({
-    module: question.module,
-    _id: { $ne: question._id },
-    status: { $ne: "archived" },
-  }).sort({ order: 1 });
-
-  for (let i = 0; i < remainingQuestions.length; i++) {
-    const item = remainingQuestions[i];
-    if (!item) continue;
-    const targetOrder = i + 1;
-    if (item.order !== targetOrder) {
-      await QuizQuestion.updateOne(
-        { _id: item._id },
-        { $set: { order: targetOrder } },
-      );
-    }
-  }
+  // Re-sequence remaining active questions in this module so orders are 1..N
+  await resequenceActiveQuestions(question.module);
 
   return question;
+};
+
+const deleteQuizQuestion = async (questionId: string) => {
+  assertValidObjectId(questionId, "Quiz question ID");
+
+  const question = await QuizQuestion.findById(questionId);
+
+  assertFound(question, "Quiz question not found", 404);
+
+  const moduleId = question.module;
+
+  await QuizQuestion.findByIdAndDelete(questionId);
+
+  // Re-sequence remaining active questions in this module so orders are 1..N
+  await resequenceActiveQuestions(moduleId);
+
+  return {
+    message: "Quiz question deleted successfully",
+    questionId,
+  };
 };
 
 export const quizQuestionService = {
@@ -762,4 +787,5 @@ export const quizQuestionService = {
   publishQuizQuestion,
   moveQuizQuestionToDraft,
   archiveQuizQuestion,
+  deleteQuizQuestion,
 };

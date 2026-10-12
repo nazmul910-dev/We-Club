@@ -125,5 +125,20 @@ router.patch(
     .archiveQuizQuestion
 );
 
+router.delete(
+  "/:id",
+  verifyToken,
+  authorizeRoles(
+    "admin",
+    "manager",
+    "founder"
+  ),
+  validateRequest(
+    quizQuestionIdValidation
+  ),
+  quizQuestionController
+    .deleteQuizQuestion
+);
+
 export const quizQuestionRoutes =
   router;

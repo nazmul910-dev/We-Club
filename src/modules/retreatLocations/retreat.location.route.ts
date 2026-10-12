@@ -14,6 +14,14 @@ import { uploadRetreatImages } from "../../middleware/uploadMiddleware";
 
 const router = Router();
 
+router.get(
+  "/management",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest(queryRetreatLocationValidation),
+  retreatLocationController.getManagementRetreatLocations,
+);
+
 // Public / Member Routes (Location Overview & Details)
 router.get(
   "/",

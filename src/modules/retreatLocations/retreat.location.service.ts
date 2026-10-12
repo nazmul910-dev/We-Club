@@ -1,5 +1,7 @@
 import { QueryFilter, Types } from "mongoose";
 
+import { RetreatBatch } from "../retreatBatches/retreat.batch.model.schema";
+import { RetreatBooking } from "../retreatBookings/retreat.booking.model.schema";
 import {
   ICreateRetreatLocation,
   IRetreatLocation,
@@ -259,6 +261,18 @@ const deleteRetreatLocation = async (locationId: string) => {
 
   const location = await RetreatLocation.findById(locationId);
   assertFound(location, "Retreat location not found", 404);
+
+  const [batchCount, bookingCount] = await Promise.all([
+    RetreatBatch.countDocuments({ retreatLocation: location._id }),
+    RetreatBooking.countDocuments({ retreatLocation: location._id }),
+  ]);
+
+  if (batchCount > 0 || bookingCount > 0) {
+    throwServiceError(
+      "Cannot delete a retreat location while batches or bookings are linked to it. Delete eligible batches first, or archive the location to keep its history.",
+      409,
+    );
+  }
 
   await location.deleteOne();
   return { success: true, message: "Retreat location deleted successfully" };

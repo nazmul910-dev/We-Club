@@ -724,11 +724,18 @@ const getMyAllModuleProgress = async (userId: string) => {
     .select("module")
     .lean();
 
-  const refreshed = await Promise.all(
+  // Refresh each module's progress individually; silently skip archived
+  // modules so a previously-active module that has since been archived does
+  // not surface an error to the member.
+  const results = await Promise.allSettled(
     progressRecords.map((record) =>
       refreshModuleProgress(userId, String(record.module)),
     ),
   );
+
+  const refreshed = results
+    .filter((r): r is PromiseFulfilledResult<ModuleProgressDocument> => r.status === "fulfilled")
+    .map((r) => r.value);
 
   return refreshed.sort(
     (left, right) =>
@@ -838,7 +845,7 @@ const getAllModuleProgressGroupedByUser = async (
   // All matching records are pulled first (sorted newest-first) so
   // grouping-by-user is correct regardless of which page a record
   // would otherwise have landed on.
-  const records = await ModuleProgress.find(filter)
+  const allRecords = await ModuleProgress.find(filter)
     .sort({
       updatedAt: -1,
     })
@@ -855,6 +862,13 @@ const getAllModuleProgressGroupedByUser = async (
         select: "name title slug status",
       },
     });
+
+  // Exclude progress records whose module has been archived so that
+  // archived-module data never surfaces in the admin progress view.
+  const records = allRecords.filter((record) => {
+    const mod = record.module as unknown as { status?: string } | null;
+    return mod?.status !== "archived";
+  });
 
   const groupsByUserId = new Map<string, IUserModuleProgressGroup>();
 

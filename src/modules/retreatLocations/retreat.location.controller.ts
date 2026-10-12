@@ -111,6 +111,28 @@ const getAllRetreatLocations = async (
   }
 };
 
+const getManagementRetreatLocations = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await retreatLocationService.getAllRetreatLocations(
+      req.query as IRetreatLocationQuery,
+      false,
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Retreat locations retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getSingleRetreatLocation = async (
   req: Request,
   res: Response,
@@ -227,6 +249,7 @@ const deleteRetreatLocation = async (
 export const retreatLocationController = {
   createRetreatLocation,
   getAllRetreatLocations,
+  getManagementRetreatLocations,
   getSingleRetreatLocation,
   updateRetreatLocation,
   deleteRetreatLocation,

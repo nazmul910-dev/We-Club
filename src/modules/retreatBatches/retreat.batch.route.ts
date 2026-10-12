@@ -13,6 +13,14 @@ import {
 
 const router = Router();
 
+router.get(
+  "/management",
+  verifyToken,
+  authorizeRoles("founder", "super_admin", "admin", "manager"),
+  validateRequest(queryRetreatBatchValidation),
+  retreatBatchController.getManagementRetreatBatches,
+);
+
 // Public / Member Routes (Batch List & Details)
 router.get(
   "/",
